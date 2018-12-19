@@ -1,0 +1,40 @@
+
+
+# Categories
+- Model-Free RL
+  - Deep Q-Learning
+  - Policy Gradients
+  - Deterministic Policy Gradients
+  - Distributional RL
+  - Policy Gradients with Action-Dependent Baselines
+  - Path-Consistency Learning
+  - Other Directions for Combining Policy-Learning and Q-Learning
+  - Evolutionary Algorithms
+- Exploration
+  - Intrinsic Motivation
+  - Unsupervised RL
+- Transfer and Multitask RL
+- Hierarchy
+- Memory
+- Model-Based RL
+  - Model is Learned
+  - Model is Given
+- Meta-RL
+- Scaling RL
+- RL in the Real World
+- Safety
+- Imitation Learning and Inverse Reinforcement Learning
+- Reproducibility, Analysis, and Critique
+- Bonus: Classic Papers in RL Theory or Review
+
+# Paper Resources
+- [DDPG with Demonstrations](https://arxiv.org/abs/1707.08817)
+  - MFRL.DPG + IL
+- [DDPG+HER](https://arxiv.org/abs/1707.01495)
+  - MFRL.DPG + Transfer and Multitask RL
+- [DDPG+HER+Demonstration](https://arxiv.org/pdf/1709.10089.pdf)
+- [Ensemble of Q functions](https://arxiv.org/abs/1602.04621)
+  - Exploration
+- [VIME](https://arxiv.org/abs/1605.09674)
+  - Exploration.Intrinsic Motivation
+- [Asymmetric Self-Play](https://openreview.net/forum?id=SkT5Yg-RZ)

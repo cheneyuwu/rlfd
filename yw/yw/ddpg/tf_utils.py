@@ -1,18 +1,28 @@
+# =============================================================================
+# Import
+# =============================================================================
+
+# System import
+import os
+
+# Infra import
 import joblib
 import numpy as np
-import tensorflow as tf  # pylint: ignore-module
 import copy
-import os
 import functools
 import collections
 import multiprocessing
 
-# ================================================================
-# Global session
-# ================================================================
+import tensorflow as tf  # pylint: ignore-module
+
+# =============================================================================
+# # Global session
+# =============================================================================
 
 def get_session(config=None):
-    """Get default session or create one with a given config"""
+    """
+    Get default session or create one with a given config
+    """
     sess = tf.get_default_session()
     if sess is None:
         sess = make_session(config=config, make_default=True)
@@ -26,7 +36,9 @@ def in_session(f):
     return newfunc
 
 def make_session(config=None, num_cpu=None, make_default=False, graph=None):
-    """Returns a session that will use <num_cpu> CPU's only"""
+    """
+    Returns a session that will use <num_cpu> CPU's only
+    """
     if num_cpu is None:
         num_cpu = int(os.getenv('RCALL_NUM_CPU', multiprocessing.cpu_count()))
     if config is None:
@@ -43,12 +55,14 @@ def make_session(config=None, num_cpu=None, make_default=False, graph=None):
         return tf.Session(config=config, graph=graph)
 
 def single_threaded_session():
-    """Returns a session which will only use a single CPU"""
+    """
+    Returns a session which will only use a single CPU
+    """
     return make_session(num_cpu=1)
 
-# ================================================================
+# =============================================================================
 # Flat vectors
-# ================================================================
+# =============================================================================
 
 def var_shape(x):
     out = x.get_shape().as_list()
@@ -70,6 +84,12 @@ def flatgrad(loss, var_list, clip_norm=None):
         tf.reshape(grad if grad is not None else tf.zeros_like(v), [numel(v)])
         for (v, grad) in zip(var_list, grads)
     ])
+
+def flatten_grads(var_list, grads):
+    """Flattens a variables and their gradients.
+    """
+    return tf.concat([tf.reshape(grad, [numel(v)])
+                      for (v, grad) in zip(var_list, grads)], 0)
 
 class SetFromFlat(object):
     def __init__(self, var_list, dtype=tf.float32):
@@ -96,9 +116,9 @@ class GetFlat(object):
     def __call__(self):
         return tf.get_default_session().run(self.op)
 
-# ================================================================
+# =============================================================================
 # Theano-like Function
-# ================================================================
+# =============================================================================
 
 def function(inputs, outputs, updates=None, givens=None):
     """Just like Theano function. Take a bunch of tensorflow placeholders and expressions
@@ -174,9 +194,9 @@ class _Function(object):
         results = get_session().run(self.outputs_update, feed_dict=feed_dict)[:-1]
         return results
 
-# ================================================================
+# =============================================================================
 # Shape adjustment for feeding into tf placeholders
-# ================================================================
+# =============================================================================
 def adjust_shape(placeholder, data):
     '''
     adjust shape of the data to the shape of the placeholder if possible.
@@ -199,3 +219,24 @@ def adjust_shape(placeholder, data):
     placeholder_shape = [x or -1 for x in placeholder.shape.as_list()]
 
     return np.reshape(data, placeholder_shape)
+
+# =============================================================================
+# Building neural net works
+# =============================================================================
+
+def nn(input, layers_sizes, reuse=None, flatten=False, name=""):
+    """Creates a simple neural network
+    """
+    for i, size in enumerate(layers_sizes):
+        activation = tf.nn.relu if i < len(layers_sizes) - 1 else None
+        input = tf.layers.dense(inputs=input,
+                                units=size,
+                                kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                reuse=reuse,
+                                name=name + '_' + str(i))
+        if activation:
+            input = activation(input)
+    if flatten:
+        assert layers_sizes[-1] == 1
+        input = tf.reshape(input, [-1])
+    return input

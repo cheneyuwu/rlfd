@@ -1,4 +1,8 @@
-import yw.common.tf_util as U
+# =============================================================================
+# Import
+# =============================================================================
+
+# Infra import
 import tensorflow as tf
 import numpy as np
 try:
@@ -6,6 +10,8 @@ try:
 except ImportError:
     MPI = None
 
+# DDPG Package import
+import yw.ddpg.tf_utils as U
 
 class MpiAdam(object):
     def __init__(self, var_list, *, beta1=0.9, beta2=0.999, epsilon=1e-08, scale_grad_by_procs=True, comm=None):

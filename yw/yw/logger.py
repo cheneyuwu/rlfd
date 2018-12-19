@@ -1,12 +1,23 @@
+# =============================================================================
+# Import
+# =============================================================================
+
+# System import
 import os
 import sys
 import shutil
 import os.path as osp
+
+# Infra import
 import json
 import time
 import datetime
 import tempfile
 from collections import defaultdict
+
+# =============================================================================
+# Logger Levels
+# =============================================================================
 
 DEBUG = 10
 INFO = 20
@@ -14,6 +25,10 @@ WARN = 30
 ERROR = 40
 
 DISABLED = 50
+
+# =============================================================================
+# Logger Implementation Bases
+# =============================================================================
 
 class KVWriter(object):
     def writekvs(self, kvs):
@@ -94,8 +109,101 @@ def make_output_format(format, ev_dir, log_suffix=''):
         raise ValueError('Unknown format specified: %s' % (format,))
 
 # ================================================================
+# Backend
+# ================================================================
+
+class Logger(object):
+    DEFAULT = None  # A logger with no output files. (See right below class definition)
+                    # So that you can still log to the terminal without setting up any output files
+    CURRENT = None  # Current logger being used by the free functions above
+
+    def __init__(self, dir, output_formats):
+        self.name2val = defaultdict(float)  # values this iteration
+        self.name2cnt = defaultdict(int)
+        self.level = INFO
+        self.dir = dir
+        self.output_formats = output_formats
+
+    # Logging API, forwarded
+    # ----------------------------------------
+    def log(self, *args, level=INFO):
+        if self.level <= level:
+            self._do_log(args)
+
+    def logkv(self, key, val):
+        self.name2val[key] = val
+
+    def logkv_mean(self, key, val):
+        if val is None:
+            self.name2val[key] = None
+            return
+        oldval, cnt = self.name2val[key], self.name2cnt[key]
+        self.name2val[key] = oldval*cnt/(cnt+1) + val/(cnt+1)
+        self.name2cnt[key] = cnt + 1
+
+    def dumpkvs(self):
+        if self.level == DISABLED: return
+        for fmt in self.output_formats:
+            if isinstance(fmt, KVWriter):
+                fmt.writekvs(self.name2val)
+        self.name2val.clear()
+        self.name2cnt.clear()
+
+    # Configuration
+    # ----------------------------------------
+    def set_level(self, level):
+        self.level = level
+
+    def get_dir(self):
+        return self.dir
+
+    def close(self):
+        for fmt in self.output_formats:
+            fmt.close()
+
+    # Misc
+    # ----------------------------------------
+    def _do_log(self, args):
+        for fmt in self.output_formats:
+            if isinstance(fmt, SeqWriter):
+                fmt.writeseq(map(str, args))
+
+# ================================================================
 # API
 # ================================================================
+
+def configure(dir=None, format_strs=None):
+    if dir is None:
+        dir = os.getenv('YW_LOGDIR')
+    if dir is None:
+        dir = osp.join(tempfile.gettempdir(),
+                       datetime.datetime.now().strftime("yw-%Y-%m-%d-%H-%M-%S-%f"))
+    assert isinstance(dir, str)
+    os.makedirs(dir, exist_ok=True)
+
+    log_suffix = ''
+    rank = 0
+    # check environment variables here instead of importing mpi4py
+    # to avoid calling MPI_Init() when this module is imported
+    for varname in ['PMI_RANK', 'OMPI_COMM_WORLD_RANK']:
+        if varname in os.environ:
+            rank = int(os.environ[varname])
+    if rank > 0:
+        log_suffix = "-rank%03i" % rank
+
+    if format_strs is None:
+        if rank == 0:
+            # Yuchen use stdout log only for now?
+            # format_strs = os.getenv('OPENAI_LOG_FORMAT', 'stdout,log,csv').split(',')
+            format_strs = ['stdout', 'log']
+        else:
+            # format_strs = os.getenv('OPENAI_LOG_FORMAT_MPI', 'log').split(',')
+            format_strs = ['log']
+    format_strs = filter(None, format_strs)
+    output_formats = [make_output_format(f, dir, log_suffix) for f in format_strs]
+
+    Logger.CURRENT = Logger(dir=dir, output_formats=output_formats)
+    log('Logging to %s' % dir)
 
 def dumpkvs():
     """
@@ -161,105 +269,15 @@ def warn(*args):
 def error(*args):
     log(*args, level=ERROR)
 
-# ================================================================
-# Backend
-# ================================================================
-
-class Logger(object):
-    DEFAULT = None  # A logger with no output files. (See right below class definition)
-                    # So that you can still log to the terminal without setting up any output files
-    CURRENT = None  # Current logger being used by the free functions above
-
-    def __init__(self, dir, output_formats):
-        self.name2val = defaultdict(float)  # values this iteration
-        self.name2cnt = defaultdict(int)
-        self.level = INFO
-        self.dir = dir
-        self.output_formats = output_formats
-
-    # Logging API, forwarded
-    # ----------------------------------------
-    def log(self, *args, level=INFO):
-        if self.level <= level:
-            self._do_log(args)
-
-    def logkv(self, key, val):
-        self.name2val[key] = val
-
-    def logkv_mean(self, key, val):
-        if val is None:
-            self.name2val[key] = None
-            return
-        oldval, cnt = self.name2val[key], self.name2cnt[key]
-        self.name2val[key] = oldval*cnt/(cnt+1) + val/(cnt+1)
-        self.name2cnt[key] = cnt + 1
-
-    def dumpkvs(self):
-        if self.level == DISABLED: return
-        for fmt in self.output_formats:
-            if isinstance(fmt, KVWriter):
-                fmt.writekvs(self.name2val)
-        self.name2val.clear()
-        self.name2cnt.clear()
-
-    # Configuration
-    # ----------------------------------------
-    def set_level(self, level):
-        self.level = level
-
-    def get_dir(self):
-        return self.dir
-
-    def close(self):
-        for fmt in self.output_formats:
-            fmt.close()
-
-    # Misc
-    # ----------------------------------------
-    def _do_log(self, args):
-        for fmt in self.output_formats:
-            if isinstance(fmt, SeqWriter):
-                fmt.writeseq(map(str, args))
-
-def configure(dir=None, format_strs=None):
-    if dir is None:
-        dir = os.getenv('YW_LOGDIR')
-    if dir is None:
-        dir = osp.join(tempfile.gettempdir(),
-                       datetime.datetime.now().strftime("yw-%Y-%m-%d-%H-%M-%S-%f"))
-    assert isinstance(dir, str)
-    os.makedirs(dir, exist_ok=True)
-
-    log_suffix = ''
-    rank = 0
-    # check environment variables here instead of importing mpi4py
-    # to avoid calling MPI_Init() when this module is imported
-    for varname in ['PMI_RANK', 'OMPI_COMM_WORLD_RANK']:
-        if varname in os.environ:
-            rank = int(os.environ[varname])
-    if rank > 0:
-        log_suffix = "-rank%03i" % rank
-
-    if format_strs is None:
-        if rank == 0:
-            # Yuchen use stdout log only for now?
-            # format_strs = os.getenv('OPENAI_LOG_FORMAT', 'stdout,log,csv').split(',')
-            format_strs = ['stdout', 'log']
-        else:
-            # format_strs = os.getenv('OPENAI_LOG_FORMAT_MPI', 'log').split(',')
-            format_strs = ['log']
-    format_strs = filter(None, format_strs)
-    output_formats = [make_output_format(f, dir, log_suffix) for f in format_strs]
-
-    Logger.CURRENT = Logger(dir=dir, output_formats=output_formats)
-    log('Logging to %s' % dir)
-
 def reset():
     if Logger.CURRENT is not Logger.DEFAULT:
         Logger.CURRENT.close()
         Logger.CURRENT = Logger.DEFAULT
         log('Reset logger')
 
+# =============================================================================
+# Initial Configuration
+# =============================================================================
 
 def _configure_default_logger():
     format_strs = None
@@ -269,7 +287,15 @@ def _configure_default_logger():
     configure(format_strs=format_strs)
     Logger.DEFAULT = Logger.CURRENT
 
-# ================================================================
+# configure the default logger on import
+_configure_default_logger()
+
+record_tabular = logkv
+dump_tabular = dumpkvs
+
+# =============================================================================
+# For testing purposes
+# =============================================================================
 
 def _demo():
     info("hi")
@@ -298,12 +324,6 @@ def _demo():
 
     logkv("a", "longasslongasslongasslongasslongasslongassvalue")
     dumpkvs()
-
-record_tabular = logkv
-dump_tabular = dumpkvs
-
-# configure the default logger on import
-_configure_default_logger()
 
 if __name__ == "__main__":
     _demo()

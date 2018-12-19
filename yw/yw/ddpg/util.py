@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+
 import importlib
 import inspect
 import functools
@@ -8,7 +9,7 @@ import functools
 import tensorflow as tf
 import numpy as np
 
-from yw.common import tf_util as U
+from yw.ddpg import tf_utils as U
 
 def convert_episode_to_batch_major(episode):
     """Converts an episode to have the batch dimension in the major (first)
@@ -22,12 +23,6 @@ def convert_episode_to_batch_major(episode):
 
     return episode_batch
 
-def flatten_grads(var_list, grads):
-    """Flattens a variables and their gradients.
-    """
-    return tf.concat([tf.reshape(grad, [U.numel(v)])
-                      for (v, grad) in zip(var_list, grads)], 0)
-
 
 def import_function(spec):
     """Import a function identified by a string like "pkg.module:fn_name".
@@ -36,60 +31,6 @@ def import_function(spec):
     module = importlib.import_module(mod_name)
     fn = getattr(module, fn_name)
     return fn
-
-def install_mpi_excepthook():
-    import sys
-    from mpi4py import MPI
-    old_hook = sys.excepthook
-
-    def new_hook(a, b, c):
-        old_hook(a, b, c)
-        sys.stdout.flush()
-        sys.stderr.flush()
-        MPI.COMM_WORLD.Abort()
-    sys.excepthook = new_hook
-
-def nn(input, layers_sizes, reuse=None, flatten=False, name=""):
-    """Creates a simple neural network
-    """
-    for i, size in enumerate(layers_sizes):
-        activation = tf.nn.relu if i < len(layers_sizes) - 1 else None
-        input = tf.layers.dense(inputs=input,
-                                units=size,
-                                kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                reuse=reuse,
-                                name=name + '_' + str(i))
-        if activation:
-            input = activation(input)
-    if flatten:
-        assert layers_sizes[-1] == 1
-        input = tf.reshape(input, [-1])
-    return input
-
-def mpi_fork(n, extra_mpi_args=[]):
-    """Re-launches the current script with workers
-    Returns "parent" for original parent, "child" for MPI children
-    """
-    if n <= 1:
-        return "child"
-    if os.getenv("IN_MPI") is None:
-        env = os.environ.copy()
-        env.update(
-            MKL_NUM_THREADS="1",
-            OMP_NUM_THREADS="1",
-            IN_MPI="1"
-        )
-        # "-bind-to core" is crucial for good performance
-        args = ["mpirun", "-np", str(n)] + \
-            extra_mpi_args + \
-            [sys.executable]
-
-        args += sys.argv
-        subprocess.check_call(args, env=env)
-        return "parent"
-    else:
-        install_mpi_excepthook()
-        return "child"
 
 def reshape_for_broadcasting(source, target):
     """Reshapes a tensor (source) to have the correct shape and dtype of the target
@@ -130,3 +71,6 @@ def transitions_in_episode_batch(episode_batch):
     """
     shape = episode_batch['u'].shape
     return shape[0] * shape[1]
+
+def dims_to_shapes(input_dims):
+    return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}

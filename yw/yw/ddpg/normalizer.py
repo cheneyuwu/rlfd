@@ -1,10 +1,17 @@
+# =============================================================================
+# Import
+# =============================================================================
+
+# System import
 import threading
 
+# Infra import
 import numpy as np
 from mpi4py import MPI
 import tensorflow as tf
 
-from baselines.her.util import reshape_for_broadcasting
+# DDPG Package import
+from yw.ddpg.util import reshape_for_broadcasting
 
 
 class Normalizer:
@@ -81,12 +88,6 @@ class Normalizer:
         std = reshape_for_broadcasting(self.std,  v)
         return mean + v * std
 
-    def _mpi_average(self, x):
-        buf = np.zeros_like(x)
-        MPI.COMM_WORLD.Allreduce(x, buf, op=MPI.SUM)
-        buf /= MPI.COMM_WORLD.Get_size()
-        return buf
-
     def synchronize(self, local_sum, local_sumsq, local_count, root=None):
         local_sum[...] = self._mpi_average(local_sum)
         local_sumsq[...] = self._mpi_average(local_sumsq)
@@ -116,25 +117,9 @@ class Normalizer:
             self.sumsq_pl: synced_sumsq,
         })
         self.sess.run(self.recompute_op)
-
-
-class IdentityNormalizer:
-    def __init__(self, size, std=1.):
-        self.size = size
-        self.mean = tf.zeros(self.size, tf.float32)
-        self.std = std * tf.ones(self.size, tf.float32)
-
-    def update(self, x):
-        pass
-
-    def normalize(self, x, clip_range=None):
-        return x / self.std
-
-    def denormalize(self, x):
-        return self.std * x
-
-    def synchronize(self):
-        pass
-
-    def recompute_stats(self):
-        pass
+        
+    def _mpi_average(self, x):
+        buf = np.zeros_like(x)
+        MPI.COMM_WORLD.Allreduce(x, buf, op=MPI.SUM)
+        buf /= MPI.COMM_WORLD.Get_size()
+        return buf

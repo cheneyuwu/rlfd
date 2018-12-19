@@ -1,42 +1,45 @@
+# =============================================================================
+# Import
+# =============================================================================
+
+# System import
 import os
 import sys
+from subprocess import CalledProcessError
 
+# Infra import
 import click
 import numpy as np
 import json
 from mpi4py import MPI
 
+# For configuring all the parameters
 import config
 
+# DDPG Package import
 from yw import logger
-from yw.common import set_global_seeds
-from yw.common.mpi_moments import mpi_moments
 from yw.ddpg.rollout import RolloutWorker
-from yw.ddpg.util import mpi_fork
+from yw.ddpg.mpi_utils import mpi_fork, mpi_average, set_global_seeds
 
 
-from subprocess import CalledProcessError
+# =============================================================================
+# Functions
+# =============================================================================
 
 
-def mpi_average(value):
-    if value == []:
-        value = [0.]
-    if not isinstance(value, list):
-        value = [value]
-    return mpi_moments(np.array(value))[0]
-
-
-def train(policy,
-          rollout_worker,
-          evaluator,
-          n_epochs,
-          n_cycles,
-          n_batches,
-          n_test_rollouts,
-          #   policy_save_interval,
-          #   save_policies,
-          #   demo_file,
-          **kwargs):
+def train(
+    policy,
+    rollout_worker,
+    evaluator,
+    n_epochs,
+    n_cycles,
+    n_batches,
+    n_test_rollouts,
+    #   policy_save_interval,
+    #   save_policies,
+    #   demo_file,
+    **kwargs
+):
     rank = MPI.COMM_WORLD.Get_rank()
 
     logger.info("\n*** Training ***")
@@ -62,10 +65,10 @@ def train(policy,
             evaluator.generate_rollouts()
 
         # record logs
-        logger.record_tabular('epoch', epoch)
-        for key, val in evaluator.logs('test'):
+        logger.record_tabular("epoch", epoch)
+        for key, val in evaluator.logs("test"):
             logger.record_tabular(key, mpi_average(val))
-        for key, val in rollout_worker.logs('train'):
+        for key, val in rollout_worker.logs("train"):
             logger.record_tabular(key, mpi_average(val))
         for key, val in policy.logs():
             logger.record_tabular(key, mpi_average(val))
@@ -82,33 +85,34 @@ def train(policy,
 
 
 def launch(
-        env,
-        logdir,
-        num_cpu,
-        seed,
-        n_epochs,
-        clip_return,
-        replay_strategy,
-        # policy_save_interval,
-        # demo_file,
-        # save_policies=True,
-        # override_params={}
+    env,
+    logdir,
+    num_cpu,
+    seed,
+    n_epochs,
+    clip_return,
+    replay_strategy,
+    # policy_save_interval,
+    # demo_file,
+    # save_policies=True,
+    # override_params={}
 ):
     # Fork for multi-CPU MPI implementation.
     if num_cpu > 1:
         try:
-            whoami = mpi_fork(num_cpu, ['--bind-to', 'core'])
+            whoami = mpi_fork(num_cpu, ["--bind-to", "core"])
         except CalledProcessError:
             # fancy version of mpi call failed, try simple version
             whoami = mpi_fork(num_cpu)
 
-        if whoami == 'parent':
+        if whoami == "parent":
             sys.exit(0)
         import yw.common.tf_util as U
+
         U.single_threaded_session().__enter__()
     # Consider rank as pid
     rank = MPI.COMM_WORLD.Get_rank()
-
+    
     # Configure logging
     if rank == 0:
         if logdir or logger.get_dir() is None:
@@ -124,20 +128,19 @@ def launch(
 
     # Prepare params.
     params = config.DEFAULT_PARAMS
-    params['env_name'] = env
-    params['rank_seed'] = rank_seed
-    params['clip_return'] = clip_return
-    params['replay_strategy'] = replay_strategy
+    params["env_name"] = env
+    params["rank_seed"] = rank_seed
+    params["clip_return"] = clip_return
+    params["replay_strategy"] = replay_strategy # For HER: future or none 
     # params.update(**override_params)  # makes it possible to override any parameter
-    # with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f:
+    params = config.prepare_params(params=params)
+    # with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f: # TODO enable this, currently cannot
     #     json.dump(params, f)
 
-    params = config.prepare_params(params=params)
-
-    policy = config.configure_ddpg(params=params, clip_return=clip_return)
+    # Configure everything
+    policy = config.configure_ddpg(params=params)
     rollout_worker = config.config_rollout(params=params, policy=policy)
     evaluator = config.config_evaluator(params=params, policy=policy)
-
     logger.info("\n*** params ***")
     config.log_params(params=params)
 
@@ -147,26 +150,35 @@ def launch(
         rollout_worker=rollout_worker,
         evaluator=evaluator,
         n_epochs=n_epochs,
-        n_cycles=params['n_cycles'],
-        n_batches=params['n_batches'],
-        n_test_rollouts=params['n_test_rollouts'],
+        n_cycles=params["n_cycles"],
+        n_batches=params["n_batches"],
+        n_test_rollouts=params["n_test_rollouts"],
         # policy_save_interval=policy_save_interval,
         # save_policies=save_policies,
         # demo_file=demo_file
     )
 
 
+# =============================================================================
+# Top Level User API
+# =============================================================================
 @click.command()
-@click.option('--logdir', type=str, default="/home/yuchen/Desktop/FlorianResearch/RLProject/temp/log", help='Log directory.')
-@click.option('--num_cpu', type=int, default=1, help='the number of CPU cores to use (using MPI)')
-@click.option('--seed', type=int, default=0,
-              help='The random seed used to seed both the environment and the training code')
-@click.option('--env', type=str, default='FetchReach-v1', help='Name of the environment.')
-@click.option('--n_epochs', type=int, default=1, help='The number of training epochs to run')
-@click.option('--clip_return', type=int, default=1, help='whether or not returns should be clipped')
 @click.option(
-    '--replay_strategy', type=click.Choice(['future', 'none']),
-    default='none', help='the HER replay strategy to be used. "future" uses HER, "none" disables HER.')
+    "--logdir", type=str, default="/home/yuchen/Desktop/FlorianResearch/RLProject/temp/log", help="Log directory."
+)
+@click.option("--num_cpu", type=int, default=1, help="the number of CPU cores to use (using MPI)")
+@click.option(
+    "--seed", type=int, default=0, help="The random seed used to seed both the environment and the training code"
+)
+@click.option("--env", type=str, default="FetchReach-v1", help="Name of the environment.")
+@click.option("--n_epochs", type=int, default=1, help="The number of training epochs to run")
+@click.option("--clip_return", type=int, default=1, help="whether or not returns should be clipped")
+@click.option(
+    "--replay_strategy",
+    type=click.Choice(["future", "none"]),
+    default="none",
+    help='the HER replay strategy to be used. "future" uses HER, "none" disables HER.',
+)
 # @click.option(
 #     '--policy_save_interval', type=int, default=5,
 #     help='the interval with which policy pickles are saved. If set to 0, only the best and latest policy will be pickled.')
@@ -175,5 +187,5 @@ def main(**kwargs):
     launch(**kwargs)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -51,7 +51,7 @@ class ReplayBuffer:
 
         for key in (['r', 'o_2', 'ag_2'] + list(self.buffers.keys())):
             assert key in transitions, "key %s missing from transitions" % key
-
+        # Note: each transition is {'o' 'u' 'g' 'ag' 'ag_2' 'o_2'}
         return transitions
 
     def store_episode(self, episode_batch):

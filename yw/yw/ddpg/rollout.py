@@ -13,7 +13,8 @@ class RolloutWorker:
     def __init__(self, make_env, policy, dims, logger, T, rollout_batch_size=1,
                  exploit=False, use_target_net=False, compute_Q=False, noise_eps=0,
                  random_eps=0, history_len=100, render=False, **kwargs):
-        """Rollout worker generates experience by interacting with one or many environments.
+        """
+        Rollout worker generates experience by interacting with one or many environments.
 
         Args:
             make_env (function): a factory function that creates a new instance of the environment
