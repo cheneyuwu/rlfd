@@ -322,7 +322,7 @@ class DDPG(object):
             if reuse:
                 vs.reuse_variables()
             target_batch_tf = batch_tf.copy()
-            target_batch_tf["o"] = batch_tf["o_2"] # What does this substitute do?
+            target_batch_tf["o"] = batch_tf["o_2"]  # What does this substitute do?
             target_batch_tf["g"] = batch_tf["g_2"]
             self.target = self.create_actor_critic(target_batch_tf, net_type="target", **self.__dict__)
             vs.reuse_variables()
@@ -378,7 +378,7 @@ class DDPG(object):
         # polyak averaging
         self.main_vars = self._vars("main/Q") + self._vars("main/pi")
         self.target_vars = self._vars("target/Q") + self._vars("target/pi")
-        self.stats_vars = self._global_vars("o_stats") + self._global_vars("g_stats") # what is this used for?
+        self.stats_vars = self._global_vars("o_stats") + self._global_vars("g_stats")  # what is this used for?
         self.init_target_net_op = list(map(lambda v: v[0].assign(v[1]), zip(self.target_vars, self.main_vars)))
         self.update_target_net_op = list(
             map(
@@ -492,30 +492,30 @@ class DDPG(object):
     # def clear_buffer(self):
     #     self.buffer.clear_buffer()
 
-    # def __getstate__(self):
-    #     """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
-    #     """
-    #     excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
-    #                          'main', 'target', 'lock', 'env', 'sample_transitions',
-    #                          'stage_shapes', 'create_actor_critic']
+    def __getstate__(self):
+        """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
+        """
+        excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
+                             'main', 'target', 'lock', 'env', 'sample_transitions',
+                             'stage_shapes', 'create_actor_critic']
 
-    #     state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
-    #     state['buffer_size'] = self.buffer_size
-    #     state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name])
-    #     return state
+        state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
+        state['buffer_size'] = self.buffer_size
+        state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name])
+        return state
 
-    # def __setstate__(self, state):
-    #     if 'sample_transitions' not in state:
-    #         # We don't need this for playing the policy.
-    #         state['sample_transitions'] = None
+    def __setstate__(self, state):
+        if 'sample_transitions' not in state:
+            # We don't need this for playing the policy.
+            state['sample_transitions'] = None
 
-    #     self.__init__(**state)
-    #     # set up stats (they are overwritten in __init__)
-    #     for k, v in state.items():
-    #         if k[-6:] == '_stats':
-    #             self.__dict__[k] = v
-    #     # load TF variables
-    #     vars = [x for x in self._global_vars('') if 'buffer' not in x.name]
-    #     assert(len(vars) == len(state["tf"]))
-    #     node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
-    #     self.sess.run(node)
+        self.__init__(**state)
+        # set up stats (they are overwritten in __init__)
+        for k, v in state.items():
+            if k[-6:] == '_stats':
+                self.__dict__[k] = v
+        # load TF variables
+        vars = [x for x in self._global_vars('') if 'buffer' not in x.name]
+        assert(len(vars) == len(state["tf"]))
+        node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
+        self.sess.run(node)

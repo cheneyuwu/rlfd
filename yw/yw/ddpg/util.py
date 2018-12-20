@@ -11,6 +11,7 @@ import numpy as np
 
 from yw.ddpg import tf_utils as U
 
+
 def convert_episode_to_batch_major(episode):
     """Converts an episode to have the batch dimension in the major (first)
     dimension.
@@ -27,10 +28,11 @@ def convert_episode_to_batch_major(episode):
 def import_function(spec):
     """Import a function identified by a string like "pkg.module:fn_name".
     """
-    mod_name, fn_name = spec.split(':')
+    mod_name, fn_name = spec.split(":")
     module = importlib.import_module(mod_name)
     fn = getattr(module, fn_name)
     return fn
+
 
 def reshape_for_broadcasting(source, target):
     """Reshapes a tensor (source) to have the correct shape and dtype of the target
@@ -40,14 +42,14 @@ def reshape_for_broadcasting(source, target):
     shape = ([1] * (dim - 1)) + [-1]
     return tf.reshape(tf.cast(source, target.dtype), shape)
 
+
 def store_args(method):
     """Stores provided method args as instance attributes.
     """
     argspec = inspect.getfullargspec(method)
     defaults = {}
     if argspec.defaults is not None:
-        defaults = dict(
-            zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
+        defaults = dict(zip(argspec.args[-len(argspec.defaults) :], argspec.defaults))
     if argspec.kwonlydefaults is not None:
         defaults.update(argspec.kwonlydefaults)
     arg_names = argspec.args[1:]
@@ -66,11 +68,14 @@ def store_args(method):
 
     return wrapper
 
+
 def transitions_in_episode_batch(episode_batch):
-    """Number of transitions in a given episode batch.
     """
-    shape = episode_batch['u'].shape
+    Number of transitions in a given episode batch.
+    """
+    shape = episode_batch["u"].shape
     return shape[0] * shape[1]
+
 
 def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}

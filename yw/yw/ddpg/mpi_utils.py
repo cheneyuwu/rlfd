@@ -19,6 +19,7 @@ import random
 # MPI Utility Functions
 # =============================================================================
 
+
 def install_mpi_excepthook():
     import sys
     from mpi4py import MPI
@@ -91,16 +92,19 @@ def mpi_moments(x, axis=0, comm=None, keepdims=False):
         std = std.reshape(newshape)
     return mean, std, count
 
+
 def set_global_seeds(i):
     try:
         import MPI
+
         rank = MPI.COMM_WORLD.Get_rank()
     except ImportError:
         rank = 0
 
-    myseed = i  + 1000 * rank if i is not None else None
+    myseed = i + 1000 * rank if i is not None else None
     try:
         import tensorflow as tf
+
         tf.set_random_seed(myseed)
     except ImportError:
         pass

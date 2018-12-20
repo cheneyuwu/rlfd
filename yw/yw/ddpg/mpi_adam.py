@@ -5,6 +5,7 @@
 # Infra import
 import tensorflow as tf
 import numpy as np
+
 try:
     from mpi4py import MPI
 except ImportError:
@@ -12,6 +13,7 @@ except ImportError:
 
 # DDPG Package import
 import yw.ddpg.tf_utils as U
+
 
 class MpiAdam(object):
     def __init__(self, var_list, *, beta1=0.9, beta2=0.999, epsilon=1e-08, scale_grad_by_procs=True, comm=None):
@@ -21,8 +23,8 @@ class MpiAdam(object):
         self.epsilon = epsilon
         self.scale_grad_by_procs = scale_grad_by_procs
         size = sum(U.numel(v) for v in var_list)
-        self.m = np.zeros(size, 'float32')
-        self.v = np.zeros(size, 'float32')
+        self.m = np.zeros(size, "float32")
+        self.v = np.zeros(size, "float32")
         self.t = 0
         self.setfromflat = U.SetFromFlat(var_list)
         self.getflat = U.GetFlat(var_list)
@@ -31,7 +33,7 @@ class MpiAdam(object):
     def update(self, localg, stepsize):
         if self.t % 100 == 0:
             self.check_synced()
-        localg = localg.astype('float32')
+        localg = localg.astype("float32")
         if self.comm is not None:
             globalg = np.zeros_like(localg)
             self.comm.Allreduce(localg, globalg, op=MPI.SUM)
@@ -41,10 +43,10 @@ class MpiAdam(object):
             globalg = np.copy(localg)
 
         self.t += 1
-        a = stepsize * np.sqrt(1 - self.beta2**self.t)/(1 - self.beta1**self.t)
+        a = stepsize * np.sqrt(1 - self.beta2 ** self.t) / (1 - self.beta1 ** self.t)
         self.m = self.beta1 * self.m + (1 - self.beta1) * globalg
         self.v = self.beta2 * self.v + (1 - self.beta2) * (globalg * globalg)
-        step = (- a) * self.m / (np.sqrt(self.v) + self.epsilon)
+        step = (-a) * self.m / (np.sqrt(self.v) + self.epsilon)
         self.setfromflat(self.getflat() + step)
 
     def sync(self):
@@ -57,7 +59,7 @@ class MpiAdam(object):
     def check_synced(self):
         if self.comm is None:
             return
-        if self.comm.Get_rank() == 0: # this is root
+        if self.comm.Get_rank() == 0:  # this is root
             theta = self.getflat()
             self.comm.Bcast(theta, root=0)
         else:
@@ -66,13 +68,14 @@ class MpiAdam(object):
             self.comm.Bcast(thetaroot, root=0)
             assert (thetaroot == thetalocal).all(), (thetaroot, thetalocal)
 
+
 @U.in_session
 def test_MpiAdam():
     np.random.seed(0)
     tf.set_random_seed(0)
 
-    a = tf.Variable(np.random.randn(3).astype('float32'))
-    b = tf.Variable(np.random.randn(2,5).astype('float32'))
+    a = tf.Variable(np.random.randn(3).astype("float32"))
+    b = tf.Variable(np.random.randn(2, 5).astype("float32"))
     loss = tf.reduce_sum(tf.square(a)) + tf.reduce_sum(tf.sin(b))
 
     stepsize = 1e-2
@@ -86,24 +89,22 @@ def test_MpiAdam():
         print(i, l)
         losslist_ref.append(l)
 
-
-
     tf.set_random_seed(0)
     tf.get_default_session().run(tf.global_variables_initializer())
 
-    var_list = [a,b]
+    var_list = [a, b]
     lossandgrad = U.function([], [loss, U.flatgrad(loss, var_list)])
     adam = MpiAdam(var_list)
 
     losslist_test = []
     for i in range(10):
-        l,g = lossandgrad()
+        l, g = lossandgrad()
         adam.update(g, stepsize)
-        print(i,l)
+        print(i, l)
         losslist_test.append(l)
 
     np.testing.assert_allclose(np.array(losslist_ref), np.array(losslist_test), atol=1e-4)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_MpiAdam()

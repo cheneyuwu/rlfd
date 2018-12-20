@@ -28,6 +28,8 @@ from yw.ddpg.mpi_utils import mpi_fork, mpi_average, set_global_seeds
 
 
 def train(
+    save_path,
+    policy_save_interval,
     policy,
     rollout_worker,
     evaluator,
@@ -35,12 +37,15 @@ def train(
     n_cycles,
     n_batches,
     n_test_rollouts,
-    #   policy_save_interval,
-    #   save_policies,
     #   demo_file,
     **kwargs
 ):
     rank = MPI.COMM_WORLD.Get_rank()
+
+    if save_path:
+        latest_policy_path = os.path.join(save_path, 'policy_latest.pkl')
+        best_policy_path = os.path.join(save_path, 'policy_best.pkl')
+        periodic_policy_path = os.path.join(save_path, 'policy_{}.pkl')
 
     logger.info("\n*** Training ***")
     best_success_rate = -1
@@ -51,6 +56,7 @@ def train(
         rollout_worker.clear_history()
         for _ in range(n_cycles):
             episode = rollout_worker.generate_rollouts()
+            # Yuchen debug only
             # for key in episode.keys():
             #     logger.info(key)
             #     logger.info(episode[key].shape)
@@ -76,6 +82,18 @@ def train(
         if rank == 0:
             logger.dump_tabular()
 
+        # save the policy if it's better than the previous ones
+        success_rate = mpi_average(evaluator.current_success_rate())
+        if rank == 0 and success_rate >= best_success_rate and save_path:
+            best_success_rate = success_rate
+            logger.info('New best success rate: {}. Saving policy to {} ...'.format(best_success_rate, best_policy_path))
+            evaluator.save_policy(best_policy_path)
+            evaluator.save_policy(latest_policy_path)
+        if rank == 0 and policy_save_interval > 0 and epoch % policy_save_interval == 0 and save_path:
+            policy_path = periodic_policy_path.format(epoch)
+            logger.info('Saving periodic policy to {} ...'.format(policy_path))
+            evaluator.save_policy(policy_path)
+
         # make sure that different threads have different seeds
         local_uniform = np.random.uniform(size=(1,))
         root_uniform = local_uniform.copy()
@@ -87,14 +105,14 @@ def train(
 def launch(
     env,
     logdir,
+    save_path,
     num_cpu,
     seed,
     n_epochs,
     clip_return,
     replay_strategy,
-    # policy_save_interval,
+    policy_save_interval,
     # demo_file,
-    # save_policies=True,
     # override_params={}
 ):
     # Fork for multi-CPU MPI implementation.
@@ -107,12 +125,12 @@ def launch(
 
         if whoami == "parent":
             sys.exit(0)
-        import yw.common.tf_util as U
+        import yw.ddpg.tf_utils as U
 
         U.single_threaded_session().__enter__()
     # Consider rank as pid
     rank = MPI.COMM_WORLD.Get_rank()
-    
+
     # Configure logging
     if rank == 0:
         if logdir or logger.get_dir() is None:
@@ -131,7 +149,7 @@ def launch(
     params["env_name"] = env
     params["rank_seed"] = rank_seed
     params["clip_return"] = clip_return
-    params["replay_strategy"] = replay_strategy # For HER: future or none 
+    params["replay_strategy"] = replay_strategy  # For HER: future or none
     # params.update(**override_params)  # makes it possible to override any parameter
     params = config.prepare_params(params=params)
     # with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f: # TODO enable this, currently cannot
@@ -145,7 +163,7 @@ def launch(
     config.log_params(params=params)
 
     train(
-        logdir=logdir,
+        save_path=save_path,
         policy=policy,
         rollout_worker=rollout_worker,
         evaluator=evaluator,
@@ -153,8 +171,7 @@ def launch(
         n_cycles=params["n_cycles"],
         n_batches=params["n_batches"],
         n_test_rollouts=params["n_test_rollouts"],
-        # policy_save_interval=policy_save_interval,
-        # save_policies=save_policies,
+        policy_save_interval=policy_save_interval,
         # demo_file=demo_file
     )
 
@@ -166,6 +183,12 @@ def launch(
 @click.option(
     "--logdir", type=str, default="/home/yuchen/Desktop/FlorianResearch/RLProject/temp/log", help="Log directory."
 )
+@click.option(
+    "--save_path", type=str, default="/home/yuchen/Desktop/FlorianResearch/RLProject/temp/policy", help="Policy directory."
+)
+@click.option(
+    '--policy_save_interval', type=int, default=0,
+    help='the interval with which policy pickles are saved. If set to 0, only the best and latest policy will be pickled.')
 @click.option("--num_cpu", type=int, default=1, help="the number of CPU cores to use (using MPI)")
 @click.option(
     "--seed", type=int, default=0, help="The random seed used to seed both the environment and the training code"
@@ -179,9 +202,6 @@ def launch(
     default="none",
     help='the HER replay strategy to be used. "future" uses HER, "none" disables HER.',
 )
-# @click.option(
-#     '--policy_save_interval', type=int, default=5,
-#     help='the interval with which policy pickles are saved. If set to 0, only the best and latest policy will be pickled.')
 # @click.option('--demo_file', type=str, default='PATH/TO/DEMO/DATA/FILE.npz', help='demo data file path')
 def main(**kwargs):
     launch(**kwargs)

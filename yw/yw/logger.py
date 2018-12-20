@@ -30,21 +30,24 @@ DISABLED = 50
 # Logger Implementation Bases
 # =============================================================================
 
+
 class KVWriter(object):
     def writekvs(self, kvs):
         raise NotImplementedError
+
 
 class SeqWriter(object):
     def writeseq(self, seq):
         raise NotImplementedError
 
+
 class HumanOutputFormat(KVWriter, SeqWriter):
     def __init__(self, filename_or_file):
         if isinstance(filename_or_file, str):
-            self.file = open(filename_or_file, 'wt')
+            self.file = open(filename_or_file, "wt")
             self.own_file = True
         else:
-            assert hasattr(filename_or_file, 'read'), 'expected file or str, got %s'%filename_or_file
+            assert hasattr(filename_or_file, "read"), "expected file or str, got %s" % filename_or_file
             self.file = filename_or_file
             self.own_file = False
 
@@ -53,68 +56,105 @@ class HumanOutputFormat(KVWriter, SeqWriter):
         key2str = {}
         for (key, val) in sorted(kvs.items()):
             if isinstance(val, float):
-                valstr = '%-8.3g' % (val,)
+                valstr = "%-8.3g" % (val,)
             else:
                 valstr = str(val)
             key2str[self._truncate(key)] = self._truncate(valstr)
 
         # Find max widths
         if len(key2str) == 0:
-            print('WARNING: tried to write empty key-value dict')
+            print("WARNING: tried to write empty key-value dict")
             return
         else:
             keywidth = max(map(len, key2str.keys()))
             valwidth = max(map(len, key2str.values()))
 
         # Write out the data
-        dashes = '-' * (keywidth + valwidth + 7)
+        dashes = "-" * (keywidth + valwidth + 7)
         lines = [dashes]
         for (key, val) in sorted(key2str.items(), key=lambda kv: kv[0].lower()):
-            lines.append('| %s%s | %s%s |' % (
-                key,
-                ' ' * (keywidth - len(key)),
-                val,
-                ' ' * (valwidth - len(val)),
-            ))
+            lines.append("| %s%s | %s%s |" % (key, " " * (keywidth - len(key)), val, " " * (valwidth - len(val))))
         lines.append(dashes)
-        self.file.write('\n'.join(lines) + '\n')
+        self.file.write("\n".join(lines) + "\n")
 
         # Flush the output to the file
         self.file.flush()
 
     def _truncate(self, s):
-        return s[:20] + '...' if len(s) > 23 else s
+        return s[:20] + "..." if len(s) > 23 else s
 
     def writeseq(self, seq):
         seq = list(seq)
         for (i, elem) in enumerate(seq):
             self.file.write(elem)
-            if i < len(seq) - 1: # add space unless this is the last one
-                self.file.write(' ')
-        self.file.write('\n')
+            if i < len(seq) - 1:  # add space unless this is the last one
+                self.file.write(" ")
+        self.file.write("\n")
         self.file.flush()
 
     def close(self):
         if self.own_file:
             self.file.close()
 
-def make_output_format(format, ev_dir, log_suffix=''):
+
+class CSVOutputFormat(KVWriter):
+    def __init__(self, filename):
+        self.file = open(filename, "w+t")
+        self.keys = []
+        self.sep = ","
+
+    def writekvs(self, kvs):
+        # Add our current row to the history
+        extra_keys = list(kvs.keys() - self.keys)
+        extra_keys.sort()
+        if extra_keys:
+            self.keys.extend(extra_keys)
+            self.file.seek(0)
+            lines = self.file.readlines()
+            self.file.seek(0)
+            for (i, k) in enumerate(self.keys):
+                if i > 0:
+                    self.file.write(",")
+                self.file.write(k)
+            self.file.write("\n")
+            for line in lines[1:]:
+                self.file.write(line[:-1])
+                self.file.write(self.sep * len(extra_keys))
+                self.file.write("\n")
+        for (i, k) in enumerate(self.keys):
+            if i > 0:
+                self.file.write(",")
+            v = kvs.get(k)
+            if v is not None:
+                self.file.write(str(v))
+        self.file.write("\n")
+        self.file.flush()
+
+    def close(self):
+        self.file.close()
+
+
+def make_output_format(format, ev_dir, log_suffix=""):
     os.makedirs(ev_dir, exist_ok=True)
-    if format == 'stdout':
+    if format == "stdout":
         return HumanOutputFormat(sys.stdout)
-    elif format == 'log':
-        return HumanOutputFormat(osp.join(ev_dir, 'log%s.txt' % log_suffix))
+    elif format == "log":
+        return HumanOutputFormat(osp.join(ev_dir, "log%s.txt" % log_suffix))
+    elif format == "csv":
+        return CSVOutputFormat(osp.join(ev_dir, "progress%s.csv" % log_suffix))
     # Yuchen: add json, csv and tensorboard format later
     else:
-        raise ValueError('Unknown format specified: %s' % (format,))
+        raise ValueError("Unknown format specified: %s" % (format,))
+
 
 # ================================================================
 # Backend
 # ================================================================
 
+
 class Logger(object):
     DEFAULT = None  # A logger with no output files. (See right below class definition)
-                    # So that you can still log to the terminal without setting up any output files
+    # So that you can still log to the terminal without setting up any output files
     CURRENT = None  # Current logger being used by the free functions above
 
     def __init__(self, dir, output_formats):
@@ -138,11 +178,12 @@ class Logger(object):
             self.name2val[key] = None
             return
         oldval, cnt = self.name2val[key], self.name2cnt[key]
-        self.name2val[key] = oldval*cnt/(cnt+1) + val/(cnt+1)
+        self.name2val[key] = oldval * cnt / (cnt + 1) + val / (cnt + 1)
         self.name2cnt[key] = cnt + 1
 
     def dumpkvs(self):
-        if self.level == DISABLED: return
+        if self.level == DISABLED:
+            return
         for fmt in self.output_formats:
             if isinstance(fmt, KVWriter):
                 fmt.writekvs(self.name2val)
@@ -168,24 +209,25 @@ class Logger(object):
             if isinstance(fmt, SeqWriter):
                 fmt.writeseq(map(str, args))
 
+
 # ================================================================
 # API
 # ================================================================
 
+
 def configure(dir=None, format_strs=None):
     if dir is None:
-        dir = os.getenv('YW_LOGDIR')
+        dir = os.getenv("YW_LOGDIR")
     if dir is None:
-        dir = osp.join(tempfile.gettempdir(),
-                       datetime.datetime.now().strftime("yw-%Y-%m-%d-%H-%M-%S-%f"))
+        dir = osp.join(tempfile.gettempdir(), datetime.datetime.now().strftime("yw-%Y-%m-%d-%H-%M-%S-%f"))
     assert isinstance(dir, str)
     os.makedirs(dir, exist_ok=True)
 
-    log_suffix = ''
+    log_suffix = ""
     rank = 0
     # check environment variables here instead of importing mpi4py
     # to avoid calling MPI_Init() when this module is imported
-    for varname in ['PMI_RANK', 'OMPI_COMM_WORLD_RANK']:
+    for varname in ["PMI_RANK", "OMPI_COMM_WORLD_RANK"]:
         if varname in os.environ:
             rank = int(os.environ[varname])
     if rank > 0:
@@ -195,15 +237,16 @@ def configure(dir=None, format_strs=None):
         if rank == 0:
             # Yuchen use stdout log only for now?
             # format_strs = os.getenv('OPENAI_LOG_FORMAT', 'stdout,log,csv').split(',')
-            format_strs = ['stdout', 'log']
+            format_strs = ["stdout", "log", "csv"]
         else:
             # format_strs = os.getenv('OPENAI_LOG_FORMAT_MPI', 'log').split(',')
-            format_strs = ['log']
+            format_strs = ["log"]
     format_strs = filter(None, format_strs)
     output_formats = [make_output_format(f, dir, log_suffix) for f in format_strs]
 
     Logger.CURRENT = Logger(dir=dir, output_formats=output_formats)
-    log('Logging to %s' % dir)
+    log("Logging to %s" % dir)
+
 
 def dumpkvs():
     """
@@ -214,8 +257,10 @@ def dumpkvs():
     """
     Logger.CURRENT.dumpkvs()
 
+
 def getkvs():
     return Logger.CURRENT.name2val
+
 
 def get_dir():
     """
@@ -224,11 +269,13 @@ def get_dir():
     """
     return Logger.CURRENT.get_dir()
 
+
 def log(*args, level=INFO):
     """
     Write the sequence of args, with no separators, to the console and output files (if you've configured an output file).
     """
     Logger.CURRENT.log(*args, level=level)
+
 
 def logkvs(d):
     """
@@ -236,6 +283,7 @@ def logkvs(d):
     """
     for (k, v) in d.items():
         logkv(k, v)
+
 
 def logkv(key, val):
     """
@@ -245,11 +293,13 @@ def logkv(key, val):
     """
     Logger.CURRENT.logkv(key, val)
 
+
 def logkv_mean(key, val):
     """
     The same as logkv(), but if called many times, values averaged.
     """
     Logger.CURRENT.logkv_mean(key, val)
+
 
 def set_level(level):
     """
@@ -257,35 +307,43 @@ def set_level(level):
     """
     Logger.CURRENT.set_level(level)
 
+
 def debug(*args):
     log(*args, level=DEBUG)
+
 
 def info(*args):
     log(*args, level=INFO)
 
+
 def warn(*args):
     log(*args, level=WARN)
 
+
 def error(*args):
     log(*args, level=ERROR)
+
 
 def reset():
     if Logger.CURRENT is not Logger.DEFAULT:
         Logger.CURRENT.close()
         Logger.CURRENT = Logger.DEFAULT
-        log('Reset logger')
+        log("Reset logger")
+
 
 # =============================================================================
 # Initial Configuration
 # =============================================================================
 
+
 def _configure_default_logger():
     format_strs = None
     # keep the old default of only writing to stdout
-    if 'OPENAI_LOG_FORMAT' not in os.environ:
-        format_strs = ['stdout']
+    if "OPENAI_LOG_FORMAT" not in os.environ:
+        format_strs = ["stdout"]
     configure(format_strs=format_strs)
     Logger.DEFAULT = Logger.CURRENT
+
 
 # configure the default logger on import
 _configure_default_logger()
@@ -296,6 +354,7 @@ dump_tabular = dumpkvs
 # =============================================================================
 # For testing purposes
 # =============================================================================
+
 
 def _demo():
     info("hi")
@@ -324,6 +383,7 @@ def _demo():
 
     logkv("a", "longasslongasslongasslongasslongasslongassvalue")
     dumpkvs()
+
 
 if __name__ == "__main__":
     _demo()

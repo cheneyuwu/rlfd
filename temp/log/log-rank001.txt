@@ -2,8 +2,8 @@ Logging to /home/yuchen/Desktop/FlorianResearch/RLProject/temp/log
 
 *** her_params ***
 replay_k: 4
-replay_strategy: none
-reward_fun: <function configure_her.<locals>.reward_fun at 0x7f2e46a921e0>
+replay_strategy: future
+reward_fun: <function configure_her.<locals>.reward_fun at 0x7f472e993378>
 
 *** ddpg_params ***
 Q_lr: 0.001
@@ -27,9 +27,9 @@ pi_lr: 0.001
 polyak: 0.95
 relative_goals: False
 rollout_batch_size: 5
-sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7f2e46a92268>
+sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7f472e993400>
 scope: ddpg
-subtract_goals: <function simple_goal_subtract at 0x7f2e486229d8>
+subtract_goals: <function simple_goal_subtract at 0x7f473052db70>
 Creating a DDPG agent with action space 4 x 1.0...
 
 *** rollout_params ***
@@ -71,13 +71,13 @@ _pi_lr: 0.001
 _polyak: 0.95
 _relative_goals: False
 _replay_k: 4
-_replay_strategy: none
+_replay_strategy: future
 _scope: ddpg
 clip_return: 1
 dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
 env_name: FetchReach-v1
 gamma: 0.98
-make_env: <function prepare_params.<locals>.make_env at 0x7f2e48624620>
+make_env: <function prepare_params.<locals>.make_env at 0x7f47305327b8>
 n_batches: 40
 n_cycles: 10
 n_test_rollouts: 10
