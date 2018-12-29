@@ -1,6 +1,6 @@
 import tensorflow as tf
 from yw.ddpg.util import store_args
-from yw.ddpg.tf_utils import nn
+from yw.util.tf_util import nn
 
 
 class ActorCritic:

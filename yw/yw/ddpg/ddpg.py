@@ -19,7 +19,8 @@ from yw.ddpg.util import (
 from yw.ddpg.mpi_adam import MpiAdam
 from yw.ddpg.normalizer import Normalizer
 from yw.ddpg.replay_buffer import ReplayBuffer
-from yw.ddpg.tf_utils import flatten_grads
+
+from yw.util.tf_util import flatten_grads
 
 global demoBuffer  # buffer for demonstrations
 

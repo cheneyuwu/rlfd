@@ -12,7 +12,7 @@ except ImportError:
     MPI = None
 
 # DDPG Package import
-import yw.ddpg.tf_utils as U
+import yw.util.tf_util as U
 
 
 class MpiAdam(object):

@@ -19,7 +19,7 @@ import config
 # DDPG Package import
 from yw import logger
 from yw.ddpg.rollout import RolloutWorker
-from yw.ddpg.mpi_utils import mpi_fork, mpi_average, set_global_seeds
+from yw.util.mpi_util import mpi_fork, mpi_average, set_global_seeds
 
 
 # =============================================================================
@@ -125,7 +125,7 @@ def launch(
 
         if whoami == "parent":
             sys.exit(0)
-        import yw.ddpg.tf_utils as U
+        import yw.util.tf_util as U
 
         U.single_threaded_session().__enter__()
     # Consider rank as pid
@@ -151,9 +151,11 @@ def launch(
     params["clip_return"] = clip_return
     params["replay_strategy"] = replay_strategy  # For HER: future or none
     # params.update(**override_params)  # makes it possible to override any parameter
+
+    with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f:
+        json.dump(params, f)
+
     params = config.prepare_params(params=params)
-    # with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f: # TODO enable this, currently cannot
-    #     json.dump(params, f)
 
     # Configure everything
     policy = config.configure_ddpg(params=params)

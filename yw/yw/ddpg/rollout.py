@@ -8,6 +8,7 @@ from mujoco_py import MujocoException
 from collections import deque
 
 # DDPG Package import
+from yw import logger
 from yw.ddpg.util import convert_episode_to_batch_major, store_args
 
 
@@ -18,7 +19,6 @@ class RolloutWorker:
         make_env,
         policy,
         dims,
-        logger,
         T,
         rollout_batch_size=1,
         exploit=False,
@@ -38,7 +38,6 @@ class RolloutWorker:
                 when called
             policy (object): the policy that is used to act
             dims (dict of ints): the dimensions for observations (o), goals (g), and actions (u)
-            logger (object): the logger that is used by the rollout worker
             rollout_batch_size (int): the number of parallel rollouts that should be used
             exploit (boolean): whether or not to exploit, i.e. to act optimally according to the
                 current policy without any exploration
@@ -139,7 +138,7 @@ class RolloutWorker:
                     return self.generate_rollouts()
 
             if np.isnan(o_new).any():
-                self.logger.warn("NaN caught during rollout generation. Trying again...")
+                logger.warn("NaN caught during rollout generation. Trying again...")
                 self.reset_all_rollouts()
                 return self.generate_rollouts()
 

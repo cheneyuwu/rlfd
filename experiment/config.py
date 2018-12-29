@@ -146,7 +146,7 @@ def config_rollout(params, policy):
         rollout_params[name] = params[name]
     logger.info("\n*** rollout_params ***")
     log_params(rollout_params)
-    rollout_worker = RolloutWorker(params["make_env"], policy, logger=logger, **rollout_params)
+    rollout_worker = RolloutWorker(params["make_env"], policy, **rollout_params)
     rollout_worker.seed(params["rank_seed"])
     return rollout_worker
 
@@ -163,7 +163,7 @@ def config_evaluator(params, policy):
         eval_params[name] = params[name]
     logger.info("\n*** eval_params ***")
     log_params(eval_params)
-    evaluator = RolloutWorker(params["make_env"], policy, logger=logger, **eval_params)
+    evaluator = RolloutWorker(params["make_env"], policy, **eval_params)
     evaluator.seed(params["rank_seed"])
     return evaluator
 

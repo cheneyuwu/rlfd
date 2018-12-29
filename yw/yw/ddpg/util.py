@@ -9,7 +9,7 @@ import functools
 import tensorflow as tf
 import numpy as np
 
-from yw.ddpg import tf_utils as U
+from yw.util import tf_util as U
 
 
 def convert_episode_to_batch_major(episode):
