@@ -196,14 +196,14 @@ def launch(
     "--save_path", type=str, default="/home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy", help="Policy directory."
 )
 @click.option(
-    '--policy_save_interval', type=int, default=0,
+    '--policy_save_interval', type=int, default=5,
     help='the interval with which policy pickles are saved. If set to 0, only the best and latest policy will be pickled.')
-@click.option("--num_cpu", type=int, default=1, help="the number of CPU cores to use (using MPI)")
+@click.option("--num_cpu", type=int, default=6, help="the number of CPU cores to use (using MPI)")
 @click.option(
     "--seed", type=int, default=0, help="The random seed used to seed both the environment and the training code"
 )
 @click.option("--env", type=str, default="Pendulum-v0", help="Name of the environment.")
-@click.option("--n_epochs", type=int, default=35, help="The number of training epochs to run")
+@click.option("--n_epochs", type=int, default=51, help="The number of training epochs to run")
 @click.option("--clip_return", type=int, default=1, help="whether or not returns should be clipped")
 def main(**kwargs):
     launch(**kwargs)

@@ -22,9 +22,9 @@ pi_lr: 0.001
 polyak: 0.95
 relative_goals: False
 rollout_batch_size: 1
-sample_transitions: <function make_sample_transitions.<locals>._sample_transitions at 0x7f5f2ad9fe18>
+sample_transitions: <function make_sample_transitions.<locals>._sample_transitions at 0x7f56367bce18>
 scope: ddpg
-subtract_goals: <function simple_goal_subtract at 0x7f5f2ad9ce18>
+subtract_goals: <function simple_goal_subtract at 0x7f56367b9e18>
 Preparing staging area for feeding data to the model.
 Creating a DDPG agent with action space 1 x 2.0...
 Configure the replay buffer.
@@ -84,13 +84,13 @@ clip_return: 1
 dims: {'o': 3, 'u': 1}
 env_name: Pendulum-v0
 gamma: 0.995
-make_env: <function prepare_params.<locals>.make_env at 0x7f5f2ad9fd90>
+make_env: <function prepare_params.<locals>.make_env at 0x7f56367bcd90>
 n_batches: 40
 n_cycles: 10
 n_test_rollouts: 10
 noise_eps: 0.2
 random_eps: 0.3
-rank_seed: 1000000
+rank_seed: 3000000
 replay_k: 4
 replay_strategy: none
 rollout_batch_size: 1

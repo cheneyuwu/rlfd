@@ -22,9 +22,9 @@ pi_lr: 0.001
 polyak: 0.95
 relative_goals: False
 rollout_batch_size: 1
-sample_transitions: <function make_sample_transitions.<locals>._sample_transitions at 0x7ff439167d90>
+sample_transitions: <function make_sample_transitions.<locals>._sample_transitions at 0x7f21e1971e18>
 scope: ddpg
-subtract_goals: <function simple_goal_subtract at 0x7ff439164e18>
+subtract_goals: <function simple_goal_subtract at 0x7f21e196ee18>
 Preparing staging area for feeding data to the model.
 Creating a DDPG agent with action space 1 x 2.0...
 Configure the replay buffer.
@@ -84,7 +84,7 @@ clip_return: 1
 dims: {'o': 3, 'u': 1}
 env_name: Pendulum-v0
 gamma: 0.995
-make_env: <function prepare_params.<locals>.make_env at 0x7ff439167d08>
+make_env: <function prepare_params.<locals>.make_env at 0x7f21e1971d90>
 n_batches: 40
 n_cycles: 10
 n_test_rollouts: 10
@@ -97,43 +97,44 @@ rollout_batch_size: 1
 test_with_polyak: False
 
 *** Training ***
----------------------------------
-| epoch              | 0        |
-| test/episode       | 10.0     |
-| test/mean_Q        | -8.94073 |
-| test/success_rate  | 0.0      |
-| train/episode      | 10.0     |
-| train/success_rate | 0.0      |
----------------------------------
-New best mean Q: -8.940730094909668. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy/policy_best.pkl ...
+----------------------------------
+| epoch              | 0         |
+| test/episode       | 10.0      |
+| test/mean_Q        | -8.509525 |
+| test/success_rate  | 0.0       |
+| train/episode      | 10.0      |
+| train/success_rate | 0.0       |
+----------------------------------
+New best mean Q: -8.509525299072266. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy/policy_best.pkl ...
+Saving periodic policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy/policy_0.pkl ...
 -----------------------------------
 | epoch              | 1          |
 | test/episode       | 20.0       |
-| test/mean_Q        | -10.463738 |
+| test/mean_Q        | -11.162215 |
 | test/success_rate  | 0.0        |
 | train/episode      | 20.0       |
 | train/success_rate | 0.0        |
 -----------------------------------
+-----------------------------------
+| epoch              | 2          |
+| test/episode       | 30.0       |
+| test/mean_Q        | -14.339038 |
+| test/success_rate  | 0.0        |
+| train/episode      | 30.0       |
+| train/success_rate | 0.0        |
+-----------------------------------
 ----------------------------------
-| epoch              | 2         |
-| test/episode       | 30.0      |
-| test/mean_Q        | -15.21774 |
+| epoch              | 3         |
+| test/episode       | 40.0      |
+| test/mean_Q        | -18.22296 |
 | test/success_rate  | 0.0       |
-| train/episode      | 30.0      |
+| train/episode      | 40.0      |
 | train/success_rate | 0.0       |
 ----------------------------------
 -----------------------------------
-| epoch              | 3          |
-| test/episode       | 40.0       |
-| test/mean_Q        | -18.291922 |
-| test/success_rate  | 0.0        |
-| train/episode      | 40.0       |
-| train/success_rate | 0.0        |
------------------------------------
------------------------------------
 | epoch              | 4          |
 | test/episode       | 50.0       |
-| test/mean_Q        | -20.009457 |
+| test/mean_Q        | -20.662867 |
 | test/success_rate  | 0.0        |
 | train/episode      | 50.0       |
 | train/success_rate | 0.0        |
@@ -141,15 +142,16 @@ New best mean Q: -8.940730094909668. Saving policy to /home/yuchen/Desktop/Flori
 -----------------------------------
 | epoch              | 5          |
 | test/episode       | 60.0       |
-| test/mean_Q        | -24.036648 |
+| test/mean_Q        | -24.613352 |
 | test/success_rate  | 0.0        |
 | train/episode      | 60.0       |
 | train/success_rate | 0.0        |
 -----------------------------------
+Saving periodic policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy/policy_5.pkl ...
 -----------------------------------
 | epoch              | 6          |
 | test/episode       | 70.0       |
-| test/mean_Q        | -26.278095 |
+| test/mean_Q        | -27.481344 |
 | test/success_rate  | 0.0        |
 | train/episode      | 70.0       |
 | train/success_rate | 0.0        |
@@ -157,23 +159,23 @@ New best mean Q: -8.940730094909668. Saving policy to /home/yuchen/Desktop/Flori
 -----------------------------------
 | epoch              | 7          |
 | test/episode       | 80.0       |
-| test/mean_Q        | -29.311192 |
+| test/mean_Q        | -29.633156 |
 | test/success_rate  | 0.0        |
 | train/episode      | 80.0       |
 | train/success_rate | 0.0        |
 -----------------------------------
------------------------------------
-| epoch              | 8          |
-| test/episode       | 90.0       |
-| test/mean_Q        | -33.079857 |
-| test/success_rate  | 0.0        |
-| train/episode      | 90.0       |
-| train/success_rate | 0.0        |
------------------------------------
+----------------------------------
+| epoch              | 8         |
+| test/episode       | 90.0      |
+| test/mean_Q        | -32.47732 |
+| test/success_rate  | 0.0       |
+| train/episode      | 90.0      |
+| train/success_rate | 0.0       |
+----------------------------------
 -----------------------------------
 | epoch              | 9          |
 | test/episode       | 100.0      |
-| test/mean_Q        | -34.812477 |
+| test/mean_Q        | -34.544773 |
 | test/success_rate  | 0.0        |
 | train/episode      | 100.0      |
 | train/success_rate | 0.0        |
@@ -181,15 +183,16 @@ New best mean Q: -8.940730094909668. Saving policy to /home/yuchen/Desktop/Flori
 ----------------------------------
 | epoch              | 10        |
 | test/episode       | 110.0     |
-| test/mean_Q        | -41.44922 |
+| test/mean_Q        | -37.62176 |
 | test/success_rate  | 0.0       |
 | train/episode      | 110.0     |
 | train/success_rate | 0.0       |
 ----------------------------------
+Saving periodic policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy/policy_10.pkl ...
 -----------------------------------
 | epoch              | 11         |
 | test/episode       | 120.0      |
-| test/mean_Q        | -38.602562 |
+| test/mean_Q        | -39.144657 |
 | test/success_rate  | 0.0        |
 | train/episode      | 120.0      |
 | train/success_rate | 0.0        |
@@ -197,40 +200,320 @@ New best mean Q: -8.940730094909668. Saving policy to /home/yuchen/Desktop/Flori
 -----------------------------------
 | epoch              | 12         |
 | test/episode       | 130.0      |
-| test/mean_Q        | -40.158672 |
+| test/mean_Q        | -41.295795 |
 | test/success_rate  | 0.0        |
 | train/episode      | 130.0      |
 | train/success_rate | 0.0        |
 -----------------------------------
------------------------------------
-| epoch              | 13         |
-| test/episode       | 140.0      |
-| test/mean_Q        | -46.246838 |
-| test/success_rate  | 0.0        |
-| train/episode      | 140.0      |
-| train/success_rate | 0.0        |
------------------------------------
+---------------------------------
+| epoch              | 13       |
+| test/episode       | 140.0    |
+| test/mean_Q        | -44.0833 |
+| test/success_rate  | 0.0      |
+| train/episode      | 140.0    |
+| train/success_rate | 0.0      |
+---------------------------------
 ----------------------------------
 | epoch              | 14        |
 | test/episode       | 150.0     |
-| test/mean_Q        | -44.22664 |
+| test/mean_Q        | -44.34308 |
 | test/success_rate  | 0.0       |
 | train/episode      | 150.0     |
 | train/success_rate | 0.0       |
 ----------------------------------
-----------------------------------
-| epoch              | 15        |
-| test/episode       | 160.0     |
-| test/mean_Q        | -44.36208 |
-| test/success_rate  | 0.0       |
-| train/episode      | 160.0     |
-| train/success_rate | 0.0       |
-----------------------------------
+-----------------------------------
+| epoch              | 15         |
+| test/episode       | 160.0      |
+| test/mean_Q        | -45.509533 |
+| test/success_rate  | 0.0        |
+| train/episode      | 160.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+Saving periodic policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy/policy_15.pkl ...
 ----------------------------------
 | epoch              | 16        |
 | test/episode       | 170.0     |
-| test/mean_Q        | -44.87583 |
+| test/mean_Q        | -46.67776 |
 | test/success_rate  | 0.0       |
 | train/episode      | 170.0     |
 | train/success_rate | 0.0       |
 ----------------------------------
+-----------------------------------
+| epoch              | 17         |
+| test/episode       | 180.0      |
+| test/mean_Q        | -46.289845 |
+| test/success_rate  | 0.0        |
+| train/episode      | 180.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+----------------------------------
+| epoch              | 18        |
+| test/episode       | 190.0     |
+| test/mean_Q        | -43.96699 |
+| test/success_rate  | 0.0       |
+| train/episode      | 190.0     |
+| train/success_rate | 0.0       |
+----------------------------------
+-----------------------------------
+| epoch              | 19         |
+| test/episode       | 200.0      |
+| test/mean_Q        | -45.291092 |
+| test/success_rate  | 0.0        |
+| train/episode      | 200.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+----------------------------------
+| epoch              | 20        |
+| test/episode       | 210.0     |
+| test/mean_Q        | -45.79962 |
+| test/success_rate  | 0.0       |
+| train/episode      | 210.0     |
+| train/success_rate | 0.0       |
+----------------------------------
+Saving periodic policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy/policy_20.pkl ...
+----------------------------------
+| epoch              | 21        |
+| test/episode       | 220.0     |
+| test/mean_Q        | -44.11133 |
+| test/success_rate  | 0.0       |
+| train/episode      | 220.0     |
+| train/success_rate | 0.0       |
+----------------------------------
+----------------------------------
+| epoch              | 22        |
+| test/episode       | 230.0     |
+| test/mean_Q        | -46.37852 |
+| test/success_rate  | 0.0       |
+| train/episode      | 230.0     |
+| train/success_rate | 0.0       |
+----------------------------------
+----------------------------------
+| epoch              | 23        |
+| test/episode       | 240.0     |
+| test/mean_Q        | -24.13442 |
+| test/success_rate  | 0.0       |
+| train/episode      | 240.0     |
+| train/success_rate | 0.0       |
+----------------------------------
+-----------------------------------
+| epoch              | 24         |
+| test/episode       | 250.0      |
+| test/mean_Q        | -18.606657 |
+| test/success_rate  | 0.0        |
+| train/episode      | 250.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 25         |
+| test/episode       | 260.0      |
+| test/mean_Q        | -17.391788 |
+| test/success_rate  | 0.0        |
+| train/episode      | 260.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+Saving periodic policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy/policy_25.pkl ...
+-----------------------------------
+| epoch              | 26         |
+| test/episode       | 270.0      |
+| test/mean_Q        | -14.392471 |
+| test/success_rate  | 0.0        |
+| train/episode      | 270.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+------------------------------------
+| epoch              | 27          |
+| test/episode       | 280.0       |
+| test/mean_Q        | -13.0496435 |
+| test/success_rate  | 0.0         |
+| train/episode      | 280.0       |
+| train/success_rate | 0.0         |
+------------------------------------
+----------------------------------
+| epoch              | 28        |
+| test/episode       | 290.0     |
+| test/mean_Q        | -15.90253 |
+| test/success_rate  | 0.0       |
+| train/episode      | 290.0     |
+| train/success_rate | 0.0       |
+----------------------------------
+-----------------------------------
+| epoch              | 29         |
+| test/episode       | 300.0      |
+| test/mean_Q        | -13.756589 |
+| test/success_rate  | 0.0        |
+| train/episode      | 300.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 30         |
+| test/episode       | 310.0      |
+| test/mean_Q        | -12.970651 |
+| test/success_rate  | 0.0        |
+| train/episode      | 310.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+Saving periodic policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy/policy_30.pkl ...
+-----------------------------------
+| epoch              | 31         |
+| test/episode       | 320.0      |
+| test/mean_Q        | -10.851628 |
+| test/success_rate  | 0.0        |
+| train/episode      | 320.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+----------------------------------
+| epoch              | 32        |
+| test/episode       | 330.0     |
+| test/mean_Q        | -10.35542 |
+| test/success_rate  | 0.0       |
+| train/episode      | 330.0     |
+| train/success_rate | 0.0       |
+----------------------------------
+-----------------------------------
+| epoch              | 33         |
+| test/episode       | 340.0      |
+| test/mean_Q        | -11.574513 |
+| test/success_rate  | 0.0        |
+| train/episode      | 340.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 34         |
+| test/episode       | 350.0      |
+| test/mean_Q        | -11.992593 |
+| test/success_rate  | 0.0        |
+| train/episode      | 350.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 35         |
+| test/episode       | 360.0      |
+| test/mean_Q        | -12.959752 |
+| test/success_rate  | 0.0        |
+| train/episode      | 360.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+Saving periodic policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy/policy_35.pkl ...
+-----------------------------------
+| epoch              | 36         |
+| test/episode       | 370.0      |
+| test/mean_Q        | -12.043675 |
+| test/success_rate  | 0.0        |
+| train/episode      | 370.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 37         |
+| test/episode       | 380.0      |
+| test/mean_Q        | -12.358266 |
+| test/success_rate  | 0.0        |
+| train/episode      | 380.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+----------------------------------
+| epoch              | 38        |
+| test/episode       | 390.0     |
+| test/mean_Q        | -12.34227 |
+| test/success_rate  | 0.0       |
+| train/episode      | 390.0     |
+| train/success_rate | 0.0       |
+----------------------------------
+-----------------------------------
+| epoch              | 39         |
+| test/episode       | 400.0      |
+| test/mean_Q        | -10.715287 |
+| test/success_rate  | 0.0        |
+| train/episode      | 400.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 40         |
+| test/episode       | 410.0      |
+| test/mean_Q        | -11.608376 |
+| test/success_rate  | 0.0        |
+| train/episode      | 410.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+Saving periodic policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy/policy_40.pkl ...
+---------------------------------
+| epoch              | 41       |
+| test/episode       | 420.0    |
+| test/mean_Q        | -10.3406 |
+| test/success_rate  | 0.0      |
+| train/episode      | 420.0    |
+| train/success_rate | 0.0      |
+---------------------------------
+-----------------------------------
+| epoch              | 42         |
+| test/episode       | 430.0      |
+| test/mean_Q        | -11.426303 |
+| test/success_rate  | 0.0        |
+| train/episode      | 430.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 43         |
+| test/episode       | 440.0      |
+| test/mean_Q        | -12.029128 |
+| test/success_rate  | 0.0        |
+| train/episode      | 440.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 44         |
+| test/episode       | 450.0      |
+| test/mean_Q        | -10.747514 |
+| test/success_rate  | 0.0        |
+| train/episode      | 450.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 45         |
+| test/episode       | 460.0      |
+| test/mean_Q        | -10.296127 |
+| test/success_rate  | 0.0        |
+| train/episode      | 460.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+Saving periodic policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy/policy_45.pkl ...
+-----------------------------------
+| epoch              | 46         |
+| test/episode       | 470.0      |
+| test/mean_Q        | -10.870464 |
+| test/success_rate  | 0.0        |
+| train/episode      | 470.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 47         |
+| test/episode       | 480.0      |
+| test/mean_Q        | -9.9940405 |
+| test/success_rate  | 0.0        |
+| train/episode      | 480.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+------------------------------------
+| epoch              | 48          |
+| test/episode       | 490.0       |
+| test/mean_Q        | -12.9782295 |
+| test/success_rate  | 0.0         |
+| train/episode      | 490.0       |
+| train/success_rate | 0.0         |
+------------------------------------
+-----------------------------------
+| epoch              | 49         |
+| test/episode       | 500.0      |
+| test/mean_Q        | -10.755919 |
+| test/success_rate  | 0.0        |
+| train/episode      | 500.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 50         |
+| test/episode       | 510.0      |
+| test/mean_Q        | -13.207146 |
+| test/success_rate  | 0.0        |
+| train/episode      | 510.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+Saving periodic policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy/policy_50.pkl ...
