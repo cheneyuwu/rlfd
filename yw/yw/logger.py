@@ -19,12 +19,12 @@ from collections import defaultdict
 # Logger Levels
 # =============================================================================
 
-DEBUG = 10
-INFO = 20
-WARN = 30
-ERROR = 40
+DEBUG = 1
+INFO = 2
+WARN = 3
+ERROR = 4
 
-DISABLED = 50
+DISABLED = 5
 
 # =============================================================================
 # Logger Implementation Bases

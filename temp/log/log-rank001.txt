@@ -3,7 +3,7 @@ Logging to /home/yuchen/Desktop/FlorianResearch/RLProject/temp/log
 *** her_params ***
 replay_k: 4
 replay_strategy: future
-reward_fun: <function configure_her.<locals>.reward_fun at 0x7f472e993378>
+reward_fun: <function configure_her.<locals>.reward_fun at 0x7fca6ae89620>
 
 *** ddpg_params ***
 Q_lr: 0.001
@@ -16,7 +16,7 @@ clip_pos_returns: True
 clip_return: 49.99999999999996
 gamma: 0.98
 hidden: 256
-info: {'env_name': 'FetchReach-v1'}
+info: {'env_name': 'FetchReachDense-v1'}
 input_dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
 layers: 3
 max_u: 1.0
@@ -27,10 +27,12 @@ pi_lr: 0.001
 polyak: 0.95
 relative_goals: False
 rollout_batch_size: 5
-sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7f472e993400>
+sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7fca6ae896a8>
 scope: ddpg
-subtract_goals: <function simple_goal_subtract at 0x7f473052db70>
+subtract_goals: <function simple_goal_subtract at 0x7fca6ca1ed90>
+Preparing staging area for feeding data to the model.
 Creating a DDPG agent with action space 4 x 1.0...
+Configure the replay buffer.
 
 *** rollout_params ***
 T: 50
@@ -75,15 +77,16 @@ _replay_strategy: future
 _scope: ddpg
 clip_return: 1
 dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
-env_name: FetchReach-v1
+env_name: FetchReachDense-v1
 gamma: 0.98
-make_env: <function prepare_params.<locals>.make_env at 0x7f47305327b8>
+make_env: <function prepare_params.<locals>.make_env at 0x7fca6ca1fd90>
 n_batches: 40
 n_cycles: 10
 n_test_rollouts: 10
 noise_eps: 0.2
 random_eps: 0.3
-rank_seed: 1000000
+rank_seed: 1000002
 rollout_batch_size: 5
+test_with_polyak: False
 
 *** Training ***

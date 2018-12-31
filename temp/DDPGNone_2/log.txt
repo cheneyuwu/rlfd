@@ -1,0 +1,170 @@
+Logging to ../temp/DDPGNone_2
+
+*** her_params ***
+replay_k: 4
+replay_strategy: none
+reward_fun: <function configure_her.<locals>.reward_fun at 0x7f3ae0572598>
+
+*** ddpg_params ***
+Q_lr: 0.001
+T: 50
+action_l2: 1.0
+batch_size: 256
+buffer_size: 1000000
+clip_obs: 200.0
+clip_pos_returns: True
+clip_return: 49.99999999999996
+gamma: 0.98
+hidden: 256
+info: {'env_name': 'FetchReachDense-v1'}
+input_dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
+layers: 3
+max_u: 1.0
+network_class: yw.ddpg.actor_critic:ActorCritic
+norm_clip: 5
+norm_eps: 0.01
+pi_lr: 0.001
+polyak: 0.95
+relative_goals: False
+rollout_batch_size: 5
+sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7f3ae0572620>
+scope: ddpg
+subtract_goals: <function simple_goal_subtract at 0x7f3ae2107d08>
+Preparing staging area for feeding data to the model.
+Creating a DDPG agent with action space 4 x 1.0...
+Configure the replay buffer.
+
+*** rollout_params ***
+T: 50
+compute_Q: False
+dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
+exploit: False
+noise_eps: 0.2
+random_eps: 0.3
+rollout_batch_size: 5
+use_demo_states: True
+use_target_net: False
+
+*** eval_params ***
+T: 50
+compute_Q: True
+dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
+exploit: True
+noise_eps: 0.2
+random_eps: 0.3
+rollout_batch_size: 5
+use_demo_states: False
+use_target_net: False
+
+*** params ***
+T: 50
+_Q_lr: 0.001
+_action_l2: 1.0
+_batch_size: 256
+_buffer_size: 1000000
+_clip_obs: 200.0
+_hidden: 256
+_layers: 3
+_max_u: 1.0
+_network_class: yw.ddpg.actor_critic:ActorCritic
+_norm_clip: 5
+_norm_eps: 0.01
+_pi_lr: 0.001
+_polyak: 0.95
+_relative_goals: False
+_replay_k: 4
+_replay_strategy: none
+_scope: ddpg
+clip_return: 1
+dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
+env_name: FetchReachDense-v1
+gamma: 0.98
+make_env: <function prepare_params.<locals>.make_env at 0x7f3ae2108d08>
+n_batches: 40
+n_cycles: 10
+n_test_rollouts: 10
+noise_eps: 0.2
+random_eps: 0.3
+rank_seed: 2
+rollout_batch_size: 5
+test_with_polyak: False
+
+*** Training ***
+--------------------------------------------
+| epoch              | 0                   |
+| stats_g/mean       | 0.8783417           |
+| stats_g/std        | 0.08615985          |
+| stats_o/mean       | 0.26193827          |
+| stats_o/std        | 0.028009474         |
+| test/episode       | 50.0                |
+| test/mean_Q        | -0.18367717         |
+| test/success_rate  | 0.21000000000000002 |
+| train/episode      | 50.0                |
+| train/success_rate | 0.02                |
+--------------------------------------------
+New best success rate: 0.21000000000000002. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp/policy/policy_best.pkl ...
+--------------------------------------------
+| epoch              | 1                   |
+| stats_g/mean       | 0.877553            |
+| stats_g/std        | 0.0860739           |
+| stats_o/mean       | 0.26336166          |
+| stats_o/std        | 0.02593767          |
+| test/episode       | 100.0               |
+| test/mean_Q        | -0.1871199          |
+| test/success_rate  | 0.47                |
+| train/episode      | 100.0               |
+| train/success_rate | 0.06000000000000001 |
+--------------------------------------------
+New best success rate: 0.47. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp/policy/policy_best.pkl ...
+--------------------------------------------
+| epoch              | 2                   |
+| stats_g/mean       | 0.878769            |
+| stats_g/std        | 0.085668504         |
+| stats_o/mean       | 0.26400888          |
+| stats_o/std        | 0.02548351          |
+| test/episode       | 150.0               |
+| test/mean_Q        | -0.20478076         |
+| test/success_rate  | 0.68                |
+| train/episode      | 150.0               |
+| train/success_rate | 0.10999999999999999 |
+--------------------------------------------
+New best success rate: 0.68. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp/policy/policy_best.pkl ...
+-------------------------------------------
+| epoch              | 3                  |
+| stats_g/mean       | 0.8787499          |
+| stats_g/std        | 0.085240036        |
+| stats_o/mean       | 0.26428604         |
+| stats_o/std        | 0.025112335        |
+| test/episode       | 200.0              |
+| test/mean_Q        | -0.2099494         |
+| test/success_rate  | 0.8400000000000001 |
+| train/episode      | 200.0              |
+| train/success_rate | 0.25               |
+-------------------------------------------
+New best success rate: 0.8400000000000001. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp/policy/policy_best.pkl ...
+-------------------------------------------
+| epoch              | 4                  |
+| stats_g/mean       | 0.8788658          |
+| stats_g/std        | 0.08524176         |
+| stats_o/mean       | 0.26445514         |
+| stats_o/std        | 0.025192365        |
+| test/episode       | 250.0              |
+| test/mean_Q        | -0.22233751        |
+| test/success_rate  | 0.9400000000000002 |
+| train/episode      | 250.0              |
+| train/success_rate | 0.26               |
+-------------------------------------------
+New best success rate: 0.9400000000000002. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp/policy/policy_best.pkl ...
+--------------------------------------------
+| epoch              | 5                   |
+| stats_g/mean       | 0.877995            |
+| stats_g/std        | 0.086048365         |
+| stats_o/mean       | 0.26422584          |
+| stats_o/std        | 0.025283512         |
+| test/episode       | 300.0               |
+| test/mean_Q        | -0.24426988         |
+| test/success_rate  | 0.98                |
+| train/episode      | 300.0               |
+| train/success_rate | 0.42000000000000004 |
+--------------------------------------------
+New best success rate: 0.98. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp/policy/policy_best.pkl ...

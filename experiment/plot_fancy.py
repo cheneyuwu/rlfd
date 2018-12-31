@@ -103,6 +103,7 @@ def split_by_task(taskpath):
 
 def plot_results(dirs, num_timesteps=10e6, xaxis=X_TIMESTEPS, yaxis=Y_REWARD, title="", split_fn=split_by_task):
     results = plot_util.load_results(dirs)
+    print(results)
     plot_util.plot_results(
         results,
         xy_fn=lambda r: ts2xy(r["monitor"], xaxis, yaxis),

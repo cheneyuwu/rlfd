@@ -1,0 +1,236 @@
+Logging to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/log
+
+*** ddpg_params ***
+Q_lr: 0.01
+T: 200
+action_l2: 1.0
+batch_size: 256
+buffer_size: 1000000
+clip_obs: 200.0
+clip_pos_returns: True
+clip_return: 199.99999999999983
+gamma: 0.995
+hidden: 64
+info: {'env_name': 'Pendulum-v0'}
+input_dims: {'o': 3, 'u': 1}
+layers: 2
+max_u: 2.0
+network_class: yw.ddpg_no_goal.actor_critic:ActorCritic
+norm_clip: 5
+norm_eps: 0.01
+pi_lr: 0.001
+polyak: 0.95
+relative_goals: False
+rollout_batch_size: 1
+sample_transitions: <function make_sample_transitions.<locals>._sample_transitions at 0x7ff439167d90>
+scope: ddpg
+subtract_goals: <function simple_goal_subtract at 0x7ff439164e18>
+Preparing staging area for feeding data to the model.
+Creating a DDPG agent with action space 1 x 2.0...
+Configure the replay buffer.
+
+*** rollout_params ***
+T: 200
+compute_Q: False
+dims: {'o': 3, 'u': 1}
+exploit: False
+noise_eps: 0.2
+random_eps: 0.3
+rollout_batch_size: 1
+use_demo_states: True
+use_target_net: False
+
+*** eval_params ***
+T: 200
+compute_Q: True
+dims: {'o': 3, 'u': 1}
+exploit: True
+noise_eps: 0.2
+random_eps: 0.3
+rollout_batch_size: 1
+use_demo_states: False
+use_target_net: False
+
+*** demo_params ***
+T: 200
+compute_Q: False
+dims: {'o': 3, 'u': 1}
+exploit: True
+noise_eps: 0.2
+random_eps: 0.3
+render: True
+rollout_batch_size: 1
+use_demo_states: False
+use_target_net: True
+
+*** params ***
+T: 200
+_Q_lr: 0.01
+_action_l2: 1.0
+_batch_size: 256
+_buffer_size: 1000000
+_clip_obs: 200.0
+_hidden: 64
+_layers: 2
+_max_u: 2.0
+_network_class: yw.ddpg_no_goal.actor_critic:ActorCritic
+_norm_clip: 5
+_norm_eps: 0.01
+_pi_lr: 0.001
+_polyak: 0.95
+_relative_goals: False
+_scope: ddpg
+clip_return: 1
+dims: {'o': 3, 'u': 1}
+env_name: Pendulum-v0
+gamma: 0.995
+make_env: <function prepare_params.<locals>.make_env at 0x7ff439167d08>
+n_batches: 40
+n_cycles: 10
+n_test_rollouts: 10
+noise_eps: 0.2
+random_eps: 0.3
+rank_seed: 0
+replay_k: 4
+replay_strategy: none
+rollout_batch_size: 1
+test_with_polyak: False
+
+*** Training ***
+---------------------------------
+| epoch              | 0        |
+| test/episode       | 10.0     |
+| test/mean_Q        | -8.94073 |
+| test/success_rate  | 0.0      |
+| train/episode      | 10.0     |
+| train/success_rate | 0.0      |
+---------------------------------
+New best mean Q: -8.940730094909668. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy/policy_best.pkl ...
+-----------------------------------
+| epoch              | 1          |
+| test/episode       | 20.0       |
+| test/mean_Q        | -10.463738 |
+| test/success_rate  | 0.0        |
+| train/episode      | 20.0       |
+| train/success_rate | 0.0        |
+-----------------------------------
+----------------------------------
+| epoch              | 2         |
+| test/episode       | 30.0      |
+| test/mean_Q        | -15.21774 |
+| test/success_rate  | 0.0       |
+| train/episode      | 30.0      |
+| train/success_rate | 0.0       |
+----------------------------------
+-----------------------------------
+| epoch              | 3          |
+| test/episode       | 40.0       |
+| test/mean_Q        | -18.291922 |
+| test/success_rate  | 0.0        |
+| train/episode      | 40.0       |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 4          |
+| test/episode       | 50.0       |
+| test/mean_Q        | -20.009457 |
+| test/success_rate  | 0.0        |
+| train/episode      | 50.0       |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 5          |
+| test/episode       | 60.0       |
+| test/mean_Q        | -24.036648 |
+| test/success_rate  | 0.0        |
+| train/episode      | 60.0       |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 6          |
+| test/episode       | 70.0       |
+| test/mean_Q        | -26.278095 |
+| test/success_rate  | 0.0        |
+| train/episode      | 70.0       |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 7          |
+| test/episode       | 80.0       |
+| test/mean_Q        | -29.311192 |
+| test/success_rate  | 0.0        |
+| train/episode      | 80.0       |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 8          |
+| test/episode       | 90.0       |
+| test/mean_Q        | -33.079857 |
+| test/success_rate  | 0.0        |
+| train/episode      | 90.0       |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 9          |
+| test/episode       | 100.0      |
+| test/mean_Q        | -34.812477 |
+| test/success_rate  | 0.0        |
+| train/episode      | 100.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+----------------------------------
+| epoch              | 10        |
+| test/episode       | 110.0     |
+| test/mean_Q        | -41.44922 |
+| test/success_rate  | 0.0       |
+| train/episode      | 110.0     |
+| train/success_rate | 0.0       |
+----------------------------------
+-----------------------------------
+| epoch              | 11         |
+| test/episode       | 120.0      |
+| test/mean_Q        | -38.602562 |
+| test/success_rate  | 0.0        |
+| train/episode      | 120.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 12         |
+| test/episode       | 130.0      |
+| test/mean_Q        | -40.158672 |
+| test/success_rate  | 0.0        |
+| train/episode      | 130.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+-----------------------------------
+| epoch              | 13         |
+| test/episode       | 140.0      |
+| test/mean_Q        | -46.246838 |
+| test/success_rate  | 0.0        |
+| train/episode      | 140.0      |
+| train/success_rate | 0.0        |
+-----------------------------------
+----------------------------------
+| epoch              | 14        |
+| test/episode       | 150.0     |
+| test/mean_Q        | -44.22664 |
+| test/success_rate  | 0.0       |
+| train/episode      | 150.0     |
+| train/success_rate | 0.0       |
+----------------------------------
+----------------------------------
+| epoch              | 15        |
+| test/episode       | 160.0     |
+| test/mean_Q        | -44.36208 |
+| test/success_rate  | 0.0       |
+| train/episode      | 160.0     |
+| train/success_rate | 0.0       |
+----------------------------------
+----------------------------------
+| epoch              | 16        |
+| test/episode       | 170.0     |
+| test/mean_Q        | -44.87583 |
+| test/success_rate  | 0.0       |
+| train/episode      | 170.0     |
+| train/success_rate | 0.0       |
+----------------------------------
