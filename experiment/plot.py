@@ -12,7 +12,7 @@ def launch(dirs, smooth, **kwargs):
 # =============================================================================
 @click.command()
 @click.option(
-    "--dirs", type=str, default="/home/yuchen/Desktop/FlorianResearch/RLProject/temp/log", help="Log directory."
+    "--dirs", type=str, default="/home/yuchen/Desktop/FlorianResearch/RLProject/Result", help="Log directory."
 )
 @click.option("--smooth", type=bool, default="True", help="Smooth the curve.")
 def main(**kwargs):

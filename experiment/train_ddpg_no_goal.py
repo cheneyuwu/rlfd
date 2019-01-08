@@ -14,11 +14,11 @@ import json
 from mpi4py import MPI
 
 # For configuring all the parameters
-from yw.ddpg import config
+from yw.ddpg_no_goal import config
 
 # DDPG Package import
 from yw import logger
-from yw.ddpg.rollout import RolloutWorker
+# from yw.ddpg.rollout import RolloutWorker
 from yw.util.mpi_util import mpi_fork, mpi_average, set_global_seeds
 
 
@@ -33,11 +33,11 @@ def train(
     policy,
     rollout_worker,
     evaluator,
+    demo,
     n_epochs,
     n_cycles,
     n_batches,
     n_test_rollouts,
-    #   demo_file,
     **kwargs
 ):
     rank = MPI.COMM_WORLD.Get_rank()
@@ -49,14 +49,18 @@ def train(
         periodic_policy_path = os.path.join(save_path, 'policy_{}.pkl')
 
     logger.info("\n*** Training ***")
-    best_success_rate = -1
+    best_mean_Q = -999
 
-    # TODO: add demonstration!
     for epoch in range(n_epochs):
         # train
         rollout_worker.clear_history()
         for _ in range(n_cycles):
             episode = rollout_worker.generate_rollouts()
+            # Yuchen debug only
+            # for key in episode.keys():
+            #     logger.info(key)
+            #     logger.info(episode[key].shape)
+            #     logger.info(episode[key])
             policy.store_episode(episode)
             for _ in range(n_batches):
                 policy.train()
@@ -74,17 +78,17 @@ def train(
             logger.record_tabular(key, mpi_average(val))
         for key, val in rollout_worker.logs("train"):
             logger.record_tabular(key, mpi_average(val))
-        for key, val in policy.logs():
-            logger.record_tabular(key, mpi_average(val))
+        # for key, val in policy.logs():
+        #     logger.record_tabular(key, mpi_average(val))
 
         if rank == 0:
             logger.dump_tabular()
 
         # save the policy if it's better than the previous ones
-        success_rate = mpi_average(evaluator.current_success_rate())
-        if rank == 0 and success_rate >= best_success_rate and save_path:
-            best_success_rate = success_rate
-            logger.info('New best success rate: {}. Saving policy to {} ...'.format(best_success_rate, best_policy_path))
+        mean_Q = mpi_average(evaluator.current_mean_Q())
+        if rank == 0 and mean_Q >= best_mean_Q and save_path:
+            best_mean_Q = mean_Q
+            logger.info('New best mean Q: {}. Saving policy to {} ...'.format(best_mean_Q, best_policy_path))
             evaluator.save_policy(best_policy_path)
             evaluator.save_policy(latest_policy_path)
         if rank == 0 and policy_save_interval > 0 and epoch % policy_save_interval == 0 and save_path:
@@ -98,6 +102,8 @@ def train(
         MPI.COMM_WORLD.Bcast(root_uniform, root=0)
         if rank != 0:
             assert local_uniform[0] != root_uniform[0]
+    demo.clear_history()
+    demo.generate_rollouts()
 
 
 def launch(
@@ -109,9 +115,7 @@ def launch(
     seed,
     n_epochs,
     clip_return,
-    replay_strategy,
     policy_save_interval,
-    # demo_file,
     # override_params={}
 ):
     # Fork for multi-CPU MPI implementation.
@@ -149,7 +153,6 @@ def launch(
     params["env_name"] = env
     params["rank_seed"] = rank_seed
     params["clip_return"] = clip_return
-    params["replay_strategy"] = replay_strategy  # For HER: future or none
     # params.update(**override_params)  # makes it possible to override any parameter
 
     with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f:
@@ -161,6 +164,7 @@ def launch(
     policy = config.configure_ddpg(params=params)
     rollout_worker = config.config_rollout(params=params, policy=policy)
     evaluator = config.config_evaluator(params=params, policy=policy)
+    demo = config.config_demo(params=params, policy=policy)
     logger.info("\n*** params ***")
     config.log_params(params=params)
 
@@ -169,12 +173,12 @@ def launch(
         policy=policy,
         rollout_worker=rollout_worker,
         evaluator=evaluator,
+        demo=demo,
         n_epochs=n_epochs,
         n_cycles=params["n_cycles"],
         n_batches=params["n_batches"],
         n_test_rollouts=params["n_test_rollouts"],
         policy_save_interval=policy_save_interval,
-        # demo_file=demo_file
     )
 
 
@@ -183,31 +187,24 @@ def launch(
 # =============================================================================
 @click.command()
 @click.option(
-    "--logdir", type=str, default="/home/yuchen/Desktop/FlorianResearch/RLProject/temp/log", help="Log directory."
+    "--logdir", type=str, default="/home/yuchen/Desktop/FlorianResearch/RLProject/temp2/log", help="Log directory."
 )
 @click.option(
     "--loglevel", type=str, default=2, help="Logger level."
 )
 @click.option(
-    "--save_path", type=str, default="/home/yuchen/Desktop/FlorianResearch/RLProject/temp/policy", help="Policy directory."
+    "--save_path", type=str, default="/home/yuchen/Desktop/FlorianResearch/RLProject/temp2/policy", help="Policy directory."
 )
 @click.option(
-    '--policy_save_interval', type=int, default=0,
+    '--policy_save_interval', type=int, default=5,
     help='the interval with which policy pickles are saved. If set to 0, only the best and latest policy will be pickled.')
-@click.option("--num_cpu", type=int, default=1, help="the number of CPU cores to use (using MPI)")
+@click.option("--num_cpu", type=int, default=6, help="the number of CPU cores to use (using MPI)")
 @click.option(
     "--seed", type=int, default=0, help="The random seed used to seed both the environment and the training code"
 )
-@click.option("--env", type=str, default="FetchReachDense-v1", help="Name of the environment.")
-@click.option("--n_epochs", type=int, default=1, help="The number of training epochs to run")
+@click.option("--env", type=str, default="Pendulum-v0", help="Name of the environment.")
+@click.option("--n_epochs", type=int, default=51, help="The number of training epochs to run")
 @click.option("--clip_return", type=int, default=1, help="whether or not returns should be clipped")
-@click.option(
-    "--replay_strategy",
-    type=click.Choice(["future", "none"]),
-    default="future",
-    help='the HER replay strategy to be used. "future" uses HER, "none" disables HER.',
-)
-# @click.option('--demo_file', type=str, default='PATH/TO/DEMO/DATA/FILE.npz', help='demo data file path')
 def main(**kwargs):
     launch(**kwargs)
 

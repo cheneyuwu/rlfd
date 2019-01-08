@@ -1,0 +1,171 @@
+Logging to /home/yuchen/Desktop/FlorianResearch/RLProject/Result/ddpg-none-FetchReachDense-v1-0/
+
+*** her_params ***
+replay_k: 4
+replay_strategy: none
+reward_fun: <function configure_her.<locals>.reward_fun at 0x7ff882454620>
+
+*** ddpg_params ***
+Q_lr: 0.001
+T: 50
+action_l2: 1.0
+batch_size: 256
+buffer_size: 1000000
+clip_obs: 200.0
+clip_pos_returns: True
+clip_return: 49.99999999999996
+gamma: 0.98
+hidden: 256
+info: {'env_name': 'FetchReachDense-v1'}
+input_dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
+layers: 3
+max_u: 1.0
+network_class: yw.ddpg.actor_critic:ActorCritic
+norm_clip: 5
+norm_eps: 0.01
+pi_lr: 0.001
+polyak: 0.95
+relative_goals: False
+rollout_batch_size: 5
+sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7ff8824546a8>
+scope: ddpg
+subtract_goals: <function simple_goal_subtract at 0x7ff883fe7d90>
+Preparing staging area for feeding data to the model.
+Creating a DDPG agent with action space 4 x 1.0...
+Configure the replay buffer.
+
+*** rollout_params ***
+T: 50
+compute_Q: False
+dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
+exploit: False
+noise_eps: 0.2
+random_eps: 0.3
+rollout_batch_size: 5
+use_demo_states: True
+use_target_net: False
+
+*** eval_params ***
+T: 50
+compute_Q: True
+dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
+exploit: True
+noise_eps: 0.2
+random_eps: 0.3
+rollout_batch_size: 5
+use_demo_states: False
+use_target_net: False
+
+*** params ***
+T: 50
+_Q_lr: 0.001
+_action_l2: 1.0
+_batch_size: 256
+_buffer_size: 1000000
+_clip_obs: 200.0
+_hidden: 256
+_layers: 3
+_max_u: 1.0
+_network_class: yw.ddpg.actor_critic:ActorCritic
+_norm_clip: 5
+_norm_eps: 0.01
+_pi_lr: 0.001
+_polyak: 0.95
+_relative_goals: False
+_replay_k: 4
+_replay_strategy: none
+_scope: ddpg
+clip_return: 1
+config: ddpg
+dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
+env_name: FetchReachDense-v1
+gamma: 0.98
+make_env: <function prepare_params.<locals>.make_env at 0x7ff883fe8d90>
+n_batches: 40
+n_cycles: 10
+n_test_rollouts: 10
+noise_eps: 0.2
+random_eps: 0.3
+rank_seed: 0
+rollout_batch_size: 5
+test_with_polyak: False
+
+*** Training ***
+--------------------------------------------
+| epoch              | 0                   |
+| stats_g/mean       | 0.8805732           |
+| stats_g/std        | 0.08894616          |
+| stats_o/mean       | 0.25945652          |
+| stats_o/std        | 0.024093729         |
+| test/episode       | 50.0                |
+| test/mean_Q        | -0.25593835         |
+| test/success_rate  | 0.09000000000000001 |
+| train/episode      | 50.0                |
+| train/success_rate | 0.02                |
+--------------------------------------------
+New best success rate: 0.09000000000000001. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/Result/ddpg-none-FetchReachDense-v1-0/policy/policy_best.pkl ...
+------------------------------------
+| epoch              | 1           |
+| stats_g/mean       | 0.87662405  |
+| stats_g/std        | 0.08663893  |
+| stats_o/mean       | 0.25980312  |
+| stats_o/std        | 0.023042738 |
+| test/episode       | 100.0       |
+| test/mean_Q        | -0.26716924 |
+| test/success_rate  | 0.27        |
+| train/episode      | 100.0       |
+| train/success_rate | 0.065       |
+------------------------------------
+New best success rate: 0.27. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/Result/ddpg-none-FetchReachDense-v1-0/policy/policy_best.pkl ...
+--------------------------------------------
+| epoch              | 2                   |
+| stats_g/mean       | 0.87605405          |
+| stats_g/std        | 0.08644245          |
+| stats_o/mean       | 0.25998184          |
+| stats_o/std        | 0.022572827         |
+| test/episode       | 150.0               |
+| test/mean_Q        | -0.28762048         |
+| test/success_rate  | 0.42000000000000004 |
+| train/episode      | 150.0               |
+| train/success_rate | 0.10500000000000001 |
+--------------------------------------------
+New best success rate: 0.42000000000000004. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/Result/ddpg-none-FetchReachDense-v1-0/policy/policy_best.pkl ...
+-------------------------------------------
+| epoch              | 3                  |
+| stats_g/mean       | 0.8766474          |
+| stats_g/std        | 0.086855136        |
+| stats_o/mean       | 0.26028144         |
+| stats_o/std        | 0.022767106        |
+| test/episode       | 200.0              |
+| test/mean_Q        | -0.31106097        |
+| test/success_rate  | 0.5999999999999999 |
+| train/episode      | 200.0              |
+| train/success_rate | 0.165              |
+-------------------------------------------
+New best success rate: 0.5999999999999999. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/Result/ddpg-none-FetchReachDense-v1-0/policy/policy_best.pkl ...
+-------------------------------------------
+| epoch              | 4                  |
+| stats_g/mean       | 0.8766537          |
+| stats_g/std        | 0.08704945         |
+| stats_o/mean       | 0.2604718          |
+| stats_o/std        | 0.022997264        |
+| test/episode       | 250.0              |
+| test/mean_Q        | -0.33010393        |
+| test/success_rate  | 0.8450000000000001 |
+| train/episode      | 250.0              |
+| train/success_rate | 0.245              |
+-------------------------------------------
+New best success rate: 0.8450000000000001. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/Result/ddpg-none-FetchReachDense-v1-0/policy/policy_best.pkl ...
+------------------------------------
+| epoch              | 5           |
+| stats_g/mean       | 0.8762812   |
+| stats_g/std        | 0.08667304  |
+| stats_o/mean       | 0.26070386  |
+| stats_o/std        | 0.023235535 |
+| test/episode       | 300.0       |
+| test/mean_Q        | -0.3135416  |
+| test/success_rate  | 0.99        |
+| train/episode      | 300.0       |
+| train/success_rate | 0.355       |
+------------------------------------
+New best success rate: 0.99. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/Result/ddpg-none-FetchReachDense-v1-0/policy/policy_best.pkl ...

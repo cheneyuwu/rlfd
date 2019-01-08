@@ -13,6 +13,8 @@ from yw.ddpg.rollout import RolloutWorker
 from yw.ddpg.her import make_sample_her_transitions
 
 DEFAULT_PARAMS = {
+    # config name
+    "config": "ddpg",
     # env
     "max_u": 1.0,  # max absolute value of actions on different coordinates
     # ddpg

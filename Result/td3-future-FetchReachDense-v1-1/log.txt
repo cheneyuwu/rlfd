@@ -1,0 +1,171 @@
+Logging to /home/yuchen/Desktop/FlorianResearch/RLProject/Result/td3-future-FetchReachDense-v1-1/
+
+*** her_params ***
+replay_k: 4
+replay_strategy: future
+reward_fun: <function configure_her.<locals>.reward_fun at 0x7f47fe3f16a8>
+
+*** ddpg_params ***
+Q_lr: 0.001
+T: 50
+action_l2: 1.0
+batch_size: 256
+buffer_size: 1000000
+clip_obs: 200.0
+clip_pos_returns: True
+clip_return: 49.99999999999996
+gamma: 0.98
+hidden: 256
+info: {'env_name': 'FetchReachDense-v1'}
+input_dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
+layers: 3
+max_u: 1.0
+network_class: yw.td3.actor_critic:ActorCritic
+norm_clip: 5
+norm_eps: 0.01
+pi_lr: 0.001
+polyak: 0.95
+relative_goals: False
+rollout_batch_size: 5
+sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7f47fe3f1730>
+scope: ddpg
+subtract_goals: <function simple_goal_subtract at 0x7f47fff85e18>
+Preparing staging area for feeding data to the model.
+Creating a DDPG agent with action space 4 x 1.0...
+Configure the replay buffer.
+
+*** rollout_params ***
+T: 50
+compute_Q: False
+dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
+exploit: False
+noise_eps: 0.2
+random_eps: 0.3
+rollout_batch_size: 5
+use_demo_states: True
+use_target_net: False
+
+*** eval_params ***
+T: 50
+compute_Q: True
+dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
+exploit: True
+noise_eps: 0.2
+random_eps: 0.3
+rollout_batch_size: 5
+use_demo_states: False
+use_target_net: False
+
+*** params ***
+T: 50
+_Q_lr: 0.001
+_action_l2: 1.0
+_batch_size: 256
+_buffer_size: 1000000
+_clip_obs: 200.0
+_hidden: 256
+_layers: 3
+_max_u: 1.0
+_network_class: yw.td3.actor_critic:ActorCritic
+_norm_clip: 5
+_norm_eps: 0.01
+_pi_lr: 0.001
+_polyak: 0.95
+_relative_goals: False
+_replay_k: 4
+_replay_strategy: future
+_scope: ddpg
+clip_return: 1
+config: td3
+dims: {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
+env_name: FetchReachDense-v1
+gamma: 0.98
+make_env: <function prepare_params.<locals>.make_env at 0x7f47fff87e18>
+n_batches: 40
+n_cycles: 10
+n_test_rollouts: 10
+noise_eps: 0.2
+random_eps: 0.3
+rank_seed: 1
+rollout_batch_size: 5
+test_with_polyak: False
+
+*** Training ***
+------------------------------------
+| epoch              | 0           |
+| stats_g/mean       | 0.88598156  |
+| stats_g/std        | 0.08137721  |
+| stats_o/mean       | 0.2652141   |
+| stats_o/std        | 0.026277706 |
+| test/episode       | 50.0        |
+| test/mean_Q        | -0.2005023  |
+| test/success_rate  | 0.55        |
+| train/episode      | 50.0        |
+| train/success_rate | 0.08        |
+------------------------------------
+New best success rate: 0.55. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/Result/td3-future-FetchReachDense-v1-1/policy/policy_best.pkl ...
+------------------------------------
+| epoch              | 1           |
+| stats_g/mean       | 0.8877061   |
+| stats_g/std        | 0.07811398  |
+| stats_o/mean       | 0.2658908   |
+| stats_o/std        | 0.025501108 |
+| test/episode       | 100.0       |
+| test/mean_Q        | -0.21576768 |
+| test/success_rate  | 0.795       |
+| train/episode      | 100.0       |
+| train/success_rate | 0.23        |
+------------------------------------
+New best success rate: 0.795. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/Result/td3-future-FetchReachDense-v1-1/policy/policy_best.pkl ...
+------------------------------------
+| epoch              | 2           |
+| stats_g/mean       | 0.88660794  |
+| stats_g/std        | 0.07730687  |
+| stats_o/mean       | 0.26558214  |
+| stats_o/std        | 0.025383417 |
+| test/episode       | 150.0       |
+| test/mean_Q        | -0.22269207 |
+| test/success_rate  | 0.91        |
+| train/episode      | 150.0       |
+| train/success_rate | 0.28        |
+------------------------------------
+New best success rate: 0.91. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/Result/td3-future-FetchReachDense-v1-1/policy/policy_best.pkl ...
+-------------------------------------------
+| epoch              | 3                  |
+| stats_g/mean       | 0.8855386          |
+| stats_g/std        | 0.077447794        |
+| stats_o/mean       | 0.26538247         |
+| stats_o/std        | 0.025483172        |
+| test/episode       | 200.0              |
+| test/mean_Q        | -0.23729506        |
+| test/success_rate  | 0.9800000000000001 |
+| train/episode      | 200.0              |
+| train/success_rate | 0.405              |
+-------------------------------------------
+New best success rate: 0.9800000000000001. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/Result/td3-future-FetchReachDense-v1-1/policy/policy_best.pkl ...
+--------------------------------------------
+| epoch              | 4                   |
+| stats_g/mean       | 0.88485837          |
+| stats_g/std        | 0.07745862          |
+| stats_o/mean       | 0.26525393          |
+| stats_o/std        | 0.025539387         |
+| test/episode       | 250.0               |
+| test/mean_Q        | -0.23587921         |
+| test/success_rate  | 1.0                 |
+| train/episode      | 250.0               |
+| train/success_rate | 0.45499999999999996 |
+--------------------------------------------
+New best success rate: 1.0. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/Result/td3-future-FetchReachDense-v1-1/policy/policy_best.pkl ...
+-------------------------------------------
+| epoch              | 5                  |
+| stats_g/mean       | 0.8833172          |
+| stats_g/std        | 0.07772618         |
+| stats_o/mean       | 0.26492447         |
+| stats_o/std        | 0.025657102        |
+| test/episode       | 300.0              |
+| test/mean_Q        | -0.23934081        |
+| test/success_rate  | 1.0                |
+| train/episode      | 300.0              |
+| train/success_rate | 0.4700000000000001 |
+-------------------------------------------
+New best success rate: 1.0. Saving policy to /home/yuchen/Desktop/FlorianResearch/RLProject/Result/td3-future-FetchReachDense-v1-1/policy/policy_best.pkl ...

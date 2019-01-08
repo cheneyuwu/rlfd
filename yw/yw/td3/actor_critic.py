@@ -32,13 +32,20 @@ class ActorCritic:
         input_pi = tf.concat(axis=1, values=[o, g])  # for actor
 
         # Networks.
+        # Policy Pi
         with tf.variable_scope("pi"):
             self.pi_tf = self.max_u * tf.tanh(nn(input_pi, [self.hidden] * self.layers + [self.dimu]))
+        # Q networks
+        self.Q_pi_tf = []
+        self._input_Q = []
+        self.Q_tf = []
         with tf.variable_scope("Q"):
-            # for policy training
-            input_Q = tf.concat(axis=1, values=[o, g, self.pi_tf / self.max_u])
-            self.Q_pi_tf = nn(input_Q, [self.hidden] * self.layers + [1])
-            # for critic training
-            input_Q = tf.concat(axis=1, values=[o, g, self.u_tf / self.max_u])
-            self._input_Q = input_Q  # exposed for tests
-            self.Q_tf = nn(input_Q, [self.hidden] * self.layers + [1], reuse=True)
+            for i in range(2):
+                with tf.variable_scope("Q"+str(i)):
+                    # for policy training
+                    input_Q = tf.concat(axis=1, values=[o, g, self.pi_tf / self.max_u])
+                    self.Q_pi_tf.append(nn(input_Q, [self.hidden] * self.layers + [1]))
+                    # for critic training
+                    input_Q = tf.concat(axis=1, values=[o, g, self.u_tf / self.max_u])
+                    self._input_Q.append(input_Q)  # exposed for tests
+                    self.Q_tf.append(nn(input_Q, [self.hidden] * self.layers + [1], reuse=True))

@@ -64,15 +64,18 @@ def load_results(root_dir_or_dirs):
 def plot_results(allresults, dir, smooth=False):
     data = {}
     for results in allresults:
+        print(results)
         success_rate = results["progress"]["test/success_rate"]
         epoch = results["progress"]["epoch"] + 1
         env_id = results["params"]["env_name"]
         replay_strategy = results["params"]["replay_strategy"]
-
+        config = results["params"]["config"]
+        # Used hindsight replay or not
         if replay_strategy == "future":
-            config = "her"
+            config += "-her"
         else:
-            config = "ddpg"
+            config += "-none"
+        # Used sparse reward or not
         if "Dense" in env_id:
             config += "-dense"
         else:

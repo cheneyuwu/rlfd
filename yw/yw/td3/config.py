@@ -8,17 +8,19 @@ import gym
 
 # DDPG Package import
 from yw import logger
-from yw.ddpg.ddpg import DDPG
+from yw.td3.ddpg import DDPG
 from yw.ddpg.rollout import RolloutWorker
 from yw.ddpg.her import make_sample_her_transitions
 
 DEFAULT_PARAMS = {
+    # config name
+    "config": "td3",
     # env
     "max_u": 1.0,  # max absolute value of actions on different coordinates
     # ddpg
     "layers": 3,  # number of layers in the critic/actor networks
     "hidden": 256,  # number of neurons in each hidden layers
-    "network_class": "yw.ddpg.actor_critic:ActorCritic",
+    "network_class": "yw.td3.actor_critic:ActorCritic",
     "Q_lr": 0.001,  # critic learning rate
     "pi_lr": 0.001,  # actor learning rate
     "buffer_size": int(1e6),  # for experience replay

@@ -136,7 +136,7 @@ class DDPG(object):
             stage_shapes[key] = (None, *input_shapes[key])
         for key in ["o", "g"]:
             stage_shapes[key + "_2"] = stage_shapes[key]
-        stage_shapes["r"] = (None,1)
+        stage_shapes["r"] = (None, 1)
         self.stage_shapes = stage_shapes  # feeding data into model
         logger.debug("DDPG.__init__ -> The staging shapes are: {}".format(self.stage_shapes))
         with tf.variable_scope(self.scope):
@@ -274,7 +274,7 @@ class DDPG(object):
         self._update(Q_grad, pi_grad)
         logger.debug("DDPG.train -> critic_loss:{}, actor_loss:{}".format(critic_loss, actor_loss))
         return critic_loss, actor_loss
-    
+
     def check_train(self):
         """
         For debugging only
@@ -339,10 +339,18 @@ class DDPG(object):
         assert len(self._vars("main")) == len(self._vars("target"))
 
         # loss functions
-        target_Q_pi_tf = self.target.Q_pi_tf
+        target_Q_pi_tf_list = self.target.Q_pi_tf
         clip_range = (-self.clip_return, 0.0 if self.clip_pos_returns else np.inf)
-        target_tf = tf.clip_by_value(batch_tf["r"] + self.gamma * target_Q_pi_tf, *clip_range)
-        self.Q_loss_tf = tf.reduce_mean(tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf))
+        target_tf_list = [
+            tf.clip_by_value(batch_tf["r"] + self.gamma * target_Q_pi_tf, *clip_range)
+            for target_Q_pi_tf in target_Q_pi_tf_list
+        ]
+        target_min_tf = tf.reduce_min(target_tf_list, 0)
+
+        self.Q_loss_tf = [
+            tf.reduce_mean(tf.square(tf.stop_gradient(target_min_tf) - self.main.Q_tf[i]))
+            for i in range(len(self.main.Q_tf))
+        ]
 
         # if self.bc_loss == 1 and self.q_filter == 1:  # train with demonstrations and use bc_loss and q_filter both
         #     # where is the demonstrator action better than actor action according to the critic? choose those samples only
@@ -370,7 +378,7 @@ class DDPG(object):
         #     self.pi_loss_tf = -tf.reduce_mean(self.main.Q_pi_tf)
         #     self.pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
 
-        self.pi_loss_tf = -tf.reduce_mean(self.main.Q_pi_tf)
+        self.pi_loss_tf = -tf.reduce_mean(self.main.Q_pi_tf[0])
         self.pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
         Q_grads_tf = tf.gradients(self.Q_loss_tf, self._vars("main/Q"))
         pi_grads_tf = tf.gradients(self.pi_loss_tf, self._vars("main/pi"))
