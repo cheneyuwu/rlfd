@@ -1,7 +1,8 @@
 # Resources list
 
-## Papers
-[Might want to check this out](https://openreview.net/forum?id=SkT5Yg-RZ)
+## Websites
+- [OpenAI Spinning Up]()
+- [OpenAI Baselines]()
 
 ## Simulators
 

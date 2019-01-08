@@ -1,5 +1,3 @@
-
-
 # Categories
 - Model-Free RL
   - Deep Q-Learning
