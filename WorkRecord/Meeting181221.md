@@ -34,6 +34,6 @@ December 21, 2018
   - PhysX from Nvidia
     - Since it is c++ based. Let's leave this for now.
 
-## Extra Note
+## Extra Notes
   - Always use dense reward rather than sparse reward.
 
