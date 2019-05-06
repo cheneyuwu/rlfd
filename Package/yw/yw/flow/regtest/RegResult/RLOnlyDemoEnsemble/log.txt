@@ -1,0 +1,233 @@
+Logging to /home/yuchen/Desktop/RLProject/Temp/RegResult/RLOnlyDemoEnsemble/
+Launching the training process with 1 cpu core(s).
+Setting log level to 1.
+train_ddpg_main.launch -> Using debug mode. Avoid training with too many epochs.
+Using environment Reach2D with r scale down by 1.000000 shift by 0.000000 and max episode 2.000000
+Skip demonstration training.
+Will use provided policy file from /home/yuchen/Desktop/RLProject/Package/yw/yw/flow/regtest/data/ensemble_policy_latest.
+Creating a Demonstration NN.
+Imitation.__init__ -> The staging shapes are: OrderedDict([('g', (None, 2)), ('o', (None, 4)), ('u', (None, 2)), ('q', (None, 1))])
+Creating an Ensemble NN of sample x hidden x layer: 1 x 4 x 2.
+demo_policy.EnsembleNN.SampleNN.__init__ -> Called.
+Demo.__init__ -> Global variables are: [<tf.Variable 'demo/EnsembleNN/ens_0/_0/kernel:0' shape=(8, 4) dtype=float32_ref>, <tf.Variable 'demo/EnsembleNN/ens_0/_0/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'demo/EnsembleNN/ens_0/_1/kernel:0' shape=(4, 4) dtype=float32_ref>, <tf.Variable 'demo/EnsembleNN/ens_0/_1/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'demo/EnsembleNN/ens_0/_2/kernel:0' shape=(4, 1) dtype=float32_ref>, <tf.Variable 'demo/EnsembleNN/ens_0/_2/bias:0' shape=(1,) dtype=float32_ref>]
+Demo.__init__ -> Trainable variables are: [<tf.Variable 'demo/EnsembleNN/ens_0/_0/kernel:0' shape=(8, 4) dtype=float32_ref>, <tf.Variable 'demo/EnsembleNN/ens_0/_0/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'demo/EnsembleNN/ens_0/_1/kernel:0' shape=(4, 4) dtype=float32_ref>, <tf.Variable 'demo/EnsembleNN/ens_0/_1/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'demo/EnsembleNN/ens_0/_2/kernel:0' shape=(4, 1) dtype=float32_ref>, <tf.Variable 'demo/EnsembleNN/ens_0/_2/bias:0' shape=(1,) dtype=float32_ref>]
+Imitator.__getstate__ -> Loaded Params:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'input_dims', 'dimo', 'dimg', 'dimu', 'input_shapes', 'buffer_size', 'tf'])
+*** her_params ***
+k: 4
+reward_fun: <function configure_her.<locals>.reward_fun at 0x7f2a37152ea0>
+strategy: future
+*** her_params ***
+*** ddpg_params ***
+Q_lr: 0.001
+T: 2
+action_l2: 1.0
+aux_loss_weight: 0.0078
+batch_size: 4
+batch_size_demo: 128
+buffer_size: 1000000
+ca_ratio: 1
+clip_obs: 200.0
+clip_pos_returns: False
+clip_return: 2.0
+demo_strategy: critic
+gamma: 0.5
+hidden: 4
+info: {'env_name': 'Reach2D', 'r_scale': 1.0, 'r_shift': 0.0, 'eps_length': 2}
+input_dims: {'o': 4, 'u': 2, 'g': 2, 'info_is_success': 1}
+layers: 2
+max_u: 2
+norm_clip: 5
+norm_eps: 0.01
+num_demo: 1000
+num_sample: 1
+pi_lr: 0.001
+polyak: 0.95
+prm_loss_weight: 0.001
+q_filter: 0
+relative_goals: False
+rollout_batch_size: 2
+sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7f2a37152e18>
+scope: ddpg
+subtract_goals: <function simple_goal_subtract at 0x7f2a3714f620>
+*** ddpg_params ***
+Configuring the replay buffer.
+DDPG.__init__ -> The buffer shapes are: {'o': (3, 4), 'u': (2, 2), 'g': (2, 2), 'info_is_success': (2, 1), 'ag': (3, 2), 'mask': (2, 1), 'q': (2, 1)}
+DDPG.__init__ -> The buffer size is: 1000000
+Preparing staging area for feeding data to the model.
+DDPG.__init__ -> The staging shapes are: OrderedDict([('g', (None, 2)), ('o', (None, 4)), ('u', (None, 2)), ('o_2', (None, 4)), ('g_2', (None, 2)), ('r', (None, 1)), ('mask', (None, 1)), ('q', (None, 1)), ('q_mean', (None, 1)), ('q_var', (None, 1)), ('q_sample', (None, 1))])
+Creating a DDPG agent with action space 2 x 2.
+DDPG._create_network -> self.stage_shapes.keys() are odict_keys(['g', 'o', 'u', 'o_2', 'g_2', 'r', 'mask', 'q', 'q_mean', 'q_var', 'q_sample'])
+ActorCritic.__init__ -> Creating ActorCritic with 1 replications of type main.
+ActorCritic.__init__ -> Creating ActorCritic with 1 replications of type target.
+Demo.__init__ -> Global variables are: [<tf.Variable 'ddpg/o_stats/sum:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/o_stats/sumsq:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/o_stats/count:0' shape=(1,) dtype=float32_ref>, <tf.Variable 'ddpg/o_stats/mean:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/o_stats/std:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/g_stats/sum:0' shape=(2,) dtype=float32_ref>, <tf.Variable 'ddpg/g_stats/sumsq:0' shape=(2,) dtype=float32_ref>, <tf.Variable 'ddpg/g_stats/count:0' shape=(1,) dtype=float32_ref>, <tf.Variable 'ddpg/g_stats/mean:0' shape=(2,) dtype=float32_ref>, <tf.Variable 'ddpg/g_stats/std:0' shape=(2,) dtype=float32_ref>, <tf.Variable 'ddpg/main/pi/pi0/_0/kernel:0' shape=(6, 4) dtype=float32_ref>, <tf.Variable 'ddpg/main/pi/pi0/_0/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/main/pi/pi0/_1/kernel:0' shape=(4, 4) dtype=float32_ref>, <tf.Variable 'ddpg/main/pi/pi0/_1/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/main/pi/pi0/_2/kernel:0' shape=(4, 2) dtype=float32_ref>, <tf.Variable 'ddpg/main/pi/pi0/_2/bias:0' shape=(2,) dtype=float32_ref>, <tf.Variable 'ddpg/main/Q/Q0/_0/kernel:0' shape=(8, 4) dtype=float32_ref>, <tf.Variable 'ddpg/main/Q/Q0/_0/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/main/Q/Q0/_1/kernel:0' shape=(4, 4) dtype=float32_ref>, <tf.Variable 'ddpg/main/Q/Q0/_1/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/main/Q/Q0/_2/kernel:0' shape=(4, 1) dtype=float32_ref>, <tf.Variable 'ddpg/main/Q/Q0/_2/bias:0' shape=(1,) dtype=float32_ref>, <tf.Variable 'ddpg/target/pi/pi0/_0/kernel:0' shape=(6, 4) dtype=float32_ref>, <tf.Variable 'ddpg/target/pi/pi0/_0/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/target/pi/pi0/_1/kernel:0' shape=(4, 4) dtype=float32_ref>, <tf.Variable 'ddpg/target/pi/pi0/_1/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/target/pi/pi0/_2/kernel:0' shape=(4, 2) dtype=float32_ref>, <tf.Variable 'ddpg/target/pi/pi0/_2/bias:0' shape=(2,) dtype=float32_ref>, <tf.Variable 'ddpg/target/Q/Q0/_0/kernel:0' shape=(8, 4) dtype=float32_ref>, <tf.Variable 'ddpg/target/Q/Q0/_0/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/target/Q/Q0/_1/kernel:0' shape=(4, 4) dtype=float32_ref>, <tf.Variable 'ddpg/target/Q/Q0/_1/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/target/Q/Q0/_2/kernel:0' shape=(4, 1) dtype=float32_ref>, <tf.Variable 'ddpg/target/Q/Q0/_2/bias:0' shape=(1,) dtype=float32_ref>, <tf.Variable 'ddpg/global_step:0' shape=() dtype=float32_ref>]
+Demo.__init__ -> Trainable variables are: [<tf.Variable 'ddpg/main/pi/pi0/_0/kernel:0' shape=(6, 4) dtype=float32_ref>, <tf.Variable 'ddpg/main/pi/pi0/_0/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/main/pi/pi0/_1/kernel:0' shape=(4, 4) dtype=float32_ref>, <tf.Variable 'ddpg/main/pi/pi0/_1/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/main/pi/pi0/_2/kernel:0' shape=(4, 2) dtype=float32_ref>, <tf.Variable 'ddpg/main/pi/pi0/_2/bias:0' shape=(2,) dtype=float32_ref>, <tf.Variable 'ddpg/main/Q/Q0/_0/kernel:0' shape=(8, 4) dtype=float32_ref>, <tf.Variable 'ddpg/main/Q/Q0/_0/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/main/Q/Q0/_1/kernel:0' shape=(4, 4) dtype=float32_ref>, <tf.Variable 'ddpg/main/Q/Q0/_1/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/main/Q/Q0/_2/kernel:0' shape=(4, 1) dtype=float32_ref>, <tf.Variable 'ddpg/main/Q/Q0/_2/bias:0' shape=(1,) dtype=float32_ref>, <tf.Variable 'ddpg/target/pi/pi0/_0/kernel:0' shape=(6, 4) dtype=float32_ref>, <tf.Variable 'ddpg/target/pi/pi0/_0/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/target/pi/pi0/_1/kernel:0' shape=(4, 4) dtype=float32_ref>, <tf.Variable 'ddpg/target/pi/pi0/_1/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/target/pi/pi0/_2/kernel:0' shape=(4, 2) dtype=float32_ref>, <tf.Variable 'ddpg/target/pi/pi0/_2/bias:0' shape=(2,) dtype=float32_ref>, <tf.Variable 'ddpg/target/Q/Q0/_0/kernel:0' shape=(8, 4) dtype=float32_ref>, <tf.Variable 'ddpg/target/Q/Q0/_0/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/target/Q/Q0/_1/kernel:0' shape=(4, 4) dtype=float32_ref>, <tf.Variable 'ddpg/target/Q/Q0/_1/bias:0' shape=(4,) dtype=float32_ref>, <tf.Variable 'ddpg/target/Q/Q0/_2/kernel:0' shape=(4, 1) dtype=float32_ref>, <tf.Variable 'ddpg/target/Q/Q0/_2/bias:0' shape=(1,) dtype=float32_ref>]
+
+*** rollout_params ***
+T: 2
+compute_Q: False
+dims: {'o': 4, 'u': 2, 'g': 2, 'info_is_success': 1}
+exploit: 0
+noise_eps: 0.2
+random_eps: 0.3
+rollout_batch_size: 2
+use_demo_states: True
+use_target_net: False
+*** rollout_params ***
+*** eval_params ***
+T: 2
+compute_Q: True
+dims: {'o': 4, 'u': 2, 'g': 2, 'info_is_success': 1}
+exploit: 1
+noise_eps: 0.2
+random_eps: 0.3
+rollout_batch_size: 2
+use_demo_states: False
+use_target_net: False
+*** eval_params ***
+Training the RL agent.
+train_ddpg_main.train_reinforce -> epoch: 0
+DDPG.train -> global step at 1.0
+train_ddpg_main.train_reinforce -> cycle: 0
+RolloutWorker.generate_rollouts -> step 0
+DDPG.get_actions -> Dumping out action input and output for debugging.
+DDPG.get_actions -> The observation shape is: (2, 4)
+DDPG.get_actions -> The achieved goal shape is: (2, 2)
+DDPG.get_actions -> The goal shape is: (2, 2)
+DDPG.get_actions -> The estimated q value shape is: (2,)
+DDPG.get_actions -> The action array shape is: 1 x (2, 2)
+DDPG.get_actions -> The selected action shape is: (2, 2)
+DDPG.get_actions -> The shape of demo mean is: (2,)
+DDPG.get_actions -> The shape of demo variance is: (2,)
+RolloutWorker.generate_rollouts -> step 1
+DDPG.get_actions -> Dumping out action input and output for debugging.
+DDPG.get_actions -> The observation shape is: (2, 4)
+DDPG.get_actions -> The achieved goal shape is: (2, 2)
+DDPG.get_actions -> The goal shape is: (2, 2)
+DDPG.get_actions -> The estimated q value shape is: (2,)
+DDPG.get_actions -> The action array shape is: 1 x (2, 2)
+DDPG.get_actions -> The selected action shape is: (2, 2)
+DDPG.get_actions -> The shape of demo mean is: (2,)
+DDPG.get_actions -> The shape of demo variance is: (2,)
+train_ddpg_main.train_reinforce -> batch: 0
+DDPG.sample_batch -> The sampled batch shape is: {'g': (4, 2), 'o': (4, 4), 'u': (4, 2), 'o_2': (4, 4), 'g_2': (4, 2), 'r': (4, 1), 'mask': (4, 1), 'q': (4, 1), 'q_mean': (4, 1), 'q_var': (4, 1), 'q_sample': (4, 1)}
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder:0", shape=(?, 2), dtype=float32) is  (4, 2)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_1:0", shape=(?, 4), dtype=float32) is  (4, 4)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_2:0", shape=(?, 2), dtype=float32) is  (4, 2)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_3:0", shape=(?, 4), dtype=float32) is  (4, 4)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_4:0", shape=(?, 2), dtype=float32) is  (4, 2)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_5:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_6:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_7:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_8:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_9:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> Order should match stage_shapes.
+DDPG.train -> critic_loss:[0.016234828], actor_loss:[0.1562641]
+train_ddpg_main.train_reinforce -> batch: 1
+DDPG.sample_batch -> The sampled batch shape is: {'g': (4, 2), 'o': (4, 4), 'u': (4, 2), 'o_2': (4, 4), 'g_2': (4, 2), 'r': (4, 1), 'mask': (4, 1), 'q': (4, 1), 'q_mean': (4, 1), 'q_var': (4, 1), 'q_sample': (4, 1)}
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder:0", shape=(?, 2), dtype=float32) is  (4, 2)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_1:0", shape=(?, 4), dtype=float32) is  (4, 4)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_2:0", shape=(?, 2), dtype=float32) is  (4, 2)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_3:0", shape=(?, 4), dtype=float32) is  (4, 4)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_4:0", shape=(?, 2), dtype=float32) is  (4, 2)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_5:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_6:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_7:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_8:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_9:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> Order should match stage_shapes.
+DDPG.train -> critic_loss:[0.02859524], actor_loss:[0.26155823]
+DDPG.update_target_net -> updating target net.
+train_ddpg_main.train_reinforce -> cycle: 1
+RolloutWorker.generate_rollouts -> step 0
+DDPG.get_actions -> Dumping out action input and output for debugging.
+DDPG.get_actions -> The observation shape is: (2, 4)
+DDPG.get_actions -> The achieved goal shape is: (2, 2)
+DDPG.get_actions -> The goal shape is: (2, 2)
+DDPG.get_actions -> The estimated q value shape is: (2,)
+DDPG.get_actions -> The action array shape is: 1 x (2, 2)
+DDPG.get_actions -> The selected action shape is: (2, 2)
+DDPG.get_actions -> The shape of demo mean is: (2,)
+DDPG.get_actions -> The shape of demo variance is: (2,)
+RolloutWorker.generate_rollouts -> step 1
+DDPG.get_actions -> Dumping out action input and output for debugging.
+DDPG.get_actions -> The observation shape is: (2, 4)
+DDPG.get_actions -> The achieved goal shape is: (2, 2)
+DDPG.get_actions -> The goal shape is: (2, 2)
+DDPG.get_actions -> The estimated q value shape is: (2,)
+DDPG.get_actions -> The action array shape is: 1 x (2, 2)
+DDPG.get_actions -> The selected action shape is: (2, 2)
+DDPG.get_actions -> The shape of demo mean is: (2,)
+DDPG.get_actions -> The shape of demo variance is: (2,)
+train_ddpg_main.train_reinforce -> batch: 0
+DDPG.sample_batch -> The sampled batch shape is: {'g': (4, 2), 'o': (4, 4), 'u': (4, 2), 'o_2': (4, 4), 'g_2': (4, 2), 'r': (4, 1), 'mask': (4, 1), 'q': (4, 1), 'q_mean': (4, 1), 'q_var': (4, 1), 'q_sample': (4, 1)}
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder:0", shape=(?, 2), dtype=float32) is  (4, 2)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_1:0", shape=(?, 4), dtype=float32) is  (4, 4)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_2:0", shape=(?, 2), dtype=float32) is  (4, 2)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_3:0", shape=(?, 4), dtype=float32) is  (4, 4)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_4:0", shape=(?, 2), dtype=float32) is  (4, 2)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_5:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_6:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_7:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_8:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_9:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> Order should match stage_shapes.
+DDPG.train -> critic_loss:[0.034792326], actor_loss:[0.4138145]
+train_ddpg_main.train_reinforce -> batch: 1
+DDPG.sample_batch -> The sampled batch shape is: {'g': (4, 2), 'o': (4, 4), 'u': (4, 2), 'o_2': (4, 4), 'g_2': (4, 2), 'r': (4, 1), 'mask': (4, 1), 'q': (4, 1), 'q_mean': (4, 1), 'q_var': (4, 1), 'q_sample': (4, 1)}
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder:0", shape=(?, 2), dtype=float32) is  (4, 2)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_1:0", shape=(?, 4), dtype=float32) is  (4, 4)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_2:0", shape=(?, 2), dtype=float32) is  (4, 2)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_3:0", shape=(?, 4), dtype=float32) is  (4, 4)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_4:0", shape=(?, 2), dtype=float32) is  (4, 2)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_5:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_6:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_7:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_8:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_9:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtype=float32) is  (4, 1)
+DDPG.stage_batch -> Order should match stage_shapes.
+DDPG.train -> critic_loss:[0.009082497], actor_loss:[0.45379156]
+DDPG.update_target_net -> updating target net.
+train_ddpg_main.train_reinforce -> Testing.
+RolloutWorker.generate_rollouts -> step 0
+DDPG.get_actions -> Dumping out action input and output for debugging.
+DDPG.get_actions -> The observation shape is: (2, 4)
+DDPG.get_actions -> The achieved goal shape is: (2, 2)
+DDPG.get_actions -> The goal shape is: (2, 2)
+DDPG.get_actions -> The estimated q value shape is: (2,)
+DDPG.get_actions -> The action array shape is: 1 x (2, 2)
+DDPG.get_actions -> The selected action shape is: (2, 2)
+DDPG.get_actions -> The shape of demo mean is: (2,)
+DDPG.get_actions -> The shape of demo variance is: (2,)
+RolloutWorker.generate_rollouts -> step 1
+DDPG.get_actions -> Dumping out action input and output for debugging.
+DDPG.get_actions -> The observation shape is: (2, 4)
+DDPG.get_actions -> The achieved goal shape is: (2, 2)
+DDPG.get_actions -> The goal shape is: (2, 2)
+DDPG.get_actions -> The estimated q value shape is: (2,)
+DDPG.get_actions -> The action array shape is: 1 x (2, 2)
+DDPG.get_actions -> The selected action shape is: (2, 2)
+DDPG.get_actions -> The shape of demo mean is: (2,)
+DDPG.get_actions -> The shape of demo variance is: (2,)
+------------------------------------
+| epoch              | 0           |
+| stats_g/mean       | 0.13362059  |
+| stats_g/std        | 0.4620508   |
+| stats_o/mean       | 0.08232952  |
+| stats_o/std        | 0.45332536  |
+| test/episode       | 2.0         |
+| test/mean_Q        | -0.06346282 |
+| test/success_rate  | 0.0         |
+| train/episode      | 4.0         |
+| train/success_rate | 0.0         |
+------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchen/Desktop/RLProject/Temp/RegResult/RLOnlyDemoEnsemble//rl/policy_best.pkl.
+Imitator.__getstate__ -> Members:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'input_dims', 'dimo', 'dimg', 'dimu', 'input_shapes', 'buffer_size', 'tf', 'training_set', 'test_set', 'sess', 'input_tf', 'policy', 'grad_tf', 'adam'])
+Imitator.__getstate__ -> Saved members:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'input_dims', 'dimo', 'dimg', 'dimu', 'input_shapes', 'buffer_size', 'tf'])
+Saving latest policy to /home/yuchen/Desktop/RLProject/Temp/RegResult/RLOnlyDemoEnsemble//rl/policy_latest.pkl.
+Imitator.__getstate__ -> Members:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'input_dims', 'dimo', 'dimg', 'dimu', 'input_shapes', 'buffer_size', 'tf', 'training_set', 'test_set', 'sess', 'input_tf', 'policy', 'grad_tf', 'adam'])
+Imitator.__getstate__ -> Saved members:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'input_dims', 'dimo', 'dimg', 'dimu', 'input_shapes', 'buffer_size', 'tf'])
