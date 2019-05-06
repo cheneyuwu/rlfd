@@ -1,0 +1,545 @@
+Logging to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly/
+Launching the training process with 1 cpu core(s).
+Setting log level to 2.
+Using environment Reach2D with r scale down by 1.000000 shift by 0.000000 and max episode 0.000000
+Training demonstration neural net to produce expected Q value.
+*** q_estimator_params ***
+T: 42
+batch_size: 64
+buffer_size: 1000000
+data_size: 1024
+hidden: 256
+input_dims: {'o': 4, 'u': 2, 'g': 2, 'info_is_success': 1}
+layers: 3
+lr: 0.001
+max_u: 2
+net_type: yw.ddpg_main.demo_policy:EnsembleNN
+num_sample: 12
+scope: demo
+test_batch_size: 100
+*** q_estimator_params ***
+Creating a Demonstration NN.
+Creating an Ensemble NN of sample x hidden x layer: 12 x 256 x 3.
+Adding data to the training set.
+Adding data to test set.
+Imitator.check -> Mean u output is: 1.6057791709899902
+---------------------
+| epoch | 0         |
+| loss  | 135.71443 |
+---------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_0.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 1.8983880281448364
+--------------------
+| epoch | 1        |
+| loss  | 36.22437 |
+--------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.6722802519798279
+---------------------
+| epoch | 2         |
+| loss  | 26.408407 |
+---------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_2.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.39388567209243774
+---------------------
+| epoch | 3         |
+| loss  | 21.493505 |
+---------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.25876179337501526
+---------------------
+| epoch | 4         |
+| loss  | 17.956476 |
+---------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_4.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.25154271721839905
+---------------------
+| epoch | 5         |
+| loss  | 15.196792 |
+---------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.18615639209747314
+----------------------
+| epoch | 6          |
+| loss  | 12.7354555 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_6.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.19513550400733948
+---------------------
+| epoch | 7         |
+| loss  | 10.345967 |
+---------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.2599315047264099
+--------------------
+| epoch | 8        |
+| loss  | 8.175519 |
+--------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_8.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.30049261450767517
+---------------------
+| epoch | 9         |
+| loss  | 6.1153755 |
+---------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.1814231127500534
+---------------------
+| epoch | 10        |
+| loss  | 4.1188674 |
+---------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_10.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.2651219964027405
+---------------------
+| epoch | 11        |
+| loss  | 2.7143395 |
+---------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.2125907838344574
+---------------------
+| epoch | 12        |
+| loss  | 1.6674188 |
+---------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_12.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.18013215065002441
+---------------------
+| epoch | 13        |
+| loss  | 1.1159873 |
+---------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.1418464481830597
+---------------------
+| epoch | 14        |
+| loss  | 0.8308751 |
+---------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_14.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.12361209839582443
+---------------------
+| epoch | 15        |
+| loss  | 0.6826718 |
+---------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.10311277210712433
+---------------------
+| epoch | 16        |
+| loss  | 0.5679957 |
+---------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_16.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.08207953721284866
+----------------------
+| epoch | 17         |
+| loss  | 0.48173568 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.06574994325637817
+----------------------
+| epoch | 18         |
+| loss  | 0.41906908 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_18.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.06364281475543976
+----------------------
+| epoch | 19         |
+| loss  | 0.37194505 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.05469828471541405
+----------------------
+| epoch | 20         |
+| loss  | 0.32723984 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_20.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.05993536859750748
+---------------------
+| epoch | 21        |
+| loss  | 0.3033493 |
+---------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.0487174391746521
+----------------------
+| epoch | 22         |
+| loss  | 0.26553252 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_22.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.04744865372776985
+----------------------
+| epoch | 23         |
+| loss  | 0.24499857 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.04337658733129501
+---------------------
+| epoch | 24        |
+| loss  | 0.2230349 |
+---------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_24.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.04420392960309982
+----------------------
+| epoch | 25         |
+| loss  | 0.20972206 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.03881685435771942
+----------------------
+| epoch | 26         |
+| loss  | 0.18900192 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_26.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.040843673050403595
+----------------------
+| epoch | 27         |
+| loss  | 0.17946321 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.03786768764257431
+----------------------
+| epoch | 28         |
+| loss  | 0.16667758 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_28.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.03336361423134804
+---------------------
+| epoch | 29        |
+| loss  | 0.1538914 |
+---------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.03120477870106697
+----------------------
+| epoch | 30         |
+| loss  | 0.14326437 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_30.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.031834546476602554
+----------------------
+| epoch | 31         |
+| loss  | 0.13518868 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.028501199558377266
+----------------------
+| epoch | 32         |
+| loss  | 0.12558673 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_32.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.02420351468026638
+----------------------
+| epoch | 33         |
+| loss  | 0.11399716 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.024579916149377823
+-----------------------
+| epoch | 34          |
+| loss  | 0.108457685 |
+-----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_34.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.02546585351228714
+-----------------------
+| epoch | 35          |
+| loss  | 0.103854656 |
+-----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.023159556090831757
+-----------------------
+| epoch | 36          |
+| loss  | 0.098069005 |
+-----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_36.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.023032106459140778
+----------------------
+| epoch | 37         |
+| loss  | 0.09576741 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.023864595219492912
+----------------------
+| epoch | 38         |
+| loss  | 0.09156289 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_38.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.022721752524375916
+----------------------
+| epoch | 39         |
+| loss  | 0.08538288 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.022792033851146698
+----------------------
+| epoch | 40         |
+| loss  | 0.08196903 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_40.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.020409664139151573
+-----------------------
+| epoch | 41          |
+| loss  | 0.077166356 |
+-----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.023247119039297104
+----------------------
+| epoch | 42         |
+| loss  | 0.07642277 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_42.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.02036745846271515
+----------------------
+| epoch | 43         |
+| loss  | 0.07087194 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.017982468008995056
+----------------------
+| epoch | 44         |
+| loss  | 0.06595675 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_44.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.019455503672361374
+----------------------
+| epoch | 45         |
+| loss  | 0.06531942 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.017729230225086212
+-----------------------
+| epoch | 46          |
+| loss  | 0.061695304 |
+-----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_46.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.018502211198210716
+-----------------------
+| epoch | 47          |
+| loss  | 0.060488954 |
+-----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.016208507120609283
+-----------------------
+| epoch | 48          |
+| loss  | 0.056368023 |
+-----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_48.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.015540697611868382
+----------------------
+| epoch | 49         |
+| loss  | 0.05473579 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.015389377251267433
+-----------------------
+| epoch | 50          |
+| loss  | 0.052175824 |
+-----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_50.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.015448005869984627
+-----------------------
+| epoch | 51          |
+| loss  | 0.050344616 |
+-----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.0144072650000453
+----------------------
+| epoch | 52         |
+| loss  | 0.04818909 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_52.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.01266592089086771
+-----------------------
+| epoch | 53          |
+| loss  | 0.045239676 |
+-----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.01608339138329029
+----------------------
+| epoch | 54         |
+| loss  | 0.04748422 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_54.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.015976442024111748
+-----------------------
+| epoch | 55          |
+| loss  | 0.045957793 |
+-----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.013582421466708183
+-----------------------
+| epoch | 56          |
+| loss  | 0.042560518 |
+-----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_56.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.014837974682450294
+----------------------
+| epoch | 57         |
+| loss  | 0.04316854 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.01242391299456358
+-----------------------
+| epoch | 58          |
+| loss  | 0.039529283 |
+-----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_58.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.01429087296128273
+----------------------
+| epoch | 59         |
+| loss  | 0.03999504 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.012785722501575947
+-----------------------
+| epoch | 60          |
+| loss  | 0.037772607 |
+-----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_60.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.013093068264424801
+-----------------------
+| epoch | 61          |
+| loss  | 0.037231497 |
+-----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.012256648391485214
+-----------------------
+| epoch | 62          |
+| loss  | 0.035420343 |
+-----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_62.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.014080477878451347
+-----------------------
+| epoch | 63          |
+| loss  | 0.036311287 |
+-----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.011539367958903313
+-----------------------
+| epoch | 64          |
+| loss  | 0.033657942 |
+-----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_64.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.011820911429822445
+----------------------
+| epoch | 65         |
+| loss  | 0.03262067 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.012511887587606907
+-----------------------
+| epoch | 66          |
+| loss  | 0.032685205 |
+-----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_66.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.011199751868844032
+-----------------------
+| epoch | 67          |
+| loss  | 0.030751407 |
+-----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.011545538902282715
+-----------------------
+| epoch | 68          |
+| loss  | 0.030370027 |
+-----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_68.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.010103220120072365
+-----------------------
+| epoch | 69          |
+| loss  | 0.028381437 |
+-----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.010177645832300186
+-----------------------
+| epoch | 70          |
+| loss  | 0.027647203 |
+-----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_70.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.010090790688991547
+--------------------
+| epoch | 71       |
+| loss  | 0.027067 |
+--------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.010958169586956501
+-----------------------
+| epoch | 72          |
+| loss  | 0.028113842 |
+-----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_72.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.009109921753406525
+-----------------------
+| epoch | 73          |
+| loss  | 0.025396928 |
+-----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.009964769706130028
+----------------------
+| epoch | 74         |
+| loss  | 0.02573585 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_74.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.008760105818510056
+-----------------------
+| epoch | 75          |
+| loss  | 0.024205903 |
+-----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.009300093166530132
+----------------------
+| epoch | 76         |
+| loss  | 0.02422685 |
+----------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_76.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.00902465172111988
+----------------------
+| epoch | 77         |
+| loss  | 0.02405707 |
+----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.009227515198290348
+---------------------
+| epoch | 78        |
+| loss  | 0.0236049 |
+---------------------
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_78.pkl ...
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Imitator.check -> Mean u output is: 0.010148689150810242
+-----------------------
+| epoch | 79          |
+| loss  | 0.023658449 |
+-----------------------
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
+Skip RL agent training.
