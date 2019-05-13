@@ -6,7 +6,7 @@ Skip demonstration training.
 Demo policy file does not exit, cannot use demo policy.
 *** her_params ***
 k: 4
-reward_fun: <function configure_her.<locals>.reward_fun at 0x7fc01fbb6ea0>
+reward_fun: <function configure_her.<locals>.reward_fun at 0x7f1ce824eea0>
 strategy: future
 *** her_params ***
 *** ddpg_params ***
@@ -39,9 +39,9 @@ prm_loss_weight: 0.001
 q_filter: 0
 relative_goals: False
 rollout_batch_size: 4
-sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7fc01fbb6f28>
+sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7f1ce824ef28>
 scope: critic_demo
-subtract_goals: <function simple_goal_subtract at 0x7fc01fc7fae8>
+subtract_goals: <function simple_goal_subtract at 0x7f1ce8315ae8>
 *** ddpg_params ***
 Configuring the replay buffer.
 Preparing staging area for feeding data to the model.

@@ -21,125 +21,125 @@ test_batch_size: 100
 Creating a Gaussian Process.
 Adding data to the training set.
 Adding data to test set.
-GPImitator.check -> average var -0.4184703246043205
+GPImitator.check -> average var -0.32707662649202135
 --------------------
 | epoch | 0        |
-| loss  | -631     |
+| loss  | -657     |
 --------------------
 Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_0.pkl ...
 Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
-GPImitator.check -> average var -0.4185646133460855
+GPImitator.check -> average var -0.3271516719724814
 --------------------
 | epoch | 50       |
-| loss  | -739     |
+| loss  | -773     |
 --------------------
-GPImitator.check -> average var -0.4185853971486579
+GPImitator.check -> average var -0.32717902531677506
 --------------------
 | epoch | 100      |
-| loss  | -840     |
+| loss  | -877     |
 --------------------
 Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_100.pkl ...
 Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
-GPImitator.check -> average var -0.41859399526302954
+GPImitator.check -> average var -0.32718754453869525
 --------------------
 | epoch | 150      |
-| loss  | -938     |
+| loss  | -978     |
 --------------------
-GPImitator.check -> average var -0.4185994583889085
+GPImitator.check -> average var -0.32719221943949406
 ---------------------
 | epoch | 200       |
-| loss  | -1.03e+03 |
+| loss  | -1.08e+03 |
 ---------------------
 Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_200.pkl ...
 Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
-GPImitator.check -> average var -0.4186030200836095
+GPImitator.check -> average var -0.32719581388762625
 ---------------------
 | epoch | 250       |
-| loss  | -1.13e+03 |
+| loss  | -1.18e+03 |
 ---------------------
-GPImitator.check -> average var -0.4186052913036636
+GPImitator.check -> average var -0.3271984373613305
 ---------------------
 | epoch | 300       |
-| loss  | -1.22e+03 |
+| loss  | -1.27e+03 |
 ---------------------
 Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_300.pkl ...
 Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
-GPImitator.check -> average var -0.4186067190254148
+GPImitator.check -> average var -0.32720016596183393
 ---------------------
 | epoch | 350       |
-| loss  | -1.31e+03 |
+| loss  | -1.37e+03 |
 ---------------------
-GPImitator.check -> average var -0.4186077013841472
+GPImitator.check -> average var -0.3272012554072197
 ---------------------
 | epoch | 400       |
-| loss  | -1.39e+03 |
+| loss  | -1.46e+03 |
 ---------------------
 Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_400.pkl ...
 Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
-GPImitator.check -> average var -0.418608443215964
+GPImitator.check -> average var -0.3272019274134495
 ---------------------
 | epoch | 450       |
-| loss  | -1.48e+03 |
+| loss  | -1.54e+03 |
 ---------------------
-GPImitator.check -> average var -0.41860897484651244
+GPImitator.check -> average var -0.3272023963086071
 ---------------------
 | epoch | 500       |
-| loss  | -1.55e+03 |
+| loss  | -1.63e+03 |
 ---------------------
 Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_500.pkl ...
 Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
-GPImitator.check -> average var -0.41860932568965764
----------------------
-| epoch | 550       |
-| loss  | -1.63e+03 |
----------------------
-GPImitator.check -> average var -0.4186095439947013
+GPImitator.check -> average var -0.3272027035929106
 --------------------
-| epoch | 600      |
+| epoch | 550      |
 | loss  | -1.7e+03 |
 --------------------
+GPImitator.check -> average var -0.3272029059532337
+---------------------
+| epoch | 600       |
+| loss  | -1.78e+03 |
+---------------------
 Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_600.pkl ...
 Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
-GPImitator.check -> average var -0.41860967664981086
+GPImitator.check -> average var -0.32720303259608857
 ---------------------
 | epoch | 650       |
-| loss  | -1.77e+03 |
+| loss  | -1.84e+03 |
 ---------------------
-GPImitator.check -> average var -0.41860976399065536
+GPImitator.check -> average var -0.32720310855781737
 ---------------------
 | epoch | 700       |
-| loss  | -1.84e+03 |
+| loss  | -1.91e+03 |
 ---------------------
 Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_700.pkl ...
 Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
-GPImitator.check -> average var -0.4186098216702884
---------------------
-| epoch | 750      |
-| loss  | -1.9e+03 |
---------------------
-GPImitator.check -> average var -0.418609859756526
+GPImitator.check -> average var -0.3272031537087481
+---------------------
+| epoch | 750       |
+| loss  | -1.96e+03 |
+---------------------
+GPImitator.check -> average var -0.3272031808543906
 ---------------------
 | epoch | 800       |
-| loss  | -1.95e+03 |
+| loss  | -2.01e+03 |
 ---------------------
 Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_800.pkl ...
 Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
-GPImitator.check -> average var -0.41860988405318234
+GPImitator.check -> average var -0.3272031976118984
 ---------------------
 | epoch | 850       |
-| loss  | -1.99e+03 |
+| loss  | -2.05e+03 |
 ---------------------
-GPImitator.check -> average var -0.41860989975810703
+GPImitator.check -> average var -0.32720320812404013
 ---------------------
 | epoch | 900       |
-| loss  | -2.03e+03 |
+| loss  | -2.09e+03 |
 ---------------------
 Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_900.pkl ...
 Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
-GPImitator.check -> average var -0.4186099099250916
+GPImitator.check -> average var -0.3272032147578866
 ---------------------
 | epoch | 950       |
-| loss  | -2.06e+03 |
+| loss  | -2.12e+03 |
 ---------------------
 Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly//rl_demo_critic/policy_latest.pkl
 Skip RL agent training.
