@@ -7,7 +7,7 @@ Skip demonstration training.
 Demo policy file does not exit, cannot use demo policy.
 *** her_params ***
 k: 4
-reward_fun: <function configure_her.<locals>.reward_fun at 0x7f44baf6c620>
+reward_fun: <function configure_her.<locals>.reward_fun at 0x7f8110409e18>
 strategy: future
 *** her_params ***
 *** ddpg_params ***
@@ -22,7 +22,8 @@ ca_ratio: 1
 clip_obs: 200.0
 clip_pos_returns: False
 clip_return: 2.0
-demo_strategy: none
+demo_actor: none
+demo_critic: none
 gamma: 0.5
 hidden: 4
 info: {'env_name': 'Reach2D', 'r_scale': 1.0, 'r_shift': 0.0, 'eps_length': 2}
@@ -39,9 +40,9 @@ prm_loss_weight: 0.001
 q_filter: 0
 relative_goals: False
 rollout_batch_size: 2
-sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7f44baf6c6a8>
+sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7f8110409ea0>
 scope: ddpg
-subtract_goals: <function simple_goal_subtract at 0x7f44baf69598>
+subtract_goals: <function simple_goal_subtract at 0x7f81104d1ae8>
 *** ddpg_params ***
 Configuring the replay buffer.
 DDPG.__init__ -> The buffer shapes are: {'o': (3, 4), 'u': (2, 2), 'g': (2, 2), 'info_is_success': (2, 1), 'ag': (3, 2), 'mask': (2, 1), 'q': (2, 1)}
@@ -108,7 +109,7 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_5:0", shape=(?, 1), dtype
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_6:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_7:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> Order should match stage_shapes.
-DDPG.train -> critic_loss:[0.060484905], actor_loss:[0.36534083]
+DDPG.train -> critic_loss:[0.060484912], actor_loss:[0.36534083]
 train_ddpg_main.train_reinforce -> batch: 1
 DDPG.sample_batch -> The sampled batch shape is: {'g': (4, 2), 'o': (4, 4), 'u': (4, 2), 'o_2': (4, 4), 'g_2': (4, 2), 'r': (4, 1), 'mask': (4, 1), 'q': (4, 1)}
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder:0", shape=(?, 2), dtype=float32) is  (4, 2)
@@ -120,7 +121,7 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_5:0", shape=(?, 1), dtype
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_6:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_7:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> Order should match stage_shapes.
-DDPG.train -> critic_loss:[0.13479398], actor_loss:[0.48677343]
+DDPG.train -> critic_loss:[0.134794], actor_loss:[0.4867734]
 DDPG.update_target_net -> updating target net.
 train_ddpg_main.train_reinforce -> cycle: 1
 RolloutWorker.generate_rollouts -> step 0
@@ -150,7 +151,7 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_5:0", shape=(?, 1), dtype
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_6:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_7:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> Order should match stage_shapes.
-DDPG.train -> critic_loss:[0.15281038], actor_loss:[1.1027966]
+DDPG.train -> critic_loss:[0.15281034], actor_loss:[1.1027966]
 train_ddpg_main.train_reinforce -> batch: 1
 DDPG.sample_batch -> The sampled batch shape is: {'g': (4, 2), 'o': (4, 4), 'u': (4, 2), 'o_2': (4, 4), 'g_2': (4, 2), 'r': (4, 1), 'mask': (4, 1), 'q': (4, 1)}
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder:0", shape=(?, 2), dtype=float32) is  (4, 2)
@@ -162,7 +163,7 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_5:0", shape=(?, 1), dtype
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_6:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_7:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> Order should match stage_shapes.
-DDPG.train -> critic_loss:[0.2092903], actor_loss:[0.88896334]
+DDPG.train -> critic_loss:[0.20929024], actor_loss:[0.88896334]
 DDPG.update_target_net -> updating target net.
 train_ddpg_main.train_reinforce -> Testing.
 RolloutWorker.generate_rollouts -> step 0
@@ -186,9 +187,9 @@ DDPG.get_actions -> The selected action shape is: (2, 2)
 | stats_g/mean       | 0.13801041  |
 | stats_g/std        | 0.4683011   |
 | stats_o/mean       | 0.09153538  |
-| stats_o/std        | 0.4621516   |
+| stats_o/std        | 0.46215156  |
 | test/episode       | 2.0         |
-| test/mean_Q        | -0.32880405 |
+| test/mean_Q        | -0.32880408 |
 | test/success_rate  | 0.0         |
 | train/episode      | 4.0         |
 | train/success_rate | 0.0         |

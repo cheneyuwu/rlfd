@@ -72,7 +72,7 @@ class Train(RegTest):
         command["--logdir"] = self.result_dir + "RLOnlyDemoBaysian/"
         command["--save_path"] = self.result_dir + "RLOnlyDemoBaysian/"
         command["--train_rl"] = 1
-        command["--demo_strategy"] = "critic"
+        command["--demo_critic"] = "nn"
         command["--demo_net_type"] = "BaysianNN"
         command["--demo_policy_file"] = self.data_dir + "baysian_policy_latest"
         return command
@@ -83,7 +83,7 @@ class Train(RegTest):
         command["--logdir"] = self.result_dir + "RLOnlyDemoEnsemble/"
         command["--save_path"] = self.result_dir + "RLOnlyDemoEnsemble/"
         command["--train_rl"] = 1
-        command["--demo_strategy"] = "critic"
+        command["--demo_critic"] = "nn"
         command["--demo_net_type"] = "EnsembleNN"
         command["--demo_policy_file"] = self.data_dir + "ensemble_policy_latest"
         return command
@@ -94,7 +94,7 @@ class Train(RegTest):
         command["--logdir"] = self.result_dir + "DemoEnsembleOnly/"
         command["--save_path"] = self.result_dir + "DemoEnsembleOnly/"
         command["--train_rl"] = 0
-        command["--demo_strategy"] = "critic"
+        command["--demo_critic"] = "nn"
         command["--demo_net_type"] = "EnsembleNN"
         command["--demo_file"] = self.data_dir + "Reach2D.data"
         command["--demo_test_file"] = self.data_dir + "Reach2D.data"
@@ -106,7 +106,7 @@ class Train(RegTest):
         command["--logdir"] = self.result_dir + "DemoBaysianOnly/"
         command["--save_path"] = self.result_dir + "DemoBaysianOnly/"
         command["--train_rl"] = 0
-        command["--demo_strategy"] = "critic"
+        command["--demo_critic"] = "nn"
         command["--demo_net_type"] = "BaysianNN"
         command["--demo_file"] = self.data_dir + "Reach2D.data"
         command["--demo_test_file"] = self.data_dir + "Reach2D.data"
@@ -119,7 +119,7 @@ class Train(RegTest):
         command["--save_path"] = self.result_dir + "RLWithDemo/"
         command["--seed"] = 1
         command["--train_rl"] = 1
-        command["--demo_strategy"] = "critic"
+        command["--demo_critic"] = "nn"
         command["--demo_net_type"] = "EnsembleNN"
         command["--demo_file"] = self.data_dir + "Reach2D.data"
         command["--demo_test_file"] = self.data_dir + "Reach2D.data"

@@ -14,7 +14,7 @@ Demo.__init__ -> Trainable variables are: [<tf.Variable 'demo/BaysianNN/sequenti
 Imitator.__getstate__ -> Loaded Params:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'buffer_size', 'input_dims', 'dimo', 'dimg', 'dimu', 'input_shapes', 'tf'])
 *** her_params ***
 k: 4
-reward_fun: <function configure_her.<locals>.reward_fun at 0x7f5d2ccfa6a8>
+reward_fun: <function configure_her.<locals>.reward_fun at 0x7f18640f4ea0>
 strategy: future
 *** her_params ***
 *** ddpg_params ***
@@ -29,7 +29,8 @@ ca_ratio: 1
 clip_obs: 200.0
 clip_pos_returns: False
 clip_return: 2.0
-demo_strategy: critic
+demo_actor: none
+demo_critic: nn
 gamma: 0.5
 hidden: 4
 info: {'env_name': 'Reach2D', 'r_scale': 1.0, 'r_shift': 0.0, 'eps_length': 2}
@@ -46,9 +47,9 @@ prm_loss_weight: 0.001
 q_filter: 0
 relative_goals: False
 rollout_batch_size: 2
-sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7f5d244399d8>
+sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7f182065bf28>
 scope: ddpg
-subtract_goals: <function simple_goal_subtract at 0x7f5d2ccf7620>
+subtract_goals: <function simple_goal_subtract at 0x7f18641bbb70>
 *** ddpg_params ***
 Configuring the replay buffer.
 DDPG.__init__ -> The buffer shapes are: {'o': (3, 4), 'u': (2, 2), 'g': (2, 2), 'info_is_success': (2, 1), 'ag': (3, 2), 'mask': (2, 1), 'q': (2, 1)}
@@ -122,7 +123,7 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_8:0", shape=(?, 1), dtype
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_9:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> Order should match stage_shapes.
-DDPG.train -> critic_loss:[0.038762603], actor_loss:[-0.027315687]
+DDPG.train -> critic_loss:[0.03949065], actor_loss:[-0.027315672]
 train_ddpg_main.train_reinforce -> batch: 1
 DDPG.sample_batch -> The sampled batch shape is: {'g': (4, 2), 'o': (4, 4), 'u': (4, 2), 'o_2': (4, 4), 'g_2': (4, 2), 'r': (4, 1), 'mask': (4, 1), 'q': (4, 1), 'q_mean': (4, 1), 'q_var': (4, 1), 'q_sample': (4, 1)}
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder:0", shape=(?, 2), dtype=float32) is  (4, 2)
@@ -137,7 +138,7 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_8:0", shape=(?, 1), dtype
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_9:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> Order should match stage_shapes.
-DDPG.train -> critic_loss:[0.07608087], actor_loss:[-0.050476953]
+DDPG.train -> critic_loss:[0.077396974], actor_loss:[-0.050476953]
 DDPG.update_target_net -> updating target net.
 train_ddpg_main.train_reinforce -> cycle: 1
 RolloutWorker.generate_rollouts -> step 0
@@ -174,7 +175,7 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_8:0", shape=(?, 1), dtype
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_9:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> Order should match stage_shapes.
-DDPG.train -> critic_loss:[0.06475201], actor_loss:[-0.03747435]
+DDPG.train -> critic_loss:[0.06600009], actor_loss:[-0.037472054]
 train_ddpg_main.train_reinforce -> batch: 1
 DDPG.sample_batch -> The sampled batch shape is: {'g': (4, 2), 'o': (4, 4), 'u': (4, 2), 'o_2': (4, 4), 'g_2': (4, 2), 'r': (4, 1), 'mask': (4, 1), 'q': (4, 1), 'q_mean': (4, 1), 'q_var': (4, 1), 'q_sample': (4, 1)}
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder:0", shape=(?, 2), dtype=float32) is  (4, 2)
@@ -189,7 +190,7 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_8:0", shape=(?, 1), dtype
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_9:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> Order should match stage_shapes.
-DDPG.train -> critic_loss:[0.039982356], actor_loss:[-0.02127824]
+DDPG.train -> critic_loss:[0.03826226], actor_loss:[-0.021268873]
 DDPG.update_target_net -> updating target net.
 train_ddpg_main.train_reinforce -> Testing.
 RolloutWorker.generate_rollouts -> step 0
@@ -219,7 +220,7 @@ DDPG.get_actions -> The shape of demo variance is: (2,)
 | stats_o/mean       | 0.09889526 |
 | stats_o/std        | 0.44789335 |
 | test/episode       | 2.0        |
-| test/mean_Q        | 0.08037715 |
+| test/mean_Q        | 0.08037734 |
 | test/success_rate  | 0.0        |
 | train/episode      | 4.0        |
 | train/success_rate | 0.0        |

@@ -4,7 +4,7 @@ Setting log level to 1.
 train_ddpg_main.launch -> Using debug mode. Avoid training with too many epochs.
 Using environment Reach2D with r scale down by 1.000000 shift by 0.000000 and max episode 2.000000
 Training demonstration neural net to produce expected Q value.
-*** q_estimator_params ***
+*** nn_q_estimator_params ***
 T: 2
 batch_size: 4
 buffer_size: 1000000
@@ -18,7 +18,7 @@ net_type: yw.ddpg_main.demo_policy:EnsembleNN
 num_sample: 1
 scope: demo
 test_batch_size: 4
-*** q_estimator_params ***
+*** nn_q_estimator_params ***
 Creating a Demonstration NN.
 Imitation.__init__ -> The staging shapes are: OrderedDict([('g', (None, 2)), ('o', (None, 4)), ('u', (None, 2)), ('q', (None, 1))])
 Creating an Ensemble NN of sample x hidden x layer: 1 x 4 x 2.
@@ -39,9 +39,10 @@ Imitation.train -> Number of iteration:  4
 Imitator.check -> Input shape:  {'o': (20, 4), 'g': (20, 2), 'u': (20, 2), 'q': (20, 1)}
 Imitator.check -> Mean output shape is: (20,)
 Imitator.check -> Output variance shape is: (20,)
+Imitator.check -> Mean u output is: 0.0
 --------------------
 | epoch | 0        |
-| loss  | 7.527195 |
+| loss  | 7.527196 |
 --------------------
 Saving policy to /home/yuchen/Desktop/RLProject/Temp/RegResult/DemoEnsembleOnly//rl_demo_critic/policy_latest.pkl
 Imitator.__getstate__ -> Members:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'buffer_size', 'input_dims', 'dimo', 'dimg', 'dimu', 'training_set', 'test_set', 'sess', 'input_shapes', 'input_tf', 'policy', 'grad_tf', 'adam'])
