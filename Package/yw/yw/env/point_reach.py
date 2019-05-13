@@ -131,7 +131,7 @@ class Reach2D:
         self.mass = 1
         self.boundary = 1.0
         self.threshold = self.boundary / 12
-        self._max_episode_steps = 42 if self.order == 2 else 32
+        self._max_episode_steps = 42 if self.order == 2 else 24
         self.max_u = 2
         self.action_space = self.ActionSpace()
         plt.ion()
