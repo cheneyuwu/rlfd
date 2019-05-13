@@ -25,8 +25,55 @@ from yw.ddpg_main import config
 from yw.tool import logger
 from yw.util.mpi_util import mpi_fork, mpi_average, set_global_seeds
 
+def train_gp_q_estimator(save_path, save_interval, policy, n_epochs, demo_file, demo_test_file, **kwargs):
 
-def train_q_estimator(save_path, save_interval, policy, n_epochs, demo_file, demo_test_file, **kwargs):
+    # Consider rank as pid
+    rank = MPI.COMM_WORLD.Get_rank()
+
+    # Make directions for saving policies
+    if save_path:
+        policy_save_path = save_path + "/rl_demo_critic/"
+        os.makedirs(policy_save_path, exist_ok=True)
+        latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
+        periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")
+
+    # Fill in demonstration data
+    policy.update_dataset(demo_file, demo_test_file)
+
+    check_interval = n_epochs // 20 if n_epochs > 20 else 1
+    for epoch in range(n_epochs):
+
+        # train - This will go through the entire training set once.
+        policy.train()
+
+        # test
+        if rank == 0 and epoch % check_interval == 0:
+            loss = policy.check()
+            logger.record_tabular("epoch", epoch)
+            logger.record_tabular("loss", loss)
+            logger.dump_tabular()
+
+        # save periodical policy
+        if rank == 0 and save_interval > 0 and epoch % save_interval == 0 and save_path:
+            policy_path = periodic_policy_path.format(epoch)
+            logger.info("Saving periodic policy to {} ...".format(policy_path))
+            policy.save(policy_path)
+            logger.info("Saving policy to {}".format(latest_policy_path))
+            policy.save(latest_policy_path)
+
+        # Sanity check - Make sure that different threads have different seeds
+        local_uniform = np.random.uniform(size=(1,))
+        root_uniform = local_uniform.copy()
+        MPI.COMM_WORLD.Bcast(root_uniform, root=0)
+        if rank != 0:
+            assert local_uniform[0] != root_uniform[0]
+
+    # Save latest policy
+    if rank == 0 and save_path:
+        logger.info("Saving policy to {}".format(latest_policy_path))
+        policy.save(latest_policy_path)
+
+def train_nn_q_estimator(save_path, save_interval, policy, n_epochs, demo_file, demo_test_file, **kwargs):
 
     # Consider rank as pid
     rank = MPI.COMM_WORLD.Get_rank()
@@ -164,7 +211,7 @@ def train_reinforce(
         os.makedirs(critic_q_save_path, exist_ok=True)
         os.makedirs(uncertainty_save_path, exist_ok=True)
 
-    if policy.demo_strategy == "actor":
+    if policy.demo_actor is not "none":
         policy.init_demo_buffer(demo_file)
 
     best_success_rate = -1
@@ -248,7 +295,8 @@ def launch(
     rl_ca_ratio,
     exploit,
     replay_strategy,
-    demo_strategy,
+    demo_critic,
+    demo_actor,
     train_demo_epochs,
     demo_num_sample,
     demo_net_type,
@@ -304,7 +352,8 @@ def launch(
     params["exploit"] = exploit
     params["train_rl_epochs"] = train_rl_epochs
     params["train_demo_epochs"] = train_demo_epochs
-    params["rl_demo_strategy"] = demo_strategy
+    params["rl_demo_critic"] = demo_critic
+    params["rl_demo_actor"] = demo_actor
     params["rl_ca_ratio"] = rl_ca_ratio
     params["rl_num_sample"] = rl_num_sample
     params["demo_num_sample"] = demo_num_sample
@@ -314,8 +363,9 @@ def launch(
         "-".join(
             [
                 "ddpg",
+                demo_critic,
                 "r_sample:" + str(rl_num_sample),
-                "d_sample:" + str(0 if demo_strategy is "none" else demo_num_sample),
+                "d_sample:" + str(-1 if demo_critic is "none" else demo_num_sample),
             ]
         )
         if train_rl
@@ -342,7 +392,7 @@ def launch(
 
     # Configure and Train demonstration
     demo_policy = None
-    if demo_strategy == "actor" and demo_file is not None:
+    if demo_actor == "nn" and demo_file is not None:
         logger.info("Training demonstration neural net to produce expected action.")
         demo_policy = config.configure_action_imitator(params=params)
         evaluator = config.config_rollout(params=params, policy=demo_policy)
@@ -356,10 +406,21 @@ def launch(
             evaluator=evaluator,
             n_test_rollouts=params["n_test_rollouts"],
         )
-    elif demo_strategy == "critic" and demo_file is not None:
+    elif demo_critic == "nn" and demo_file is not None:
         logger.info("Training demonstration neural net to produce expected Q value.")
-        demo_policy = config.configure_q_estimator(params=params)
-        train_q_estimator(
+        demo_policy = config.configure_nn_q_estimator(params=params)
+        train_nn_q_estimator(
+            save_path=save_path,
+            save_interval=save_interval,
+            policy=demo_policy,
+            n_epochs=params["train_demo_epochs"],
+            demo_file=demo_file,
+            demo_test_file=demo_test_file,
+        )
+    elif demo_critic == "gp" and demo_file is not None:
+        logger.info("Training gaussian process to produce expected Q value.")
+        demo_policy = config.configure_gp_q_estimator(params=params)
+        train_gp_q_estimator(
             save_path=save_path,
             save_interval=save_interval,
             policy=demo_policy,
@@ -440,10 +501,16 @@ def launch(
 
 # Demo Configuration
 @click.option(
-    "--demo_strategy",
-    type=click.Choice(["actor", "critic", "none"]),
+    "--demo_critic",
+    type=click.Choice(["nn", "gp", "none"]),
     default="none",
-    help="Use actor or critic or none. Need to provide or train a demo policy if not set to none",
+    help="Use a neural network as critic or a gaussian process. Need to provide or train a demo policy if not set to none",
+)
+@click.option(
+    "--demo_actor",
+    type=click.Choice(["nn", "none"]),
+    default="none",
+    help="Use a neural network as actor. Need to provide or train a demo policy if not set to none",
 )
 @click.option(
     "--demo_policy_file",
@@ -456,7 +523,7 @@ def launch(
 @click.option("--demo_test_file", type=str, default=None, help="Demonstration test dataset.")
 @click.option(
     "--demo_net_type",
-    type=click.Choice(["EnsembleNN", "BaysianNN", "ActorNN"]),
+    type=click.Choice(["EnsembleNN", "BaysianNN"]),
     default="EnsembleNN",
     help="Demonstration neural network type, ensemble, baysian or ensemble of actor",
 )

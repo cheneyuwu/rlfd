@@ -38,7 +38,8 @@ class DDPG(object):
         relative_goals,
         clip_pos_returns,
         clip_return,
-        demo_strategy,
+        demo_critic,
+        demo_actor,
         demo_policy,
         num_demo,
         q_filter,
@@ -87,7 +88,8 @@ class DDPG(object):
             action_l2          (float)        - coefficient for L2 penalty on the actions
             gamma              (float)        - gamma used for Q learning updates
             # Use demonstration to shape critic or actor
-            demo_strategy      (str)          - whether or not to use demonstration network to shape the critic or actor
+            demo_actor         (str)          - whether or not to use demonstration network to shape the critic or actor
+            demo_critic        (str)          - whether or not to use demonstration network to shape the critic or actor
             demo_policy        (cls Demo)     - trained demonstration nn
             num_demo           (int)          - Number of episodes in to be used in the demonstration buffer
             batch_size_demo    (int)          - number of samples to be used from the demonstrations buffer, per mpi thread
@@ -114,7 +116,7 @@ class DDPG(object):
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         logger.debug("DDPG.__init__ -> The buffer size is: {}".format(buffer_size))
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
-        if self.demo_strategy == "actor":
+        if self.demo_actor != "none":
             # initialize the demo buffer; in the same way as the primary data buffer
             self.demo_buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
 
@@ -132,7 +134,7 @@ class DDPG(object):
             # for bootstrapped DQN, to add mask
             stage_shapes["mask"] = (None, self.num_sample)
             stage_shapes["q"] = (None, 1)
-            if self.demo_strategy == "critic":
+            if self.demo_critic != "none":
                 # should be used for stage shape only. The input is from demo_policy
                 stage_shapes["q_mean"] = (None, 1)
                 stage_shapes["q_var"] = (None, 1)
@@ -295,7 +297,7 @@ class DDPG(object):
             self._update_stats(episode_batch)
 
     def sample_batch(self):
-        if self.demo_strategy == "actor":  # use demonstration buffer to sample as well if demo flag is set TRUE
+        if self.demo_actor != "none":  # use demonstration buffer to sample as well if demo flag is set TRUE
             transitions = {}
             transition_rollout = self.buffer.sample(self.batch_size - self.batch_size_demo)
             transition_demo = self.demo_buffer.sample(self.batch_size_demo)
@@ -309,7 +311,7 @@ class DDPG(object):
         ag, ag_2 = transitions["ag"], transitions["ag_2"]
         transitions["o"], transitions["g"] = self._preprocess_og(o, ag, g)
         transitions["o_2"], transitions["g_2"] = self._preprocess_og(o_2, ag_2, g)
-        if self.demo_strategy == "critic":
+        if self.demo_critic != "none":
 
             # Method 1 calculate q_d directly
             output_sample, output_mean, output_var = self.demo_policy.get_q_value(transitions)
@@ -464,7 +466,7 @@ class DDPG(object):
         self.Q_loss_tf = []
         self.global_step_tf = tf.get_variable("global_step", initializer=0.0, trainable=False, dtype=tf.float32)
         self.global_step_inc_op = tf.assign_add(self.global_step_tf, 1.0)
-        if self.demo_strategy == "critic":
+        if self.demo_critic != "none":
             # demonstration target result
             self.demo_q_mean_tf = tf.reshape(batch_tf["q_mean"], [-1, 1])
             self.demo_q_var_tf = tf.reshape(batch_tf["q_var"], [-1, 1])
@@ -498,7 +500,7 @@ class DDPG(object):
                 # Method 0.a The weight is dependent on the uncertainty of the demonstration nn
                 # $w*q_r + (1-w)*q_d$ where $w=count(q_r > q_dk)$ where $k$ is the $k$th sample from demonstration nn.
                 self.demo_certainty_tf = tf.exp(tf.negative(20 * self.demo_q_var_tf))
-                self.damping_tf = tf.maximum(0.0, 1 - self.global_step_tf / 15) # 25 should be number of training epoches
+                self.damping_tf = tf.maximum(0.0, 1 - self.global_step_tf / 20) # 25 should be number of training epoches
                 self.weight_tf = self.demo_certainty_tf * self.damping_tf
                 self.weighted_q_tf = (
                     tf.stop_gradient(target_list_tf[i]) * (1 - self.weight_tf) + self.demo_q_mean_tf * self.weight_tf
@@ -557,7 +559,7 @@ class DDPG(object):
                 )
                 self.Q_loss_tf.append(loss_tf)
 
-        if self.demo_strategy == "actor" and self.q_filter == 1:
+        if self.demo_actor != "none" and self.q_filter == 1:
             # train with demonstrations and use demo and q_filter both
             # where is the demonstrator action better than actor action according to the critic? choose those sample only
             mask = np.concatenate(
@@ -580,7 +582,7 @@ class DDPG(object):
             # adding the cloning loss to the actor loss as an auxilliary loss scaled by its weight aux_loss_weight
             self.pi_loss_tf += self.aux_loss_weight * self.cloning_loss_tf
 
-        elif self.demo_strategy == "actor" and not self.q_filter:  # train with demonstrations without q_filter
+        elif self.demo_actor != "none" and not self.q_filter:  # train with demonstrations without q_filter
             # choose only the demo buffer samples
             mask = np.concatenate(
                 (np.zeros(self.batch_size - self.batch_size_demo), np.ones(self.batch_size_demo)), axis=0
@@ -814,30 +816,30 @@ class DDPG(object):
         z1 = np.zeros((pow(num_point, 4), 1))
         z2 = np.zeros((pow(num_point, 4), 2))
         # Method 1
-        # ls = np.linspace(-1.0, 1.0, num_point)
-        # x, y, ax, ay = np.meshgrid(ls, ls, ls, ls)
-        # xr = x.reshape((-1, 1))
-        # yr = y.reshape((-1, 1))
-        # axr = ax.reshape((-1, 1))
-        # ayr = ay.reshape((-1, 1))
-        # if self.dimo == 2:
-        #     o = np.concatenate((xr, yr), 1)  # This has to be set accordingly
-        # elif self.dimo == 4:
-        #     o = np.concatenate((z2, xr, yr), 1)  # This has to be set accordingly
-        # else:
-        #     assert False, "Observation dimension does not match!"
-        # g = z2
-        # ag = o
-        # o, g = self._preprocess_og(o, ag, g)
-        # u = np.concatenate((axr, ayr), axis=1)
-        # Method 2
-        max_o = 1.0
-        max_g = 1.0
-        o = np.random.rand(pow(num_point, 4), self.dimo) * 2 * max_o - max_o
-        g = np.random.rand(pow(num_point, 4), self.dimg) * 2 * max_g - max_g
-        u = np.random.rand(pow(num_point, 4), self.dimu) * 2 * self.max_u - self.max_u
+        ls = np.linspace(-1.0, 1.0, num_point)
+        x, y, ax, ay = np.meshgrid(ls, ls, ls, ls)
+        xr = x.reshape((-1, 1))
+        yr = y.reshape((-1, 1))
+        axr = ax.reshape((-1, 1))
+        ayr = ay.reshape((-1, 1))
+        if self.dimo == 2:
+            o = np.concatenate((xr, yr), 1)  # This has to be set accordingly
+        elif self.dimo == 4:
+            o = np.concatenate((z2, xr, yr), 1)  # This has to be set accordingly
+        else:
+            assert False, "Observation dimension does not match!"
+        g = z2
         ag = o
         o, g = self._preprocess_og(o, ag, g)
+        u = np.concatenate((axr, ayr), axis=1)
+        # Method 2
+        # max_o = 1.0
+        # max_g = 1.0
+        # o = np.random.rand(pow(num_point, 4), self.dimo) * 2 * max_o - max_o
+        # g = np.random.rand(pow(num_point, 4), self.dimg) * 2 * max_g - max_g
+        # u = np.random.rand(pow(num_point, 4), self.dimu) * 2 * self.max_u - self.max_u
+        # ag = o
+        # o, g = self._preprocess_og(o, ag, g)
 
         policy = self.target
         feed = {policy.o_tf: o, policy.g_tf: g, policy.u_tf: u}

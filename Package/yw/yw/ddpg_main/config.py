@@ -3,6 +3,7 @@ import numpy as np
 from yw.tool import logger
 from yw.ddpg_main.ddpg import DDPG
 from yw.ddpg_main.imitation import QEstimator, ActionImitator
+from yw.ddpg_main.gp_imitation import GPQEstimator
 from yw.ddpg_main.rollout import RolloutWorker
 from yw.ddpg_main.her import make_sample_her_transitions
 
@@ -46,7 +47,8 @@ DEFAULT_PARAMS = {
     "rl_action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)
     "rl_batch_size": 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
     "rl_batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
-    "rl_demo_strategy": "none",  # whether or not to use the behavior cloning loss as an auxilliary loss
+    "rl_demo_critic": "none",  # whether or not to use the behavior cloning loss as an auxilliary loss
+    "rl_demo_actor": "none",  # whether or not to use the behavior cloning loss as an auxilliary loss
     "rl_q_filter": 0,  # whether or not a Q value filter should be used on the Actor outputs
     "rl_num_demo": 1000,  # number of expert demo episodes
     "rl_prm_loss_weight": 0.001,  # Weight corresponding to the primary loss
@@ -204,7 +206,7 @@ def configure_ddpg(params, demo_policy):
     return policy
 
 
-def configure_q_estimator(params):
+def configure_nn_q_estimator(params):
 
     # Extract relevant parameters.
     demo_params = extract_params(params, "demo_")
@@ -213,10 +215,26 @@ def configure_q_estimator(params):
         demo_params[name] = params[name]
     demo_params["input_dims"] = params["dims"].copy()
 
-    logger.info("*** q_estimator_params ***")
+    logger.info("*** nn_q_estimator_params ***")
     log_params(demo_params)
-    logger.info("*** q_estimator_params ***")
+    logger.info("*** nn_q_estimator_params ***")
     policy = QEstimator(**demo_params)
+
+    return policy
+
+def configure_gp_q_estimator(params):
+
+    # Extract relevant parameters.
+    demo_params = extract_params(params, "demo_")
+    for name in ["T", "max_u", "buffer_size"]:
+        # copy public parameters
+        demo_params[name] = params[name]
+    demo_params["input_dims"] = params["dims"].copy()
+
+    logger.info("*** gp_q_estimator_params ***")
+    log_params(demo_params)
+    logger.info("*** gp_q_estimator_params ***")
+    policy = GPQEstimator(**demo_params)
 
     return policy
 

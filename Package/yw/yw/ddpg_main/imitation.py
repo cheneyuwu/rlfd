@@ -97,7 +97,7 @@ class Imitator(object):
         logger.debug("Imitator.check -> Output variance shape is: {}".format(output_var.shape))
         # value debug
         # logger.info("Imitator.check -> Mean q output is: {}".format(output_mean))
-        # logger.info("Imitator.check -> Mean u output is: {}".format(np.mean(output_var)))
+        logger.info("Imitator.check -> Mean u output is: {}".format(np.mean(output_var)))
 
         return loss
 

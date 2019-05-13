@@ -78,15 +78,27 @@ class Train(Experiment):
         return command
 
     @Command.execute
-    def demo_critic_only(self, **kwargs):
+    def demo_nn_critic_only(self, **kwargs):
         command = self.run.copy()
         command["--logdir"] = self.result_dir + "DemoCriticOnly/"
         command["--save_path"] = self.result_dir + "DemoCriticOnly/"
         command["--train_rl"] = 0
-        command["--demo_strategy"] = "critic"
+        command["--demo_critic"] = "nn"
         command["--demo_net_type"] = "EnsembleNN"
         command["--demo_file"] = self.result_dir + "DemoData/" + self.env + ".npz"
         command["--demo_test_file"] = self.result_dir + "DemoData/" + self.env + ".npz"
+        return command
+
+    @Command.execute
+    def demo_gp_critic_only(self, **kwargs):
+        command = self.run.copy()
+        command["--logdir"] = self.result_dir + "DemoCriticOnly/"
+        command["--save_path"] = self.result_dir + "DemoCriticOnly/"
+        command["--train_rl"] = 0
+        command["--demo_critic"] = "gp"
+        command["--demo_file"] = self.result_dir + "DemoData/" + self.env + ".npz"
+        command["--demo_test_file"] = self.result_dir + "DemoData/" + self.env + ".npz"
+        command["--save_interval"] = 100
         return command
 
     @Command.execute
@@ -95,7 +107,7 @@ class Train(Experiment):
         command["--logdir"] = self.result_dir + "DemoActorOnly/"
         command["--save_path"] = self.result_dir + "DemoActorOnly/"
         command["--train_rl"] = 0
-        command["--demo_strategy"] = "actor"
+        command["--demo_actor"] = "nn"
         command["--demo_net_type"] = "EnsembleNN"
         command["--demo_file"] = self.result_dir + "DemoData/" + self.env + ".npz"
         command["--demo_test_file"] = self.result_dir + "DemoData/" + self.env + ".npz"
@@ -107,7 +119,7 @@ class Train(Experiment):
         command["--logdir"] = self.result_dir + "RLDemoCriticPolicy/"
         command["--save_path"] = self.result_dir + "RLDemoCriticPolicy/"
         command["--train_rl"] = 1
-        command["--demo_strategy"] = "critic"
+        command["--demo_critic"] = "nn"
         command["--demo_net_type"] = "EnsembleNN"
         command["--demo_policy_file"] = self.result_dir + "RLNoDemo/rl/policy_latest.pkl"
         return command
@@ -118,7 +130,7 @@ class Train(Experiment):
         command["--logdir"] = self.result_dir + "RLDemo/"
         command["--save_path"] = self.result_dir + "RLDemo/"
         command["--train_rl"] = 1
-        command["--demo_strategy"] = "critic"
+        command["--demo_critic"] = "nn"
         command["--demo_net_type"] = "EnsembleNN"
         command["--demo_file"] = self.result_dir + "DemoData/" + self.env + ".npz"
         command["--demo_test_file"] = self.result_dir + "DemoData/" + self.env + ".npz"
@@ -261,9 +273,9 @@ if __name__ == "__main__":
 
     # # Train the demonstration network.
     # # Method 1
-    # # train_exp.demo_critic_only(demo_file=train_exp.result_dir + "/RLNoDemo/critic_q/query_latest.npz", demo_test_file=train_exp.result_dir + "/RLNoDemo/critic_q/query_latest.npz")
+    # # train_exp.demo_nn_critic_only(demo_file=train_exp.result_dir + "/RLNoDemo/critic_q/query_latest.npz", demo_test_file=train_exp.result_dir + "/RLNoDemo/critic_q/query_latest.npz")
     # # Method 2
-    # train_exp.demo_critic_only(
+    # train_exp.demo_nn_critic_only(
     #     override_params=1,
     #     train_demo_epochs=100,
     #     demo_num_sample=12,
@@ -293,7 +305,7 @@ if __name__ == "__main__":
     # Used for the Reach2D environment
     ###################################################################################################################
 
-    train_exp.env = "Reach2D"
+    train_exp.env = "Reach2DFirstOrder"
     train_exp.update()
 
     # We can change the result directory without updating
@@ -306,12 +318,12 @@ if __name__ == "__main__":
     compare_q.result_dir = os.path.join(exp_dir, "Result/Temp/")
     uncertainty.result_dir = os.path.join(exp_dir, "Result/Temp/")
 
-    demo_data_size = 4096
-    train_rl_epochs = 40
+    demo_data_size = 512
+    train_rl_epochs = 30
 
     # Train the RL without demonstration
     assert not train_exp.rl_only(
-        r_scale=1.0,
+        r_scale=8.0,
         r_shift=0.0,
         override_params=1,
         rl_action_l2=0.5,
@@ -327,7 +339,7 @@ if __name__ == "__main__":
 
     # Train the demonstration network.
     # Method 1
-    # assert not train_exp.demo_critic_only(
+    # assert not train_exp.demo_nn_critic_only(
     #     override_params=1,
     #     train_demo_epochs=50,
     #     demo_num_sample=12,
@@ -335,9 +347,17 @@ if __name__ == "__main__":
     #     demo_test_file=train_exp.result_dir + "/RLNoDemo/critic_q/query_latest.npz",
     # )
     # Method 2
-    assert not train_exp.demo_critic_only(
+    # assert not train_exp.demo_nn_critic_only(
+    #     override_params=1,
+    #     train_demo_epochs=80,
+    #     demo_num_sample=12,
+    #     demo_data_size=demo_data_size,
+    #     demo_batch_size=int(np.ceil(demo_data_size / 16)),
+    # )
+    # Method 3 using a gaussian process
+    assert not train_exp.demo_gp_critic_only(
         override_params=1,
-        train_demo_epochs=80,
+        train_demo_epochs=1000,
         demo_num_sample=12,
         demo_data_size=demo_data_size,
         demo_batch_size=int(np.ceil(demo_data_size / 16)),
@@ -345,7 +365,7 @@ if __name__ == "__main__":
 
     # Train the RL with demonstration
     assert not train_exp.rl_with_demo_critic_policy(
-        r_scale=1.0,
+        r_scale=8.0,
         r_shift=0.0,
         override_params=1,
         rl_action_l2=0.5,
@@ -353,7 +373,7 @@ if __name__ == "__main__":
         n_cycles=10,
         seed=13,
         rl_num_sample=1,
-        train_rl_epochs=40,
+        train_rl_epochs=train_rl_epochs,
         # Method 1
         # demo_policy_file=os.path.join(train_exp.result_dir, "RLNoDemo/rl/policy_latest.pkl"),
         # Method 2
@@ -364,14 +384,14 @@ if __name__ == "__main__":
     assert not plot_exp.plot(dirs=plot_exp.result_dir)
 
     # Plot the query result
-    # assert not animation.plot_animation(load_dir=os.path.join(animation.result_dir, "RLNoDemo/ac_output"))
-    # assert not animation.plot_animation(load_dir=os.path.join(animation.result_dir, "RLDemoCriticPolicy/ac_output"))
+    assert not animation.plot_animation(load_dir=os.path.join(animation.result_dir, "RLNoDemo/ac_output"))
+    assert not animation.plot_animation(load_dir=os.path.join(animation.result_dir, "RLDemoCriticPolicy/ac_output"))
 
     # Compare the real q and critic q from arbitrary initial state and action pair.
-    # assert not compare_q.compare()
+    assert not compare_q.compare()
 
     # Check the uncertainty output of the demonstration output
-    # assert not uncertainty.check()
+    assert not uncertainty.check()
 
     # Display a policy result (calls run_agent).
     assert not display_exp.display(policy_file=display_exp.result_dir + "RLDemoCriticPolicy/rl/policy_latest.pkl")
@@ -397,6 +417,6 @@ if __name__ == "__main__":
     # A complete test set as example.
     # train_exp.rl_only(override_params=1, rl_action_l2 = 0.5, n_cycles=10, seed=0)
     # demo_exp.generate_demo()
-    # train_exp.demo_critic_only()
+    # train_exp.demo_nn_critic_only()
     # train_exp.rl_with_demo_critic_policy(override_params=1, rl_action_l2 = 0.5, n_cycles=10, seed=0)
     # train_exp.rl_with_demo_critic(override_params=1, rl_action_l2 = 0.1, n_cycles=20, seed=3)
