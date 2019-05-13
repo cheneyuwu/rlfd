@@ -26,6 +26,6 @@
   ```
   - Run jobs
     - `sbatch *.sh`
-    
-  - Modules 
+
+  - Modules
     - `module list`

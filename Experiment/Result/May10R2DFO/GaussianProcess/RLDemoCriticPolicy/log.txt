@@ -1,0 +1,515 @@
+Logging to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy/
+Launching the training process with 1 cpu core(s).
+Setting log level to 2.
+Using environment Reach2DFirstOrder with r scale down by 8.000000 shift by 0.000000 and max episode 0.000000
+Skip demonstration training.
+Will use provided policy file from /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/DemoCriticOnly/rl_demo_critic/policy_latest.pkl.
+Creating a Gaussian Process.
+*** her_params ***
+k: 4
+reward_fun: <function configure_her.<locals>.reward_fun at 0x7fd0b4e156a8>
+strategy: future
+*** her_params ***
+*** ddpg_params ***
+Q_lr: 0.001
+T: 24
+action_l2: 0.5
+aux_loss_weight: 0.0078
+batch_size: 256
+batch_size_demo: 128
+buffer_size: 1000000
+ca_ratio: 1
+clip_obs: 200.0
+clip_pos_returns: False
+clip_return: 24.00000000000002
+demo_actor: none
+demo_critic: nn
+gamma: 0.9583333333333334
+hidden: 256
+info: {'env_name': 'Reach2DFirstOrder', 'r_scale': 8.0, 'r_shift': 0.0, 'eps_length': 0}
+input_dims: {'o': 2, 'u': 2, 'g': 2, 'info_is_success': 1}
+layers: 3
+max_u: 2
+norm_clip: 5
+norm_eps: 0.01
+num_demo: 1000
+num_sample: 1
+pi_lr: 0.001
+polyak: 0.95
+prm_loss_weight: 0.001
+q_filter: 0
+relative_goals: False
+rollout_batch_size: 4
+sample_transitions: <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7fd0aa4b5d08>
+scope: ddpg
+subtract_goals: <function simple_goal_subtract at 0x7fd0aa57ba60>
+*** ddpg_params ***
+Configuring the replay buffer.
+Preparing staging area for feeding data to the model.
+Creating a DDPG agent with action space 2 x 2.
+
+*** rollout_params ***
+T: 24
+compute_Q: False
+dims: {'o': 2, 'u': 2, 'g': 2, 'info_is_success': 1}
+exploit: 0
+noise_eps: 0.2
+random_eps: 0.3
+rollout_batch_size: 4
+use_demo_states: True
+use_target_net: False
+*** rollout_params ***
+*** eval_params ***
+T: 24
+compute_Q: True
+dims: {'o': 2, 'u': 2, 'g': 2, 'info_is_success': 1}
+exploit: 1
+noise_eps: 0.2
+random_eps: 0.3
+rollout_batch_size: 20
+use_demo_states: False
+use_target_net: False
+*** eval_params ***
+Training the RL agent.
+-------------------------------------
+| epoch              | 0            |
+| stats_g/mean       | -0.028056918 |
+| stats_g/std        | 0.7081164    |
+| stats_o/mean       | -0.02765751  |
+| stats_o/std        | 0.6539813    |
+| test/episode       | 20.0         |
+| test/mean_Q        | -0.23387407  |
+| test/success_rate  | 0.0          |
+| train/episode      | 40.0         |
+| train/success_rate | 0.0          |
+-------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_000.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_000.npz
+New best success rate: 0.0.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_0.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 1           |
+| stats_g/mean       | 0.030414037 |
+| stats_g/std        | 0.6868092   |
+| stats_o/mean       | 0.037203163 |
+| stats_o/std        | 0.6403712   |
+| test/episode       | 40.0        |
+| test/mean_Q        | -0.23294061 |
+| test/success_rate  | 0.0         |
+| train/episode      | 80.0        |
+| train/success_rate | 0.0         |
+------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_001.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_001.npz
+New best success rate: 0.0.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 2           |
+| stats_g/mean       | 0.009009818 |
+| stats_g/std        | 0.67136455  |
+| stats_o/mean       | 0.009856168 |
+| stats_o/std        | 0.6339507   |
+| test/episode       | 60.0        |
+| test/mean_Q        | -0.35902065 |
+| test/success_rate  | 0.0         |
+| train/episode      | 120.0       |
+| train/success_rate | 0.0         |
+------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_002.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_002.npz
+New best success rate: 0.0.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_2.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+--------------------------------------
+| epoch              | 3             |
+| stats_g/mean       | -0.0064852554 |
+| stats_g/std        | 0.676062      |
+| stats_o/mean       | -0.0033373572 |
+| stats_o/std        | 0.64311254    |
+| test/episode       | 80.0          |
+| test/mean_Q        | -0.34476313   |
+| test/success_rate  | 0.0           |
+| train/episode      | 160.0         |
+| train/success_rate | 0.0           |
+--------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_003.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_003.npz
+New best success rate: 0.0.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+-------------------------------------
+| epoch              | 4            |
+| stats_g/mean       | 0.0019018976 |
+| stats_g/std        | 0.67325807   |
+| stats_o/mean       | 0.003405415  |
+| stats_o/std        | 0.64466345   |
+| test/episode       | 100.0        |
+| test/mean_Q        | -0.3197478   |
+| test/success_rate  | 0.0          |
+| train/episode      | 200.0        |
+| train/success_rate | 0.0          |
+-------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_004.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_004.npz
+New best success rate: 0.0.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_4.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+-------------------------------------
+| epoch              | 5            |
+| stats_g/mean       | 0.005460823  |
+| stats_g/std        | 0.66603386   |
+| stats_o/mean       | 0.0032968577 |
+| stats_o/std        | 0.6403252    |
+| test/episode       | 120.0        |
+| test/mean_Q        | -0.39949608  |
+| test/success_rate  | 0.0          |
+| train/episode      | 240.0        |
+| train/success_rate | 0.05         |
+-------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_005.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_005.npz
+New best success rate: 0.0.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+-------------------------------------
+| epoch              | 6            |
+| stats_g/mean       | 0.0048733437 |
+| stats_g/std        | 0.6590736    |
+| stats_o/mean       | 0.004943539  |
+| stats_o/std        | 0.63645136   |
+| test/episode       | 140.0        |
+| test/mean_Q        | -0.4459564   |
+| test/success_rate  | 0.0          |
+| train/episode      | 280.0        |
+| train/success_rate | 0.0          |
+-------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_006.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_006.npz
+New best success rate: 0.0.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_6.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 7           |
+| stats_g/mean       | 0.005582134 |
+| stats_g/std        | 0.65128076  |
+| stats_o/mean       | 0.005032062 |
+| stats_o/std        | 0.6309874   |
+| test/episode       | 160.0       |
+| test/mean_Q        | -0.46088317 |
+| test/success_rate  | 0.0         |
+| train/episode      | 320.0       |
+| train/success_rate | 0.0         |
+------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_007.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_007.npz
+New best success rate: 0.0.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 8           |
+| stats_g/mean       | 0.009263429 |
+| stats_g/std        | 0.651793    |
+| stats_o/mean       | 0.009831551 |
+| stats_o/std        | 0.6297879   |
+| test/episode       | 180.0       |
+| test/mean_Q        | -0.36104643 |
+| test/success_rate  | 0.05        |
+| train/episode      | 360.0       |
+| train/success_rate | 0.0         |
+------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_008.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_008.npz
+New best success rate: 0.05.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_8.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 9           |
+| stats_g/mean       | 0.018634047 |
+| stats_g/std        | 0.6422944   |
+| stats_o/mean       | 0.024196848 |
+| stats_o/std        | 0.6229329   |
+| test/episode       | 200.0       |
+| test/mean_Q        | -0.3043255  |
+| test/success_rate  | 0.2         |
+| train/episode      | 400.0       |
+| train/success_rate | 0.0         |
+------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_009.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_009.npz
+New best success rate: 0.2.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 10          |
+| stats_g/mean       | 0.029452998 |
+| stats_g/std        | 0.6372842   |
+| stats_o/mean       | 0.037302867 |
+| stats_o/std        | 0.6184452   |
+| test/episode       | 220.0       |
+| test/mean_Q        | -0.45383504 |
+| test/success_rate  | 0.05        |
+| train/episode      | 440.0       |
+| train/success_rate | 0.0         |
+------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_010.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_010.npz
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_10.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 11          |
+| stats_g/mean       | 0.023273326 |
+| stats_g/std        | 0.63061416  |
+| stats_o/mean       | 0.029035173 |
+| stats_o/std        | 0.61219096  |
+| test/episode       | 240.0       |
+| test/mean_Q        | -0.26551658 |
+| test/success_rate  | 0.15        |
+| train/episode      | 480.0       |
+| train/success_rate | 0.025       |
+------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_011.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_011.npz
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+-------------------------------------
+| epoch              | 12           |
+| stats_g/mean       | 0.021002091  |
+| stats_g/std        | 0.6277697    |
+| stats_o/mean       | 0.026962629  |
+| stats_o/std        | 0.6109741    |
+| test/episode       | 260.0        |
+| test/mean_Q        | -0.109636046 |
+| test/success_rate  | 0.4          |
+| train/episode      | 520.0        |
+| train/success_rate | 0.05         |
+-------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_012.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_012.npz
+New best success rate: 0.4.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_12.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 13          |
+| stats_g/mean       | 0.020983025 |
+| stats_g/std        | 0.6203521   |
+| stats_o/mean       | 0.027049161 |
+| stats_o/std        | 0.6027957   |
+| test/episode       | 280.0       |
+| test/mean_Q        | -0.28425732 |
+| test/success_rate  | 0.5         |
+| train/episode      | 560.0       |
+| train/success_rate | 0.0         |
+------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_013.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_013.npz
+New best success rate: 0.5.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 14          |
+| stats_g/mean       | 0.019187734 |
+| stats_g/std        | 0.61616164  |
+| stats_o/mean       | 0.02624892  |
+| stats_o/std        | 0.5983253   |
+| test/episode       | 300.0       |
+| test/mean_Q        | -0.19902447 |
+| test/success_rate  | 0.3         |
+| train/episode      | 600.0       |
+| train/success_rate | 0.075       |
+------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_014.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_014.npz
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_14.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 15          |
+| stats_g/mean       | 0.014060195 |
+| stats_g/std        | 0.61201584  |
+| stats_o/mean       | 0.02171468  |
+| stats_o/std        | 0.59469366  |
+| test/episode       | 320.0       |
+| test/mean_Q        | -0.23660679 |
+| test/success_rate  | 0.3         |
+| train/episode      | 640.0       |
+| train/success_rate | 0.075       |
+------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_015.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_015.npz
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 16          |
+| stats_g/mean       | 0.014038527 |
+| stats_g/std        | 0.60757446  |
+| stats_o/mean       | 0.022833612 |
+| stats_o/std        | 0.59042466  |
+| test/episode       | 340.0       |
+| test/mean_Q        | -0.25430554 |
+| test/success_rate  | 0.5         |
+| train/episode      | 680.0       |
+| train/success_rate | 0.05        |
+------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_016.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_016.npz
+New best success rate: 0.5.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_16.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 17          |
+| stats_g/mean       | 0.013151107 |
+| stats_g/std        | 0.60076606  |
+| stats_o/mean       | 0.02055479  |
+| stats_o/std        | 0.58370245  |
+| test/episode       | 360.0       |
+| test/mean_Q        | -0.27856153 |
+| test/success_rate  | 0.55        |
+| train/episode      | 720.0       |
+| train/success_rate | 0.05        |
+------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_017.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_017.npz
+New best success rate: 0.55.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 18          |
+| stats_g/mean       | 0.015511379 |
+| stats_g/std        | 0.5962188   |
+| stats_o/mean       | 0.022943158 |
+| stats_o/std        | 0.5805272   |
+| test/episode       | 380.0       |
+| test/mean_Q        | -0.19992362 |
+| test/success_rate  | 0.8         |
+| train/episode      | 760.0       |
+| train/success_rate | 0.1         |
+------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_018.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_018.npz
+New best success rate: 0.8.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_18.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 19          |
+| stats_g/mean       | 0.012887055 |
+| stats_g/std        | 0.5940459   |
+| stats_o/mean       | 0.019503549 |
+| stats_o/std        | 0.5788994   |
+| test/episode       | 400.0       |
+| test/mean_Q        | -0.14947103 |
+| test/success_rate  | 0.9         |
+| train/episode      | 800.0       |
+| train/success_rate | 0.075       |
+------------------------------------
+Query: ac_output: getting Q value and actions over epochs.
+Query: ac_output: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//ac_output/query_019.npz
+Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.
+Query: critic_q: number of transition pairs is 4096.
+Query: critic_q: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//critic_q/query_latest.npz
+Query: uncertainty: Plot the uncertainty of demonstration NN.
+Query: uncertainty: storing query results to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//uncertainty/query_019.npz
+New best success rate: 0.9.
+Saving policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/Desktop/RLProject/Experiment/Result/Temp/RLDemoCriticPolicy//rl/policy_latest.pkl.

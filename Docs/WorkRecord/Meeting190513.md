@@ -1,9 +1,12 @@
 # Undergrad Research Project
 Meeting Summary<br>
-May 6th, 2019
+May 13th, 2019
 
 ## Goal/Thoughts/Idea from last week
-1. The uncertainty problem, how to combine Q_{RL} and Q_{Demo}
+1. Use Gaussian Process with fewer regression points.
+
+
+2. The uncertainty problem, how to combine Q_{RL} and Q_{Demo}
     - The target Q value should be a weighted combination of Q_{RL} and Q_{Demo}: Alpha*Q_{RL} + (1-Alpha)*Q_{Demo}
     - Implemented: Need calibration
         - Alpha = 1 as time -> infinity
@@ -14,13 +17,13 @@ May 6th, 2019
         - Should consider using lots of ensembles (>20) to run the experiments
         - Do not collapse $q_{rl}$!
 
-2. More environments/experiments to show that our current method is beneficial (High priority).
+3. More environments/experiments to show that our current method is beneficial (High priority).
     - Since the uncertainty problem have not been solved. Currently, we have to assume that we are given an almost "perfect" function (s,a) -> Q, and prove that we can use this function to improve the learning performance of DDPG. For now, the "perfect" (s,a) -> Q is obtained from a well-trained ddpg critic.
     - Besides the two OpenAI environments,
         - Extra environment 1: peg in hole problem (either through modifying the openai robotics envs or using the robosuite peg in hole environment)
         - Extra env 2: navigation problem, e.g. the  OpenAI CarRacing environment.
 
-3. How to acquire the training set of the demonstration neural net? Or, how to acquire or ask for a demonstration?
+4. How to acquire the training set of the demonstration neural net? Or, how to acquire or ask for a demonstration?
     - I used to worry a lot about this. But it should have a lower priority than the uncertainty issue.
     - Currently we have discussed two strategies:
         1. Random:
@@ -44,9 +47,9 @@ Extras...
     - Just require demonstration of the desired Q value of transition pairs drawn from the replay buffer (based on some condition such as uncertainty from the bootstrapped ensemble of critic.)
 
 ## Meeting Minutes
-- Try using Gaussian Process for demonstration -> may only work for low dimensions
-- Sparse Gaussian process
-- Try to do regression with fewer points.
+- Chernoff bnd width
+- Chebyshev inequality
+- Markov decision process
 
 
 

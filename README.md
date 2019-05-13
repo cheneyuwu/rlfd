@@ -46,5 +46,23 @@
       | sample_transitions | A simple function to sample transitions from the replay buffer. Not quit related to the demonstration training. Just because I use   replay_buffer to store the training data. |
     - Note: Parameters start with "demo" will be used only for demonstration. Others will be shared by other modules.
 
+### DDPG
+staging_tf    staged values
+buffer_ph_tf  placeholders
 
+demo_q_mean_tf
+demo_q_var_tf
+demo_q_sample_tf
+max_q_tf
+
+Q_loss_tf -> a list of losses for each critic sample
+pi_loss_tf -> a list of losses for each pi sample
+
+policy.
+pi_tf  list of output from actor
+Q_tf
+Q_pi_tf
+Q_pi_mean_tf
+Q_pi_var_tf
+_input_Q
 
