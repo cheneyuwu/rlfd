@@ -132,7 +132,7 @@ def add_env_params(params):
     params["gamma"] = 1.0 - 1.0 / params["T"]
     assert hasattr(tmp_env, "max_u")
     params["max_u"] = np.array(tmp_env.max_u) if isinstance(tmp_env.max_u, list) else tmp_env.max_u
-    # get environment dimenstions
+    # get environment dimensions
     tmp_env.reset()
     obs, _, _, info = tmp_env.step(tmp_env.action_space.sample())
     dims = {"o": obs["observation"].shape[0], "u": tmp_env.action_space.shape[0], "g": obs["desired_goal"].shape[0]}

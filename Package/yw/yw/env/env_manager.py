@@ -3,7 +3,7 @@ import gym
 
 
 class EnvManager:
-    def __init__(self, env_name, r_scale=1, r_shift = 0.05, eps_length = 0):
+    def __init__(self, env_name, r_scale=1, r_shift=0.05, eps_length=0):
         self.make_env = None
         self.env_arg = {}
 
@@ -71,6 +71,12 @@ class EnvManager:
 
 
 if __name__ == "__main__":
-    env_manager = EnvManager("Reach2D", 1)
+    import numpy as np
+
+    env_manager = EnvManager("Reach2D")
     env = env_manager.get_env()
+    env.reset()
+    for i in range(32):
+        env.step([-np.sin(i / 10), -np.cos(i / 10)])
+        env.render()
 

@@ -22,7 +22,10 @@ def set_global_seeds(i):
     try:
         import tensorflow as tf
 
-        tf.set_random_seed(myseed)
+        if tf.__version__.startswith("1"):
+            tf.set_random_seed(myseed)
+        else:
+            tf.random.set_seed(myseed)
     except ImportError:
         pass
     np.random.seed(myseed)

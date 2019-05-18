@@ -346,7 +346,7 @@ dump_tabular = dumpkvs
 # ======================================
 
 
-def _demo():
+def test_demo():
     info("hi")
     debug("shouldn't appear")
     set_level(DEBUG)
@@ -376,5 +376,5 @@ def _demo():
 
 
 if __name__ == "__main__":
-    _demo()
+    test_demo()
 
