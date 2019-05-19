@@ -13,16 +13,15 @@
 
 import os
 import sys
-from subprocess import CalledProcessError
 
-import click
-import numpy as np
-import json
-import pickle
 from mpi4py import MPI
 
-from yw.ddpg_main import config
+import json
+import pickle
+import numpy as np
+
 from yw.tool import logger
+from yw.ddpg_main import config
 from yw.util.mpi_util import mpi_fork, mpi_average, set_global_seeds
 
 def train_gp_q_estimator(save_path, save_interval, policy, n_epochs, demo_file, demo_test_file, **kwargs):
@@ -278,12 +277,11 @@ def train_reinforce(
             assert local_uniform[0] != root_uniform[0]
 
 
-def launch(
+def train(
     logdir,
     loglevel,
     save_path,
     save_interval,
-    num_cpu,
     env,
     r_scale,
     r_shift,
@@ -307,22 +305,10 @@ def launch(
     debug_params,
     **kwargs,
 ):
-    # Fork for multi-CPU MPI implementation.
-    if num_cpu > 1:
-        try:
-            whoami = mpi_fork(num_cpu, ["--bind-to", "core"])
-        except CalledProcessError:
-            # fancy version of mpi call failed, try simple version
-            whoami = mpi_fork(num_cpu)
-
-        if whoami == "parent":
-            sys.exit(0)
-        import yw.util.tf_util as U
-
-        U.single_threaded_session().__enter__()
 
     # Consider rank as pid.
     rank = MPI.COMM_WORLD.Get_rank()
+    num_cpu = MPI.COMM_WORLD.Get_size()
 
     # Configure logging.
     if rank == 0:
@@ -458,101 +444,83 @@ def launch(
     else:
         logger.info("Skip RL agent training.")
 
+if __name__ == "__main__":
+    from yw.util.cmd_util import ArgParser
 
-# Top Level User API
-# =====================================
-@click.command(context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
-
-# Log
-@click.option("--logdir", type=str, default=os.getenv("PROJECT") + "/Temp/Temp/log", help="Log directory.")
-@click.option("--loglevel", type=int, default=1, help="Logger level.")
-
-# Save results - this will be for both demo and rl
-@click.option("--save_path", type=str, default=os.getenv("PROJECT") + "/Temp/Temp/policy", help="Policy path.")
-@click.option("--save_interval", type=int, default=0, help="The interval with which policy pickles are saved.")
-
-# Program - TODO: test if this works for the demonstration training part.
-@click.option("--num_cpu", type=int, default=1, help="The number of CPU cores to use (using MPI).")
-@click.option("--seed", type=int, default=0, help="Seed both the environment and the training code.")
-
-# Environment setup
-@click.option("--env", type=str, default="Reach2D", help="Name of the environment.")
-@click.option("--r_scale", type=float, default=1, help="Down scale the reward.")
-@click.option("--r_shift", type=float, default=0, help="Shift the reward (before shifting).")
-@click.option("--eps_length", type=int, default=0, help="Change the maximum episode length.")
-
-# Training
-@click.option("--train_rl", type=int, default=0, help="Whether or not to train the ddpg.")
-@click.option("--train_rl_epochs", type=int, default=1, help="The number of training epochs to run for RL.")
-@click.option("--train_demo_epochs", type=int, default=1, help="The number of training epochs to run for demo.")
-
-# DDPG Configuration
-@click.option("--rl_num_sample", type=int, default=1, help="Number of ddpg heads.")
-@click.option(
-    "--rl_ca_ratio", type=click.Choice([1, 2]), default=1, help="Use 2 for td3 or 1 for normal ddpg."
-)  # this will only affect number of critic, do not use it for now
-@click.option("--exploit", type=int, default=0, help="Whether or not to use e-greedy exploration.")
-@click.option(
-    "--replay_strategy",
-    type=click.Choice(["future", "none"]),
-    default="future",
-    help='The HER replay strategy to be used. "future" uses HER, "none" disables HER.',
-)
-
-# Demo Configuration
-@click.option(
-    "--demo_critic",
-    type=click.Choice(["nn", "gp", "none"]),
-    default="none",
-    help="Use a neural network as critic or a gaussian process. Need to provide or train a demo policy if not set to none",
-)
-@click.option(
-    "--demo_actor",
-    type=click.Choice(["nn", "none"]),
-    default="none",
-    help="Use a neural network as actor. Need to provide or train a demo policy if not set to none",
-)
-@click.option(
-    "--demo_policy_file",
-    type=str,
-    default=None,
-    help="Demonstration policy file. Provide this if you want to train RL agent only.",
-)
-@click.option("--demo_num_sample", type=int, default=1, help="Number of demonstration heads.")
-@click.option("--demo_file", type=str, default=None, help="Demonstration training dataset.")
-@click.option("--demo_test_file", type=str, default=None, help="Demonstration test dataset.")
-@click.option(
-    "--demo_net_type",
-    type=click.Choice(["EnsembleNN", "BaysianNN"]),
-    default="EnsembleNN",
-    help="Demonstration neural network type, ensemble, baysian or ensemble of actor",
-)
-
-# Others
-@click.option("--override_params", type=int, default=0, help="Whether or not to overwrite default parameters.")
-@click.option("--debug_params", type=int, default=0, help="Override some parameters for internal regression tests.")
-@click.pass_context
-def main(ctx, **kwargs):
-    print("Provided Arguments:")
-    print("{:<30}{:<30}".format("Option", "Value"))
-    for key, value in kwargs.items():
-        print("{:<30}{:<30}".format(str(key), str(value)))
-
-    if kwargs["override_params"] == 1:
-        unparsed_options = []
-        for i in range(0, len(ctx.args)):
-            unparsed_options += list(filter(bool, ctx.args[i].split("=")))
-        assert len(unparsed_options) % 2 == 0, "Wrong number of arguments!"
-        override = {unparsed_options[i].strip("-"): unparsed_options[i + 1] for i in range(0, len(ctx.args), 2)}
-        print("Overrided Parameters:")
-        print("{:<30}{:<30}".format("Option", "Value"))
-        for key, value in override.items():
-            print("{:<30}{:<30}".format(str(key), str(value)))
-        kwargs["override_params"] = override
+    ap = ArgParser()
+    # logging
+    ap.parser.add_argument("--logdir", help="log directory", type=str, default=os.getenv("TEMPDIR") + "/Train/log")
+    ap.parser.add_argument("--loglevel", help="log level", type=int, default=2)
+    # save results - this will be for both demo and rl
+    ap.parser.add_argument("--save_path", help="policy path", type=str, default=os.getenv("TEMPDIR") + "/Train/policy")
+    ap.parser.add_argument("--save_interval", help="the interval which policy pickles are saved", type=int, default=0)
+    # program - TODO: test if this works for the demonstration training part.
+    ap.parser.add_argument("--seed", help="RNG seed", type=int, default=0)
+    # environment setup
+    ap.parser.add_argument("--env", help="name of the environment", type=str, default="Reach2DFirstOrder")
+    ap.parser.add_argument("--r_scale", help="down scale the reward", type=float, default=1.0)
+    ap.parser.add_argument("--r_shift", help="shift the reward (before shifting)", type=float, default=0.0)
+    ap.parser.add_argument("--eps_length", help="change the maximum episode length", type=int, default=0)
+    # training
+    ap.parser.add_argument("--train_rl", help="whether or not to train the ddpg", type=int, default=0)
+    ap.parser.add_argument(
+        "--train_rl_epochs", help="the number of training epochs to run for RL", type=int, default=1
+    )
+    ap.parser.add_argument(
+        "--train_demo_epochs", help="the number of training epochs to run for demo", type=int, default=1
+    )
+    # DDPG configuration
+    ap.parser.add_argument("--rl_num_sample", help="number of ddpg heads", type=int, default=1)
+    ap.parser.add_argument(
+        "--rl_ca_ratio", help="use 2 for td3 or 1 for normal ddpg", type=int, choices=[1, 2], default=1
+    )  # do not use this flag for now
+    ap.parser.add_argument("--exploit", help="whether or not to use e-greedy exploration", type=int, default=0)
+    ap.parser.add_argument(
+        "--replay_strategy",
+        help="the HER replay strategy to be used. 'future' uses HER, 'none' disables HER",
+        type=str,
+        choices=["none", "future"],
+        default="future",
+    )
+    # demo configuration
+    ap.parser.add_argument(
+        "--demo_critic",
+        help="use a neural network as critic or a gaussian process. Need to provide or train a demo policy if not set to none",
+        type=str,
+        choices=["nn", "gp", "none"],
+        default="none",
+    )
+    ap.parser.add_argument(
+        "--demo_actor",
+        help="use a neural network as actor. Need to provide or train a demo policy if not set to none",
+        type=str,
+        choices=["nn", "none"],
+        default="none",
+    )
+    ap.parser.add_argument(
+        "--demo_policy_file",
+        help="demonstration policy file (provide this if you want to train RL agent only)",
+        type=str,
+        default=None,
+    )
+    ap.parser.add_argument("--demo_num_sample", help="number of demonstration heads", type=int, default=1)
+    ap.parser.add_argument("--demo_file", help="demonstration training dataset", type=str, default=None)
+    ap.parser.add_argument("--demo_test_file", help="demonstration test dataset", type=str, default=None)
+    ap.parser.add_argument(
+        "--demo_net_type",
+        help="demonstration neural network type, ensemble, baysian",
+        type=str,
+        choices=["EnsembleNN", "BaysianNN"],
+        default="EnsembleNN",
+    )
+    # others
+    ap.parser.add_argument(
+        "--override_params", help="whether or not to overwrite default parameters", type=int, default=0
+    )
+    ap.parser.add_argument(
+        "--debug_params", help="override some parameters for internal regression tests", type=int, default=0
+    )
+    ap.parse(sys.argv)
 
     print("Launching the training process.")
-    launch(**kwargs)
-
-
-if __name__ == "__main__":
-    main()
+    train(**ap.get_dict())

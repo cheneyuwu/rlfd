@@ -1,9 +1,14 @@
+import tensorflow as tf
 import numpy as np
 
 from yw.tool import logger
-from yw.ddpg_main.ddpg import DDPG
-from yw.ddpg_main.imitation import QEstimator, ActionImitator
-from yw.ddpg_main.gp_imitation import GPQEstimator
+
+if tf.__version__.startswith("1"):
+    from yw.ddpg_main.ddpg import DDPG
+    from yw.ddpg_main.imitation import QEstimator, ActionImitator
+    from yw.ddpg_main.gp_imitation import GPQEstimator
+else:
+    from yw.ddpg_tf2.ddpg import DDPG
 from yw.ddpg_main.rollout import RolloutWorker
 from yw.ddpg_main.her import make_sample_her_transitions
 
@@ -94,7 +99,7 @@ DEFAULT_PARAMS = {
 
 def log_params(params):
     for key in sorted(params.keys()):
-        logger.info("{}: {}".format(key, params[key]))
+        logger.info("{:<30}{}".format(key, params[key]))
 
 
 # Helper Functions for Configuration
@@ -221,6 +226,7 @@ def configure_nn_q_estimator(params):
     policy = QEstimator(**demo_params)
 
     return policy
+
 
 def configure_gp_q_estimator(params):
 
