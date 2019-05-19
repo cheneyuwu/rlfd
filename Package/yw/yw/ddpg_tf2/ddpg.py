@@ -7,7 +7,7 @@ from collections import OrderedDict
 from yw.tool import logger
 
 from yw.ddpg_tf2.mpi_adam import MpiAdam
-# from yw.ddpg_main.normalizer import Normalizer
+from yw.ddpg_tf2.normalizer import Normalizer
 from yw.ddpg_main.replay_buffer import ReplayBuffer
 from yw.ddpg_tf2.actor_critic import ActorCritic
 from yw.util.util import store_args, import_function
@@ -124,8 +124,8 @@ class DDPG(object):
         logger.info("Creating a DDPG agent with action space %d x %s." % (self.dimu, self.max_u))
 
         # Creating a normalizer for goal and observation.
-        # self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
-        # self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
+        self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip)
+        self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip)
 
         # Create actor critic
         self.main_tf = ActorCritic(**vars(self))

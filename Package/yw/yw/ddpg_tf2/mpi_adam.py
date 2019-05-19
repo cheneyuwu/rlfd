@@ -1,7 +1,6 @@
 import tensorflow as tf
 import numpy as np
 from yw.util.util import store_args
-from yw.util.tf2_util import GetFlat, SetFromFlat
 from yw.util.tf2_util import get_flat, set_from_flat
 
 try:
