@@ -1,7 +1,7 @@
 #!/bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 python ${DIR}/regtest.py
-diff -r -I ".*: <function.*>" ${DIR}/RegResult ${TEMPDIR}/RegResult &> ${TEMPDIR}/diff.log
+diff -r -I ".*<function.*>" ${DIR}/RegResult ${TEMPDIR}/RegResult &> ${TEMPDIR}/diff.log
 if [ $? -eq 0 ]; then
     echo "PASSED"
     rm -r ${TEMPDIR}/RegResult/*
