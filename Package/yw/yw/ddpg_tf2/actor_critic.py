@@ -13,7 +13,6 @@ class Actor(tf.keras.Model):
         self.max_u = max_u
 
     def call(self, input):
-        input = [tf.cast(i, tf.float32) for i in input] # numpy array should be tf32
         concat_input = tf.concat(axis=1, values=input)
         return self.max_u * tf.tanh(self.nn(concat_input))
 
@@ -25,14 +24,13 @@ class Critic(tf.keras.Model):
         self.nn = nn([hidden] * layers + [1])
 
     def call(self, input):
-        input = [tf.cast(i, tf.float32) for i in input] # numpy array should be tf32
         concat_input = tf.concat(axis=1, values=[input[0], input[1], input[2] / self.max_u])
         return self.nn(concat_input)
 
 
 class ActorCritic:
     @store_args
-    def __init__(self, max_u, hidden, layers, dimo, dimg, dimu, norm_eps, norm_clip, **kwargs):
+    def __init__(self, max_u, hidden, layers, dimo, dimg, dimu, o_stats, g_stats, **kwargs):
 
         self.critic = Critic(**vars(self))
         self.critic.build([(None, dimo), (None, dimg), (None, dimu)])
@@ -42,18 +40,22 @@ class ActorCritic:
         self.actor.build([(None, dimo), (None, dimg)])
         self.actor_num_weights = len(self.actor.get_weights())
 
-        # Creating a normalizer for goal and observation.
-        self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip)
-        self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip)
+        self.variables = self.actor.variables + self.critic.variables
 
+    @tf.function
     def get_pi(self, input):
+        input = self._normalize_og(input)
         return self.actor([input["o"], input["g"]])
 
+    @tf.function
     def get_q(self, input):
+        input = self._normalize_og(input)
         return self.critic([input["o"], input["g"], input["u"]])
 
+    @tf.function
     def get_q_pi(self, input):
         u = self.get_pi(input)
+        input = self._normalize_og(input)
         return self.critic([input["o"], input["g"], u])
 
     def get_actor_vars(self):
@@ -62,17 +64,16 @@ class ActorCritic:
     def get_critic_vars(self):
         return self.critic.trainable_variables
 
-    def get_weights(self):
-        weights = []
-        weights += self.actor.get_weights()
-        weights += self.critic.get_weights()
-        return weights
+    @tf.function
+    def set_variables(self, weights):
+        for i in range(len(self.variables)):
+            self.variables[i].assign(weights[i])
 
-    def set_weights(self, weights):
-        size = 0
-        self.actor.set_weights(weights[size : size + self.actor_num_weights])
-        size += self.actor_num_weights
-        self.critic.set_weights(weights[size : size + self.critic_num_weights])
+    def _normalize_og(self, input):
+        result = input.copy()
+        result["o"] = self.o_stats.normalize(input["o"])
+        result["g"] = self.g_stats.normalize(input["g"])
+        return result
 
 
 class EnsambleActorCritic:

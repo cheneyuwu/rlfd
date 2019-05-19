@@ -96,32 +96,23 @@ def nn(layers_sizes):
         ))
     return model
 
-class Actor(tf.keras.Model):
+class Actor(tf.Module):
 
-  def __init__(self):
-    super(Actor, self).__init__()
+  def __init__(self, name=None):
+    super(Actor, self).__init__(name=name)
+    self.check = tf.Variable(initial_value=np.array((1,2,3)))
     self.nn = nn([3,16])
-    self.nn2 = nn([3,1])
 
   def call(self, inputs):
-    x = self.nn(inputs)
-    self.result = self.nn2(x)
+    self.check.assign_add(np.array((1,2,3)))
+    self.x = self.nn(inputs)
 
 if __name__ == "__main__":
-    model1 = nn([3,8,9,1])
-    model2 = nn([3,8,9,1])
-    model3 = Actor()
-
+    model3 = Actor(name="test")
     input = np.array((1.,2.,3.,4.)).reshape(-1,1)
-
-    # print(model(input))
-    # print(model2(input))
-    print(model3.nn.trainable_variables)
-    model3(input)
-    print(model3.nn.summary())
-    # print(model.trainable_variables)
-    # print(model2.trainable_variables)
-    # print(model3.trainable_variables)
+    model3.call(input)
+    print(model3.variables)
+    print(model3.nn.variables)
 
 
 

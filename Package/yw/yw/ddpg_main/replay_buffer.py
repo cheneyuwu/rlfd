@@ -48,7 +48,7 @@ class ReplayBuffer:
         self.sample_transitions = ReplayBuffer.default_sampler if sample_transitions is None else sample_transitions
 
         # self.buffers is {key: array(size_in_episodes x T or T+1 x dim_key)}
-        self.buffers = {key: np.empty([self.size, *shape]) for key, shape in buffer_shapes.items()}
+        self.buffers = {key: np.empty([self.size, *shape], dtype=np.float32) for key, shape in buffer_shapes.items()}
 
         # memory management
         self.current_size = 0
@@ -76,9 +76,9 @@ class ReplayBuffer:
 
         transitions = self.sample_transitions(buffers, batch_size)
 
+        # Note: each transition is {'o' 'u' 'g' 'ag' 'ag_2' 'o_2'}
         for key in ["r", "o_2", "ag_2"] + list(self.buffers.keys()):
             assert key in transitions, "key %s missing from transitions" % key
-        # Note: each transition is {'o' 'u' 'g' 'ag' 'ag_2' 'o_2'}
 
         return transitions
 
@@ -104,6 +104,7 @@ class ReplayBuffer:
     def store_episode(self, episode_batch):
         """episode_batch: array(batch_size x (T or T+1) x dim_key)
         """
+
         batch_sizes = [len(episode_batch[key]) for key in episode_batch.keys()]
         assert np.all(np.array(batch_sizes) == batch_sizes[0])
         batch_size = batch_sizes[0]

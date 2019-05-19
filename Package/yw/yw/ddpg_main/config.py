@@ -88,7 +88,7 @@ DEFAULT_PARAMS = {
     "demo_test_batch_size": 100,  # testing data size in number of transitions
     # DDPG Training
     "train_rl_epochs": 1,
-    "n_cycles": 50,  # per epoch
+    "n_cycles": 10,  # per epoch
     "n_batches": 40,  # training batches per cycle
     "rollout_batch_size": 4,  # per mpi thread
     "n_test_rollouts": 20,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts

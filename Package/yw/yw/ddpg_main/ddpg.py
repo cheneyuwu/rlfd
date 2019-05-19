@@ -1,13 +1,15 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.staging import StagingArea
+
 from collections import OrderedDict
 
 from yw.tool import logger
+
 from yw.ddpg_main.mpi_adam import MpiAdam
 from yw.ddpg_main.normalizer import Normalizer
-from yw.ddpg_main.replay_buffer import ReplayBuffer
 from yw.ddpg_main.actor_critic import ActorCritic
+from yw.ddpg_main.replay_buffer import ReplayBuffer
 from yw.util.util import store_args, import_function
 from yw.util.tf_util import flatten_grads
 
@@ -115,7 +117,7 @@ class DDPG(object):
         logger.debug("DDPG.__init__ -> The buffer shapes are: {}".format(buffer_shapes))
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         logger.debug("DDPG.__init__ -> The buffer size is: {}".format(buffer_size))
-        self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
+        self.replay_buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
         if self.demo_actor != "none":
             # initialize the demo buffer; in the same way as the primary data buffer
             self.demo_buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
@@ -279,19 +281,16 @@ class DDPG(object):
         episode_batch: array of batch_size x (T or T+1) x dim_key
                        'o' is of size T+1, others are of size T
         """
-        # mask transitions for each bootstrapped head
-        # select a distribution!
         for key in episode_batch.keys():
             assert episode_batch[key].shape[0] == self.rollout_batch_size
-        mask = np.random.binomial(
-            1, 1, (self.rollout_batch_size, self.T, self.num_sample)
-        )  # choose your own distribution!
-        episode_batch["mask"] = mask
-        expected_q = -100 * np.ones(
-            (self.rollout_batch_size, self.T, 1)
-        )  # fill in the minimal value of q for rollout data.
-        episode_batch["q"] = expected_q
-        self.buffer.store_episode(episode_batch)
+        # mask transitions for each bootstrapped head
+        # select a distribution!
+        episode_batch["mask"] = np.float32(
+            np.random.binomial(1, 1, (self.rollout_batch_size, self.T, self.num_sample))
+        )
+        # fill in the minimal value of q for rollout data.
+        episode_batch["q"] = -100 * np.ones((self.rollout_batch_size, self.T, 1), dtype=np.float32)
+        self.replay_buffer.store_episode(episode_batch)
 
         if update_stats:
             self._update_stats(episode_batch)
@@ -299,13 +298,13 @@ class DDPG(object):
     def sample_batch(self):
         if self.demo_actor != "none":  # use demonstration buffer to sample as well if demo flag is set TRUE
             transitions = {}
-            transition_rollout = self.buffer.sample(self.batch_size - self.batch_size_demo)
+            transition_rollout = self.replay_buffer.sample(self.batch_size - self.batch_size_demo)
             transition_demo = self.demo_buffer.sample(self.batch_size_demo)
             assert transition_rollout.keys() == transition_demo.keys()
             for k in transition_rollout.keys():
                 transitions[k] = np.concatenate((transition_rollout[k], transition_demo[k]))
         else:
-            transitions = self.buffer.sample(self.batch_size)  # otherwise only sample from primary buffer
+            transitions = self.replay_buffer.sample(self.batch_size)  # otherwise only sample from primary buffer
 
         o, o_2, g = transitions["o"], transitions["o_2"], transitions["g"]
         ag, ag_2 = transitions["ag"], transitions["ag_2"]
@@ -333,18 +332,12 @@ class DDPG(object):
             transitions["q_mean"] = output_mean.reshape((-1, 1))
             transitions["q_var"] = output_var.reshape((-1, 1))
 
-        transitions_batch = [transitions[key] for key in self.stage_shapes.keys()]
-        logger.debug(
-            "DDPG.sample_batch -> The sampled batch shape is: {}".format(
-                {k: transitions[k].shape for k in self.stage_shapes.keys()}
-            )
-        )
-
-        return transitions_batch
+        return transitions
 
     def stage_batch(self, batch=None):
         if batch is None:
             batch = self.sample_batch()
+            batch = [batch[key] for key in self.stage_shapes.keys()]
             self.current_batch = batch
         assert len(self.buffer_ph_tf) == len(batch)
         input_data = dict(zip(self.buffer_ph_tf, batch))
@@ -368,9 +361,7 @@ class DDPG(object):
         """
         self.stage_batch(self.current_batch)
         # method 0 rl only
-        rl_q_var = self.sess.run(
-            self.main.Q_var_tf
-        )
+        rl_q_var = self.sess.run(self.main.Q_var_tf)
         logger.info("DDPG.check_train -> rl variance {}".format(np.mean(rl_q_var)))
 
         # method 1 using both rl and demo uncertainty
@@ -385,11 +376,11 @@ class DDPG(object):
         # logger.debug("DDPG.check_train -> critic_loss:{}, actor_loss:{}".format(critic_loss, actor_loss))
         # for i in range(10):
         #     logger.info("DDPG.check_train -> weight:{}, demo_var: {}".format(np.mean(weight), demo_q[i]))
-            # logger.info("DDPG.check_train -> rl_q_sample: {}".format(rl_q_sample[i]))
-            # logger.info("DDPG.check_train -> demo_q_sample: {}".format(demo_q_sample[i]))
-            # logger.info(
-            #     "DDPG.check_train -> {}: rl_q, demo_q: {} {} {}".format(i, rl_q[i], demo_q[i], rl_q[i] > demo_q[i])
-            # )
+        # logger.info("DDPG.check_train -> rl_q_sample: {}".format(rl_q_sample[i]))
+        # logger.info("DDPG.check_train -> demo_q_sample: {}".format(demo_q_sample[i]))
+        # logger.info(
+        #     "DDPG.check_train -> {}: rl_q, demo_q: {} {} {}".format(i, rl_q[i], demo_q[i], rl_q[i] > demo_q[i])
+        # )
 
     def update_target_net(self):
         logger.debug("DDPG.update_target_net -> updating target net.")
@@ -400,10 +391,10 @@ class DDPG(object):
         logger.debug("DDPG.train -> global step at {}".format(step))
 
     def get_current_buffer_size(self):
-        return self.buffer.get_current_size()
+        return self.replay_buffer.get_current_size()
 
     def clear_buffer(self):
-        self.buffer.clear_buffer()
+        self.replay_buffer.clear_buffer()
 
     def logs(self, prefix=""):
         logs = []
@@ -500,7 +491,9 @@ class DDPG(object):
                 # Method 0.a The weight is dependent on the uncertainty of the demonstration nn
                 # $w*q_r + (1-w)*q_d$ where $w=count(q_r > q_dk)$ where $k$ is the $k$th sample from demonstration nn.
                 self.demo_certainty_tf = tf.exp(tf.negative(20 * self.demo_q_var_tf))
-                self.damping_tf = tf.maximum(0.0, 1 - self.global_step_tf / 20) # 25 should be number of training epoches
+                self.damping_tf = tf.maximum(
+                    0.0, 1 - self.global_step_tf / 20
+                )  # 25 should be number of training epoches
                 self.weight_tf = self.demo_certainty_tf * self.damping_tf
                 self.weighted_q_tf = (
                     tf.stop_gradient(target_list_tf[i]) * (1 - self.weight_tf) + self.demo_q_mean_tf * self.weight_tf
@@ -686,7 +679,6 @@ class DDPG(object):
 
         self.o_stats.update(transitions["o"])
         self.g_stats.update(transitions["g"])
-
         self.o_stats.recompute_stats()
         self.g_stats.recompute_stats()
 
@@ -704,7 +696,7 @@ class DDPG(object):
             "_vars",
             "_adam",
             "_stats",
-            "buffer",
+            "_buffer",
             "sess",
             "main",
             "target",
@@ -715,7 +707,6 @@ class DDPG(object):
         ]
 
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
-        state["buffer_size"] = self.buffer_size
         state["tf"] = self.sess.run([x for x in self._global_vars("") if "buffer" not in x.name])
         return state
 

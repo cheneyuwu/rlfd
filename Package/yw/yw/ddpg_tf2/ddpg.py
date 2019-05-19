@@ -1,15 +1,14 @@
 import numpy as np
 import tensorflow as tf
 
-# from tensorflow.contrib.staging import StagingArea
 from collections import OrderedDict
 
 from yw.tool import logger
 
 from yw.ddpg_tf2.mpi_adam import MpiAdam
 from yw.ddpg_tf2.normalizer import Normalizer
-from yw.ddpg_main.replay_buffer import ReplayBuffer
 from yw.ddpg_tf2.actor_critic import ActorCritic
+from yw.ddpg_main.replay_buffer import ReplayBuffer
 from yw.util.util import store_args, import_function
 
 
@@ -124,14 +123,15 @@ class DDPG(object):
         logger.info("Creating a DDPG agent with action space %d x %s." % (self.dimu, self.max_u))
 
         # Creating a normalizer for goal and observation.
-        self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip)
-        self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip)
+        self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, name="obs")
+        self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, name="goal")
 
         # Create actor critic
         self.main_tf = ActorCritic(**vars(self))
         self.target_tf = ActorCritic(**vars(self))
 
         # Loss functions
+        @tf.function
         def compute_critic_loss(input):
             clip_range = (-self.clip_return, 0.0 if self.clip_pos_returns else self.clip_return)
             target_value = tf.clip_by_value(
@@ -145,6 +145,7 @@ class DDPG(object):
 
         self.critic_loss_op = compute_critic_loss
 
+        @tf.function
         def compute_actor_loss(input):
             actor_loss = -tf.reduce_mean(
                 self.main_tf.get_q_pi({"o": input["o"], "g": input["g"]})
@@ -158,11 +159,10 @@ class DDPG(object):
         # Optimizers
         self.Q_adam = MpiAdam(self.main_tf.get_critic_vars(), scale_grad_by_procs=False)
         self.pi_adam = MpiAdam(self.main_tf.get_actor_vars(), scale_grad_by_procs=False)
-        self.Q_adam.sync()
-        self.pi_adam.sync()
+        self._sync_optimizers()
 
         # Sync Target net
-        self.target_tf.set_weights(self.main_tf.get_weights())
+        self.target_tf.set_variables(self.main_tf.variables)
 
         # # Loss functions
         # clip_range = (-self.clip_return, 0.0 if self.clip_pos_returns else self.clip_return)
@@ -186,17 +186,12 @@ class DDPG(object):
         #     for i in range(self.num_sample)
         # ]
 
-    # def get_q_value(self, batch):
-    #     policy = self.target
-    #     # values to compute
-    #     vals = [policy.Q_sample_tf, policy.Q_mean_tf, policy.Q_var_tf]
-    #     # feed
-    #     feed = {
-    #         policy.o_tf: batch["o"].reshape(-1, self.dimo),
-    #         policy.g_tf: batch["g"].reshape(-1, self.dimg),
-    #         policy.u_tf: batch["u"].reshape(-1, self.dimu),
-    #     }
-    #     return self.sess.run(vals, feed_dict=feed)
+    def get_q_value(self, batch):
+        
+        policy = self.target_tf
+
+        # TODO should also return mean and variance
+        return policy.get_q({"o": batch["o"], "g": batch["g"], "u": batch["u"]})
 
     def get_actions(self, o, ag, g, noise_eps=0.0, random_eps=0.0, use_target_net=False, compute_Q=False):
 
@@ -275,22 +270,53 @@ class DDPG(object):
         if update_stats:
             self._update_stats(episode_batch)
 
+   # def init_demo_buffer_2(self, demo_data_file, update_stats=True):
+    #     """ Another function for initializing the demonstration buffer. Used for getting demonstration from OpenAI
+    #         environments only.
+    #     """
+    #     demo_data = np.load(demo_data_file)  # load the demonstration data from data file
+    #     info_keys = [key.replace("info_", "") for key in self.input_dims.keys() if key.startswith("info_")]
+    #     info_values = [np.empty((self.T, 1, self.input_dims["info_" + key]), np.float32) for key in info_keys]
+
+    #     for eps in range(self.num_demo):  # we initialize the whole demo buffer at the start of the training
+    #         obs, acts, goals, achieved_goals = [], [], [], []
+    #         i = 0
+    #         for transition in range(self.T):
+    #             obs.append([demo_data["obs"][eps][transition].get("observation")])
+    #             acts.append([demo_data["acs"][eps][transition]])
+    #             goals.append([demo_data["obs"][eps][transition].get("desired_goal")])
+    #             achieved_goals.append([demo_data["obs"][eps][transition].get("achieved_goal")])
+    #             for idx, key in enumerate(info_keys):
+    #                 info_values[idx][transition, i] = demo_data["info"][eps][transition][key]
+
+    #         obs.append([demo_data["obs"][eps][self.T].get("observation")])
+    #         achieved_goals.append([demo_data["obs"][eps][self.T].get("achieved_goal")])
+
+    #         episode = dict(o=obs, u=acts, g=goals, ag=achieved_goals)
+    #         for key, value in zip(info_keys, info_values):
+    #             episode["info_{}".format(key)] = value
+    #         episode = convert_episode_to_batch_major(episode)
+    #         # create the observation dict and append them into the demonstration buffer
+    #         self.demo_buffer.store_episode(episode)
+    #         if update_stats:
+    #             self._update_stats(episode)
+    #         episode.clear()
+    #     logger.info("Demo buffer size: ", self.demo_buffer.get_current_size())
+
     def store_episode(self, episode_batch, update_stats=True):
         """
         episode_batch: array of batch_size x (T or T+1) x dim_key
                        'o' is of size T+1, others are of size T
         """
-        # mask transitions for each bootstrapped head
-        # select a distribution!
         for key in episode_batch.keys():
             assert episode_batch[key].shape[0] == self.rollout_batch_size
-        mask = np.random.binomial(
-            1, 1, (self.rollout_batch_size, self.T, self.num_sample)
-        )  # choose your own distribution!
-        episode_batch["mask"] = mask
+        # mask transitions for each bootstrapped head
+        # select a distribution!
+        episode_batch["mask"] = np.float32(
+            np.random.binomial(1, 1, (self.rollout_batch_size, self.T, self.num_sample))
+        )
         # fill in the minimal value of q for rollout data.
-        expected_q = -100 * np.ones((self.rollout_batch_size, self.T, 1))
-        episode_batch["q"] = expected_q
+        episode_batch["q"] = -100 * np.ones((self.rollout_batch_size, self.T, 1), dtype=np.float32)
         self.replay_buffer.store_episode(episode_batch)
 
         if update_stats:
@@ -333,13 +359,6 @@ class DDPG(object):
             transitions["q_mean"] = output_mean.reshape((-1, 1))
             transitions["q_var"] = output_var.reshape((-1, 1))
 
-        # transitions_batch = [transitions[key] for key in self.stage_shapes.keys()]
-        # logger.debug(
-        #     "DDPG.sample_batch -> The sampled batch shape is: {}".format(
-        #         {k: transitions[k].shape for k in self.stage_shapes.keys()}
-        #     )
-        # )
-
         return transitions
 
     def train(self):
@@ -348,8 +367,8 @@ class DDPG(object):
         batch = self.sample_batch()
 
         # Update
-        self.Q_adam.update(self.critic_loss_op, input={"input":batch})
-        self.pi_adam.update(self.actor_loss_op, input={"input":batch})
+        self.Q_adam.update(self.critic_loss_op, input={"input": batch})
+        self.pi_adam.update(self.actor_loss_op, input={"input": batch})
 
     # def check_train(self):
     #     """ For debugging only
@@ -381,11 +400,11 @@ class DDPG(object):
 
     def update_target_net(self):
         logger.debug("DDPG.update_target_net -> updating target net.")
-        main_weights = self.main_tf.get_weights()
-        target_weights = self.target_tf.get_weights()
+        main_vars = self.main_tf.variables
+        target_vars = self.target_tf.variables
         # polyak averaging
-        avg_weights = [self.polyak * v[0] + (1.0 - self.polyak) * v[1] for v in zip(target_weights, main_weights)]
-        self.target_tf.set_weights(avg_weights)
+        avg_weights = [self.polyak * v[0] + (1.0 - self.polyak) * v[1] for v in zip(target_vars, main_vars)]
+        self.target_tf.set_variables(avg_weights)
 
     def update_global_step(self):
         pass
@@ -398,10 +417,10 @@ class DDPG(object):
 
     def logs(self, prefix=""):
         logs = []
-        # logs += [("stats_o/mean", np.mean(self.sess.run([self.o_stats.mean])))]
-        # logs += [("stats_o/std", np.mean(self.sess.run([self.o_stats.std])))]
-        # logs += [("stats_g/mean", np.mean(self.sess.run([self.g_stats.mean])))]
-        # logs += [("stats_g/std", np.mean(self.sess.run([self.g_stats.std])))]
+        logs += [("stats_o/mean", np.mean(self.o_stats.mean.numpy()))]
+        logs += [("stats_o/std", np.mean(self.o_stats.std.numpy()))]
+        logs += [("stats_g/mean", np.mean(self.g_stats.mean.numpy()))]
+        logs += [("stats_g/std", np.mean(self.g_stats.std.numpy()))]
 
         if prefix is not "" and not prefix.endswith("/"):
             return [(prefix + "/" + key, val) for key, val in logs]
@@ -422,6 +441,10 @@ class DDPG(object):
     def _random_action(self, n):
         return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
 
+    def _sync_optimizers(self):
+        self.Q_adam.sync()
+        self.pi_adam.sync()
+
     def _update_stats(self, episode_batch):
         # add transitions to normalizer
         episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
@@ -433,26 +456,19 @@ class DDPG(object):
         transitions["o"], transitions["g"] = self._preprocess_og(o, ag, g)
         # No need to preprocess the o_2 and g_2 since this is only used for stats
 
-        # self.o_stats.update(transitions["o"])
-        # self.g_stats.update(transitions["g"])
-
-        # self.o_stats.recompute_stats()
-        # self.g_stats.recompute_stats()
+        self.o_stats.update(transitions["o"])
+        self.g_stats.update(transitions["g"])
+        self.o_stats.recompute_stats()
+        self.g_stats.recompute_stats()
 
     def __getstate__(self):
         """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
         """
-        excluded_subnames = [
-            "_tf",
-            "_op",
-            "_adam",
-            "_stats",
-            "_buffer",
-            "sample_transitions",
-        ]
+        excluded_subnames = ["_tf", "_op", "_adam", "_stats", "_buffer", "sample_transitions"]
 
         state = {k: v for k, v in vars(self).items() if all([not subname in k for subname in excluded_subnames])}
-        state["tf"] = {"main": self.main_tf.get_weights(), "target": self.target_tf.get_weights()}
+        state["actorcritic"] = {"main": self.main_tf.variables, "target": self.target_tf.variables}
+        state["stats"] = {"o_stats": self.o_stats.variables, "g_stats": self.g_stats.variables}
         return state
 
     def __setstate__(self, state):
@@ -464,8 +480,10 @@ class DDPG(object):
         self.__init__(**state)
 
         # load TF variables
-        self.main_tf.set_weights(state["tf"]["main"])
-        self.target_tf.set_weights(state["tf"]["target"])
+        self.main_tf.set_variables(state["actorcritic"]["main"])
+        self.target_tf.set_variables(state["actorcritic"]["target"])
+        self.o_stats.set_variables(state["stats"]["o_stats"])
+        self.g_stats.set_variables(state["stats"]["g_stats"])
 
     # ###########################################
     # # Queries
