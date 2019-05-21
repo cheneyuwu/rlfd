@@ -12,7 +12,7 @@ else
         echo "Updating the reference..."
         rm -r ${DIR}/RegResult
         rm ${TEMPDIR}/diff.log
-        cp -r ${TEMPDIR}/RegResult/ ${DIR}
+        cp -r ${TEMPDIR}/RegResult ${DIR}
         rm -r ${TEMPDIR}/RegResult/*
         echo "DONE"
     fi

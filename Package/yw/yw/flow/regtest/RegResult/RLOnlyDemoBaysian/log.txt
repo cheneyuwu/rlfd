@@ -1,10 +1,10 @@
-Logging to /home/yuchen/data/YWProject/RLProject/Temp/RegResult/RLOnlyDemoBaysian/
+Logging to /Users/yuchenwu/Desktop/RLProject/Temp/RegResult/RLOnlyDemoBaysian/
 Launching the training process with 1 cpu core(s).
 Setting log level to 1.
 train_ddpg_main.launch -> Using debug mode. Avoid training with too many epochs.
 Using environment Reach2D with r scale down by 1.000000 shift by 0.000000 and max episode 2.000000
 Skip demonstration training.
-Will use provided policy file from /home/yuchen/data/YWProject/RLProject/Package/yw/yw/flow/regtest/data/baysian_policy_latest.
+Will use provided policy file from /Users/yuchenwu/Desktop/RLProject/Package/yw/yw/flow/regtest/data/baysian_policy_latest.
 Creating a Demonstration NN.
 Imitation.__init__ -> The staging shapes are: OrderedDict([('g', (None, 2)), ('o', (None, 4)), ('u', (None, 2)), ('q', (None, 1))])
 Create an Baysian NN of hidden x layer: 4 x 2.
@@ -14,7 +14,7 @@ Demo.__init__ -> Trainable variables are: [<tf.Variable 'demo/BaysianNN/sequenti
 Imitator.__getstate__ -> Loaded Params:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'buffer_size', 'input_dims', 'dimo', 'dimg', 'dimu', 'input_shapes', 'tf'])
 *** her_params ***
 k                             4
-reward_fun                    <function configure_her.<locals>.reward_fun at 0x7fc241879488>
+reward_fun                    <function configure_her.<locals>.reward_fun at 0x12e327e18>
 strategy                      future
 *** her_params ***
 *** ddpg_params ***
@@ -47,9 +47,9 @@ prm_loss_weight               0.001
 q_filter                      0
 relative_goals                False
 rollout_batch_size            2
-sample_transitions            <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x7fc238147f28>
+sample_transitions            <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x12ea7f840>
 scope                         ddpg
-subtract_goals                <function simple_goal_subtract at 0x7fc241877730>
+subtract_goals                <function simple_goal_subtract at 0x12d9edf28>
 *** ddpg_params ***
 Configuring the replay buffer.
 DDPG.__init__ -> The buffer shapes are: {'o': (3, 4), 'u': (2, 2), 'g': (2, 2), 'info_is_success': (2, 1), 'ag': (3, 2), 'mask': (2, 1), 'q': (2, 1)}
@@ -110,7 +110,6 @@ DDPG.get_actions -> The selected action shape is: (2, 2)
 DDPG.get_actions -> The shape of demo mean is: (2,)
 DDPG.get_actions -> The shape of demo variance is: (2,)
 train_ddpg_main.train_reinforce -> batch: 0
-DDPG.sample_batch -> The sampled batch shape is: {'g': (4, 2), 'o': (4, 4), 'u': (4, 2), 'o_2': (4, 4), 'g_2': (4, 2), 'r': (4, 1), 'mask': (4, 1), 'q': (4, 1), 'q_mean': (4, 1), 'q_var': (4, 1), 'q_sample': (4, 1)}
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder:0", shape=(?, 2), dtype=float32) is  (4, 2)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_1:0", shape=(?, 4), dtype=float32) is  (4, 4)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_2:0", shape=(?, 2), dtype=float32) is  (4, 2)
@@ -125,7 +124,6 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtyp
 DDPG.stage_batch -> Order should match stage_shapes.
 DDPG.train -> critic_loss:[0.03949065], actor_loss:[-0.027315687]
 train_ddpg_main.train_reinforce -> batch: 1
-DDPG.sample_batch -> The sampled batch shape is: {'g': (4, 2), 'o': (4, 4), 'u': (4, 2), 'o_2': (4, 4), 'g_2': (4, 2), 'r': (4, 1), 'mask': (4, 1), 'q': (4, 1), 'q_mean': (4, 1), 'q_var': (4, 1), 'q_sample': (4, 1)}
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder:0", shape=(?, 2), dtype=float32) is  (4, 2)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_1:0", shape=(?, 4), dtype=float32) is  (4, 4)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_2:0", shape=(?, 2), dtype=float32) is  (4, 2)
@@ -162,7 +160,6 @@ DDPG.get_actions -> The selected action shape is: (2, 2)
 DDPG.get_actions -> The shape of demo mean is: (2,)
 DDPG.get_actions -> The shape of demo variance is: (2,)
 train_ddpg_main.train_reinforce -> batch: 0
-DDPG.sample_batch -> The sampled batch shape is: {'g': (4, 2), 'o': (4, 4), 'u': (4, 2), 'o_2': (4, 4), 'g_2': (4, 2), 'r': (4, 1), 'mask': (4, 1), 'q': (4, 1), 'q_mean': (4, 1), 'q_var': (4, 1), 'q_sample': (4, 1)}
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder:0", shape=(?, 2), dtype=float32) is  (4, 2)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_1:0", shape=(?, 4), dtype=float32) is  (4, 4)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_2:0", shape=(?, 2), dtype=float32) is  (4, 2)
@@ -177,7 +174,6 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtyp
 DDPG.stage_batch -> Order should match stage_shapes.
 DDPG.train -> critic_loss:[0.06600011], actor_loss:[-0.037472054]
 train_ddpg_main.train_reinforce -> batch: 1
-DDPG.sample_batch -> The sampled batch shape is: {'g': (4, 2), 'o': (4, 4), 'u': (4, 2), 'o_2': (4, 4), 'g_2': (4, 2), 'r': (4, 1), 'mask': (4, 1), 'q': (4, 1), 'q_mean': (4, 1), 'q_var': (4, 1), 'q_sample': (4, 1)}
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder:0", shape=(?, 2), dtype=float32) is  (4, 2)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_1:0", shape=(?, 4), dtype=float32) is  (4, 4)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_2:0", shape=(?, 2), dtype=float32) is  (4, 2)
@@ -190,7 +186,7 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_8:0", shape=(?, 1), dtype
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_9:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> Order should match stage_shapes.
-DDPG.train -> critic_loss:[0.03826227], actor_loss:[-0.021268886]
+DDPG.train -> critic_loss:[0.038262278], actor_loss:[-0.021268886]
 DDPG.update_target_net -> updating target net.
 train_ddpg_main.train_reinforce -> Testing.
 RolloutWorker.generate_rollouts -> step 0
@@ -213,22 +209,22 @@ DDPG.get_actions -> The action array shape is: 1 x (2, 2)
 DDPG.get_actions -> The selected action shape is: (2, 2)
 DDPG.get_actions -> The shape of demo mean is: (2,)
 DDPG.get_actions -> The shape of demo variance is: (2,)
-------------------------------------
-| epoch              | 0           |
-| stats_g/mean       | 0.140892    |
-| stats_g/std        | 0.4655478   |
-| stats_o/mean       | 0.09889526  |
-| stats_o/std        | 0.44789335  |
-| test/episode       | 2.0         |
-| test/mean_Q        | 0.080377385 |
-| test/success_rate  | 0.0         |
-| train/episode      | 4.0         |
-| train/success_rate | 0.0         |
-------------------------------------
+-----------------------------------
+| epoch              | 0          |
+| stats_g/mean       | 0.140892   |
+| stats_g/std        | 0.4655478  |
+| stats_o/mean       | 0.09889526 |
+| stats_o/std        | 0.44789335 |
+| test/episode       | 2.0        |
+| test/mean_Q        | 0.08037738 |
+| test/success_rate  | 0.0        |
+| train/episode      | 4.0        |
+| train/success_rate | 0.0        |
+-----------------------------------
 New best success rate: 0.0.
-Saving policy to /home/yuchen/data/YWProject/RLProject/Temp/RegResult/RLOnlyDemoBaysian//rl/policy_best.pkl.
+Saving policy to /Users/yuchenwu/Desktop/RLProject/Temp/RegResult/RLOnlyDemoBaysian//rl/policy_best.pkl.
 Imitator.__getstate__ -> Members:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'buffer_size', 'input_dims', 'dimo', 'dimg', 'dimu', 'input_shapes', 'tf', 'training_set', 'test_set', 'sess', 'input_tf', 'policy', 'grad_tf', 'adam'])
 Imitator.__getstate__ -> Saved members:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'buffer_size', 'input_dims', 'dimo', 'dimg', 'dimu', 'input_shapes', 'tf'])
-Saving latest policy to /home/yuchen/data/YWProject/RLProject/Temp/RegResult/RLOnlyDemoBaysian//rl/policy_latest.pkl.
+Saving latest policy to /Users/yuchenwu/Desktop/RLProject/Temp/RegResult/RLOnlyDemoBaysian//rl/policy_latest.pkl.
 Imitator.__getstate__ -> Members:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'buffer_size', 'input_dims', 'dimo', 'dimg', 'dimu', 'input_shapes', 'tf', 'training_set', 'test_set', 'sess', 'input_tf', 'policy', 'grad_tf', 'adam'])
 Imitator.__getstate__ -> Saved members:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'buffer_size', 'input_dims', 'dimo', 'dimg', 'dimu', 'input_shapes', 'tf'])

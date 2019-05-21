@@ -1,4 +1,4 @@
-Logging to /home/yuchen/data/YWProject/RLProject/Temp/RegResult/DemoBaysianOnly/
+Logging to /Users/yuchenwu/Desktop/RLProject/Temp/RegResult/DemoBaysianOnly/
 Launching the training process with 1 cpu core(s).
 Setting log level to 1.
 train_ddpg_main.launch -> Using debug mode. Avoid training with too many epochs.
@@ -44,7 +44,7 @@ Imitator.check -> Mean u output is: 0.0
 | epoch | 0         |
 | loss  | 348.98557 |
 ---------------------
-Saving policy to /home/yuchen/data/YWProject/RLProject/Temp/RegResult/DemoBaysianOnly//rl_demo_critic/policy_latest.pkl
+Saving policy to /Users/yuchenwu/Desktop/RLProject/Temp/RegResult/DemoBaysianOnly//rl_demo_critic/policy_latest.pkl
 Imitator.__getstate__ -> Members:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'buffer_size', 'input_dims', 'dimo', 'dimg', 'dimu', 'training_set', 'test_set', 'sess', 'input_shapes', 'input_tf', 'policy', 'grad_tf', 'adam'])
 Imitator.__getstate__ -> Saved members:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'buffer_size', 'input_dims', 'dimo', 'dimg', 'dimu', 'input_shapes', 'tf'])
 Skip RL agent training.
