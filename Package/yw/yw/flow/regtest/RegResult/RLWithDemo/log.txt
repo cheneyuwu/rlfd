@@ -49,8 +49,8 @@ Imitator.__getstate__ -> Members:  dict_keys(['reuse', 'scope', 'net_type', 'num
 Imitator.__getstate__ -> Saved members:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'buffer_size', 'input_dims', 'dimo', 'dimg', 'dimu', 'input_shapes', 'tf'])
 *** her_params ***
 k                             4
-reward_fun                    <function configure_her.<locals>.reward_fun at 0x13487f2f0>
-strategy                      future
+reward_fun                    <function configure_her.<locals>.reward_fun at 0x13407a378>
+strategy                      none
 *** her_params ***
 *** ddpg_params ***
 Q_lr                          0.001
@@ -82,12 +82,12 @@ prm_loss_weight               0.001
 q_filter                      0
 relative_goals                False
 rollout_batch_size            2
-sample_transitions            <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x13487f1e0>
+sample_transitions            <function make_sample_her_transitions.<locals>._sample_her_transitions at 0x13407a268>
 scope                         ddpg
-subtract_goals                <function simple_goal_subtract at 0x133d6eea0>
+subtract_goals                <function simple_goal_subtract at 0x13355bf28>
 *** ddpg_params ***
 Configuring the replay buffer.
-DDPG.__init__ -> The buffer shapes are: {'o': (3, 4), 'u': (2, 2), 'g': (2, 2), 'info_is_success': (2, 1), 'ag': (3, 2), 'mask': (2, 1), 'q': (2, 1)}
+DDPG.__init__ -> The buffer shapes are: {'o': (3, 4), 'u': (2, 2), 'g': (2, 2), 'info_is_success': (2, 1), 'ag': (3, 2), 'mask': (2, 1), 'r': (2, 1), 'q': (2, 1)}
 DDPG.__init__ -> The buffer size is: 1000000
 Preparing staging area for feeding data to the model.
 DDPG.__init__ -> The staging shapes are: OrderedDict([('g', (None, 2)), ('o', (None, 4)), ('u', (None, 2)), ('o_2', (None, 4)), ('g_2', (None, 2)), ('r', (None, 1)), ('mask', (None, 1)), ('q', (None, 1)), ('q_mean', (None, 1)), ('q_var', (None, 1)), ('q_sample', (None, 1))])
@@ -157,7 +157,7 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_8:0", shape=(?, 1), dtype
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_9:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> Order should match stage_shapes.
-DDPG.train -> critic_loss:[0.15984794], actor_loss:[0.57848716]
+DDPG.train -> critic_loss:[0.14368536], actor_loss:[0.3282913]
 train_ddpg_main.train_reinforce -> batch: 1
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder:0", shape=(?, 2), dtype=float32) is  (4, 2)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_1:0", shape=(?, 4), dtype=float32) is  (4, 4)
@@ -171,7 +171,7 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_8:0", shape=(?, 1), dtype
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_9:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> Order should match stage_shapes.
-DDPG.train -> critic_loss:[0.3544589], actor_loss:[0.64525056]
+DDPG.train -> critic_loss:[0.40454444], actor_loss:[0.6630043]
 DDPG.update_target_net -> updating target net.
 train_ddpg_main.train_reinforce -> cycle: 1
 RolloutWorker.generate_rollouts -> step 0
@@ -207,7 +207,7 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_8:0", shape=(?, 1), dtype
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_9:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> Order should match stage_shapes.
-DDPG.train -> critic_loss:[0.042727493], actor_loss:[0.62724626]
+DDPG.train -> critic_loss:[0.0054523083], actor_loss:[0.47060984]
 train_ddpg_main.train_reinforce -> batch: 1
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder:0", shape=(?, 2), dtype=float32) is  (4, 2)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_1:0", shape=(?, 4), dtype=float32) is  (4, 4)
@@ -221,7 +221,7 @@ DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_8:0", shape=(?, 1), dtype
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_9:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> input of  Tensor("ddpg/Placeholder_10:0", shape=(?, 1), dtype=float32) is  (4, 1)
 DDPG.stage_batch -> Order should match stage_shapes.
-DDPG.train -> critic_loss:[0.031322923], actor_loss:[0.5203571]
+DDPG.train -> critic_loss:[0.0040931683], actor_loss:[0.40765554]
 DDPG.update_target_net -> updating target net.
 train_ddpg_main.train_reinforce -> Testing.
 RolloutWorker.generate_rollouts -> step 0
@@ -244,18 +244,18 @@ DDPG.get_actions -> The action array shape is: 1 x (2, 2)
 DDPG.get_actions -> The selected action shape is: (2, 2)
 DDPG.get_actions -> The shape of demo mean is: (2,)
 DDPG.get_actions -> The shape of demo variance is: (2,)
--------------------------------------
-| epoch              | 0            |
-| stats_g/mean       | -0.32932037  |
-| stats_g/std        | 0.47915286   |
-| stats_o/mean       | -0.28662497  |
-| stats_o/std        | 0.39556792   |
-| test/episode       | 2.0          |
-| test/mean_Q        | -0.120297246 |
-| test/success_rate  | 0.0          |
-| train/episode      | 4.0          |
-| train/success_rate | 0.0          |
--------------------------------------
+------------------------------------
+| epoch              | 0           |
+| stats_g/mean       | -0.23791237 |
+| stats_g/std        | 0.30000556  |
+| stats_o/mean       | -0.28662497 |
+| stats_o/std        | 0.39556792  |
+| test/episode       | 2.0         |
+| test/mean_Q        | -0.24289382 |
+| test/success_rate  | 0.0         |
+| train/episode      | 4.0         |
+| train/success_rate | 0.0         |
+------------------------------------
 New best success rate: 0.0.
 Saving policy to /Users/yuchenwu/Desktop/RLProject/Temp/RegResult/RLWithDemo//rl/policy_best.pkl.
 Imitator.__getstate__ -> Members:  dict_keys(['reuse', 'scope', 'net_type', 'num_sample', 'layers', 'hidden', 'lr', 'data_size', 'batch_size', 'test_batch_size', 'T', 'max_u', 'buffer_size', 'input_dims', 'dimo', 'dimg', 'dimu', 'training_set', 'test_set', 'sess', 'input_shapes', 'input_tf', 'policy', 'grad_tf', 'adam'])
