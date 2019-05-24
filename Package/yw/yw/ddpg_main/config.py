@@ -5,12 +5,10 @@ from yw.tool import logger
 
 if tf.__version__.startswith("1"):
     from yw.ddpg_main.ddpg import DDPG
-    from yw.ddpg_main.imitation import QEstimator, ActionImitator
-    from yw.ddpg_main.gp_imitation import GPQEstimator
 else:
     from yw.ddpg_tf2.ddpg import DDPG
 from yw.ddpg_main.rollout import RolloutWorker
-from yw.ddpg_main.her import make_sample_her_transitions
+from yw.ddpg_main.sampler import make_sample_her_transitions
 
 from yw.env.env_manager import EnvManager
 
@@ -18,11 +16,6 @@ from yw.env.env_manager import EnvManager
 DEBUG_PARAMS = {
     "rl_layers": 2,  # number of layers in the critic/actor networks
     "rl_hidden": 4,  # number of neurons in each hidden layers
-    "demo_layers": 2,  # number of layers in the demo networks
-    "demo_hidden": 4,  # number of neurons in each hidden layers
-    "demo_data_size": 16,  # training data size in number of transitions
-    "demo_batch_size": 4,  # number of samples to be used to train the demo nn
-    "demo_test_batch_size": 4,  # testing data size in number of transitions
     "n_cycles": 2,  # per epoch
     "n_batches": 2,  # training batches per cycle
     "rl_batch_size": 4,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
@@ -74,18 +67,6 @@ DEFAULT_PARAMS = {
     # HER
     "replay_strategy": "future",  # supported modes: future, none
     "replay_k": 4,  # number of additional goals used for replay, only used if off_policy_data=future
-    # use demonstration to shape actor or critic
-    "demo_scope": "demo",
-    "demo_net_type": "ensemble",  # choose between "ensemble" or "baysian"
-    "demo_num_sample": 10,  # number of bootstrapped ensemble of demonstration neural nets.
-    "demo_layers": 3,  # number of layers in the demo networks
-    "demo_hidden": 256,  # number of neurons in each hidden layers
-    "demo_lr": 0.001,  # demonstration nn learning rate.
-    # Demonstration training
-    "train_demo_epochs": 1,
-    "demo_data_size": 4096,  # training data size in number of transitions
-    "demo_batch_size": 128,  # number of samples to be used to train the demo nn
-    "demo_test_batch_size": 100,  # testing data size in number of transitions
     # DDPG Training
     "train_rl_epochs": 1,
     "n_cycles": 10,  # per epoch
@@ -176,7 +157,7 @@ def configure_her(params):
     return sample_her_transitions
 
 
-def configure_ddpg(params, demo_policy):
+def configure_ddpg(params):
     # Extract relevant parameters.
     ddpg_params = extract_params(params, "rl_")
     for name in ["max_u", "buffer_size", "relative_goals", "clip_obs"]:
@@ -207,64 +188,7 @@ def configure_ddpg(params, demo_policy):
     logger.info("*** ddpg_params ***")
     log_params(ddpg_params)
     logger.info("*** ddpg_params ***")
-    policy = DDPG(demo_policy=demo_policy, **ddpg_params)
-    return policy
-
-
-def configure_nn_q_estimator(params):
-
-    # Extract relevant parameters.
-    demo_params = extract_params(params, "demo_")
-    for name in ["T", "max_u", "buffer_size"]:
-        # copy public parameters
-        demo_params[name] = params[name]
-    demo_params["input_dims"] = params["dims"].copy()
-
-    logger.info("*** nn_q_estimator_params ***")
-    log_params(demo_params)
-    logger.info("*** nn_q_estimator_params ***")
-    policy = QEstimator(**demo_params)
-
-    return policy
-
-
-def configure_gp_q_estimator(params):
-
-    # Extract relevant parameters.
-    demo_params = extract_params(params, "demo_")
-    for name in ["T", "max_u", "buffer_size"]:
-        # copy public parameters
-        demo_params[name] = params[name]
-    demo_params["input_dims"] = params["dims"].copy()
-
-    logger.info("*** gp_q_estimator_params ***")
-    log_params(demo_params)
-    logger.info("*** gp_q_estimator_params ***")
-    policy = GPQEstimator(**demo_params)
-
-    return policy
-
-
-def configure_action_imitator(params):
-
-    # Extract relevant parameters.
-    demo_params = extract_params(params, "demo_")
-    for name in ["T", "max_u", "buffer_size"]:
-        # copy public parameters
-        demo_params[name] = params[name]
-    demo_params["input_dims"] = params["dims"].copy()
-    demo_params["info"] = {
-        "env_name": params["env_name"],
-        "r_scale": params["r_scale"],
-        "r_shift": params["r_shift"],
-        "eps_length": params["eps_length"],
-    }
-
-    logger.info("*** action_imitator_params ***")
-    log_params(demo_params)
-    logger.info("*** action_imitator_params ***")
-    policy = ActionImitator(**demo_params)
-
+    policy = DDPG(**ddpg_params)
     return policy
 
 

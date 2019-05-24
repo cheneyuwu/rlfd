@@ -14,7 +14,7 @@ def make_sample_her_transitions(strategy, k, reward_fun):
     else:  # 'strategy' == 'none'
         future_p = 0
 
-    def _sample_her_transitions(episode_batch, batch_size_in_transitions):
+    def sample_her_transitions(episode_batch, batch_size_in_transitions):
         """
         episode_batch is {key: array(buffer_size x T x dim_key)}
         """
@@ -59,4 +59,14 @@ def make_sample_her_transitions(strategy, k, reward_fun):
 
         return transitions
 
-    return _sample_her_transitions
+    return sample_her_transitions
+
+
+def makesample_her_transitions(strategy, k, reward_fun):
+    """Creates a sample function that can be used for HER experience replay.
+
+    Args:
+        strategy (str) - set to "future" to use the HER replay strategy; if set to 'none', regular DDPG experience replay is used
+        k        (int) - the ratio between HER replays and regular replays (e.g. k = 4 -> 4 times as many HER replays as regular replays are used)
+        reward_fun (function): function to re-compute the reward with substituted goals
+    """

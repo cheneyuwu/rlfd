@@ -42,7 +42,6 @@ class DDPG(object):
         clip_return,
         demo_critic,
         demo_actor,
-        demo_policy,
         num_demo,
         q_filter,
         batch_size_demo,
@@ -137,11 +136,6 @@ class DDPG(object):
             # for bootstrapped DQN, to add mask
             stage_shapes["mask"] = (None, self.num_sample)
             stage_shapes["q"] = (None, 1)
-            if self.demo_critic in ["gp", "nn"]:
-                # should be used for stage shape only. The input is from demo_policy
-                stage_shapes["q_mean"] = (None, 1)
-                stage_shapes["q_var"] = (None, 1)
-                stage_shapes["q_sample"] = (None, self.demo_policy.num_sample)
             self.stage_shapes = stage_shapes  # feeding data into model
             logger.debug("DDPG.__init__ -> The staging shapes are: {}".format(self.stage_shapes))
             self.staging_tf = StagingArea(
@@ -196,14 +190,6 @@ class DDPG(object):
         # value debug: check the q from rl.
         # logger.info("DDPG.get_actions -> The estimated q value is: {}".format(ret[1]))
         # logger.info("DDPG.get_actions -> The selected action value is: {}".format(u))
-
-        if self.demo_policy is not None:
-            transitions = {"u": u, "o": o, "g": g, "q": np.zeros(ret[1].shape).reshape((-1, 1))}
-            demo_sample, demo_mean, demo_var = self.demo_policy.get_q_value(transitions)
-            logger.debug("DDPG.get_actions -> The shape of demo mean is: {}".format(demo_mean.shape))
-            logger.debug("DDPG.get_actions -> The shape of demo variance is: {}".format(demo_var.shape))
-            # value debug: check the Q from demo and rl are similar
-            # logger.info("DDPG.get_actions -> The output from demo mean is: {}".format(demo_mean-demo_var))
 
         noise = noise_eps * self.max_u * np.random.randn(*u.shape)  # gaussian noise
         u += noise
@@ -312,27 +298,6 @@ class DDPG(object):
         ag, ag_2 = transitions["ag"], transitions["ag_2"]
         transitions["o"], transitions["g"] = self._preprocess_og(o, ag, g)
         transitions["o_2"], transitions["g_2"] = self._preprocess_og(o_2, ag_2, g)
-        if self.demo_critic in ["gp", "nn"]:
-
-            # Method 1 calculate q_d directly
-            output_sample, output_mean, output_var = self.demo_policy.get_q_value(transitions)
-
-            # Method 2 calculate q_d for the next state and then
-            # policy = self.target
-            # # feed
-            # feed = {policy.o_tf: transitions["o_2"], policy.g_tf: transitions["g"], policy.u_tf: transitions["u"]}
-            # # values to compute
-            # ret = self.sess.run(policy.pi_tf, feed_dict=feed)
-            # u = np.mean(ret, axis=0)
-            # demo_input = transitions.copy()
-            # demo_input["u"] = u
-            # output_sample, output_mean, output_var = self.demo_policy.get_q_value(demo_input)
-            # output_sample = output_sample.reshape((-1, self.demo_policy.num_sample)) * self.gamma + transitions["r"]
-            # output_mean = output_mean.reshape((-1, 1)) * self.gamma + transitions["r"]
-
-            transitions["q_sample"] = output_sample.reshape((-1, self.demo_policy.num_sample))
-            transitions["q_mean"] = output_mean.reshape((-1, 1))
-            transitions["q_var"] = output_var.reshape((-1, 1))
 
         return transitions
 
@@ -372,24 +337,6 @@ class DDPG(object):
         # method 0 rl only
         rl_q_var = self.sess.run(self.main.Q_var_tf)
         logger.info("DDPG.check_train -> rl variance {}".format(np.mean(rl_q_var)))
-
-        # method 1 using both rl and demo uncertainty
-        # critic_loss, actor_loss, weight, rl_q, demo_q, rl_q_sample, demo_q_sample = self.sess.run(
-        #     [self.Q_loss_tf, self.pi_loss_tf, self.weight_tf, self.rl_certainty_tf, self.demo_certainty_tf, self.rl_q_sample_tf, self.demo_q_sample_tf]
-        # )
-
-        # method 2 using demo uncertainty only
-        # critic_loss, actor_loss, weight, demo_q = self.sess.run(
-        #     [self.Q_loss_tf, self.pi_loss_tf, self.weight_tf, self.demo_q_var_tf]
-        # )
-        # logger.debug("DDPG.check_train -> critic_loss:{}, actor_loss:{}".format(critic_loss, actor_loss))
-        # for i in range(10):
-        #     logger.info("DDPG.check_train -> weight:{}, demo_var: {}".format(np.mean(weight), demo_q[i]))
-        # logger.info("DDPG.check_train -> rl_q_sample: {}".format(rl_q_sample[i]))
-        # logger.info("DDPG.check_train -> demo_q_sample: {}".format(demo_q_sample[i]))
-        # logger.info(
-        #     "DDPG.check_train -> {}: rl_q, demo_q: {} {} {}".format(i, rl_q[i], demo_q[i], rl_q[i] > demo_q[i])
-        # )
 
     def update_target_net(self):
         logger.debug("DDPG.update_target_net -> updating target net.")
@@ -490,101 +437,6 @@ class DDPG(object):
                 # loss_tf = rl_loss_tf + demo_loss_tf
                 self.Q_loss_tf.append(rl_loss_tf)
                 self.demo_loss_tf.append(demo_loss_tf)
-            # Method 2 do not use demo
-            # for i in range(self.num_sample):
-            #     self.max_q_tf = tf.stop_gradient(target_list_tf[i])
-            #     loss_tf = tf.reduce_mean(
-            #         tf.square(self.max_q_tf - self.main.Q_tf[i]) * tf.reshape(batch_tf["mask"][:, i], [-1, 1])
-            #     )
-            #     self.Q_loss_tf.append(loss_tf)
-
-        elif self.demo_critic in ["gp", "nn"]:
-            # demonstration target result
-            self.demo_q_mean_tf = tf.reshape(batch_tf["q_mean"], [-1, 1])
-            self.demo_q_var_tf = tf.reshape(batch_tf["q_var"], [-1, 1])
-            self.demo_q_sample_tf = tf.reshape(batch_tf["q_sample"], [-1, self.demo_policy.num_sample])
-            # rl target result
-            target_q_list_tf = [tf.stop_gradient(target_list_tf[i]) for i in range(self.num_sample)]
-            target_q_tf = tf.concat(values=target_q_list_tf, axis=1)
-            target_q_mean_tf, target_q_var_tf = tf.nn.moments(target_q_tf, 1)
-            self.rl_q_mean_tf = tf.reshape(target_q_mean_tf, [-1, 1])
-            self.rl_q_var_tf = tf.reshape(target_q_var_tf, [-1, 1])
-            self.rl_q_sample_tf = tf.reshape(target_q_tf, [-1, self.num_sample])
-            """
-            For the RL policy:
-                During training randomly select one policy.
-                During testing, choose the mean of all policies.
-
-            There are several methods we can use here for the loss function
-            1. One actor critic pair compares to the entire distribution over experts
-                a. a1 q1    (q1 - exp_q1)^2  where  exp_q = q1' < avg(demo_q) ? avg(demo_q) : q1'
-                    Note: the avg(demo_q) here can actually be mean(demo_q)-var(demo_q) so that we add some uncertainty.
-                    This is based on the assumption that the output from the ensembles form gaussian distribution.
-                b. a1 q1    (q1 - exp_q1)^2  where  exp_q = count(q1' < demo_qk) ? avg(demo_q) : q1' with k = number of demo samples.
-            2. Distribution of actor critic pairs compare to the distributions of the demonstration pairs.
-                e.g.
-                    a1 q1    (o_q1 - (exp_q))^2  where  exp_q = avg(q1', q2') < avg(demo_q) ? avg(demo_q) : q1'
-                    a2 q2    (o_q2 - (exp_q))^2
-                Note: the avg(demo_q) here can actually be mean(demo_q)-var(demo_q) so that we add some uncertainty.
-                This is based on the assumption that the output from the ensembles form gaussian distribution.
-            """
-            for i in range(self.num_sample):
-                # Method 0.a The weight is dependent on the uncertainty of the demonstration nn
-                # $w*q_r + (1-w)*q_d$ where $w=count(q_r > q_dk)$ where $k$ is the $k$th sample from demonstration nn.
-                self.demo_certainty_tf = tf.exp(tf.negative(20 * self.demo_q_var_tf))
-                self.damping_tf = tf.maximum(
-                    0.0, 1 - self.global_step_tf / 20
-                )  # 25 should be number of training epoches
-                self.weight_tf = self.demo_certainty_tf * self.damping_tf
-                self.weighted_q_tf = (
-                    tf.stop_gradient(target_list_tf[i]) * (1 - self.weight_tf) + self.demo_q_mean_tf * self.weight_tf
-                )
-                # self.max_q_tf = tf.maximum(tf.stop_gradient(target_list_tf[i]), self.weighted_q_tf)
-                self.max_q_tf = self.weighted_q_tf
-
-                # Method 0.b The weight is dependent on the uncertainty of the demonstration nn and the critic samples
-                # $w*q_r + (1-w)*q_d$ where $w=count(q_r > q_dk)$ where $k$ is the $k$th sample from demonstration nn.
-
-                # 1. either use the value directly
-                # self.demo_certainty_tf = self.demo_q_var_tf
-                # self.rl_certainty_tf =  self.rl_q_var_tf
-                # 2. or use the exp to magnify them
-                # self.demo_certainty_tf = tf.exp(self.demo_q_var_tf) - 1
-                # self.rl_certainty_tf =  tf.exp(self.rl_q_var_tf) - 1
-
-                # self.weight_tf = self.demo_certainty_tf / (self.rl_certainty_tf + self.demo_certainty_tf) # / (1 + 0.01 * tf.square(self.global_step_tf))
-                # self.max_q_tf = (
-                #     self.rl_q_mean_tf * self.weight_tf
-                #     + self.demo_q_mean_tf * (1-self.weight_tf)
-                # )
-
-                # Method 1 No interfere
-                # self.max_q_tf = tf.stop_gradient(target_list_tf[i])
-
-                # Method 2.a  mean minus variance
-                # self.max_q_tf = tf.maximum(
-                #     tf.stop_gradient(target_list_tf[i]), self.demo_q_mean_tf - self.demo_q_var_tf
-                # )
-
-                # Method 2.b counting
-                # target_q_concat_tf = tf.concat(
-                #     values=[tf.stop_gradient(target_list_tf[i]) for _ in range(self.demo_policy.num_sample)], axis=1
-                # )
-                # max_q_mask_tf = tf.greater(target_q_concat_tf, self.demo_q_sample_tf)
-                # max_q_mask_tf = tf.reduce_sum(tf.cast(max_q_mask_tf, dtype=tf.float32), axis=1)
-                # self.max_q_tf = tf.where(max_q_mask_tf > 0, tf.stop_gradient(target_list_tf[i]), self.demo_q_mean_tf)
-
-                # Method 2.c soft bar: $w*q_r + (1-w)*q_d$ where $w=count(q_r > q_dk)$ where $k$ is the $k$th sample from demonstration nn.
-                # target_q_concat_tf = tf.concat(values=[tf.stop_gradient(target_list_tf[i]) for _ in range(self.demo_policy.num_sample)], axis=1)
-                # max_q_mask_tf = tf.greater(target_q_concat_tf, self.demo_q_sample_tf)
-                # max_q_mask_tf = tf.reduce_sum(tf.cast(max_q_mask_tf, dtype=tf.float32), axis=1)
-                # max_q_weight_tf = tf.reshape(max_q_mask_tf / self.demo_policy.num_sample, [-1, 1])
-                # self.max_q_tf = tf.stop_gradient(target_list_tf[i]) * max_q_weight_tf + self.demo_q_mean_tf * (1-max_q_weight_tf)
-
-                loss_tf = tf.reduce_mean(
-                    tf.square(self.max_q_tf - self.main.Q_tf[i]) * tf.reshape(batch_tf["mask"][:, i], [-1, 1])
-                )
-                self.Q_loss_tf.append(loss_tf)
         else:
             for i in range(self.num_sample):
                 self.max_q_tf = tf.stop_gradient(target_list_tf[i])
