@@ -61,7 +61,7 @@ class ArgParser:
     def get_dict(self):
         args = {}
         args.update(self.known_dict)
-        args.update(self.unknown_dict)
+        args["unknown_params"] = self.unknown_dict
         return args
 
     def _parse_unknown_args(self, args):
@@ -94,3 +94,4 @@ if __name__ == "__main__":
     arg_parser = ArgParser()
     arg_parser.parser.add_argument("--test", type=int, default=0)
     arg_parser.parse(["--check", "a", "--test=2"])
+    print(arg_parser.get_dict())

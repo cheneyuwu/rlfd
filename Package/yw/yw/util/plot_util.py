@@ -1,7 +1,6 @@
 import os
 import os.path as osp
 
-import glob2
 import matplotlib
 matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode
 import matplotlib.pyplot as plt

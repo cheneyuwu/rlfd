@@ -1,5 +1,5 @@
-import click
 import os
+import sys
 from yw.util.plot_util import load_results, plot_results
 
 def plot(dirs, smooth, **kwargs):
@@ -7,16 +7,11 @@ def plot(dirs, smooth, **kwargs):
     plot_results(results, dirs)
 
 
-# Top Level User API
-# =====================================
-@click.command()
-@click.option(
-    "--dirs", type=str, default=os.getenv("PROJECT")+"/Temp"
-)
-@click.option("--smooth", type=bool, default="True", help="Smooth the curve.")
-def main(**kwargs):
-    plot(**kwargs)
-
-
 if __name__ == "__main__":
-    main()
+    from yw.util.cmd_util import ArgParser
+    ap = ArgParser()
+    # logging
+    ap.parser.add_argument("--dirs", help="load directory", type=str, default=os.getenv("PROJECT")+"/Temp")
+    ap.parser.add_argument("--smooth", help="smooth the curve", type=int, default=1)
+    ap.parse(sys.argv)
+    plot(**ap.get_dict())

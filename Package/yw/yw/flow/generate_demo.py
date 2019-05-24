@@ -1,4 +1,4 @@
-import click
+import sys
 import os
 import numpy as np
 import pickle
@@ -13,7 +13,7 @@ from yw.util.lit_util import toy_regression_data
 from yw.tool import logger
 
 
-def generate_demo_data(policy_file, store_dir, seed, num_itr, render, entire_eps):
+def generate_demo_data(policy_file, store_dir, seed, num_itr, shuffle, render, entire_eps, **kwargs):
     """Generate demo from policy file
     """
     assert policy_file is not None, "Must provide the policy_file!"
@@ -38,7 +38,7 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, render, entire_eps
     params["eps_length"] = eps_length
     params["rank_seed"] = seed
     params["render"] = render
-    params["rollout_batch_size"] = int(np.ceil(num_itr/T)) if entire_eps else num_itr
+    params["rollout_batch_size"] = int(np.ceil(num_itr/T)) if shuffle and entire_eps else num_itr
     params = config.add_env_params(params=params)
     demo = config.config_demo(params=params, policy=policy)
 
@@ -46,12 +46,12 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, render, entire_eps
     demo.clear_history()
     episode = demo.generate_rollouts()
 
-    # add expected Q value
+    # Add expected Q value
     exp_q = np.empty(episode["r"].shape)
     exp_q[:, -1, :] = episode["r"][:, -1, :] / (1 - policy.gamma)
     for i in range(policy.T - 1):
         exp_q[:, -2 - i, :] = policy.gamma * exp_q[:, -1 - i, :] + episode["r"][:, -2 - i, :]
-    episode["q"] = exp_q
+    # episode["q"] = exp_q
 
     # value debug print out the q value
     # logger.info("The expected q values are: {}".format(episode["q"]))
@@ -64,19 +64,22 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, render, entire_eps
     # array(batch_size x (T or T+1) x dim_key), we only need the first one!
     result = {}
 
-    if entire_eps:
-        result["o"] = episode["o"][:, :-1, ...] # observation is T+1
-        result["g"] = episode["g"][:, :, ...]
-        result["u"] = episode["u"][:, :, ...]
-        result["q"] = episode["q"][:, :, ...]
+    if not shuffle:
+        result = episode
     else:
-        result["o"] = episode["o"][:, :1, ...]
-        result["g"] = episode["g"][:, :1, ...]
-        result["u"] = episode["u"][:, :1, ...]
-        result["q"] = episode["q"][:, :1, ...]
+        if entire_eps:
+            result["o"] = episode["o"][:, :-1, ...] # observation is T+1
+            result["g"] = episode["g"][:, :, ...]
+            result["u"] = episode["u"][:, :, ...]
+            result["q"] = episode["q"][:, :, ...]
+        else:
+            result["o"] = episode["o"][:, :1, ...]
+            result["g"] = episode["g"][:, :1, ...]
+            result["u"] = episode["u"][:, :1, ...]
+            result["q"] = episode["q"][:, :1, ...]
 
-    assert result["o"].shape[0] * result["o"].shape[1] >= num_itr, "No enough data!"
-    result = {key: result[key].reshape((-1,) + result[key].shape[2:])[:num_itr] for key in result.keys()}
+        assert result["o"].shape[0] * result["o"].shape[1] >= num_itr, "No enough data!"
+        result = {key: result[key].reshape((-1,) + result[key].shape[2:])[:num_itr] for key in result.keys()}
 
     # store demonstration data
     os.makedirs(store_dir, exist_ok=True)
@@ -91,19 +94,26 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, render, entire_eps
     logger.info("Demo file has been stored into {}.".format(file_name))
 
 
-@click.command()
-@click.option("--policy_file", type=str, default=None, help="Input policy for training.")
-@click.option("--loglevel", type=int, default=1, help="Set to 1 for debugging.")
-@click.option("--store_dir", type=str, default=os.getenv("PROJECT") + "/Temp/Multigoal/demo/fake_data.npz", help="Log directory.")
-@click.option("--seed", type=int, default=1)
-@click.option("--num_itr", type=int, default=1000)
-@click.option("--entire_eps", type=int, default=1, help="Whether or not to store the entire episode.")
-@click.option("--render", type=int, default=0)
 def main(loglevel, **kwargs):
     logger.set_level(loglevel)
     generate_demo_data(**kwargs)
 
 
 if __name__ == "__main__":
-    main()
+    from yw.util.cmd_util import ArgParser
+
+    ap = ArgParser()
+    ap.parser.add_argument("--policy_file", help="input policy for training", type=str, default=None)
+    ap.parser.add_argument("--loglevel", help="log level", type=int, default=2)
+    ap.parser.add_argument("--store_dir", help="policy store directory", type=str, default=os.getenv("PROJECT") + "/Temp/generate_demo/fake_data.npz")
+    ap.parser.add_argument("--seed", help="RNG seed", type=int, default=0)
+    ap.parser.add_argument("--num_itr", help="number of iterations or episodes", type=int, default=1000)
+    ap.parser.add_argument("--shuffle", help="whether or not to shuffle and reshape the data", type=int, default=1)
+    ap.parser.add_argument("--entire_eps", help="store entire episodes", type=int, default=1)
+    ap.parser.add_argument("--render", help="render", type=int, default=0)
+    ap.parse(sys.argv)
+
+    print("Launching the training process.")
+    main(**ap.get_dict())
+
 

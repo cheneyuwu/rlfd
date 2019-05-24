@@ -17,7 +17,6 @@ class RolloutWorker:
         dims,
         T,
         rollout_batch_size=1,
-        compute_r=False,
         exploit=False,
         use_target_net=False,
         compute_Q=False,
@@ -147,9 +146,7 @@ class RolloutWorker:
         achieved_goals.append(ag.copy())
 
         # Will contain episode info
-        episode = dict(o=obs, u=acts, g=goals, ag=achieved_goals)
-        if self.compute_r:
-            episode["r"] = rewards
+        episode = dict(o=obs, u=acts, g=goals, ag=achieved_goals, r=rewards)
         if self.compute_Q:
             episode["q"] = Qs
         for key, value in zip(self.info_keys, info_values):

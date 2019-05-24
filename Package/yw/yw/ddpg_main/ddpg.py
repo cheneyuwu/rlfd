@@ -113,14 +113,15 @@ class DDPG(object):
         buffer_shapes["g"] = (buffer_shapes["g"][0], self.dimg)
         buffer_shapes["ag"] = (self.T + 1, self.dimg)
         buffer_shapes["mask"] = (self.T, self.num_sample)  # mask for training each head with different dataset
+        buffer_shapes["r"] = (self.T, 1)
         buffer_shapes["q"] = (self.T, 1)  # expected q value
         logger.debug("DDPG.__init__ -> The buffer shapes are: {}".format(buffer_shapes))
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         logger.debug("DDPG.__init__ -> The buffer size is: {}".format(buffer_size))
         self.replay_buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
-        if self.demo_actor != "none":
+        if self.demo_actor != "none" or self.demo_critic == "rb":
             # initialize the demo buffer; in the same way as the primary data buffer
-            self.demo_buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
+            self.demo_buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T)
 
         # Build computation core.
         with tf.variable_scope(self.scope):
@@ -136,7 +137,7 @@ class DDPG(object):
             # for bootstrapped DQN, to add mask
             stage_shapes["mask"] = (None, self.num_sample)
             stage_shapes["q"] = (None, 1)
-            if self.demo_critic != "none":
+            if self.demo_critic in ["gp", "nn"]:
                 # should be used for stage shape only. The input is from demo_policy
                 stage_shapes["q_mean"] = (None, 1)
                 stage_shapes["q_var"] = (None, 1)
@@ -234,10 +235,10 @@ class DDPG(object):
         for key in episode_batch.keys():
             episode_batch[key] = episode_batch[key][: self.num_demo]
 
-        mask = np.random.binomial(1, 1, (self.num_demo, self.T, self.num_sample))
-        episode_batch["mask"] = mask
-        # expected_q = np.zeros((self.num_demo, self.T, 1)) # fill in the minimal value of q for rollout data.
-        # episode_batch["q"] = expected_q
+        episode_batch["mask"] = np.random.binomial(1, 1, (self.num_demo, self.T, self.num_sample))
+        if self.demo_critic != "rb":
+            # fill in the minimal value of q for rollout data.
+            episode_batch["q"] = -100 * np.ones((self.rollout_batch_size, self.T, 1), dtype=np.float32)
         self.demo_buffer.store_episode(episode_batch)
 
         if update_stats:
@@ -296,7 +297,8 @@ class DDPG(object):
             self._update_stats(episode_batch)
 
     def sample_batch(self):
-        if self.demo_actor != "none":  # use demonstration buffer to sample as well if demo flag is set TRUE
+         # use demonstration buffer to sample as well if demo flag is set TRUE
+        if self.demo_actor != "none" or self.demo_critic == "rb":
             transitions = {}
             transition_rollout = self.replay_buffer.sample(self.batch_size - self.batch_size_demo)
             transition_demo = self.demo_buffer.sample(self.batch_size_demo)
@@ -310,7 +312,7 @@ class DDPG(object):
         ag, ag_2 = transitions["ag"], transitions["ag_2"]
         transitions["o"], transitions["g"] = self._preprocess_og(o, ag, g)
         transitions["o_2"], transitions["g_2"] = self._preprocess_og(o_2, ag_2, g)
-        if self.demo_critic != "none":
+        if self.demo_critic in ["gp", "nn"]:
 
             # Method 1 calculate q_d directly
             output_sample, output_mean, output_var = self.demo_policy.get_q_value(transitions)
@@ -347,6 +349,13 @@ class DDPG(object):
         for k in input_data.keys():
             logger.debug("DDPG.stage_batch -> input of ", k, "is ", input_data[k].shape)
         logger.debug("DDPG.stage_batch -> Order should match stage_shapes.")
+    
+    def pre_train(self, stage=True):
+        if stage:
+            self.stage_batch()
+        demo_loss, demo_grad = self.sess.run([self.demo_loss_tf, self.demo_grad_tf])
+        self.demo_adam.update(demo_grad, self.Q_lr)
+        return demo_loss
 
     def train(self, stage=True):
         if stage:
@@ -455,9 +464,41 @@ class DDPG(object):
         ]
         # target_min_tf = tf.reduce_min(target_list_tf, 0) # used for td3 training.
         self.Q_loss_tf = []
+        self.demo_loss_tf = []
         self.global_step_tf = tf.get_variable("global_step", initializer=0.0, trainable=False, dtype=tf.float32)
         self.global_step_inc_op = tf.assign_add(self.global_step_tf, 1.0)
-        if self.demo_critic != "none":
+        if self.demo_critic in ["rb"]:
+            # Method 1 choose only the demo buffer samples
+            demo_mask = np.concatenate(
+                (np.zeros(self.batch_size - self.batch_size_demo), np.ones(self.batch_size_demo)), axis=0
+            ).reshape(-1, 1)
+            rl_mask = np.concatenate(
+                (np.ones(self.batch_size - self.batch_size_demo), np.zeros(self.batch_size_demo)), axis=0
+            ).reshape(-1, 1)
+            for i in range(self.num_sample):
+                rl_mse_tf = tf.boolean_mask(
+                    tf.square(tf.stop_gradient(target_list_tf[i]) - self.main.Q_tf[i])
+                    * tf.reshape(batch_tf["mask"][:, i], [-1, 1]),
+                    rl_mask,
+                )
+                rl_loss_tf = tf.reduce_mean(rl_mse_tf)
+                demo_mse_tf = tf.boolean_mask(
+                    tf.square(batch_tf["q"] - self.main.Q_tf[i]) * tf.reshape(batch_tf["mask"][:, i], [-1, 1]),
+                    demo_mask,
+                )
+                demo_loss_tf = tf.reduce_mean(demo_mse_tf)
+                # loss_tf = rl_loss_tf + demo_loss_tf
+                self.Q_loss_tf.append(rl_loss_tf)
+                self.demo_loss_tf.append(demo_loss_tf)
+            # Method 2 do not use demo
+            # for i in range(self.num_sample):
+            #     self.max_q_tf = tf.stop_gradient(target_list_tf[i])
+            #     loss_tf = tf.reduce_mean(
+            #         tf.square(self.max_q_tf - self.main.Q_tf[i]) * tf.reshape(batch_tf["mask"][:, i], [-1, 1])
+            #     )
+            #     self.Q_loss_tf.append(loss_tf)
+
+        elif self.demo_critic in ["gp", "nn"]:
             # demonstration target result
             self.demo_q_mean_tf = tf.reshape(batch_tf["q_mean"], [-1, 1])
             self.demo_q_var_tf = tf.reshape(batch_tf["q_var"], [-1, 1])
@@ -604,10 +645,17 @@ class DDPG(object):
         self.pi_grads_vars_tf = zip(pi_grads_tf, self._vars("main/pi"))
         self.Q_grad_tf = flatten_grads(grads=Q_grads_tf, var_list=self._vars("main/Q"))
         self.pi_grad_tf = flatten_grads(grads=pi_grads_tf, var_list=self._vars("main/pi"))
+        if self.demo_critic == "rb":
+            demo_grads_tf = tf.gradients(self.demo_loss_tf, self._vars("main/Q"))
+            assert len(self._vars("main/pi")) == len(demo_grads_tf)
+            self.demo_grads_vars_tf = zip(demo_grads_tf, self._vars("main/Q"))
+            self.demo_grad_tf = flatten_grads(grads=demo_grads_tf, var_list=self._vars("main/Q"))
 
         # Optimizers
         self.Q_adam = MpiAdam(self._vars("main/Q"), scale_grad_by_procs=False)
         self.pi_adam = MpiAdam(self._vars("main/pi"), scale_grad_by_procs=False)
+        if self.demo_critic == "rb":
+            self.demo_adam = MpiAdam(self._vars("main/Q"), scale_grad_by_procs=False)
 
         # Polyak averaging
         self.main_vars = self._vars("main/Q") + self._vars("main/pi")

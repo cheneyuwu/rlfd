@@ -210,10 +210,22 @@ def train_reinforce(
         os.makedirs(critic_q_save_path, exist_ok=True)
         os.makedirs(uncertainty_save_path, exist_ok=True)
 
-    if policy.demo_actor is not "none":
+    if policy.demo_actor != "none" or policy.demo_critic == "rb":
         policy.init_demo_buffer(demo_file)
 
     best_success_rate = -1
+
+    if policy.demo_critic == "rb":
+        logger.info("Pre-training")
+        rollout_worker.clear_history()
+        episode = rollout_worker.generate_rollouts()
+        policy.store_episode(episode)
+        for i in range(1000):
+            loss = policy.pre_train()
+            if i % 100 == 0:
+                print(loss)
+            policy.update_target_net()
+        policy._init_target_net()
 
     for epoch in range(n_epochs):
         logger.debug("train_ddpg_main.train_reinforce -> epoch: {}".format(epoch))
@@ -301,8 +313,8 @@ def train(
     demo_file,
     demo_test_file,
     demo_policy_file,
-    override_params,
     debug_params,
+    unknown_params,
     **kwargs,
 ):
 
@@ -357,11 +369,11 @@ def train(
         if train_rl
         else ""
     )
-    if override_params:
-        # make it possible to override any parameter.
-        for key, val in override_params.items():
-            assert key in params.keys(), "Wrong override parameter."
-            params.update({key: type(params[key])(val)})
+    # make it possible to override any parameter.
+    for key, val in unknown_params.items():
+        assert key in params.keys(), "Wrong override parameter: {}.".format(key)
+        params.update({key: type(params[key])(val)})
+    # for debugging only
     if debug_params:
         # put any parameter in the debug_param global dictionary.
         params.update(**config.DEBUG_PARAMS)
@@ -480,14 +492,14 @@ if __name__ == "__main__":
         help="the HER replay strategy to be used. 'future' uses HER, 'none' disables HER",
         type=str,
         choices=["none", "future"],
-        default="future",
+        default="none",
     )
     # demo configuration
     ap.parser.add_argument(
         "--demo_critic",
         help="use a neural network as critic or a gaussian process. Need to provide or train a demo policy if not set to none",
         type=str,
-        choices=["nn", "gp", "none"],
+        choices=["rb", "nn", "gp", "none"],
         default="none",
     )
     ap.parser.add_argument(
@@ -514,9 +526,6 @@ if __name__ == "__main__":
         default="EnsembleNN",
     )
     # others
-    ap.parser.add_argument(
-        "--override_params", help="whether or not to overwrite default parameters", type=int, default=0
-    )
     ap.parser.add_argument(
         "--debug_params", help="override some parameters for internal regression tests", type=int, default=0
     )

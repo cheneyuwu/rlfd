@@ -50,7 +50,6 @@ class Train(RegTest):
                 ("--loglevel", 1),
                 ("--env", "Reach2D"),
                 ("--eps_length", 2),
-                ("--num_cpu", 1),
                 ("--seed", 0),
                 ("--train_rl_epochs", 1),
                 ("--train_demo_epochs", 1),
