@@ -1,3 +1,0 @@
-epoch,loss,stats_g/mean,stats_g/std,stats_o/mean,stats_o/std,test/episode,test/mean_Q,test/success_rate,train/episode,train/success_rate
-0,7.5470796,,,,,,,,,
-0,,-0.23791237,0.30000556,-0.28662497,0.39556792,2.0,-0.24289382,0.0,4.0,0.0
