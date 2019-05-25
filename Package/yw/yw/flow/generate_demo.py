@@ -51,7 +51,7 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, shuffle, render, e
     exp_q[:, -1, :] = episode["r"][:, -1, :] / (1 - policy.gamma)
     for i in range(policy.T - 1):
         exp_q[:, -2 - i, :] = policy.gamma * exp_q[:, -1 - i, :] + episode["r"][:, -2 - i, :]
-    # episode["q"] = exp_q
+    episode["q"] = exp_q
 
     # value debug print out the q value
     # logger.info("The expected q values are: {}".format(episode["q"]))

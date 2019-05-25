@@ -24,6 +24,7 @@ from yw.tool import logger
 from yw.ddpg_main import config
 from yw.util.mpi_util import mpi_fork, mpi_average, set_global_seeds
 
+
 def train_reinforce(
     save_path,
     save_interval,
@@ -146,7 +147,8 @@ def train(
     rl_num_sample,
     rl_ca_ratio,
     exploit,
-    replay_strategy,
+    her_strategy,
+    nstep_n,
     demo_critic,
     demo_actor,
     demo_file,
@@ -190,17 +192,9 @@ def train(
     params["rl_demo_actor"] = demo_actor
     params["rl_ca_ratio"] = rl_ca_ratio
     params["rl_num_sample"] = rl_num_sample
-    params["replay_strategy"] = replay_strategy  # For HER: future or none
-    params["config"] = (
-        "-".join(
-            [
-                "ddpg",
-                demo_critic,
-                "r_sample:" + str(rl_num_sample),
-                "her:" + replay_strategy,
-            ]
-        )
-    )
+    params["nstep_n"] = nstep_n
+    params["her_strategy"] = her_strategy  # For HER: future or none
+    params["config"] = "-".join(["ddpg", demo_critic, "r_sample:" + str(rl_num_sample), "her:" + her_strategy])
     # make it possible to override any parameter.
     for key, val in unknown_params.items():
         assert key in params.keys(), "Wrong override parameter: {}.".format(key)
@@ -238,6 +232,7 @@ def train(
         demo_file=demo_file,
     )
 
+
 if __name__ == "__main__":
     from yw.util.cmd_util import ArgParser
 
@@ -265,8 +260,9 @@ if __name__ == "__main__":
         "--rl_ca_ratio", help="use 2 for td3 or 1 for normal ddpg", type=int, choices=[1, 2], default=1
     )  # do not use this flag for now
     ap.parser.add_argument("--exploit", help="whether or not to use e-greedy exploration", type=int, default=0)
+    ap.parser.add_argument("--nstep_n", help="Specify n step return for demonstration training.", type=int, default=50)
     ap.parser.add_argument(
-        "--replay_strategy",
+        "--her_strategy",
         help="the HER replay strategy to be used. 'future' uses HER, 'none' disables HER",
         type=str,
         choices=["none", "future"],

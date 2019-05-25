@@ -47,7 +47,8 @@ class DDPG(object):
         batch_size_demo,
         prm_loss_weight,
         aux_loss_weight,
-        sample_transitions,
+        sample_rl_transitions,
+        sample_demo_transitions,
         gamma,
         reuse=False,
         **kwargs
@@ -79,7 +80,8 @@ class DDPG(object):
             # Replay Buffer
             buffer_size        (int)          - number of transitions that are stored in the replay buffer
             # HER
-            sample_transitions (function)     - function that samples from the replay buffer
+            sample_rl_transitions (function)     - function that samples from the replay buffer
+            sample_demo_transitions (function)
             # Dual Network Set
             polyak             (float)        - coefficient for Polyak-averaging of the target network
             # Training
@@ -113,14 +115,15 @@ class DDPG(object):
         buffer_shapes["ag"] = (self.T + 1, self.dimg)
         buffer_shapes["mask"] = (self.T, self.num_sample)  # mask for training each head with different dataset
         buffer_shapes["r"] = (self.T, 1)
+        buffer_shapes["n"] = (self.T, 1)
         buffer_shapes["q"] = (self.T, 1)  # expected q value
         logger.debug("DDPG.__init__ -> The buffer shapes are: {}".format(buffer_shapes))
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         logger.debug("DDPG.__init__ -> The buffer size is: {}".format(buffer_size))
-        self.replay_buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
+        self.replay_buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_rl_transitions)
         if self.demo_actor != "none" or self.demo_critic == "rb":
             # initialize the demo buffer; in the same way as the primary data buffer
-            self.demo_buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T)
+            self.demo_buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_demo_transitions)
 
         # Build computation core.
         with tf.variable_scope(self.scope):
@@ -133,6 +136,7 @@ class DDPG(object):
             for key in ["o", "g"]:
                 stage_shapes[key + "_2"] = stage_shapes[key]
             stage_shapes["r"] = (None, 1)
+            stage_shapes["n"] = (None, 1)
             # for bootstrapped DQN, to add mask
             stage_shapes["mask"] = (None, self.num_sample)
             stage_shapes["q"] = (None, 1)
@@ -222,9 +226,10 @@ class DDPG(object):
             episode_batch[key] = episode_batch[key][: self.num_demo]
 
         episode_batch["mask"] = np.random.binomial(1, 1, (self.num_demo, self.T, self.num_sample))
+        episode_batch["n"] = np.ones((self.num_demo, self.T, 1), dtype=np.float32)
         if self.demo_critic != "rb":
             # fill in the minimal value of q for rollout data.
-            episode_batch["q"] = -100 * np.ones((self.rollout_batch_size, self.T, 1), dtype=np.float32)
+            episode_batch["q"] = -100 * np.ones((self.num_demo, self.T, 1), dtype=np.float32)
         self.demo_buffer.store_episode(episode_batch)
 
         if update_stats:
@@ -275,6 +280,7 @@ class DDPG(object):
         episode_batch["mask"] = np.float32(
             np.random.binomial(1, 1, (self.rollout_batch_size, self.T, self.num_sample))
         )
+        episode_batch["n"] = np.ones((self.rollout_batch_size, self.T, 1), dtype=np.float32)
         # fill in the minimal value of q for rollout data.
         episode_batch["q"] = -100 * np.ones((self.rollout_batch_size, self.T, 1), dtype=np.float32)
         self.replay_buffer.store_episode(episode_batch)
@@ -283,7 +289,7 @@ class DDPG(object):
             self._update_stats(episode_batch)
 
     def sample_batch(self):
-         # use demonstration buffer to sample as well if demo flag is set TRUE
+        # use demonstration buffer to sample as well if demo flag is set TRUE
         if self.demo_actor != "none" or self.demo_critic == "rb":
             transitions = {}
             transition_rollout = self.replay_buffer.sample(self.batch_size - self.batch_size_demo)
@@ -314,7 +320,7 @@ class DDPG(object):
         for k in input_data.keys():
             logger.debug("DDPG.stage_batch -> input of ", k, "is ", input_data[k].shape)
         logger.debug("DDPG.stage_batch -> Order should match stage_shapes.")
-    
+
     def pre_train(self, stage=True):
         if stage:
             self.stage_batch()
@@ -403,10 +409,10 @@ class DDPG(object):
             vs.reuse_variables()
         assert len(self._vars("main")) == len(self._vars("target"))
 
-        # Loss functions
+        # Critic loss
         clip_range = (-self.clip_return, 0.0 if self.clip_pos_returns else self.clip_return)
         target_list_tf = [
-            tf.clip_by_value(batch_tf["r"] + self.gamma * target_Q_pi_tf, *clip_range)
+            tf.clip_by_value(batch_tf["r"] + np.power(self.gamma, batch_tf["n"]) * target_Q_pi_tf, *clip_range)
             for target_Q_pi_tf in self.target.Q_pi_tf
         ]
         # target_min_tf = tf.reduce_min(target_list_tf, 0) # used for td3 training.
@@ -423,17 +429,22 @@ class DDPG(object):
                 (np.ones(self.batch_size - self.batch_size_demo), np.zeros(self.batch_size_demo)), axis=0
             ).reshape(-1, 1)
             for i in range(self.num_sample):
+                # rl loss
                 rl_mse_tf = tf.boolean_mask(
                     tf.square(tf.stop_gradient(target_list_tf[i]) - self.main.Q_tf[i])
                     * tf.reshape(batch_tf["mask"][:, i], [-1, 1]),
                     rl_mask,
                 )
                 rl_loss_tf = tf.reduce_mean(rl_mse_tf)
+                # demo loss
                 demo_mse_tf = tf.boolean_mask(
-                    tf.square(batch_tf["q"] - self.main.Q_tf[i]) * tf.reshape(batch_tf["mask"][:, i], [-1, 1]),
+                    # tf.square(batch_tf["q"] - self.main.Q_tf[i])
+                    tf.square(tf.stop_gradient(target_list_tf[i]) - self.main.Q_tf[i])
+                    * tf.reshape(batch_tf["mask"][:, i], [-1, 1]),
                     demo_mask,
                 )
                 demo_loss_tf = tf.reduce_mean(demo_mse_tf)
+
                 # loss_tf = rl_loss_tf + demo_loss_tf
                 self.Q_loss_tf.append(rl_loss_tf)
                 self.demo_loss_tf.append(demo_loss_tf)
@@ -445,6 +456,7 @@ class DDPG(object):
                 )
                 self.Q_loss_tf.append(loss_tf)
 
+        # Actor Loss
         if self.demo_actor != "none" and self.q_filter == 1:
             # train with demonstrations and use demo and q_filter both
             # where is the demonstrator action better than actor action according to the critic? choose those sample only
@@ -571,7 +583,7 @@ class DDPG(object):
         episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
         episode_batch["ag_2"] = episode_batch["ag"][:, 1:, :]
         num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
-        transitions = self.sample_transitions(episode_batch, num_normalizing_transitions)
+        transitions = self.sample_rl_transitions(episode_batch, num_normalizing_transitions)
 
         o, o_2, g, ag = transitions["o"], transitions["o_2"], transitions["g"], transitions["ag"]
         transitions["o"], transitions["g"] = self._preprocess_og(o, ag, g)
@@ -597,12 +609,12 @@ class DDPG(object):
             "_adam",
             "_stats",
             "_buffer",
+            "_transitions",  # sample
             "sess",
             "main",
             "target",
             "lock",
             "env",
-            "sample_transitions",
             "stage_shapes",
         ]
 
@@ -612,8 +624,10 @@ class DDPG(object):
 
     def __setstate__(self, state):
         # We don't need these for playing the policy.
-        if "sample_transitions" not in state:
-            state["sample_transitions"] = None
+        assert "sample_rl_transitions" not in state
+        assert "sample_demo_transitions" not in state
+        state["sample_rl_transitions"] = None
+        state["sample_demo_transitions"] = None
 
         self.__init__(**state)
         # set up stats (they are overwritten in __init__)

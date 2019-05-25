@@ -8,7 +8,7 @@ if tf.__version__.startswith("1"):
 else:
     from yw.ddpg_tf2.ddpg import DDPG
 from yw.ddpg_main.rollout import RolloutWorker
-from yw.ddpg_main.sampler import make_sample_her_transitions
+from yw.ddpg_main.sampler import make_sample_her_transitions, make_sample_nstep_transitions
 
 from yw.env.env_manager import EnvManager
 
@@ -64,9 +64,11 @@ DEFAULT_PARAMS = {
     "exploit": False,  # whether or not to use e-greedy and add noise to output
     "random_eps": 0.3,  # percentage of time a random action is taken
     "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
+    # N step return
+    "nstep_n": 1,
     # HER
-    "replay_strategy": "future",  # supported modes: future, none
-    "replay_k": 4,  # number of additional goals used for replay, only used if off_policy_data=future
+    "her_strategy": "future",  # supported modes: future, none
+    "her_k": 4,  # number of additional goals used for replay, only used if off_policy_data=future
     # DDPG Training
     "train_rl_epochs": 1,
     "n_cycles": 10,  # per epoch
@@ -147,7 +149,7 @@ def configure_her(params):
         return env.compute_reward(achieved_goal=ag_2, desired_goal=g, info=info)
 
     # Prepare configuration for HER.
-    her_params = extract_params(params, "replay_")
+    her_params = extract_params(params, "her_")
     her_params["reward_fun"] = reward_fun
     logger.info("*** her_params ***")
     log_params(her_params)
@@ -155,6 +157,19 @@ def configure_her(params):
     sample_her_transitions = make_sample_her_transitions(**her_params)
 
     return sample_her_transitions
+
+
+def configure_nstep(params):
+
+    # Prepare configuration for HER.
+    nstep_params = extract_params(params, "nstep_")
+    nstep_params.update({"gamma": params["gamma"],})
+    logger.info("*** nstep_params ***")
+    log_params(nstep_params)
+    logger.info("*** nstep_params ***")
+    sample_nstep_transitions = make_sample_nstep_transitions(**nstep_params)
+
+    return sample_nstep_transitions
 
 
 def configure_ddpg(params):
@@ -166,6 +181,7 @@ def configure_ddpg(params):
         del params[name]
 
     sample_her_transitions = configure_her(params)
+    sample_nstep_transitions = configure_nstep(params)
     # Update parameters
     ddpg_params.update(
         {
@@ -175,7 +191,8 @@ def configure_ddpg(params):
             "clip_return": (1.0 / (1.0 - params["gamma"])) if params["clip_return"] else np.inf,  # max abs of return
             "rollout_batch_size": params["rollout_batch_size"],
             "subtract_goals": simple_goal_subtract,
-            "sample_transitions": sample_her_transitions,
+            "sample_rl_transitions": sample_her_transitions,
+            "sample_demo_transitions": sample_nstep_transitions,
             "gamma": params["gamma"],
         }
     )
