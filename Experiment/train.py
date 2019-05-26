@@ -37,6 +37,7 @@ class Demo(Experiment):
         command["--store_dir"] = self.result_dir + "DemoData/"
         command["--num_itr"] = 128
         command["--entire_eps"] = 1
+        command["--seed"] = 0
         return command
 
 
@@ -256,62 +257,65 @@ if __name__ == "__main__":
     train_exp.env = environment
     train_exp.update()
 
-    # We can change the result directory without updating
-    exp_dir = os.getenv("EXPERIMENT")
-    result_dir = os.path.join(exp_dir, "Result/Temp/")
-    demo_exp.result_dir = result_dir
-    train_exp.result_dir = result_dir
-    display_exp.result_dir = result_dir
-    plot_exp.result_dir = result_dir
-    animation.result_dir = result_dir
-    compare_q.result_dir = result_dir
-    uncertainty.result_dir = result_dir
-
     demo_data_size = 128
     train_rl_epochs = 50
+    # seed = 0
+    # for i in range(4):
+    #     seed += i*100
 
-    # Train the RL without demonstration
-    assert not train_exp.rl_only(
-        r_scale=1.0,
-        r_shift=0.0,
-        rl_action_l2=0.5,
-        rl_scope="critic_demo",
-        n_cycles=10,
-        seed=4,
-        rl_num_sample=1,
-        rl_batch_size=256,
-        train_rl_epochs=train_rl_epochs,
-    )
-    assert not train_exp.rl_her_only(
-        r_scale=1.0,
-        r_shift=0.0,
-        rl_action_l2=0.5,
-        rl_scope="critic_demo",
-        n_cycles=10,
-        seed=4,
-        rl_num_sample=1,
-        rl_batch_size=256,
-        train_rl_epochs=train_rl_epochs,
-    )
+    #     # We can change the result directory without updating
+    #     exp_dir = os.getenv("EXPERIMENT")
+    #     result_dir = os.path.join(exp_dir, "Result/Temp/Exp"+str(i)+"/")
+    #     demo_exp.result_dir = result_dir
+    #     train_exp.result_dir = result_dir
+    #     display_exp.result_dir = result_dir
+    #     plot_exp.result_dir = result_dir
+    #     animation.result_dir = result_dir
+    #     compare_q.result_dir = result_dir
+    #     uncertainty.result_dir = result_dir
 
-    # Generate demonstration data
-    assert not demo_exp.generate_demo(num_itr=demo_data_size, entire_eps=1, shuffle=0)
+    #     # Train the RL without demonstration
+    #     assert not train_exp.rl_only(
+    #         r_scale=1.0,
+    #         r_shift=0.0,
+    #         rl_action_l2=0.5,
+    #         rl_scope="critic_demo",
+    #         n_cycles=10,
+    #         seed=seed+10,
+    #         rl_num_sample=1,
+    #         rl_batch_size=256,
+    #         train_rl_epochs=train_rl_epochs,
+    #     )
+    #     assert not train_exp.rl_her_only(
+    #         r_scale=1.0,
+    #         r_shift=0.0,
+    #         rl_action_l2=0.5,
+    #         rl_scope="critic_demo",
+    #         n_cycles=10,
+    #         seed=seed+20,
+    #         rl_num_sample=1,
+    #         rl_batch_size=256,
+    #         train_rl_epochs=train_rl_epochs,
+    #     )
 
-    # Train the RL with demonstration
-    assert not train_exp.rl_with_demo_critic_rb(
-        r_scale=1.0,
-        r_shift=0.0,
-        rl_action_l2=0.5,
-        n_cycles=10,
-        seed=13,
-        rl_num_sample=1,
-        rl_batch_size=512,
-        rl_batch_size_demo=256, 
-        train_rl_epochs=train_rl_epochs,
-        demo_file=result_dir + "DemoData/" + environment + ".npz",
-        rl_num_demo=demo_data_size,
-        her_strategy="none",
-    )
+    #     # Generate demonstration data
+    #     assert not demo_exp.generate_demo(seed=seed+30, num_itr=demo_data_size, entire_eps=1, shuffle=0)
+
+    #     # Train the RL with demonstration
+    #     assert not train_exp.rl_with_demo_critic_rb(
+    #         r_scale=1.0,
+    #         r_shift=0.0,
+    #         rl_action_l2=0.5,
+    #         n_cycles=10,
+    #         seed=seed+40,
+    #         rl_num_sample=1,
+    #         rl_batch_size=512,
+    #         rl_batch_size_demo=256, 
+    #         train_rl_epochs=train_rl_epochs,
+    #         demo_file=result_dir + "DemoData/" + environment + ".npz",
+    #         rl_num_demo=demo_data_size,
+    #         her_strategy="none",
+    #     )
 
     # Plot the training result
     assert not plot_exp.plot(dirs=plot_exp.result_dir)
