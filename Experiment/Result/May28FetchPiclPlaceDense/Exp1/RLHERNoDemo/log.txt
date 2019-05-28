@@ -1,0 +1,1473 @@
+Logging to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo/
+Launching the training process with 1 cpu core(s).
+Setting log level to 2.
+Using environment FetchPickAndPlace-v1 with r scale down by 1.000000 shift by 0.000000 and max episode 0.000000
+*** her_params ***
+k                             4
+reward_fun                    <function configure_her.<locals>.reward_fun at 0x7ff583e4a598>
+strategy                      future
+*** her_params ***
+*** nstep_params ***
+gamma                         0.98
+n                             50
+*** nstep_params ***
+*** ddpg_params ***
+Q_lr                          0.001
+T                             50
+action_l2                     1.0
+aux_loss_weight               0.0078
+batch_size                    256
+batch_size_demo               128
+buffer_size                   1000000
+ca_ratio                      1
+clip_obs                      200.0
+clip_pos_returns              False
+clip_return                   49.99999999999996
+demo_actor                    none
+demo_critic                   none
+gamma                         0.98
+hidden                        256
+info                          {'env_name': 'FetchPickAndPlace-v1', 'r_scale': 1.0, 'r_shift': 0.0, 'eps_length': 0}
+input_dims                    {'o': 25, 'u': 4, 'g': 3, 'info_is_success': 1}
+layers                        3
+max_u                         1
+norm_clip                     5
+norm_eps                      0.01
+num_demo                      1000
+num_sample                    1
+pi_lr                         0.001
+polyak                        0.95
+prm_loss_weight               0.001
+q_filter                      0
+relative_goals                False
+rollout_batch_size            4
+sample_demo_transitions       <function make_sample_nstep_transitions.<locals>.sample_nstep_transitions at 0x7ff583e4a6a8>
+sample_rl_transitions         <function make_sample_her_transitions.<locals>.sample_her_transitions at 0x7ff583e4a620>
+scope                         rl_only
+subtract_goals                <function simple_goal_subtract at 0x7ff544d6a6a8>
+*** ddpg_params ***
+Configuring the replay buffer.
+Preparing staging area for feeding data to the model.
+Creating a DDPG agent with action space 4 x 1.
+
+*** rollout_params ***
+T                             50
+compute_Q                     False
+dims                          {'o': 25, 'u': 4, 'g': 3, 'info_is_success': 1}
+exploit                       0
+noise_eps                     0.2
+random_eps                    0.3
+rollout_batch_size            4
+use_demo_states               True
+use_target_net                False
+*** rollout_params ***
+*** eval_params ***
+T                             50
+compute_Q                     True
+dims                          {'o': 25, 'u': 4, 'g': 3, 'info_is_success': 1}
+exploit                       1
+noise_eps                     0.2
+random_eps                    0.3
+rollout_batch_size            20
+use_demo_states               False
+use_target_net                False
+*** eval_params ***
+Training the RL agent.
+-----------------------------------
+| epoch              | 0          |
+| stats_g/mean       | 0.8471904  |
+| stats_g/std        | 0.09088687 |
+| stats_o/mean       | 0.20555355 |
+| stats_o/std        | 0.05146224 |
+| test/episode       | 20.0       |
+| test/mean_Q        | -2.8568864 |
+| test/success_rate  | 0.0        |
+| train/episode      | 200.0      |
+| train/success_rate | 0.07       |
+-----------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_0.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 1           |
+| stats_g/mean       | 0.84549284  |
+| stats_g/std        | 0.091738395 |
+| stats_o/mean       | 0.20381477  |
+| stats_o/std        | 0.05303958  |
+| test/episode       | 40.0        |
+| test/mean_Q        | -4.6495323  |
+| test/success_rate  | 0.0         |
+| train/episode      | 400.0       |
+| train/success_rate | 0.03        |
+------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 2           |
+| stats_g/mean       | 0.84613276  |
+| stats_g/std        | 0.092315614 |
+| stats_o/mean       | 0.20408155  |
+| stats_o/std        | 0.05334966  |
+| test/episode       | 60.0        |
+| test/mean_Q        | -6.2054796  |
+| test/success_rate  | 0.0         |
+| train/episode      | 600.0       |
+| train/success_rate | 0.02        |
+------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_2.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 3           |
+| stats_g/mean       | 0.84657174  |
+| stats_g/std        | 0.093803026 |
+| stats_o/mean       | 0.20413603  |
+| stats_o/std        | 0.052780267 |
+| test/episode       | 80.0        |
+| test/mean_Q        | -8.827339   |
+| test/success_rate  | 0.0         |
+| train/episode      | 800.0       |
+| train/success_rate | 0.035       |
+------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 4           |
+| stats_g/mean       | 0.8461585   |
+| stats_g/std        | 0.09338672  |
+| stats_o/mean       | 0.20369525  |
+| stats_o/std        | 0.054513928 |
+| test/episode       | 100.0       |
+| test/mean_Q        | -10.708244  |
+| test/success_rate  | 0.0         |
+| train/episode      | 1000.0      |
+| train/success_rate | 0.03        |
+------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_4.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 5           |
+| stats_g/mean       | 0.84648937  |
+| stats_g/std        | 0.094555974 |
+| stats_o/mean       | 0.20390205  |
+| stats_o/std        | 0.05519039  |
+| test/episode       | 120.0       |
+| test/mean_Q        | -11.542895  |
+| test/success_rate  | 0.0         |
+| train/episode      | 1200.0      |
+| train/success_rate | 0.03        |
+------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 6          |
+| stats_g/mean       | 0.8461512  |
+| stats_g/std        | 0.09471214 |
+| stats_o/mean       | 0.20385571 |
+| stats_o/std        | 0.05600894 |
+| test/episode       | 140.0      |
+| test/mean_Q        | -14.297538 |
+| test/success_rate  | 0.0        |
+| train/episode      | 1400.0     |
+| train/success_rate | 0.025      |
+-----------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_6.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 7           |
+| stats_g/mean       | 0.84568757  |
+| stats_g/std        | 0.094439216 |
+| stats_o/mean       | 0.20382257  |
+| stats_o/std        | 0.057220854 |
+| test/episode       | 160.0       |
+| test/mean_Q        | -14.713362  |
+| test/success_rate  | 0.0         |
+| train/episode      | 1600.0      |
+| train/success_rate | 0.055       |
+------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 8           |
+| stats_g/mean       | 0.84538126  |
+| stats_g/std        | 0.09454628  |
+| stats_o/mean       | 0.20384027  |
+| stats_o/std        | 0.058261946 |
+| test/episode       | 180.0       |
+| test/mean_Q        | -15.791623  |
+| test/success_rate  | 0.1         |
+| train/episode      | 1800.0      |
+| train/success_rate | 0.02        |
+------------------------------------
+New best success rate: 0.1.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_8.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 9           |
+| stats_g/mean       | 0.8457487   |
+| stats_g/std        | 0.0950861   |
+| stats_o/mean       | 0.20391613  |
+| stats_o/std        | 0.061004333 |
+| test/episode       | 200.0       |
+| test/mean_Q        | -18.068314  |
+| test/success_rate  | 0.0         |
+| train/episode      | 2000.0      |
+| train/success_rate | 0.045       |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 10         |
+| stats_g/mean       | 0.84567475 |
+| stats_g/std        | 0.0950119  |
+| stats_o/mean       | 0.20397425 |
+| stats_o/std        | 0.06186889 |
+| test/episode       | 220.0      |
+| test/mean_Q        | -16.072594 |
+| test/success_rate  | 0.15       |
+| train/episode      | 2200.0     |
+| train/success_rate | 0.025      |
+-----------------------------------
+New best success rate: 0.15.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_10.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 11          |
+| stats_g/mean       | 0.8456982   |
+| stats_g/std        | 0.09540168  |
+| stats_o/mean       | 0.20390509  |
+| stats_o/std        | 0.061919365 |
+| test/episode       | 240.0       |
+| test/mean_Q        | -15.4655485 |
+| test/success_rate  | 0.15        |
+| train/episode      | 2400.0      |
+| train/success_rate | 0.03        |
+------------------------------------
+New best success rate: 0.15.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 12          |
+| stats_g/mean       | 0.84580255  |
+| stats_g/std        | 0.095626585 |
+| stats_o/mean       | 0.20375645  |
+| stats_o/std        | 0.06292125  |
+| test/episode       | 260.0       |
+| test/mean_Q        | -21.785421  |
+| test/success_rate  | 0.0         |
+| train/episode      | 2600.0      |
+| train/success_rate | 0.02        |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_12.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 13          |
+| stats_g/mean       | 0.8453107   |
+| stats_g/std        | 0.09608403  |
+| stats_o/mean       | 0.20365195  |
+| stats_o/std        | 0.063146345 |
+| test/episode       | 280.0       |
+| test/mean_Q        | -21.79045   |
+| test/success_rate  | 0.0         |
+| train/episode      | 2800.0      |
+| train/success_rate | 0.045       |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 14         |
+| stats_g/mean       | 0.8455894  |
+| stats_g/std        | 0.0966625  |
+| stats_o/mean       | 0.20381545 |
+| stats_o/std        | 0.06444419 |
+| test/episode       | 300.0      |
+| test/mean_Q        | -18.603577 |
+| test/success_rate  | 0.1        |
+| train/episode      | 3000.0     |
+| train/success_rate | 0.035      |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_14.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 15          |
+| stats_g/mean       | 0.84557104  |
+| stats_g/std        | 0.097318776 |
+| stats_o/mean       | 0.20373644  |
+| stats_o/std        | 0.066180006 |
+| test/episode       | 320.0       |
+| test/mean_Q        | -20.097906  |
+| test/success_rate  | 0.05        |
+| train/episode      | 3200.0      |
+| train/success_rate | 0.035       |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 16          |
+| stats_g/mean       | 0.84539247  |
+| stats_g/std        | 0.0973613   |
+| stats_o/mean       | 0.20375402  |
+| stats_o/std        | 0.067603506 |
+| test/episode       | 340.0       |
+| test/mean_Q        | -22.210722  |
+| test/success_rate  | 0.1         |
+| train/episode      | 3400.0      |
+| train/success_rate | 0.025       |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_16.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 17          |
+| stats_g/mean       | 0.8454847   |
+| stats_g/std        | 0.097251035 |
+| stats_o/mean       | 0.20387685  |
+| stats_o/std        | 0.06886905  |
+| test/episode       | 360.0       |
+| test/mean_Q        | -23.691114  |
+| test/success_rate  | 0.05        |
+| train/episode      | 3600.0      |
+| train/success_rate | 0.04        |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 18          |
+| stats_g/mean       | 0.84540105  |
+| stats_g/std        | 0.09790323  |
+| stats_o/mean       | 0.2039611   |
+| stats_o/std        | 0.070469536 |
+| test/episode       | 380.0       |
+| test/mean_Q        | -24.263441  |
+| test/success_rate  | 0.0         |
+| train/episode      | 3800.0      |
+| train/success_rate | 0.05        |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_18.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 19          |
+| stats_g/mean       | 0.84551096  |
+| stats_g/std        | 0.099247985 |
+| stats_o/mean       | 0.20404436  |
+| stats_o/std        | 0.072545625 |
+| test/episode       | 400.0       |
+| test/mean_Q        | -25.209856  |
+| test/success_rate  | 0.0         |
+| train/episode      | 4000.0      |
+| train/success_rate | 0.025       |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 20          |
+| stats_g/mean       | 0.8449755   |
+| stats_g/std        | 0.099875145 |
+| stats_o/mean       | 0.20397884  |
+| stats_o/std        | 0.07376228  |
+| test/episode       | 420.0       |
+| test/mean_Q        | -22.514645  |
+| test/success_rate  | 0.15        |
+| train/episode      | 4200.0      |
+| train/success_rate | 0.055       |
+------------------------------------
+New best success rate: 0.15.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_20.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 21          |
+| stats_g/mean       | 0.84499913  |
+| stats_g/std        | 0.100013666 |
+| stats_o/mean       | 0.20394689  |
+| stats_o/std        | 0.07445505  |
+| test/episode       | 440.0       |
+| test/mean_Q        | -24.042261  |
+| test/success_rate  | 0.0         |
+| train/episode      | 4400.0      |
+| train/success_rate | 0.05        |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 22         |
+| stats_g/mean       | 0.8444937  |
+| stats_g/std        | 0.1007917  |
+| stats_o/mean       | 0.20384821 |
+| stats_o/std        | 0.07596065 |
+| test/episode       | 460.0      |
+| test/mean_Q        | -23.617329 |
+| test/success_rate  | 0.05       |
+| train/episode      | 4600.0     |
+| train/success_rate | 0.055      |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_22.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 23          |
+| stats_g/mean       | 0.84448314  |
+| stats_g/std        | 0.101160645 |
+| stats_o/mean       | 0.20382112  |
+| stats_o/std        | 0.07702317  |
+| test/episode       | 480.0       |
+| test/mean_Q        | -20.877464  |
+| test/success_rate  | 0.2         |
+| train/episode      | 4800.0      |
+| train/success_rate | 0.135       |
+------------------------------------
+New best success rate: 0.2.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 24         |
+| stats_g/mean       | 0.8444244  |
+| stats_g/std        | 0.10163781 |
+| stats_o/mean       | 0.20383856 |
+| stats_o/std        | 0.07782494 |
+| test/episode       | 500.0      |
+| test/mean_Q        | -22.415611 |
+| test/success_rate  | 0.15       |
+| train/episode      | 5000.0     |
+| train/success_rate | 0.07       |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_24.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 25          |
+| stats_g/mean       | 0.84446305  |
+| stats_g/std        | 0.101511836 |
+| stats_o/mean       | 0.2038641   |
+| stats_o/std        | 0.078733385 |
+| test/episode       | 520.0       |
+| test/mean_Q        | -21.40765   |
+| test/success_rate  | 0.1         |
+| train/episode      | 5200.0      |
+| train/success_rate | 0.05        |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 26          |
+| stats_g/mean       | 0.844387    |
+| stats_g/std        | 0.10174503  |
+| stats_o/mean       | 0.20388581  |
+| stats_o/std        | 0.079328366 |
+| test/episode       | 540.0       |
+| test/mean_Q        | -19.327394  |
+| test/success_rate  | 0.1         |
+| train/episode      | 5400.0      |
+| train/success_rate | 0.065       |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_26.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 27         |
+| stats_g/mean       | 0.8443858  |
+| stats_g/std        | 0.1016325  |
+| stats_o/mean       | 0.20387672 |
+| stats_o/std        | 0.07999482 |
+| test/episode       | 560.0      |
+| test/mean_Q        | -25.886711 |
+| test/success_rate  | 0.15       |
+| train/episode      | 5600.0     |
+| train/success_rate | 0.07       |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 28         |
+| stats_g/mean       | 0.8440838  |
+| stats_g/std        | 0.10184605 |
+| stats_o/mean       | 0.20379823 |
+| stats_o/std        | 0.08121848 |
+| test/episode       | 580.0      |
+| test/mean_Q        | -25.336184 |
+| test/success_rate  | 0.05       |
+| train/episode      | 5800.0     |
+| train/success_rate | 0.11       |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_28.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 29          |
+| stats_g/mean       | 0.8437481   |
+| stats_g/std        | 0.10237455  |
+| stats_o/mean       | 0.20384327  |
+| stats_o/std        | 0.083576605 |
+| test/episode       | 600.0       |
+| test/mean_Q        | -26.692526  |
+| test/success_rate  | 0.05        |
+| train/episode      | 6000.0      |
+| train/success_rate | 0.07        |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 30         |
+| stats_g/mean       | 0.8433983  |
+| stats_g/std        | 0.10287965 |
+| stats_o/mean       | 0.2037562  |
+| stats_o/std        | 0.08500117 |
+| test/episode       | 620.0      |
+| test/mean_Q        | -20.0303   |
+| test/success_rate  | 0.15       |
+| train/episode      | 6200.0     |
+| train/success_rate | 0.07       |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_30.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 31          |
+| stats_g/mean       | 0.8432805   |
+| stats_g/std        | 0.103018135 |
+| stats_o/mean       | 0.20374237  |
+| stats_o/std        | 0.085927986 |
+| test/episode       | 640.0       |
+| test/mean_Q        | -20.251184  |
+| test/success_rate  | 0.15        |
+| train/episode      | 6400.0      |
+| train/success_rate | 0.05        |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 32          |
+| stats_g/mean       | 0.8432737   |
+| stats_g/std        | 0.103119075 |
+| stats_o/mean       | 0.20375699  |
+| stats_o/std        | 0.08696011  |
+| test/episode       | 660.0       |
+| test/mean_Q        | -24.517668  |
+| test/success_rate  | 0.0         |
+| train/episode      | 6600.0      |
+| train/success_rate | 0.1         |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_32.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 33          |
+| stats_g/mean       | 0.843126    |
+| stats_g/std        | 0.10349631  |
+| stats_o/mean       | 0.203754    |
+| stats_o/std        | 0.088092536 |
+| test/episode       | 680.0       |
+| test/mean_Q        | -21.80143   |
+| test/success_rate  | 0.15        |
+| train/episode      | 6800.0      |
+| train/success_rate | 0.09        |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 34         |
+| stats_g/mean       | 0.8429327  |
+| stats_g/std        | 0.10375913 |
+| stats_o/mean       | 0.20365614 |
+| stats_o/std        | 0.08924889 |
+| test/episode       | 700.0      |
+| test/mean_Q        | -18.032352 |
+| test/success_rate  | 0.25       |
+| train/episode      | 7000.0     |
+| train/success_rate | 0.12       |
+-----------------------------------
+New best success rate: 0.25.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_34.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 35         |
+| stats_g/mean       | 0.8430349  |
+| stats_g/std        | 0.10366511 |
+| stats_o/mean       | 0.20360982 |
+| stats_o/std        | 0.08964911 |
+| test/episode       | 720.0      |
+| test/mean_Q        | -19.062792 |
+| test/success_rate  | 0.2        |
+| train/episode      | 7200.0     |
+| train/success_rate | 0.155      |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 36         |
+| stats_g/mean       | 0.84307384 |
+| stats_g/std        | 0.10359758 |
+| stats_o/mean       | 0.20349774 |
+| stats_o/std        | 0.09057909 |
+| test/episode       | 740.0      |
+| test/mean_Q        | -23.806343 |
+| test/success_rate  | 0.2        |
+| train/episode      | 7400.0     |
+| train/success_rate | 0.15       |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_36.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 37          |
+| stats_g/mean       | 0.8431155   |
+| stats_g/std        | 0.103776574 |
+| stats_o/mean       | 0.20348431  |
+| stats_o/std        | 0.09128679  |
+| test/episode       | 760.0       |
+| test/mean_Q        | -20.140953  |
+| test/success_rate  | 0.25        |
+| train/episode      | 7600.0      |
+| train/success_rate | 0.16        |
+------------------------------------
+New best success rate: 0.25.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 38          |
+| stats_g/mean       | 0.84317523  |
+| stats_g/std        | 0.10363156  |
+| stats_o/mean       | 0.20342611  |
+| stats_o/std        | 0.091969706 |
+| test/episode       | 780.0       |
+| test/mean_Q        | -23.324665  |
+| test/success_rate  | 0.2         |
+| train/episode      | 7800.0      |
+| train/success_rate | 0.205       |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_38.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 39         |
+| stats_g/mean       | 0.843349   |
+| stats_g/std        | 0.10357841 |
+| stats_o/mean       | 0.20343092 |
+| stats_o/std        | 0.09255255 |
+| test/episode       | 800.0      |
+| test/mean_Q        | -16.058765 |
+| test/success_rate  | 0.4        |
+| train/episode      | 8000.0     |
+| train/success_rate | 0.19       |
+-----------------------------------
+New best success rate: 0.4.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 40         |
+| stats_g/mean       | 0.843427   |
+| stats_g/std        | 0.1035498  |
+| stats_o/mean       | 0.20340988 |
+| stats_o/std        | 0.09313396 |
+| test/episode       | 820.0      |
+| test/mean_Q        | -16.38679  |
+| test/success_rate  | 0.35       |
+| train/episode      | 8200.0     |
+| train/success_rate | 0.15       |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_40.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 41         |
+| stats_g/mean       | 0.84348875 |
+| stats_g/std        | 0.10339111 |
+| stats_o/mean       | 0.20336132 |
+| stats_o/std        | 0.09406199 |
+| test/episode       | 840.0      |
+| test/mean_Q        | -26.819496 |
+| test/success_rate  | 0.15       |
+| train/episode      | 8400.0     |
+| train/success_rate | 0.19       |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 42         |
+| stats_g/mean       | 0.8433962  |
+| stats_g/std        | 0.10365563 |
+| stats_o/mean       | 0.20341027 |
+| stats_o/std        | 0.09487166 |
+| test/episode       | 860.0      |
+| test/mean_Q        | -19.91745  |
+| test/success_rate  | 0.2        |
+| train/episode      | 8600.0     |
+| train/success_rate | 0.22       |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_42.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 43         |
+| stats_g/mean       | 0.8435138  |
+| stats_g/std        | 0.1036839  |
+| stats_o/mean       | 0.20344475 |
+| stats_o/std        | 0.09560313 |
+| test/episode       | 880.0      |
+| test/mean_Q        | -16.646383 |
+| test/success_rate  | 0.25       |
+| train/episode      | 8800.0     |
+| train/success_rate | 0.205      |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 44         |
+| stats_g/mean       | 0.8435386  |
+| stats_g/std        | 0.10380289 |
+| stats_o/mean       | 0.20344906 |
+| stats_o/std        | 0.09638779 |
+| test/episode       | 900.0      |
+| test/mean_Q        | -16.291452 |
+| test/success_rate  | 0.4        |
+| train/episode      | 9000.0     |
+| train/success_rate | 0.25       |
+-----------------------------------
+New best success rate: 0.4.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_44.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 45          |
+| stats_g/mean       | 0.8434303   |
+| stats_g/std        | 0.10457385  |
+| stats_o/mean       | 0.20342247  |
+| stats_o/std        | 0.097510405 |
+| test/episode       | 920.0       |
+| test/mean_Q        | -16.394098  |
+| test/success_rate  | 0.5         |
+| train/episode      | 9200.0      |
+| train/success_rate | 0.185       |
+------------------------------------
+New best success rate: 0.5.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 46         |
+| stats_g/mean       | 0.8434312  |
+| stats_g/std        | 0.10457223 |
+| stats_o/mean       | 0.20344834 |
+| stats_o/std        | 0.09818409 |
+| test/episode       | 940.0      |
+| test/mean_Q        | -17.083767 |
+| test/success_rate  | 0.4        |
+| train/episode      | 9400.0     |
+| train/success_rate | 0.25       |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_46.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 47         |
+| stats_g/mean       | 0.8434226  |
+| stats_g/std        | 0.1048462  |
+| stats_o/mean       | 0.20348662 |
+| stats_o/std        | 0.09908841 |
+| test/episode       | 960.0      |
+| test/mean_Q        | -20.465828 |
+| test/success_rate  | 0.3        |
+| train/episode      | 9600.0     |
+| train/success_rate | 0.24       |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 48          |
+| stats_g/mean       | 0.8433773   |
+| stats_g/std        | 0.105080485 |
+| stats_o/mean       | 0.20354132  |
+| stats_o/std        | 0.100274324 |
+| test/episode       | 980.0       |
+| test/mean_Q        | -18.029743  |
+| test/success_rate  | 0.4         |
+| train/episode      | 9800.0      |
+| train/success_rate | 0.255       |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_48.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 49          |
+| stats_g/mean       | 0.8433614   |
+| stats_g/std        | 0.10523542  |
+| stats_o/mean       | 0.20351493  |
+| stats_o/std        | 0.100943565 |
+| test/episode       | 1000.0      |
+| test/mean_Q        | -19.912056  |
+| test/success_rate  | 0.35        |
+| train/episode      | 10000.0     |
+| train/success_rate | 0.25        |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 50          |
+| stats_g/mean       | 0.8433377   |
+| stats_g/std        | 0.10516509  |
+| stats_o/mean       | 0.20351769  |
+| stats_o/std        | 0.101361305 |
+| test/episode       | 1020.0      |
+| test/mean_Q        | -18.270674  |
+| test/success_rate  | 0.35        |
+| train/episode      | 10200.0     |
+| train/success_rate | 0.275       |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_50.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 51         |
+| stats_g/mean       | 0.8433289  |
+| stats_g/std        | 0.10526425 |
+| stats_o/mean       | 0.20353636 |
+| stats_o/std        | 0.10176736 |
+| test/episode       | 1040.0     |
+| test/mean_Q        | -18.729645 |
+| test/success_rate  | 0.45       |
+| train/episode      | 10400.0    |
+| train/success_rate | 0.295      |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 52         |
+| stats_g/mean       | 0.8432662  |
+| stats_g/std        | 0.10544012 |
+| stats_o/mean       | 0.20357805 |
+| stats_o/std        | 0.10232436 |
+| test/episode       | 1060.0     |
+| test/mean_Q        | -22.672007 |
+| test/success_rate  | 0.4        |
+| train/episode      | 10600.0    |
+| train/success_rate | 0.29       |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_52.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 53         |
+| stats_g/mean       | 0.84341645 |
+| stats_g/std        | 0.10530687 |
+| stats_o/mean       | 0.20361301 |
+| stats_o/std        | 0.10291675 |
+| test/episode       | 1080.0     |
+| test/mean_Q        | -16.192825 |
+| test/success_rate  | 0.55       |
+| train/episode      | 10800.0    |
+| train/success_rate | 0.31       |
+-----------------------------------
+New best success rate: 0.55.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 54          |
+| stats_g/mean       | 0.8435231   |
+| stats_g/std        | 0.10542365  |
+| stats_o/mean       | 0.20367831  |
+| stats_o/std        | 0.103416465 |
+| test/episode       | 1100.0      |
+| test/mean_Q        | -18.854279  |
+| test/success_rate  | 0.5         |
+| train/episode      | 11000.0     |
+| train/success_rate | 0.3         |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_54.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 55         |
+| stats_g/mean       | 0.8434617  |
+| stats_g/std        | 0.10553223 |
+| stats_o/mean       | 0.2037474  |
+| stats_o/std        | 0.10393717 |
+| test/episode       | 1120.0     |
+| test/mean_Q        | -20.48263  |
+| test/success_rate  | 0.4        |
+| train/episode      | 11200.0    |
+| train/success_rate | 0.295      |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 56          |
+| stats_g/mean       | 0.84351414  |
+| stats_g/std        | 0.10531407  |
+| stats_o/mean       | 0.20377335  |
+| stats_o/std        | 0.104206465 |
+| test/episode       | 1140.0      |
+| test/mean_Q        | -13.467156  |
+| test/success_rate  | 0.6         |
+| train/episode      | 11400.0     |
+| train/success_rate | 0.355       |
+------------------------------------
+New best success rate: 0.6.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_56.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 57         |
+| stats_g/mean       | 0.84354    |
+| stats_g/std        | 0.10530349 |
+| stats_o/mean       | 0.2038214  |
+| stats_o/std        | 0.10448449 |
+| test/episode       | 1160.0     |
+| test/mean_Q        | -20.29254  |
+| test/success_rate  | 0.4        |
+| train/episode      | 11600.0    |
+| train/success_rate | 0.425      |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 58          |
+| stats_g/mean       | 0.8435394   |
+| stats_g/std        | 0.105322845 |
+| stats_o/mean       | 0.20386969  |
+| stats_o/std        | 0.10485023  |
+| test/episode       | 1180.0      |
+| test/mean_Q        | -23.281496  |
+| test/success_rate  | 0.3         |
+| train/episode      | 11800.0     |
+| train/success_rate | 0.365       |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_58.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 59         |
+| stats_g/mean       | 0.8436331  |
+| stats_g/std        | 0.10525764 |
+| stats_o/mean       | 0.20395592 |
+| stats_o/std        | 0.1050222  |
+| test/episode       | 1200.0     |
+| test/mean_Q        | -16.97776  |
+| test/success_rate  | 0.55       |
+| train/episode      | 12000.0    |
+| train/success_rate | 0.355      |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 60          |
+| stats_g/mean       | 0.8436343   |
+| stats_g/std        | 0.105251946 |
+| stats_o/mean       | 0.2039522   |
+| stats_o/std        | 0.105474845 |
+| test/episode       | 1220.0      |
+| test/mean_Q        | -16.102625  |
+| test/success_rate  | 0.45        |
+| train/episode      | 12200.0     |
+| train/success_rate | 0.35        |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_60.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 61         |
+| stats_g/mean       | 0.84367436 |
+| stats_g/std        | 0.10516072 |
+| stats_o/mean       | 0.20400038 |
+| stats_o/std        | 0.10596361 |
+| test/episode       | 1240.0     |
+| test/mean_Q        | -14.575177 |
+| test/success_rate  | 0.55       |
+| train/episode      | 12400.0    |
+| train/success_rate | 0.36       |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 62          |
+| stats_g/mean       | 0.843637    |
+| stats_g/std        | 0.10528802  |
+| stats_o/mean       | 0.20403841  |
+| stats_o/std        | 0.106429726 |
+| test/episode       | 1260.0      |
+| test/mean_Q        | -17.444908  |
+| test/success_rate  | 0.55        |
+| train/episode      | 12600.0     |
+| train/success_rate | 0.335       |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_62.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 63          |
+| stats_g/mean       | 0.8436834   |
+| stats_g/std        | 0.105139524 |
+| stats_o/mean       | 0.20398258  |
+| stats_o/std        | 0.1066461   |
+| test/episode       | 1280.0      |
+| test/mean_Q        | -16.969027  |
+| test/success_rate  | 0.5         |
+| train/episode      | 12800.0     |
+| train/success_rate | 0.405       |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 64          |
+| stats_g/mean       | 0.84370375  |
+| stats_g/std        | 0.105068825 |
+| stats_o/mean       | 0.20407218  |
+| stats_o/std        | 0.10686328  |
+| test/episode       | 1300.0      |
+| test/mean_Q        | -25.586414  |
+| test/success_rate  | 0.3         |
+| train/episode      | 13000.0     |
+| train/success_rate | 0.39        |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_64.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 65          |
+| stats_g/mean       | 0.84373665  |
+| stats_g/std        | 0.104964584 |
+| stats_o/mean       | 0.20411055  |
+| stats_o/std        | 0.10715407  |
+| test/episode       | 1320.0      |
+| test/mean_Q        | -14.552117  |
+| test/success_rate  | 0.6         |
+| train/episode      | 13200.0     |
+| train/success_rate | 0.4         |
+------------------------------------
+New best success rate: 0.6.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 66         |
+| stats_g/mean       | 0.8437736  |
+| stats_g/std        | 0.10489738 |
+| stats_o/mean       | 0.20417221 |
+| stats_o/std        | 0.10737453 |
+| test/episode       | 1340.0     |
+| test/mean_Q        | -17.120491 |
+| test/success_rate  | 0.55       |
+| train/episode      | 13400.0    |
+| train/success_rate | 0.44       |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_66.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 67         |
+| stats_g/mean       | 0.8437772  |
+| stats_g/std        | 0.10470203 |
+| stats_o/mean       | 0.20418257 |
+| stats_o/std        | 0.10761656 |
+| test/episode       | 1360.0     |
+| test/mean_Q        | -18.841597 |
+| test/success_rate  | 0.5        |
+| train/episode      | 13600.0    |
+| train/success_rate | 0.46       |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 68          |
+| stats_g/mean       | 0.8437502   |
+| stats_g/std        | 0.104509346 |
+| stats_o/mean       | 0.20421539  |
+| stats_o/std        | 0.107850924 |
+| test/episode       | 1380.0      |
+| test/mean_Q        | -17.065817  |
+| test/success_rate  | 0.5         |
+| train/episode      | 13800.0     |
+| train/success_rate | 0.45        |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_68.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 69          |
+| stats_g/mean       | 0.84364295  |
+| stats_g/std        | 0.104465604 |
+| stats_o/mean       | 0.2042154   |
+| stats_o/std        | 0.10819732  |
+| test/episode       | 1400.0      |
+| test/mean_Q        | -7.7583237  |
+| test/success_rate  | 0.75        |
+| train/episode      | 14000.0     |
+| train/success_rate | 0.405       |
+------------------------------------
+New best success rate: 0.75.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 70          |
+| stats_g/mean       | 0.84367657  |
+| stats_g/std        | 0.10442079  |
+| stats_o/mean       | 0.20425406  |
+| stats_o/std        | 0.108345814 |
+| test/episode       | 1420.0      |
+| test/mean_Q        | -18.478895  |
+| test/success_rate  | 0.45        |
+| train/episode      | 14200.0     |
+| train/success_rate | 0.425       |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_70.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 71          |
+| stats_g/mean       | 0.84374326  |
+| stats_g/std        | 0.104294956 |
+| stats_o/mean       | 0.20426612  |
+| stats_o/std        | 0.108517446 |
+| test/episode       | 1440.0      |
+| test/mean_Q        | -18.831823  |
+| test/success_rate  | 0.6         |
+| train/episode      | 14400.0     |
+| train/success_rate | 0.405       |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 72          |
+| stats_g/mean       | 0.84366804  |
+| stats_g/std        | 0.104321785 |
+| stats_o/mean       | 0.20424964  |
+| stats_o/std        | 0.10882705  |
+| test/episode       | 1460.0      |
+| test/mean_Q        | -16.444977  |
+| test/success_rate  | 0.55        |
+| train/episode      | 14600.0     |
+| train/success_rate | 0.435       |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_72.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 73          |
+| stats_g/mean       | 0.84374005  |
+| stats_g/std        | 0.10433135  |
+| stats_o/mean       | 0.20424314  |
+| stats_o/std        | 0.109054066 |
+| test/episode       | 1480.0      |
+| test/mean_Q        | -20.499908  |
+| test/success_rate  | 0.45        |
+| train/episode      | 14800.0     |
+| train/success_rate | 0.345       |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 74          |
+| stats_g/mean       | 0.84368724  |
+| stats_g/std        | 0.10434583  |
+| stats_o/mean       | 0.20426796  |
+| stats_o/std        | 0.10941714  |
+| test/episode       | 1500.0      |
+| test/mean_Q        | -12.1144285 |
+| test/success_rate  | 0.65        |
+| train/episode      | 15000.0     |
+| train/success_rate | 0.35        |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_74.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 75         |
+| stats_g/mean       | 0.8436091  |
+| stats_g/std        | 0.10431064 |
+| stats_o/mean       | 0.20425832 |
+| stats_o/std        | 0.10973833 |
+| test/episode       | 1520.0     |
+| test/mean_Q        | -17.861725 |
+| test/success_rate  | 0.5        |
+| train/episode      | 15200.0    |
+| train/success_rate | 0.37       |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 76         |
+| stats_g/mean       | 0.8436747  |
+| stats_g/std        | 0.1042654  |
+| stats_o/mean       | 0.2042415  |
+| stats_o/std        | 0.10991464 |
+| test/episode       | 1540.0     |
+| test/mean_Q        | -17.538923 |
+| test/success_rate  | 0.55       |
+| train/episode      | 15400.0    |
+| train/success_rate | 0.43       |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_76.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 77          |
+| stats_g/mean       | 0.8437133   |
+| stats_g/std        | 0.10427117  |
+| stats_o/mean       | 0.20431511  |
+| stats_o/std        | 0.110013016 |
+| test/episode       | 1560.0      |
+| test/mean_Q        | -16.395754  |
+| test/success_rate  | 0.5         |
+| train/episode      | 15600.0     |
+| train/success_rate | 0.395       |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 78         |
+| stats_g/mean       | 0.84383446 |
+| stats_g/std        | 0.10422852 |
+| stats_o/mean       | 0.20438044 |
+| stats_o/std        | 0.11029216 |
+| test/episode       | 1580.0     |
+| test/mean_Q        | -16.520407 |
+| test/success_rate  | 0.55       |
+| train/episode      | 15800.0    |
+| train/success_rate | 0.42       |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_78.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 79          |
+| stats_g/mean       | 0.8438398   |
+| stats_g/std        | 0.10410877  |
+| stats_o/mean       | 0.20436296  |
+| stats_o/std        | 0.110410646 |
+| test/episode       | 1600.0      |
+| test/mean_Q        | -11.957845  |
+| test/success_rate  | 0.65        |
+| train/episode      | 16000.0     |
+| train/success_rate | 0.515       |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 80          |
+| stats_g/mean       | 0.8438211   |
+| stats_g/std        | 0.1040819   |
+| stats_o/mean       | 0.2043832   |
+| stats_o/std        | 0.110658295 |
+| test/episode       | 1620.0      |
+| test/mean_Q        | -20.295868  |
+| test/success_rate  | 0.5         |
+| train/episode      | 16200.0     |
+| train/success_rate | 0.45        |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_80.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 81         |
+| stats_g/mean       | 0.8438606  |
+| stats_g/std        | 0.10405848 |
+| stats_o/mean       | 0.2044022  |
+| stats_o/std        | 0.11081225 |
+| test/episode       | 1640.0     |
+| test/mean_Q        | -21.788065 |
+| test/success_rate  | 0.45       |
+| train/episode      | 16400.0    |
+| train/success_rate | 0.46       |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 82          |
+| stats_g/mean       | 0.8438279   |
+| stats_g/std        | 0.10402098  |
+| stats_o/mean       | 0.2043833   |
+| stats_o/std        | 0.110905245 |
+| test/episode       | 1660.0      |
+| test/mean_Q        | -13.704473  |
+| test/success_rate  | 0.7         |
+| train/episode      | 16600.0     |
+| train/success_rate | 0.495       |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_82.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 83         |
+| stats_g/mean       | 0.8438664  |
+| stats_g/std        | 0.10399553 |
+| stats_o/mean       | 0.20441401 |
+| stats_o/std        | 0.11113644 |
+| test/episode       | 1680.0     |
+| test/mean_Q        | -20.577808 |
+| test/success_rate  | 0.55       |
+| train/episode      | 16800.0    |
+| train/success_rate | 0.42       |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 84         |
+| stats_g/mean       | 0.8439606  |
+| stats_g/std        | 0.10401631 |
+| stats_o/mean       | 0.20444494 |
+| stats_o/std        | 0.11149246 |
+| test/episode       | 1700.0     |
+| test/mean_Q        | -13.84076  |
+| test/success_rate  | 0.65       |
+| train/episode      | 17000.0    |
+| train/success_rate | 0.405      |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_84.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 85          |
+| stats_g/mean       | 0.8439638   |
+| stats_g/std        | 0.10403962  |
+| stats_o/mean       | 0.20445755  |
+| stats_o/std        | 0.111617014 |
+| test/episode       | 1720.0      |
+| test/mean_Q        | -7.302576   |
+| test/success_rate  | 0.7         |
+| train/episode      | 17200.0     |
+| train/success_rate | 0.435       |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 86          |
+| stats_g/mean       | 0.84399587  |
+| stats_g/std        | 0.103985585 |
+| stats_o/mean       | 0.20447505  |
+| stats_o/std        | 0.111676484 |
+| test/episode       | 1740.0      |
+| test/mean_Q        | -10.779342  |
+| test/success_rate  | 0.75        |
+| train/episode      | 17400.0     |
+| train/success_rate | 0.44        |
+------------------------------------
+New best success rate: 0.75.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_86.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 87         |
+| stats_g/mean       | 0.8440427  |
+| stats_g/std        | 0.10391611 |
+| stats_o/mean       | 0.20451804 |
+| stats_o/std        | 0.11172839 |
+| test/episode       | 1760.0     |
+| test/mean_Q        | -15.989889 |
+| test/success_rate  | 0.55       |
+| train/episode      | 17600.0    |
+| train/success_rate | 0.5        |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 88         |
+| stats_g/mean       | 0.8440532  |
+| stats_g/std        | 0.10387418 |
+| stats_o/mean       | 0.20452148 |
+| stats_o/std        | 0.11187818 |
+| test/episode       | 1780.0     |
+| test/mean_Q        | -22.688965 |
+| test/success_rate  | 0.45       |
+| train/episode      | 17800.0    |
+| train/success_rate | 0.505      |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_88.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 89         |
+| stats_g/mean       | 0.84414417 |
+| stats_g/std        | 0.103878   |
+| stats_o/mean       | 0.20450579 |
+| stats_o/std        | 0.11203228 |
+| test/episode       | 1800.0     |
+| test/mean_Q        | -15.651456 |
+| test/success_rate  | 0.55       |
+| train/episode      | 18000.0    |
+| train/success_rate | 0.45       |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 90         |
+| stats_g/mean       | 0.8442502  |
+| stats_g/std        | 0.10385758 |
+| stats_o/mean       | 0.20454666 |
+| stats_o/std        | 0.11208677 |
+| test/episode       | 1820.0     |
+| test/mean_Q        | -10.693156 |
+| test/success_rate  | 0.6        |
+| train/episode      | 18200.0    |
+| train/success_rate | 0.445      |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_90.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 91          |
+| stats_g/mean       | 0.84429055  |
+| stats_g/std        | 0.103994034 |
+| stats_o/mean       | 0.2045383   |
+| stats_o/std        | 0.112096556 |
+| test/episode       | 1840.0      |
+| test/mean_Q        | -9.107083   |
+| test/success_rate  | 0.55        |
+| train/episode      | 18400.0     |
+| train/success_rate | 0.505       |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 92         |
+| stats_g/mean       | 0.8442531  |
+| stats_g/std        | 0.1040071  |
+| stats_o/mean       | 0.20454285 |
+| stats_o/std        | 0.11211749 |
+| test/episode       | 1860.0     |
+| test/mean_Q        | -13.417978 |
+| test/success_rate  | 0.65       |
+| train/episode      | 18600.0    |
+| train/success_rate | 0.47       |
+-----------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_92.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 93          |
+| stats_g/mean       | 0.84424883  |
+| stats_g/std        | 0.10396439  |
+| stats_o/mean       | 0.20455556  |
+| stats_o/std        | 0.112104885 |
+| test/episode       | 1880.0      |
+| test/mean_Q        | -12.088558  |
+| test/success_rate  | 0.65        |
+| train/episode      | 18800.0     |
+| train/success_rate | 0.5         |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 94          |
+| stats_g/mean       | 0.84430736  |
+| stats_g/std        | 0.10397664  |
+| stats_o/mean       | 0.2045933   |
+| stats_o/std        | 0.112133764 |
+| test/episode       | 1900.0      |
+| test/mean_Q        | -13.123783  |
+| test/success_rate  | 0.55        |
+| train/episode      | 19000.0     |
+| train/success_rate | 0.45        |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_94.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 95          |
+| stats_g/mean       | 0.84424955  |
+| stats_g/std        | 0.104011714 |
+| stats_o/mean       | 0.20461471  |
+| stats_o/std        | 0.11218297  |
+| test/episode       | 1920.0      |
+| test/mean_Q        | -14.4046135 |
+| test/success_rate  | 0.55        |
+| train/episode      | 19200.0     |
+| train/success_rate | 0.45        |
+------------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 96          |
+| stats_g/mean       | 0.8442662   |
+| stats_g/std        | 0.10403243  |
+| stats_o/mean       | 0.20463155  |
+| stats_o/std        | 0.112289816 |
+| test/episode       | 1940.0      |
+| test/mean_Q        | -13.862666  |
+| test/success_rate  | 0.65        |
+| train/episode      | 19400.0     |
+| train/success_rate | 0.425       |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_96.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 97         |
+| stats_g/mean       | 0.8442746  |
+| stats_g/std        | 0.10396782 |
+| stats_o/mean       | 0.2046712  |
+| stats_o/std        | 0.11228898 |
+| test/episode       | 1960.0     |
+| test/mean_Q        | -7.9264297 |
+| test/success_rate  | 0.85       |
+| train/episode      | 19600.0    |
+| train/success_rate | 0.475      |
+-----------------------------------
+New best success rate: 0.85.
+Saving policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+------------------------------------
+| epoch              | 98          |
+| stats_g/mean       | 0.84427994  |
+| stats_g/std        | 0.104051225 |
+| stats_o/mean       | 0.20467241  |
+| stats_o/std        | 0.112380564 |
+| test/episode       | 1980.0      |
+| test/mean_Q        | -15.935694  |
+| test/success_rate  | 0.55        |
+| train/episode      | 19800.0     |
+| train/success_rate | 0.495       |
+------------------------------------
+Saving periodic policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_98.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
+-----------------------------------
+| epoch              | 99         |
+| stats_g/mean       | 0.84432584 |
+| stats_g/std        | 0.10399759 |
+| stats_o/mean       | 0.20468833 |
+| stats_o/std        | 0.11245376 |
+| test/episode       | 2000.0     |
+| test/mean_Q        | -12.139559 |
+| test/success_rate  | 0.65       |
+| train/episode      | 20000.0    |
+| train/success_rate | 0.445      |
+-----------------------------------
+Saving latest policy to /home/yuchen/data2/RLProject/Experiment/Result/Temp/Exp1/RLHERNoDemo//rl/policy_latest.pkl.
