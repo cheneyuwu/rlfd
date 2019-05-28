@@ -182,73 +182,75 @@ if __name__ == "__main__":
 
     # Quick checks
     ###################################################################################################################
+
     # exp_dir = os.getenv("EXPERIMENT")
     # result_dir = os.path.join(exp_dir, "Result/Temp/")
 
     # display_exp.display(policy_file=result_dir + "/RLDemoCriticPolicy/rl/policy_latest.pkl")
     # assert not uncertainty.check()
     # assert not animation.plot_animation(load_dir=os.path.join(result_dir, "../Ap28Reach2DFO/Demo256/RLNoDemo/ac_output"))
-    # exit(0)
+
+    # exit()
 
     # # Used for openai environments
     # ###################################################################################################################
 
-    # train_exp.env = "FetchPush-v1"
-    # train_exp.update()
+    environment = "FetchPickAndPlaceDense-v1"
+    train_exp.env = environment
+    train_exp.update()
 
-    # # We can change the result directory without updating
-    # exp_dir = os.getenv("EXPERIMENT")
-    # demo_exp.result_dir = os.path.join(exp_dir, "Result/Temp2/")
-    # train_exp.result_dir = os.path.join(exp_dir, "Result/Temp2/")
-    # display_exp.result_dir = os.path.join(exp_dir, "Result/Temp2/")
-    # plot_exp.result_dir = os.path.join(exp_dir, "Result/Temp2/")
-    # animation.result_dir = os.path.join(exp_dir, "Result/Temp2/")
-    # compare_q.result_dir = os.path.join(exp_dir, "Result/Temp2/")
-    # uncertainty.result_dir = os.path.join(exp_dir, "Result/Temp2/")
+    demo_data_size = 1024
+    train_rl_epochs = 100
 
-    # demo_data_size = 10240
-    # train_rl_epochs = 100
+    seed = 1
+    for i in range(3):
+        seed += i*100
 
-    # # Train the RL without demonstration
-    # train_exp.rl_only(
-    #     rl_scope="critic_demo",
-    #     seed=0,
-    #     rl_num_sample=1,
-    #     train_rl_epochs=train_rl_epochs,
-    # )
+        # We can change the result directory without updating
+        exp_dir = os.getenv("EXPERIMENT")
+        result_dir = os.path.join(exp_dir, "Result/Temp/Exp"+str(i)+"/")
+        demo_exp.result_dir = result_dir
+        train_exp.result_dir = result_dir
 
-    # # Generate demonstration data
-    # demo_exp.generate_demo(
-    #     num_itr=demo_data_size,
-    #     entire_eps=1,
-    # )
+        # Train the RL without demonstration
+        assert not train_exp.rl_only(
+            rl_scope="rl_only",
+            n_cycles=50,
+            seed=seed+10,
+            rl_num_sample=1,
+            rl_batch_size=256,
+            train_rl_epochs=train_rl_epochs,
+        )
 
-    # # Train the demonstration network.
-    # # Method 1
-    # # train_exp.demo_nn_critic_only(demo_file=train_exp.result_dir + "/RLNoDemo/critic_q/query_latest.npz", demo_test_file=train_exp.result_dir + "/RLNoDemo/critic_q/query_latest.npz")
-    # # Method 2
-    # train_exp.demo_nn_critic_only(
-    #     train_demo_epochs=100,
-    #     demo_num_sample=12,
-    #     demo_data_size=demo_data_size,
-    #     demo_batch_size=int(np.ceil(demo_data_size / 16)),
-    # )
+        assert not train_exp.rl_her_only(
+            rl_scope="rl_only",
+            n_cycles=50,
+            seed=seed+20,
+            rl_num_sample=1,
+            rl_batch_size=256,
+            train_rl_epochs=train_rl_epochs,
+        )
 
-    # # Train the RL with demonstration
-    # train_exp.rl_with_demo_critic_nn(
-    #     seed=13,
-    #     rl_num_sample=1,
-    #     train_rl_epochs=train_rl_epochs,
-    #     # Method 1
-    #     # demo_policy_file=os.path.join(train_exp.result_dir, "RLNoDemo/rl/policy_latest.pkl"),
-    #     # Method 2
-    #     demo_policy_file=os.path.join(train_exp.result_dir, "DemoCriticOnly/rl_demo_critic/policy_latest.pkl"),
-    # )
+        # Generate demonstration data
+        assert not demo_exp.generate_demo(seed=seed+30, num_itr=demo_data_size, entire_eps=1, shuffle=0)
 
-    # # Plot the training result
-    # plot_exp.plot(dirs=plot_exp.result_dir)
+        # Train the RL with demonstration
+        assert not train_exp.rl_with_demo_critic_rb(
+            n_cycles=50,
+            seed=seed + 40,
+            rl_num_sample=1,
+            rl_batch_size=512,
+            rl_batch_size_demo=256,
+            rl_num_demo=demo_data_size,
+            her_strategy="none",
+            demo_file=result_dir + "DemoData/" + environment + ".npz",
+            train_rl_epochs=train_rl_epochs,
+        )
 
-    # exit()
+    # Plot the training result
+    plot_exp.plot(dirs=plot_exp.result_dir)
+
+    exit()
 
     # Used for the Reach2D environment
     ###################################################################################################################
@@ -257,65 +259,60 @@ if __name__ == "__main__":
     train_exp.env = environment
     train_exp.update()
 
-    demo_data_size = 128
-    train_rl_epochs = 50
-    # seed = 0
-    # for i in range(4):
-    #     seed += i*100
+    demo_data_size = 512
+    train_rl_epochs = 30
+    seed = 1
+    for i in range(3):
+        seed += i*100
 
-    #     # We can change the result directory without updating
-    #     exp_dir = os.getenv("EXPERIMENT")
-    #     result_dir = os.path.join(exp_dir, "Result/Temp/Exp"+str(i)+"/")
-    #     demo_exp.result_dir = result_dir
-    #     train_exp.result_dir = result_dir
-    #     display_exp.result_dir = result_dir
-    #     plot_exp.result_dir = result_dir
-    #     animation.result_dir = result_dir
-    #     compare_q.result_dir = result_dir
-    #     uncertainty.result_dir = result_dir
+        # We can change the result directory without updating
+        exp_dir = os.getenv("EXPERIMENT")
+        result_dir = os.path.join(exp_dir, "Result/Temp/Exp"+str(i)+"/")
+        demo_exp.result_dir = result_dir
+        train_exp.result_dir = result_dir
 
-    #     # Train the RL without demonstration
-    #     assert not train_exp.rl_only(
-    #         r_scale=1.0,
-    #         r_shift=0.0,
-    #         rl_action_l2=0.5,
-    #         rl_scope="critic_demo",
-    #         n_cycles=10,
-    #         seed=seed+10,
-    #         rl_num_sample=1,
-    #         rl_batch_size=256,
-    #         train_rl_epochs=train_rl_epochs,
-    #     )
-    #     assert not train_exp.rl_her_only(
-    #         r_scale=1.0,
-    #         r_shift=0.0,
-    #         rl_action_l2=0.5,
-    #         rl_scope="critic_demo",
-    #         n_cycles=10,
-    #         seed=seed+20,
-    #         rl_num_sample=1,
-    #         rl_batch_size=256,
-    #         train_rl_epochs=train_rl_epochs,
-    #     )
+        # Train the RL without demonstration
+        assert not train_exp.rl_only(
+            r_scale=1.0,
+            r_shift=0.0,
+            rl_action_l2=0.5,
+            rl_scope="critic_demo",
+            n_cycles=10,
+            seed=seed+10,
+            rl_num_sample=1,
+            rl_batch_size=256,
+            train_rl_epochs=train_rl_epochs,
+        )
+        assert not train_exp.rl_her_only(
+            r_scale=1.0,
+            r_shift=0.0,
+            rl_action_l2=0.5,
+            rl_scope="critic_demo",
+            n_cycles=10,
+            seed=seed+20,
+            rl_num_sample=1,
+            rl_batch_size=256,
+            train_rl_epochs=train_rl_epochs,
+        )
 
-    #     # Generate demonstration data
-    #     assert not demo_exp.generate_demo(seed=seed+30, num_itr=demo_data_size, entire_eps=1, shuffle=0)
+        # Generate demonstration data
+        assert not demo_exp.generate_demo(seed=seed+30, num_itr=demo_data_size, entire_eps=1, shuffle=0)
 
-    #     # Train the RL with demonstration
-    #     assert not train_exp.rl_with_demo_critic_rb(
-    #         r_scale=1.0,
-    #         r_shift=0.0,
-    #         rl_action_l2=0.5,
-    #         n_cycles=10,
-    #         seed=seed+40,
-    #         rl_num_sample=1,
-    #         rl_batch_size=512,
-    #         rl_batch_size_demo=256, 
-    #         train_rl_epochs=train_rl_epochs,
-    #         demo_file=result_dir + "DemoData/" + environment + ".npz",
-    #         rl_num_demo=demo_data_size,
-    #         her_strategy="none",
-    #     )
+        # Train the RL with demonstration
+        assert not train_exp.rl_with_demo_critic_rb(
+            r_scale=1.0,
+            r_shift=0.0,
+            rl_action_l2=0.5,
+            n_cycles=10,
+            seed=seed+40,
+            rl_num_sample=1,
+            rl_batch_size=512,
+            rl_batch_size_demo=256,
+            train_rl_epochs=train_rl_epochs,
+            demo_file=result_dir + "DemoData/" + environment + ".npz",
+            rl_num_demo=demo_data_size,
+            her_strategy="none",
+        )
 
     # Plot the training result
     assert not plot_exp.plot(dirs=plot_exp.result_dir)
@@ -334,25 +331,3 @@ if __name__ == "__main__":
     # assert not display_exp.display(policy_file=display_exp.result_dir + "RLDemoCriticReplBuffer/rl/policy_latest.pkl")
 
     exit()
-
-    ###################################################################################################################
-    # Used for checking the uncertainty output from the demonstration neural net on simple data
-
-    # Other useful commands
-    ###################################################################################################################
-
-    # Plot the collected query result
-    # animation.plot_animation()
-
-    # Plot the training result
-    # plot_exp.plot()
-
-    # Display a policy result (calls run_agent).
-    # display_exp.display()
-
-    # A complete test set as example.
-    # train_exp.rl_only( rl_action_l2 = 0.5, n_cycles=10, seed=0)
-    # demo_exp.generate_demo()
-    # train_exp.demo_nn_critic_only()
-    # train_exp.rl_with_demo_critic_nn( rl_action_l2 = 0.5, n_cycles=10, seed=0)
-    # train_exp.rl_with_demo_critic( rl_action_l2 = 0.1, n_cycles=20, seed=3)

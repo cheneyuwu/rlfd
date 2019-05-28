@@ -64,7 +64,7 @@ def train_reinforce(
         rollout_worker.clear_history()
         episode = rollout_worker.generate_rollouts()
         policy.store_episode(episode)
-        for i in range(1000):
+        for i in range(2000):
             loss = policy.pre_train()
             if rank == 0 and i % 100 == 0:
                 logger.record_tabular("step", i)
