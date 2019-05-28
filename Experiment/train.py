@@ -87,7 +87,7 @@ class Train(Experiment):
     def rl_with_demo_critic_rb(self, **kwargs):
         command = self.run.copy()
         command["--logdir"] = self.result_dir + "RLDemoCriticReplBuffer"
-        command["--save_path"] = self.result_dir + "RLDemoCriticreplBuffer/"
+        command["--save_path"] = self.result_dir + "RLDemoCriticReplBuffer/"
         command["--demo_critic"] = "rb"
         return command
 
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     # # Used for openai environments
     # ###################################################################################################################
 
-    environment = "FetchPickAndPlaceDense-v1"
+    environment = "FetchPickAndPlace-v1"
     train_exp.env = environment
     train_exp.update()
 
