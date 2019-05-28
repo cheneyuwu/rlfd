@@ -23,12 +23,15 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, shuffle, render, e
     with open(policy_file, "rb") as f:
         policy = pickle.load(f)
 
-    # extract environment construction information
+    # Extract environment construction information
     env_name = policy.info["env_name"]
     r_scale = policy.info["r_scale"]
     r_shift = policy.info["r_shift"]
     eps_length = policy.info["eps_length"]
     T = policy.T
+
+    max_concurrency = 10
+    num_eps = int(np.ceil(num_itr/T)) if shuffle and entire_eps else num_itr
 
     # Prepare params.
     params = {}
@@ -38,13 +41,24 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, shuffle, render, e
     params["eps_length"] = eps_length
     params["rank_seed"] = seed
     params["render"] = render
-    params["rollout_batch_size"] = int(np.ceil(num_itr/T)) if shuffle and entire_eps else num_itr
+    params["rollout_batch_size"] = np.minimum(num_eps, max_concurrency)
     params = config.add_env_params(params=params)
     demo = config.config_demo(params=params, policy=policy)
 
     # Run evaluation.
+    episode = None
+    num_eps_togo = num_eps
     demo.clear_history()
-    episode = demo.generate_rollouts()
+    while num_eps_togo > 0:
+        eps = demo.generate_rollouts()
+        num_eps_to_store = np.minimum(num_eps_togo, max_concurrency)
+        if episode == None:
+            episode = {k: eps[k][:num_eps_to_store,...] for k in eps.keys()}
+        else:
+            episode = {k:np.concatenate((episode[k], eps[k][:num_eps_to_store,...]), axis=0) for k in eps.keys()}
+        num_eps_togo -= num_eps_to_store
+
+    assert all([episode[k].shape[0] == num_eps for k in episode.keys()])
 
     # Add expected Q value
     exp_q = np.empty(episode["r"].shape)

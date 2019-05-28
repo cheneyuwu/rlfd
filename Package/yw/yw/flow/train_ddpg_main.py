@@ -60,15 +60,16 @@ def train_reinforce(
     best_success_rate = -1
 
     if policy.demo_critic == "rb":
-        logger.info("Pre-training")
+        logger.info("Pre-training on demonstration data only.")
         rollout_worker.clear_history()
         episode = rollout_worker.generate_rollouts()
         policy.store_episode(episode)
         for i in range(1000):
             loss = policy.pre_train()
-            if i % 100 == 0:
-                print(loss)
-            policy.update_target_net()
+            if rank == 0 and i % 100 == 0:
+                logger.record_tabular("step", i)
+                logger.record_tabular("loss", loss)
+                logger.dump_tabular()
         policy._init_target_net()
 
     for epoch in range(n_epochs):
