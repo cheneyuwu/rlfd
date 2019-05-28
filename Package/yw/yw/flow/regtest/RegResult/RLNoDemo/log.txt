@@ -1,11 +1,11 @@
-Logging to /Users/yuchenwu/Desktop/RLProject/Temp/RegResult/RLNoDemo/
+Logging to /home/yuchen/data2/RLProject/Temp/RegResult/RLNoDemo/
 Launching the training process with 1 cpu core(s).
 Setting log level to 1.
 train_ddpg_main.launch -> Using debug mode. Avoid training with too many epochs.
 Using environment Reach2D with r scale down by 1.000000 shift by 0.000000 and max episode 2.000000
 *** her_params ***
 k                             4
-reward_fun                    <function configure_her.<locals>.reward_fun at 0x12740b7b8>
+reward_fun                    <function configure_her.<locals>.reward_fun at 0x7fe243aaa510>
 strategy                      none
 *** her_params ***
 *** nstep_params ***
@@ -42,10 +42,10 @@ prm_loss_weight               0.001
 q_filter                      0
 relative_goals                False
 rollout_batch_size            2
-sample_demo_transitions       <function make_sample_nstep_transitions.<locals>.sample_nstep_transitions at 0x12740b6a8>
-sample_rl_transitions         <function make_sample_her_transitions.<locals>.sample_her_transitions at 0x12740b620>
+sample_demo_transitions       <function make_sample_nstep_transitions.<locals>.sample_nstep_transitions at 0x7fe243aaa400>
+sample_rl_transitions         <function make_sample_her_transitions.<locals>.sample_her_transitions at 0x7fe243aaa378>
 scope                         ddpg
-subtract_goals                <function simple_goal_subtract at 0x126b44a60>
+subtract_goals                <function simple_goal_subtract at 0x7fe243aa56a8>
 *** ddpg_params ***
 Configuring the replay buffer.
 DDPG.__init__ -> The buffer shapes are: {'o': (3, 4), 'u': (2, 2), 'g': (2, 2), 'info_is_success': (2, 1), 'ag': (3, 2), 'mask': (2, 1), 'r': (2, 1), 'n': (2, 1), 'q': (2, 1)}
@@ -198,5 +198,5 @@ DDPG.get_actions -> The selected action shape is: (2, 2)
 | train/success_rate | 0.0          |
 -------------------------------------
 New best success rate: 0.0.
-Saving policy to /Users/yuchenwu/Desktop/RLProject/Temp/RegResult/RLNoDemo//rl/policy_best.pkl.
-Saving latest policy to /Users/yuchenwu/Desktop/RLProject/Temp/RegResult/RLNoDemo//rl/policy_latest.pkl.
+Saving policy to /home/yuchen/data2/RLProject/Temp/RegResult/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/data2/RLProject/Temp/RegResult/RLNoDemo//rl/policy_latest.pkl.
