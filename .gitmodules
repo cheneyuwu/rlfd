@@ -1,0 +1,6 @@
+[submodule "Package/surreal"]
+	path = Package/surreal
+	url = git@github.com:cheneyuwu/surreal.git
+[submodule "Package/robosuite"]
+	path = Package/robosuite
+	url = git@github.com:cheneyuwu/robosuite.git
