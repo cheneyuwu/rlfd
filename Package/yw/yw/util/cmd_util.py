@@ -11,7 +11,7 @@ class Command:
         Arg:
             cmd (list) : command to run in terminal
         """
-        cmd = [prefix] + cmd
+        cmd = prefix.split(" ") + cmd
         output = "| " + " ".join(cmd) + " |"
         margin = "-" * len(output)
         call(["echo", margin])
@@ -31,7 +31,7 @@ class Command:
                 if key.startswith("-"):
                     run.append(str(key))
                 run.append(str(cmd[key]))
-            return Command.print_call(run)
+            return Command.print_call(run, list(cmd.keys())[0])
 
         return wrapper
 
