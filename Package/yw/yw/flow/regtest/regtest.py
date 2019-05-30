@@ -62,6 +62,7 @@ class Train(RegTest):
         command["--logdir"] = self.result_dir + "RLNoDemo/"
         command["--save_path"] = self.result_dir + "RLNoDemo/"
         command["--train_rl"] = 1
+        command["--her_strategy"] = "future"
         return command
 
 if __name__ == "__main__":
