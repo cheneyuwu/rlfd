@@ -1,2 +1,2 @@
 epoch,stats_g/mean,stats_g/std,stats_o/mean,stats_o/std,test/episode,test/mean_Q,test/success_rate,train/episode,train/success_rate
-0,0.25293636,0.39022207,0.09048323,0.46089748,2.0,-0.122741915,0.0,4.0,0.0
+0,0.13957907,0.4667055,0.09625024,0.4528616,2.0,-0.19886065,0.0,4.0,0.0
