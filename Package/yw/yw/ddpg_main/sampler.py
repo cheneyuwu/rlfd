@@ -39,17 +39,18 @@ def make_sample_her_transitions(strategy, k, reward_fun):
         # keep the original goal.
         future_ag = episode_batch["ag"][episode_idxs[her_indexes], future_t]
         transitions["g"][her_indexes] = future_ag
+        transitions["g_2"][her_indexes] = future_ag
 
         if "q" in transitions.keys():
             transitions["q"][her_indexes] = -100 * np.ones(transitions["q"][her_indexes].shape)
 
-        # Reconstruct info dictionary for reward  computation.
+        # Reconstruct info dictionary for reward computation.
         info = {}
         for key, value in transitions.items():
             if key.startswith("info_"):
                 info[key.replace("info_", "")] = value
         # Re-compute reward since we may have substituted the goal.
-        reward_params = {k: transitions[k] for k in ["ag_2", "g"]}
+        reward_params = {k: transitions[k] for k in ["ag_2", "g_2"]}
         reward_params["info"] = info
         transitions["r"] = reward_fun(**reward_params).reshape(-1, 1)  # reshape to be consistent with default reward
 
@@ -76,10 +77,10 @@ def make_sample_nstep_transitions(gamma, n):
         # Select which episodes and time steps to use.
         episode_idxs = np.random.randint(0, total_batch_size, batch_size)
         t_samples = np.random.randint(T, size=batch_size)
-        
+
         # Get the transitions
         transitions = {}
-        for k in ["o", "u", "g", "ag", "info_is_success", "q", "mask"]:
+        for k in ["o", "u", "g", "ag", "q", "mask"]:
             transitions[k] = episode_batch[k][episode_idxs, t_samples].copy()
         # calculate n step return
         cum_reward = np.zeros_like(episode_batch["r"][episode_idxs, t_samples])
@@ -92,7 +93,7 @@ def make_sample_nstep_transitions(gamma, n):
         transitions["n"] = cum_discount
         # change the state it goes to
         n_step_t_samples = np.minimum(t_samples + n - 1, T-1)
-        for k in ["o_2", "ag_2"]:
+        for k in ["o_2", "ag_2", "g_2"]:
             transitions[k] = episode_batch[k][episode_idxs, n_step_t_samples].copy()
         transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:]) for k in transitions.keys()}
 
@@ -100,6 +101,6 @@ def make_sample_nstep_transitions(gamma, n):
         assert transitions["u"].shape[0] == batch_size
 
         return transitions
-    
+
     return sample_nstep_transitions
-    
+

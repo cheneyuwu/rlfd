@@ -52,9 +52,9 @@ class RolloutWorker:
         self.n_episodes = 0
 
         self.envs = [make_env() for _ in range(rollout_batch_size)]
-        self.g = np.empty((self.rollout_batch_size, self.dims["g"]), np.float32)  # goals
         self.initial_o = np.empty((self.rollout_batch_size, self.dims["o"]), np.float32)  # observations
         self.initial_ag = np.empty((self.rollout_batch_size, self.dims["g"]), np.float32)  # achieved goals
+        self.g = np.empty((self.rollout_batch_size, self.dims["g"]), np.float32)  # goals
 
         self.reset_all_rollouts()
         self.clear_history()

@@ -18,8 +18,8 @@ class ReplayBuffer:
             transitions
         """
 
-        T = episode_batch["u"].shape[1]
         total_batch_size = episode_batch["u"].shape[0]
+        T = episode_batch["u"].shape[1]
 
         # Select which episodes and time steps to use.
         episode_idxs = np.random.randint(0, total_batch_size, batch_size)
@@ -72,34 +72,19 @@ class ReplayBuffer:
                 buffers[key] = self.buffers[key][: self.current_size]
 
         buffers["o_2"] = buffers["o"][:, 1:, :]
-        buffers["ag_2"] = buffers["ag"][:, 1:, :]  # change from T+1 to T so that you can have a real transition
+        if "ag" in buffers.keys():
+            buffers["ag_2"] = buffers["ag"][:, 1:, :]
+        if "g" in buffers.keys():
+            buffers["g_2"] = buffers["g"][:, :, :]
 
         transitions = self.sample_transitions(buffers, batch_size)
 
         # Note: each transition is {'o' 'u' 'g' 'ag' 'ag_2' 'o_2'}
-        for key in ["r", "o_2", "ag_2"] + list(self.buffers.keys()):
-            assert key in transitions, "key %s missing from transitions" % key
+        assert all(
+            [key in transitions for key in ["r", "o_2", "ag_2", "g_2"] + list(self.buffers.keys())]
+        ), "key missing from transitions"
 
         return transitions
-
-    def get(self, num_transition=None):
-        """get all transitions, this could be useful for pipelining
-        """
-        buffers = {}
-
-        with self.lock:
-            assert self.current_size > 0
-            for key in self.buffers.keys():
-                buffers[key] = self.buffers[key][: self.current_size]
-
-        buffers["o_2"] = buffers["o"][:, 1:, :]
-        buffers["ag_2"] = buffers["ag"][:, 1:, :]  # change from T+1 to T so that you can have a real transition
-        buffers["o"] = buffers["o"][:, :-1, :]
-        buffers["ag"] = buffers["ag"][:, :-1, :]
-        buffers = {key: buffers[key].reshape((-1,) + buffers[key].shape[2:]) for key in buffers.keys()}
-        if num_transition:
-            assert num_transition <= self.current_size * self.T, "No enough demonstration data!"
-        return {key: buffers[key][:num_transition] for key in buffers.keys()}
 
     def store_episode(self, episode_batch):
         """episode_batch: array(batch_size x (T or T+1) x dim_key)

@@ -105,21 +105,28 @@ class DDPG(object):
         self.dimo = self.input_dims["o"]
         self.dimg = self.input_dims["g"]
         self.dimu = self.input_dims["u"]
-        input_shapes = {key: tuple([val]) if val > 0 else tuple() for key, val in self.input_dims.items()}
 
         logger.info("Configuring the replay buffer.")
-        buffer_shapes = {
-            key: (self.T if key != "o" else self.T + 1, *input_shapes[key]) for key, val in input_shapes.items()
-        }
-        buffer_shapes["g"] = (buffer_shapes["g"][0], self.dimg)
-        buffer_shapes["ag"] = (self.T + 1, self.dimg)
-        buffer_shapes["mask"] = (self.T, self.num_sample)  # mask for training each head with different dataset
+        buffer_shapes = {}
+        buffer_shapes["o"] = (self.T + 1, self.dimo)
+        buffer_shapes["u"] = (self.T, self.dimu)
         buffer_shapes["r"] = (self.T, 1)
-        buffer_shapes["n"] = (self.T, 1)
+        # for multigoal environment - or states that do not change over episodes.
+        buffer_shapes["ag"] = (self.T + 1, self.dimg)
+        buffer_shapes["g"] = (self.T, self.dimg)
+        # for bootstrapped ensemble of actor critics
+        buffer_shapes["mask"] = (self.T, self.num_sample)  # mask for training each head with different dataset
+        # for demonstrations
+        buffer_shapes["n"] = (self.T, 1)  # n step return
         buffer_shapes["q"] = (self.T, 1)  # expected q value
+        # add extra information
+        for key, val in input_dims.items():
+            if key.startswith("info"):
+                buffer_shapes["n"] = (self.T, *(tuple([val]) if val > 0 else tuple()))
         logger.debug("DDPG.__init__ -> The buffer shapes are: {}".format(buffer_shapes))
+
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
-        logger.debug("DDPG.__init__ -> The buffer size is: {}".format(buffer_size))
+
         self.replay_buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_rl_transitions)
         if self.demo_actor != "none" or self.demo_critic == "rb":
             # initialize the demo buffer; in the same way as the primary data buffer
@@ -129,19 +136,21 @@ class DDPG(object):
         with tf.variable_scope(self.scope):
             logger.info("Preparing staging area for feeding data to the model.")
             stage_shapes = OrderedDict()
-            for key in sorted(self.input_dims.keys()):
-                if key.startswith("info_"):
-                    continue
-                stage_shapes[key] = (None, *input_shapes[key])
-            for key in ["o", "g"]:
-                stage_shapes[key + "_2"] = stage_shapes[key]
+            stage_shapes["o"] = (None, self.dimo)
+            stage_shapes["o_2"] = (None, self.dimo)
+            stage_shapes["u"] = (None, self.dimu)
             stage_shapes["r"] = (None, 1)
-            stage_shapes["n"] = (None, 1)
+            # for multigoal environments
+            stage_shapes["g"] = (None, self.dimg)
+            stage_shapes["g_2"] = (None, self.dimg)
             # for bootstrapped DQN, to add mask
             stage_shapes["mask"] = (None, self.num_sample)
+            # for demonstrations
             stage_shapes["q"] = (None, 1)
+            stage_shapes["n"] = (None, 1)
             self.stage_shapes = stage_shapes  # feeding data into model
-            logger.debug("DDPG.__init__ -> The staging shapes are: {}".format(self.stage_shapes))
+            logger.info("DDPG.__init__ -> The staging shapes are: {}".format(self.stage_shapes))
+
             self.staging_tf = StagingArea(
                 dtypes=[tf.float32 for _ in self.stage_shapes.keys()], shapes=list(self.stage_shapes.values())
             )
@@ -300,10 +309,12 @@ class DDPG(object):
         else:
             transitions = self.replay_buffer.sample(self.batch_size)  # otherwise only sample from primary buffer
 
-        o, o_2, g = transitions["o"], transitions["o_2"], transitions["g"]
+        o, o_2 = transitions["o"], transitions["o_2"]
+        g, g_2 = transitions["g"], transitions["g_2"]
         ag, ag_2 = transitions["ag"], transitions["ag_2"]
+
         transitions["o"], transitions["g"] = self._preprocess_og(o, ag, g)
-        transitions["o_2"], transitions["g_2"] = self._preprocess_og(o_2, ag_2, g)
+        transitions["o_2"], transitions["g_2"] = self._preprocess_og(o_2, ag_2, g_2)
 
         return transitions
 
@@ -377,7 +388,6 @@ class DDPG(object):
 
         # Mini-batch sampling.
         # Note: batch_tf == {"o":(None, *int), "o_2":(None, *int), "g":(None, *int), "g_2":(None, *int), "u":(None, *int), "r":(None)}
-        # None is for batch size which is not determined
         batch = self.staging_tf.get()
         batch_tf = OrderedDict([(key, batch[i]) for i, key in enumerate(self.stage_shapes.keys())])
         logger.debug("DDPG._create_network -> self.stage_shapes.keys() are {}".format(self.stage_shapes.keys()))
@@ -397,6 +407,7 @@ class DDPG(object):
         # The input to the target network has to be the resultant observation and goal!
         target_batch_tf["o"] = batch_tf["o_2"]
         target_batch_tf["g"] = batch_tf["g_2"]
+
         with tf.variable_scope("main") as vs:
             if reuse:
                 vs.reuse_variables()
@@ -501,14 +512,18 @@ class DDPG(object):
                 for i in range(self.num_sample)
             ]
 
+        # Gradients
+        # gradients of Q
         Q_grads_tf = tf.gradients(self.Q_loss_tf, self._vars("main/Q"))
-        pi_grads_tf = tf.gradients(self.pi_loss_tf, self._vars("main/pi"))
         assert len(self._vars("main/Q")) == len(Q_grads_tf)
-        assert len(self._vars("main/pi")) == len(pi_grads_tf)
         self.Q_grads_vars_tf = zip(Q_grads_tf, self._vars("main/Q"))
-        self.pi_grads_vars_tf = zip(pi_grads_tf, self._vars("main/pi"))
         self.Q_grad_tf = flatten_grads(grads=Q_grads_tf, var_list=self._vars("main/Q"))
+        # gradients of pi
+        pi_grads_tf = tf.gradients(self.pi_loss_tf, self._vars("main/pi"))
+        assert len(self._vars("main/pi")) == len(pi_grads_tf)
+        self.pi_grads_vars_tf = zip(pi_grads_tf, self._vars("main/pi"))
         self.pi_grad_tf = flatten_grads(grads=pi_grads_tf, var_list=self._vars("main/pi"))
+        # gradients of demo
         if self.demo_critic == "rb":
             demo_grads_tf = tf.gradients(self.demo_loss_tf, self._vars("main/Q"))
             assert len(self._vars("main/pi")) == len(demo_grads_tf)
@@ -582,10 +597,11 @@ class DDPG(object):
         # add transitions to normalizer
         episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
         episode_batch["ag_2"] = episode_batch["ag"][:, 1:, :]
+        episode_batch["g_2"] = episode_batch["g"][:, :, :]
         num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
         transitions = self.sample_rl_transitions(episode_batch, num_normalizing_transitions)
 
-        o, o_2, g, ag = transitions["o"], transitions["o_2"], transitions["g"], transitions["ag"]
+        o, g, ag = transitions["o"], transitions["g"], transitions["ag"]
         transitions["o"], transitions["g"] = self._preprocess_og(o, ag, g)
         # No need to preprocess the o_2 and g_2 since this is only used for stats
 

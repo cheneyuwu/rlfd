@@ -123,7 +123,11 @@ def add_env_params(params):
     # get environment dimensions
     tmp_env.reset()
     obs, _, _, info = tmp_env.step(tmp_env.action_space.sample())
-    dims = {"o": obs["observation"].shape[0], "u": tmp_env.action_space.shape[0], "g": obs["desired_goal"].shape[0]}
+    dims = {
+        "o": obs["observation"].shape[0],  # the state
+        "u": tmp_env.action_space.shape[0],
+        "g": obs["desired_goal"].shape[0],  # extra state that does not change within 1 episode
+    }
     for key, value in info.items():
         value = np.array(value)
         if value.ndim == 0:
@@ -145,8 +149,8 @@ def configure_her(params):
     env = EnvCache.get_env(params["make_env"])
     env.reset()
 
-    def reward_fun(ag_2, g, info):  # vectorized
-        return env.compute_reward(achieved_goal=ag_2, desired_goal=g, info=info)
+    def reward_fun(ag_2, g_2, info):  # vectorized
+        return env.compute_reward(achieved_goal=ag_2, desired_goal=g_2, info=info)
 
     # Prepare configuration for HER.
     her_params = extract_params(params, "her_")
@@ -163,7 +167,7 @@ def configure_nstep(params):
 
     # Prepare configuration for HER.
     nstep_params = extract_params(params, "nstep_")
-    nstep_params.update({"gamma": params["gamma"],})
+    nstep_params.update({"gamma": params["gamma"]})
     logger.info("*** nstep_params ***")
     log_params(nstep_params)
     logger.info("*** nstep_params ***")
