@@ -117,6 +117,8 @@ class Reach2D:
         g = self.goal
         ag = self.curr_pos
         r = self.compute_reward(ag, g)
+        # g = np.empty((0))
+        # ag = np.empty((0))
         if self.order == 2:
             position_ok = r > -self.threshold if self.sparse == False else r == 1
             # position_ok = r > 0.9 if self.sparse == False else r == 1

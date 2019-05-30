@@ -57,7 +57,6 @@ DEFAULT_PARAMS = {
     "rl_norm_eps": 0.01,  # epsilon used for observation normalization
     "rl_norm_clip": 5,  # normalized observations are cropped to this values
     # Process I/Os
-    "relative_goals": False,
     "clip_obs": 200.0,
     "clip_return": True,
     # Exploration - for rollouts
@@ -179,12 +178,12 @@ def configure_nstep(params):
 def configure_ddpg(params):
     # Extract relevant parameters.
     ddpg_params = extract_params(params, "rl_")
-    for name in ["max_u", "buffer_size", "relative_goals", "clip_obs"]:
+    for name in ["max_u", "buffer_size", "clip_obs"]:
         ddpg_params[name] = params[name]
         params["_ddpg_" + name] = params[name]
         del params[name]
 
-    sample_her_transitions = configure_her(params)
+    sample_her_transitions = configure_her(params) if params["her_strategy"] != "none" else None
     sample_nstep_transitions = configure_nstep(params)
     # Update parameters
     ddpg_params.update(
@@ -194,7 +193,6 @@ def configure_ddpg(params):
             "clip_pos_returns": params["no_pos_return"],  # clip positive returns
             "clip_return": (1.0 / (1.0 - params["gamma"])) if params["clip_return"] else np.inf,  # max abs of return
             "rollout_batch_size": params["rollout_batch_size"],
-            "subtract_goals": simple_goal_subtract,
             "sample_rl_transitions": sample_her_transitions,
             "sample_demo_transitions": sample_nstep_transitions,
             "gamma": params["gamma"],
@@ -269,12 +267,3 @@ def config_demo(params, policy):
     demo = RolloutWorker(params["make_env"], policy, **demo_params)
     demo.seed(params["rank_seed"])
     return demo
-
-
-# Other helper functions
-# =====================================
-
-
-def simple_goal_subtract(a, b):
-    assert a.shape == b.shape
-    return a - b

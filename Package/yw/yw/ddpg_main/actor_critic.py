@@ -41,23 +41,19 @@ class ActorCritic:
         """
         # Prepare inputs for actor and critic.
         self.o_tf = inputs_tf["o"]
-        self.g_tf = inputs_tf["g"]
+        state = self.o_stats.normalize(self.o_tf) # o = self.o_tf
         self.u_tf = inputs_tf["u"]
+        # for multigoal environments, we have goal as another states
+        if self.dimg != 0:
+            self.g_tf = inputs_tf["g"]
+            goal = self.g_stats.normalize(self.g_tf) # g = self.g_tf
+            state = tf.concat(axis=1, values=[state, goal])
 
-        # Networks
-        # use the normalizer
-        o = self.o_stats.normalize(self.o_tf)
-        g = self.g_stats.normalize(self.g_tf)
-        # or not
-        # o = self.o_tf
-        # g = self.g_tf
-
-        input_pi = tf.concat(axis=1, values=[o, g])  # input for actor
         self.pi_tf = []  # output of actor
         with tf.variable_scope("pi"):
             for i in range(self.num_sample):
                 with tf.variable_scope("pi" + str(i)):
-                    self.pi_tf.append(self.max_u * tf.tanh(nn(input_pi, [self.hidden] * self.layers + [self.dimu])))
+                    self.pi_tf.append(self.max_u * tf.tanh(nn(state, [self.hidden] * self.layers + [self.dimu])))
         with tf.variable_scope("Q"):
             self._input_Q = []
             self.Q_pi_tf = []
@@ -65,10 +61,10 @@ class ActorCritic:
             for i in range(self.num_sample):
                 with tf.variable_scope("Q" + str(i)):
                     # for policy training
-                    input_Q = tf.concat(axis=1, values=[o, g, self.pi_tf[i] / self.max_u])
+                    input_Q = tf.concat(axis=1, values=[state, self.pi_tf[i] / self.max_u])
                     self.Q_pi_tf.append(nn(input_Q, [self.hidden] * self.layers + [1]))
                     # for critic training
-                    input_Q = tf.concat(axis=1, values=[o, g, self.u_tf / self.max_u])
+                    input_Q = tf.concat(axis=1, values=[state, self.u_tf / self.max_u])
                     self._input_Q.append(input_Q)  # exposed for tests
                     self.Q_tf.append(nn(input_Q, [self.hidden] * self.layers + [1], reuse=True))
             self.Q_sample_tf = tf.concat(values=self.Q_tf, axis=1)

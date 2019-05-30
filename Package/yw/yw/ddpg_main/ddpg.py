@@ -36,8 +36,6 @@ class DDPG(object):
         scope,
         T,
         rollout_batch_size,
-        subtract_goals,
-        relative_goals,
         clip_pos_returns,
         clip_return,
         demo_critic,
@@ -64,8 +62,6 @@ class DDPG(object):
             T                  (int)          - the time horizon for rollouts
             clip_pos_returns   (boolean)      - whether or not positive returns should be clipped (i.e. clip to 0)
             clip_return        (float)        - clip returns to be in [-clip_return, clip_return]
-            subtract_goals     (function)     - (NOT USED) function that subtracts goals from each other
-            relative_goals     (boolean)      - (NOT USED) whether or not relative goals should be fed into the network
             # Normalizer
             norm_eps           (float)        - a small value used in the normalizer to avoid numerical instabilities
             norm_clip          (float)        - normalized inputs are clipped to be in [-norm_clip, norm_clip]
@@ -112,8 +108,9 @@ class DDPG(object):
         buffer_shapes["u"] = (self.T, self.dimu)
         buffer_shapes["r"] = (self.T, 1)
         # for multigoal environment - or states that do not change over episodes.
-        buffer_shapes["ag"] = (self.T + 1, self.dimg)
-        buffer_shapes["g"] = (self.T, self.dimg)
+        if self.dimg != 0:
+            buffer_shapes["ag"] = (self.T + 1, self.dimg)
+            buffer_shapes["g"] = (self.T, self.dimg)
         # for bootstrapped ensemble of actor critics
         buffer_shapes["mask"] = (self.T, self.num_sample)  # mask for training each head with different dataset
         # for demonstrations
@@ -141,8 +138,9 @@ class DDPG(object):
             stage_shapes["u"] = (None, self.dimu)
             stage_shapes["r"] = (None, 1)
             # for multigoal environments
-            stage_shapes["g"] = (None, self.dimg)
-            stage_shapes["g_2"] = (None, self.dimg)
+            if self.dimg != 0:
+                stage_shapes["g"] = (None, self.dimg)
+                stage_shapes["g_2"] = (None, self.dimg)
             # for bootstrapped DQN, to add mask
             stage_shapes["mask"] = (None, self.num_sample)
             # for demonstrations
@@ -167,22 +165,26 @@ class DDPG(object):
         # feed
         feed = {
             policy.o_tf: batch["o"].reshape(-1, self.dimo),
-            policy.g_tf: batch["g"].reshape(-1, self.dimg),
             policy.u_tf: batch["u"].reshape(-1, self.dimu),
         }
+        if self.dimg != 0:
+            feed[policy.g_tf] = batch["g"].reshape(-1, self.dimg)
+
         return self.sess.run(vals, feed_dict=feed)
 
     def get_actions(self, o, ag, g, noise_eps=0.0, random_eps=0.0, use_target_net=False, compute_Q=False):
-        o, g = self._preprocess_og(o, ag, g)
         policy = self.target if use_target_net else self.main
         # values to compute
         vals = [policy.pi_tf, policy.Q_pi_mean_tf]
         # feed
+        o = self._preprocess_state(o)
         feed = {
             policy.o_tf: o.reshape(-1, self.dimo),
-            policy.g_tf: g.reshape(-1, self.dimg),
             policy.u_tf: np.zeros((o.size // self.dimo, self.dimu), dtype=np.float32),
         }
+        if self.dimg != 0:
+            g = self._preprocess_state(g)
+            feed[policy.g_tf] = g.reshape(-1, self.dimg)
         ret = self.sess.run(vals, feed_dict=feed)
 
         # action postprocessing
@@ -309,12 +311,11 @@ class DDPG(object):
         else:
             transitions = self.replay_buffer.sample(self.batch_size)  # otherwise only sample from primary buffer
 
-        o, o_2 = transitions["o"], transitions["o_2"]
-        g, g_2 = transitions["g"], transitions["g_2"]
-        ag, ag_2 = transitions["ag"], transitions["ag_2"]
-
-        transitions["o"], transitions["g"] = self._preprocess_og(o, ag, g)
-        transitions["o_2"], transitions["g_2"] = self._preprocess_og(o_2, ag_2, g_2)
+        transitions["o"] = self._preprocess_state(transitions["o"])
+        transitions["o_2"] = self._preprocess_state(transitions["o_2"])
+        if self.dimg != 0:
+            transitions["g"] = self._preprocess_state(transitions["g"])
+            transitions["g_2"] = self._preprocess_state(transitions["g_2"])
 
         return transitions
 
@@ -406,7 +407,8 @@ class DDPG(object):
         target_batch_tf = batch_tf.copy()
         # The input to the target network has to be the resultant observation and goal!
         target_batch_tf["o"] = batch_tf["o_2"]
-        target_batch_tf["g"] = batch_tf["g_2"]
+        if self.dimg != 0:
+            target_batch_tf["g"] = batch_tf["g_2"]
 
         with tf.variable_scope("main") as vs:
             if reuse:
@@ -571,16 +573,9 @@ class DDPG(object):
     def _init_target_net(self):
         self.sess.run(self.init_target_net_op)
 
-    def _preprocess_og(self, o, ag, g):
-        if self.relative_goals:  # note: this is never used
-            g_shape = g.shape
-            g = g.reshape(-1, self.dimg)
-            ag = ag.reshape(-1, self.dimg)
-            g = self.subtract_goals(g, ag)
-            g = g.reshape(*g_shape)
-        o = np.clip(o, -self.clip_obs, self.clip_obs)
-        g = np.clip(g, -self.clip_obs, self.clip_obs)
-        return o, g
+    def _preprocess_state(self, state):
+        state = np.clip(state, -self.clip_obs, self.clip_obs)
+        return state
 
     def _random_action(self, n):
         return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
@@ -596,19 +591,19 @@ class DDPG(object):
     def _update_stats(self, episode_batch):
         # add transitions to normalizer
         episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
-        episode_batch["ag_2"] = episode_batch["ag"][:, 1:, :]
-        episode_batch["g_2"] = episode_batch["g"][:, :, :]
+        if self.dimg != 0:
+            episode_batch["ag_2"] = episode_batch["ag"][:, 1:, :]
+            episode_batch["g_2"] = episode_batch["g"][:, :, :]
         num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
-        transitions = self.sample_rl_transitions(episode_batch, num_normalizing_transitions)
+        transitions = self.replay_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
 
-        o, g, ag = transitions["o"], transitions["g"], transitions["ag"]
-        transitions["o"], transitions["g"] = self._preprocess_og(o, ag, g)
-        # No need to preprocess the o_2 and g_2 since this is only used for stats
-
+        transitions["o"] = self._preprocess_state(transitions["o"])
         self.o_stats.update(transitions["o"])
-        self.g_stats.update(transitions["g"])
         self.o_stats.recompute_stats()
-        self.g_stats.recompute_stats()
+        if self.dimg != 0:
+            transitions["g"] = self._preprocess_state(transitions["g"])
+            self.g_stats.update(transitions["g"])
+            self.g_stats.recompute_stats()
 
     def _vars(self, scope=""):
         res = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope + "/" + scope)
