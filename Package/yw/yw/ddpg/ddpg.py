@@ -119,7 +119,7 @@ class DDPG(object):
         # add extra information
         for key, val in input_dims.items():
             if key.startswith("info"):
-                buffer_shapes["n"] = (self.T, *(tuple([val]) if val > 0 else tuple()))
+                buffer_shapes[key] = (self.T, *(tuple([val]) if val > 0 else tuple()))
         logger.debug("DDPG.__init__ -> The buffer shapes are: {}".format(buffer_shapes))
 
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
