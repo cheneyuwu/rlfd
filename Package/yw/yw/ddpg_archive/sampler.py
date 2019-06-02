@@ -80,7 +80,7 @@ def make_sample_nstep_transitions(gamma, n):
 
         # Get the transitions
         transitions = {}
-        for k in ["o", "u", "g", "ag", "q", "mask"]:
+        for k in ["o", "u", "g", "ag", "q", "mask", "info_is_success"]:
             transitions[k] = episode_batch[k][episode_idxs, t_samples].copy()
         # calculate n step return
         cum_reward = np.zeros_like(episode_batch["r"][episode_idxs, t_samples])

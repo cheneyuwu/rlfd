@@ -63,10 +63,11 @@ DEFAULT_PARAMS = {
     "exploit": False,  # whether or not to use e-greedy and add noise to output
     "random_eps": 0.3,  # percentage of time a random action is taken
     "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
+    # Replay strategy to be used
+    "replay_strategy": "none",  # supported modes: future, none for uniform
     # N step return
     "nstep_n": 1,
     # HER
-    "her_strategy": "future",  # supported modes: future, none
     "her_k": 4,  # number of additional goals used for replay, only used if off_policy_data=future
     # DDPG Training
     "train_rl_epochs": 1,
@@ -157,9 +158,8 @@ def configure_her(params):
     logger.info("*** her_params ***")
     log_params(her_params)
     logger.info("*** her_params ***")
-    sample_her_transitions = make_sample_her_transitions(**her_params)
 
-    return sample_her_transitions
+    return her_params
 
 
 def configure_nstep(params):
@@ -170,9 +170,8 @@ def configure_nstep(params):
     logger.info("*** nstep_params ***")
     log_params(nstep_params)
     logger.info("*** nstep_params ***")
-    sample_nstep_transitions = make_sample_nstep_transitions(**nstep_params)
 
-    return sample_nstep_transitions
+    return nstep_params
 
 
 def configure_ddpg(params):
@@ -183,8 +182,10 @@ def configure_ddpg(params):
         params["_ddpg_" + name] = params[name]
         del params[name]
 
-    sample_her_transitions = configure_her(params) if params["her_strategy"] != "none" else None
-    sample_nstep_transitions = configure_nstep(params)
+    rl_sample_params = {}
+    if params["replay_strategy"] == "her":
+        rl_sample_params = configure_her(params)
+    demo_sample_params = configure_nstep(params)
     # Update parameters
     ddpg_params.update(
         {
@@ -193,8 +194,8 @@ def configure_ddpg(params):
             "clip_pos_returns": params["no_pos_return"],  # clip positive returns
             "clip_return": (1.0 / (1.0 - params["gamma"])) if params["clip_return"] else np.inf,  # max abs of return
             "rollout_batch_size": params["rollout_batch_size"],
-            "sample_rl_transitions": sample_her_transitions,
-            "sample_demo_transitions": sample_nstep_transitions,
+            "sample_rl_transitions": {"strategy": params["replay_strategy"], "args": rl_sample_params},
+            "sample_demo_transitions": demo_sample_params,
             "gamma": params["gamma"],
         }
     )
