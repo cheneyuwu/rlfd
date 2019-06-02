@@ -3,10 +3,10 @@ import threading
 import numpy as np
 
 from yw.tool import logger
+from yw.ddpg_main.segment_tree import *
 
 
 class ReplayBuffer:
-
     def __init__(self, buffer_shapes, size_in_transitions, T):
         """Creates a replay buffer.
 
@@ -71,10 +71,15 @@ class ReplayBuffer:
             for key in self.buffers.keys():
                 self.buffers[key][idxs] = episode_batch[key]
 
+            self.insert_transitions(idxs)
+
             self.n_transitions_stored += batch_size * self.T
 
     def sample_transitions(self, buffers, batch_size):
         return NotImplementedError
+
+    def insert_transitions(self, idxs):
+        pass
 
     def get_current_episode_size(self):
         with self.lock:
@@ -115,7 +120,6 @@ class ReplayBuffer:
 
 
 class UniformReplayBuffer(ReplayBuffer):
-
     def __init__(self, buffer_shapes, size_in_transitions, T):
         """Creates a replay buffer.
 
@@ -150,8 +154,8 @@ class UniformReplayBuffer(ReplayBuffer):
 
         return transitions
 
-class HERReplayBuffer(ReplayBuffer):
 
+class HERReplayBuffer(ReplayBuffer):
     def __init__(self, buffer_shapes, size_in_transitions, T, k, reward_fun):
         """Creates a replay buffer.
 
@@ -209,7 +213,9 @@ class HERReplayBuffer(ReplayBuffer):
         # Re-compute reward since we may have substituted the goal.
         reward_params = {k: transitions[k] for k in ["ag_2", "g_2"]}
         reward_params["info"] = info
-        transitions["r"] = self.reward_fun(**reward_params).reshape(-1, 1)  # reshape to be consistent with default reward
+        transitions["r"] = self.reward_fun(**reward_params).reshape(
+            -1, 1
+        )  # reshape to be consistent with default reward
 
         transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:]) for k in transitions.keys()}
 
@@ -217,8 +223,8 @@ class HERReplayBuffer(ReplayBuffer):
 
         return transitions
 
-class NStepReplayBuffer(ReplayBuffer):
 
+class NStepReplayBuffer(ReplayBuffer):
     def __init__(self, buffer_shapes, size_in_transitions, T, gamma, n):
         """Creates a replay buffer.
 
@@ -239,6 +245,7 @@ class NStepReplayBuffer(ReplayBuffer):
         gamma (str) - discount rate
         n        (int) - the ratio between HER replays and regular replays (e.g. k = 4 -> 4 times as many HER replays as regular replays are used)
     """
+
     def sample_transitions(self, buffers, batch_size):
 
         # Select which episodes and time steps to use.
@@ -252,14 +259,18 @@ class NStepReplayBuffer(ReplayBuffer):
         # calculate n step return
         cum_reward = np.zeros_like(buffers["r"][episode_idxs, t_samples])
         cum_discount = np.zeros_like(buffers["n"][episode_idxs, t_samples])
-        assert self.n>= 1
+        assert self.n >= 1
         for step in range(self.n):
-            cum_reward += np.where(((t_samples + step) < self.T).reshape(cum_reward.shape), buffers["r"][episode_idxs, np.minimum(self.T-1, t_samples + step)] * np.power(self.gamma, step), 0)
+            cum_reward += np.where(
+                ((t_samples + step) < self.T).reshape(cum_reward.shape),
+                buffers["r"][episode_idxs, np.minimum(self.T - 1, t_samples + step)] * np.power(self.gamma, step),
+                0,
+            )
             cum_discount += np.where(((t_samples + step) < self.T).reshape(cum_discount.shape), 1, 0)
         transitions["r"] = cum_reward
         transitions["n"] = cum_discount
         # change the state it goes to
-        n_step_t_samples = np.minimum(t_samples + self.n - 1, self.T-1)
+        n_step_t_samples = np.minimum(t_samples + self.n - 1, self.T - 1)
         for k in ["o_2", "ag_2", "g_2"]:
             transitions[k] = buffers[k][episode_idxs, n_step_t_samples].copy()
         transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:]) for k in transitions.keys()}
@@ -268,4 +279,98 @@ class NStepReplayBuffer(ReplayBuffer):
         assert transitions["u"].shape[0] == batch_size
 
         return transitions
+
+
+class PrioritizedReplayBuffer(ReplayBuffer):
+    def __init__(self, buffer_shapes, size_in_transitions, T):
+        """Creates a replay buffer.
+
+        Args:
+            buffer_shapes (dict of ints): the shape for all buffers that are used in the replay
+                buffer
+            size_in_transitions (int): the size of the buffer, measured in transitions
+            T (int): the time horizon for episodes
+            sample_transitions (function): a function that samples from the replay buffer
+        """
+        super().__init__(buffer_shapes, size_in_transitions, T)
+        self._alpha = 0 # config this later
+        self._beta = 1
+        self._it_sum = SumSegmentTree(size_in_transitions)
+        self._it_min = MinSegmentTree(size_in_transitions)
+        self._max_priority = 1.0
+
+    def insert_transitions(self, idxs):
+        for t in range(self.T):
+            for i in idxs:
+                self._it_sum[i*self.T + t] = self._max_priority ** self._alpha
+                self._it_min[i*self.T + t] = self._max_priority ** self._alpha
+
+    def sample_transitions(self, buffers, batch_size):
+        """Sample transitions of size batch_size randomly from episode_batch.
+
+        Args:
+            episode_batch - {key: array(buffer_size x T x dim_key)}
+            batch_size    - batch size in transitions
+
+        Return:
+            transitions
+        """
+
+        # Select which episodes and time steps to use.
+        indices = self._sample_proportional(batch_size)
+        episode_idxs = [i // self.T for i in indices]
+        t_samples = [i % self.T for i in indices]
+        transitions = {key: buffers[key][episode_idxs, t_samples].copy() for key in buffers.keys()}
+
+        transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:]) for k in transitions.keys()}
+
+        assert transitions["u"].shape[0] == batch_size
+
+        transitions["idx"] = episode_idxs * self.T + t_samples
+
+        # compute importance weights for the experiences to correct for distribution shift
+        weights = []
+        p_min = self._it_min.min() / self._it_sum.sum()
+        max_weight = (p_min * self.get_current_size()) ** (-self._beta)
+
+        for idx in indices:
+            p_sample = self._it_sum[idx] / self._it_sum.sum()
+            weight = (p_sample * self.get_current_size()) ** (-self._beta)
+            weights.append(weight / max_weight)
+        weights = np.array(weights)
+
+        transitions["weight"] = weights
+
+        return transitions
+
+    def update_priorities(self, indices, priorities):
+        """
+        Update priorities of sampled transitions. sets priority of transition at index indices[i] in buffer to priorities[i].
+
+        Args:
+
+            indices    (int)   - List of indices of sampled transitions
+            priorities (float) - List of updated priorities corresponding to transitions at the sampled indices denoted by variable `indices`.
+        """
+        assert len(indices) == len(priorities)
+        for idx, priority in zip(indices, priorities):
+            assert priority > 0
+            assert 0 <= idx < len(self.get_current_size())
+            self._it_sum[idx] = priority ** self._alpha
+            self._it_min[idx] = priority ** self._alpha
+
+            self._max_priority = max(self._max_priority, priority)
+
+    def _sample_proportional(self, batch_size):
+        """
+        This is a helper function to sample expriences with probabilities
+        proportional to their priorities.
+        Returns a list of indices.
+        """
+        res = []
+        for _ in range(batch_size):
+            mass = np.random.rand() * self._it_sum.sum(0, self.get_current_size() - 1)
+            idx = self._it_sum.find_prefixsum_idx(mass)
+            res.append(idx)
+        return res
 

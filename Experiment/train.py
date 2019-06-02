@@ -48,6 +48,7 @@ class Train(Experiment):
     def __init__(self):
         super().__init__()
         self.env = "Reach2D"
+        self.num_cpu = 1
         self.update()
 
     def update(self):
@@ -55,7 +56,7 @@ class Train(Experiment):
         """
         self.run = OrderedDict(
             [
-                ("python", os.path.join(self.flow_dir, "train_ddpg_main.py")),
+                ("mpirun -np " + str(self.num_cpu) + " python", os.path.join(self.flow_dir, "train_ddpg_main.py")),
                 ("--loglevel", 2),
                 ("--save_interval", 2),
                 ("--env", self.env),
@@ -72,7 +73,15 @@ class Train(Experiment):
         command = self.run.copy()
         command["--logdir"] = self.result_dir + "RLHERNoDemo/"
         command["--save_path"] = self.result_dir + "RLHERNoDemo/"
-        command["--her_strategy"] = "future"
+        command["--rl_replay_strategy"] = "her"
+        return command
+
+    @Command.execute
+    def rl_prioritized_only(self, **kwargs):
+        command = self.run.copy()
+        command["--logdir"] = self.result_dir + "RLPrtNoDemo/"
+        command["--save_path"] = self.result_dir + "RLPrtNoDemo/"
+        command["--rl_replay_strategy"] = "prioritized"
         return command
 
     @Command.execute
@@ -80,7 +89,7 @@ class Train(Experiment):
         command = self.run.copy()
         command["--logdir"] = self.result_dir + "RLNoDemo/"
         command["--save_path"] = self.result_dir + "RLNoDemo/"
-        command["--her_strategy"] = "none"
+        command["--rl_replay_strategy"] = "none"
         return command
 
     @Command.execute
@@ -195,62 +204,62 @@ if __name__ == "__main__":
     # # Used for openai environments
     # ###################################################################################################################
 
-    environment = "FetchPickAndPlace-v1"
-    train_exp.env = environment
-    train_exp.update()
+    # environment = "FetchPickAndPlace-v1"
+    # train_exp.env = environment
+    # train_exp.num_cpu = 4
+    # train_exp.update()
 
-    demo_data_size = 1024
-    train_rl_epochs = 100
+    # demo_data_size = 1024
+    # train_rl_epochs = 50
 
-    seed = 1
-    for i in range(3):
-        seed += i*100
+    # seed = 1
+    # for i in range(3):
+    #     seed += i*100
 
-        # We can change the result directory without updating
-        exp_dir = os.getenv("EXPERIMENT")
-        result_dir = os.path.join(exp_dir, "Result/Temp/Exp"+str(i)+"/")
-        demo_exp.result_dir = result_dir
-        train_exp.result_dir = result_dir
+    #     # We can change the result directory without updating
+    #     exp_dir = os.getenv("EXPERIMENT")
+    #     result_dir = os.path.join(exp_dir, "Result/Temp/Exp"+str(i)+"/")
+    #     demo_exp.result_dir = result_dir
+    #     train_exp.result_dir = result_dir
 
-        # Train the RL without demonstration
-        assert not train_exp.rl_only(
-            rl_scope="rl_only",
-            n_cycles=50,
-            seed=seed+10,
-            rl_num_sample=1,
-            rl_batch_size=256,
-            train_rl_epochs=train_rl_epochs,
-        )
+    #     # Train the RL without demonstration
+    #     assert not train_exp.rl_her_only(
+    #         rl_scope="rl_only",
+    #         n_cycles=50,
+    #         seed=seed+20,
+    #         rl_num_sample=1,
+    #         rl_batch_size=256,
+    #         train_rl_epochs=train_rl_epochs,
+    #     )
+    #     assert not train_exp.rl_only(
+    #         rl_scope="rl_only",
+    #         n_cycles=50,
+    #         seed=seed+10,
+    #         rl_num_sample=1,
+    #         rl_batch_size=256,
+    #         train_rl_epochs=train_rl_epochs,
+    #     )
 
-        assert not train_exp.rl_her_only(
-            rl_scope="rl_only",
-            n_cycles=50,
-            seed=seed+20,
-            rl_num_sample=1,
-            rl_batch_size=256,
-            train_rl_epochs=train_rl_epochs,
-        )
+    #     # Generate demonstration data
+    #     assert not demo_exp.generate_demo(seed=seed+30, num_itr=demo_data_size, entire_eps=1, shuffle=0)
 
-        # Generate demonstration data
-        assert not demo_exp.generate_demo(seed=seed+30, num_itr=demo_data_size, entire_eps=1, shuffle=0)
+    #     # Train the RL with demonstration
+    #     assert not train_exp.rl_with_demo_critic_rb(
+    #         n_cycles=50,
+    #         seed=seed + 40,
+    #         rl_num_sample=1,
+    #         rl_batch_size=512,
+    #         rl_batch_size_demo=256,
+    #         rl_num_demo=demo_data_size,
+    #         rl_replay_strategy="none",
+    #         demo_file=result_dir + "DemoData/" + environment + ".npz",
+    #         train_rl_epochs=train_rl_epochs,
+    #     )
 
-        # Train the RL with demonstration
-        assert not train_exp.rl_with_demo_critic_rb(
-            n_cycles=50,
-            seed=seed + 40,
-            rl_num_sample=1,
-            rl_batch_size=512,
-            rl_batch_size_demo=256,
-            rl_num_demo=demo_data_size,
-            her_strategy="none",
-            demo_file=result_dir + "DemoData/" + environment + ".npz",
-            train_rl_epochs=train_rl_epochs,
-        )
+    # # Plot the training result
+    # plot_exp.plot(dirs=plot_exp.result_dir)
 
-    # Plot the training result
-    plot_exp.plot(dirs=plot_exp.result_dir)
-
-    exit()
+    # exit()
 
     # Used for the Reach2D environment
     ###################################################################################################################
@@ -261,42 +270,53 @@ if __name__ == "__main__":
 
     demo_data_size = 512
     train_rl_epochs = 30
-    seed = 1
-    for i in range(3):
-        seed += i*100
+    seed = 2
+    for i in range(1):
+        seed += i * 100
 
         # We can change the result directory without updating
         exp_dir = os.getenv("EXPERIMENT")
-        result_dir = os.path.join(exp_dir, "Result/Temp/Exp"+str(i)+"/")
+        result_dir = os.path.join(exp_dir, "Result/Temp/Exp" + str(i) + "/")
         demo_exp.result_dir = result_dir
         train_exp.result_dir = result_dir
 
         # Train the RL without demonstration
-        assert not train_exp.rl_only(
-            r_scale=1.0,
-            r_shift=0.0,
-            rl_action_l2=0.5,
-            rl_scope="critic_demo",
-            n_cycles=10,
-            seed=seed+10,
-            rl_num_sample=1,
-            rl_batch_size=256,
-            train_rl_epochs=train_rl_epochs,
-        )
         assert not train_exp.rl_her_only(
             r_scale=1.0,
             r_shift=0.0,
             rl_action_l2=0.5,
             rl_scope="critic_demo",
             n_cycles=10,
-            seed=seed+20,
+            seed=seed + 20,
+            rl_num_sample=1,
+            rl_batch_size=256,
+            train_rl_epochs=train_rl_epochs,
+        )
+        # assert not train_exp.rl_prioritized_only(
+        #     r_scale=1.0,
+        #     r_shift=0.0,
+        #     rl_action_l2=0.5,
+        #     rl_scope="critic_demo",
+        #     n_cycles=10,
+        #     seed=seed + 20,
+        #     rl_num_sample=1,
+        #     rl_batch_size=256,
+        #     train_rl_epochs=train_rl_epochs,
+        # )
+        assert not train_exp.rl_only(
+            r_scale=1.0,
+            r_shift=0.0,
+            rl_action_l2=0.5,
+            rl_scope="critic_demo",
+            n_cycles=10,
+            seed=seed + 10,
             rl_num_sample=1,
             rl_batch_size=256,
             train_rl_epochs=train_rl_epochs,
         )
 
         # Generate demonstration data
-        assert not demo_exp.generate_demo(seed=seed+30, num_itr=demo_data_size, entire_eps=1, shuffle=0)
+        assert not demo_exp.generate_demo(seed=seed + 30, num_itr=demo_data_size, entire_eps=1, shuffle=0)
 
         # Train the RL with demonstration
         assert not train_exp.rl_with_demo_critic_rb(
@@ -304,14 +324,14 @@ if __name__ == "__main__":
             r_shift=0.0,
             rl_action_l2=0.5,
             n_cycles=10,
-            seed=seed+40,
+            seed=seed + 40,
             rl_num_sample=1,
             rl_batch_size=512,
             rl_batch_size_demo=256,
             train_rl_epochs=train_rl_epochs,
             demo_file=result_dir + "DemoData/" + environment + ".npz",
             rl_num_demo=demo_data_size,
-            her_strategy="none",
+            rl_replay_strategy="none",
         )
 
     # Plot the training result

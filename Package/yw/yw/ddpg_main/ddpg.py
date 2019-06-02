@@ -44,8 +44,8 @@ class DDPG(object):
         batch_size_demo,
         prm_loss_weight,
         aux_loss_weight,
-        sample_rl_transitions,
-        sample_demo_transitions,
+        replay_strategy,
+        demo_replay_strategy,
         gamma,
         info,
         **kwargs
@@ -75,8 +75,8 @@ class DDPG(object):
             # Replay Buffer
             buffer_size        (int)          - number of transitions that are stored in the replay buffer
             # HER
-            sample_rl_transitions (function)     - function that samples from the replay buffer
-            sample_demo_transitions (function)
+            replay_strategy (function)     - function that samples from the replay buffer
+            demo_replay_strategy (function)
             # Dual Network Set
             polyak             (float)        - coefficient for Polyak-averaging of the target network
             # Training
@@ -127,11 +127,10 @@ class DDPG(object):
         self.batch_size_demo = batch_size_demo
         self.prm_loss_weight = prm_loss_weight
         self.aux_loss_weight = aux_loss_weight
-        self.sample_rl_transitions = sample_rl_transitions
-        self.sample_demo_transitions = sample_demo_transitions
+        self.replay_strategy = replay_strategy
+        self.demo_replay_strategy = demo_replay_strategy
         self.gamma = gamma
         self.info = info
-        self.reuse = reuse
 
         # Prepare parameters
         self.dimo = self.input_dims["o"]
@@ -160,22 +159,26 @@ class DDPG(object):
 
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
 
-        if not self.sample_rl_transitions:
+        if not self.replay_strategy:
             pass
-        elif self.sample_rl_transitions["strategy"] == "her":
+        elif self.replay_strategy["strategy"] == "her":
             self.replay_buffer = HERReplayBuffer(
-                buffer_shapes, buffer_size, self.T, **self.sample_rl_transitions["args"]
+                buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"]
+            )
+        elif self.replay_strategy["strategy"] == "prioritized":
+            self.replay_buffer = PrioritizedReplayBuffer(
+                buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"]
             )
         else:
             self.replay_buffer = UniformReplayBuffer(
-                buffer_shapes, buffer_size, self.T, **self.sample_rl_transitions["args"]
+                buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"]
             )
 
         # initialize the demo buffer; in the same way as the primary data buffer
-        if not self.sample_demo_transitions:
+        if not self.demo_replay_strategy:
             pass
         elif self.demo_actor != "none" or self.demo_critic == "rb":
-            self.demo_buffer = NStepReplayBuffer(buffer_shapes, buffer_size, self.T, **self.sample_demo_transitions)
+            self.demo_buffer = NStepReplayBuffer(buffer_shapes, buffer_size, self.T, **self.demo_replay_strategy["args"])
 
         # Build computation core.
         with tf.variable_scope(self.scope):
@@ -264,8 +267,8 @@ class DDPG(object):
             episode_batch["q"] = -100 * np.ones((self.num_demo, self.T, 1), dtype=np.float32)
         self.demo_buffer.store_episode(episode_batch)
 
-        if update_stats:
-            self._update_stats(episode_batch)
+        # if update_stats:
+        #     self._update_stats(episode_batch)
 
     def store_episode(self, episode_batch, update_stats=True):
         """
@@ -284,8 +287,8 @@ class DDPG(object):
         episode_batch["q"] = -100 * np.ones((self.rollout_batch_size, self.T, 1), dtype=np.float32)
         self.replay_buffer.store_episode(episode_batch)
 
-        if update_stats:
-            self._update_stats(episode_batch)
+        # if update_stats:
+        #     self._update_stats(episode_batch)
 
     def sample_batch(self):
         # use demonstration buffer to sample as well if demo flag is set TRUE
@@ -598,7 +601,7 @@ class DDPG(object):
 
         # """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
         # """
-        excluded_names = ["self", "sample_demo_transitions", "sample_rl_transitions"]
+        excluded_names = ["self", "demo_replay_strategy", "replay_strategy"]
 
         state = {k: v for k, v in self.init_args.items() if not k in excluded_names}
         state["tf"] = self.sess.run([x for x in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)])
@@ -607,10 +610,10 @@ class DDPG(object):
     def __setstate__(self, state):
 
         # We don't need these for playing the policy.
-        assert "sample_rl_transitions" not in state
-        assert "sample_demo_transitions" not in state
-        state["sample_rl_transitions"] = None
-        state["sample_demo_transitions"] = None
+        assert "replay_strategy" not in state
+        assert "demo_replay_strategy" not in state
+        state["replay_strategy"] = None
+        state["demo_replay_strategy"] = None
 
         kwargs = state["kwargs"]
         del state["kwargs"]

@@ -64,7 +64,8 @@ DEFAULT_PARAMS = {
     "random_eps": 0.3,  # percentage of time a random action is taken
     "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
     # Replay strategy to be used
-    "replay_strategy": "none",  # supported modes: future, none for uniform
+    "rl_replay_strategy": "none",  # supported modes: future, none for uniform
+    "rl_demo_replay_strategy": "none",  # supported modes: future, none for uniform
     # N step return
     "nstep_n": 1,
     # HER
@@ -183,9 +184,15 @@ def configure_ddpg(params):
         del params[name]
 
     rl_sample_params = {}
-    if params["replay_strategy"] == "her":
+    if ddpg_params["replay_strategy"] == "her":
         rl_sample_params = configure_her(params)
+    if ddpg_params["replay_strategy"] == "prioritized":
+        pass # TODO
+    ddpg_params["replay_strategy"] = {"strategy": ddpg_params["replay_strategy"], "args": rl_sample_params}
+
     demo_sample_params = configure_nstep(params)
+    ddpg_params["demo_replay_strategy"] = {"strategy": ddpg_params["demo_replay_strategy"], "args": demo_sample_params}
+
     # Update parameters
     ddpg_params.update(
         {
@@ -194,8 +201,6 @@ def configure_ddpg(params):
             "clip_pos_returns": params["no_pos_return"],  # clip positive returns
             "clip_return": (1.0 / (1.0 - params["gamma"])) if params["clip_return"] else np.inf,  # max abs of return
             "rollout_batch_size": params["rollout_batch_size"],
-            "sample_rl_transitions": {"strategy": params["replay_strategy"], "args": rl_sample_params},
-            "sample_demo_transitions": demo_sample_params,
             "gamma": params["gamma"],
         }
     )
