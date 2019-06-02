@@ -118,85 +118,6 @@ class GetFlat(object):
         return tf.get_default_session().run(self.op)
 
 
-# Theano-like Function
-# ===================================
-
-
-def function(inputs, outputs, updates=None, givens=None):
-    """Just like Theano function. Take a bunch of tensorflow placeholders and expressions
-    computed based on those placeholders and produces f(inputs) -> outputs. Function f takes
-    values to be fed to the input's placeholders and produces the values of the expressions
-    in outputs.
-
-    Input values can be passed in the same order as inputs or can be provided as kwargs based
-    on placeholder name (passed to constructor or accessible via placeholder.op.name).
-
-    Example:
-        x = tf.placeholder(tf.int32, (), name="x")
-        y = tf.placeholder(tf.int32, (), name="y")
-        z = 3 * x + 2 * y
-        lin = function([x, y], z, givens={y: 0})
-
-        with single_threaded_session():
-            initialize()
-
-            assert lin(2) == 6
-            assert lin(x=3) == 9
-            assert lin(2, 2) == 10
-            assert lin(x=2, y=3) == 12
-
-    Parameters
-    ----------
-    inputs: [tf.placeholder, tf.constant, or object with make_feed_dict method]
-        list of input arguments
-    outputs: [tf.Variable] or tf.Variable
-        list of outputs or a single output to be returned from function. Returned
-        value will also have the same shape.
-    updates: [tf.Operation] or tf.Operation
-        list of update functions or single update function that will be run whenever
-        the function is called. The return is ignored.
-
-    """
-    if isinstance(outputs, list):
-        return _Function(inputs, outputs, updates, givens=givens)
-    elif isinstance(outputs, (dict, collections.OrderedDict)):
-        f = _Function(inputs, outputs.values(), updates, givens=givens)
-        return lambda *args, **kwargs: type(outputs)(zip(outputs.keys(), f(*args, **kwargs)))
-    else:
-        f = _Function(inputs, [outputs], updates, givens=givens)
-        return lambda *args, **kwargs: f(*args, **kwargs)[0]
-
-
-class _Function(object):
-    def __init__(self, inputs, outputs, updates, givens):
-        for inpt in inputs:
-            if not hasattr(inpt, "make_feed_dict") and not (type(inpt) is tf.Tensor and len(inpt.op.inputs) == 0):
-                assert False, "inputs should all be placeholders, constants, or have a make_feed_dict method"
-        self.inputs = inputs
-        updates = updates or []
-        self.update_group = tf.group(*updates)
-        self.outputs_update = list(outputs) + [self.update_group]
-        self.givens = {} if givens is None else givens
-
-    def _feed_input(self, feed_dict, inpt, value):
-        if hasattr(inpt, "make_feed_dict"):
-            feed_dict.update(inpt.make_feed_dict(value))
-        else:
-            feed_dict[inpt] = adjust_shape(inpt, value)
-
-    def __call__(self, *args):
-        assert len(args) <= len(self.inputs), "Too many arguments provided"
-        feed_dict = {}
-        # Update the args
-        for inpt, value in zip(self.inputs, args):
-            self._feed_input(feed_dict, inpt, value)
-        # Update feed dict with givens.
-        for inpt in self.givens:
-            feed_dict[inpt] = adjust_shape(inpt, feed_dict.get(inpt, self.givens[inpt]))
-        results = get_session().run(self.outputs_update, feed_dict=feed_dict)[:-1]
-        return results
-
-
 # Shape adjustment for feeding into tf placeholders
 # =============================================================================
 def adjust_shape(placeholder, data):
@@ -244,3 +165,70 @@ def nn(input, layers_sizes, reuse=None, flatten=False, name=""):
         assert layers_sizes[-1] == 1
         input = tf.reshape(input, [-1])
     return input
+
+
+mapping = {}
+
+def register(name):
+    def _thunk(func):
+        mapping[name] = func
+        return func
+    return _thunk
+
+
+@register("mlp")
+def mlp(num_layers=2, num_hidden=64, activation=tf.tanh, layer_norm=False):
+    """
+    Stack of fully-connected layers to be used in a policy / q-function approximator
+
+    Parameters:
+    ----------
+
+    num_layers: int                 number of fully-connected layers (default: 2)
+
+    num_hidden: int                 size of fully-connected layers (default: 64)
+
+    activation:                     activation function (default: tf.tanh)
+
+    Returns:
+    -------
+
+    function that builds fully connected network with a given input tensor / placeholder
+    """
+    def network_fn(X):
+        h = tf.layers.flatten(X)
+        for i in range(num_layers):
+            h = tf.layers.dense(
+                inputs=h,
+                units=num_hidden,
+                kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                name="mlp_fc_" + str(i),
+            )
+            if layer_norm:
+                h = tf.contrib.layers.layer_norm(h, center=True, scale=True)
+            h = activation(h)
+
+        return h
+
+    return network_fn
+
+
+def get_network_builder(name):
+    """
+    If you want to register your own network outside models.py, you just need:
+
+    Usage Example:
+    -------------
+    from baselines.common.models import register
+    @register("your_network_name")
+    def your_network_define(**net_kwargs):
+        ...
+        return network_fn
+
+    """
+    if callable(name):
+        return name
+    elif name in mapping:
+        return mapping[name]
+    else:
+        raise ValueError('Unknown network type: {}'.format(name))

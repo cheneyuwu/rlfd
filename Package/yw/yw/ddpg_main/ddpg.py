@@ -9,13 +9,12 @@ from yw.tool import logger
 from yw.ddpg_main.mpi_adam import MpiAdam
 from yw.ddpg_main.normalizer import Normalizer
 from yw.ddpg_main.actor_critic import ActorCritic
-from yw.ddpg_main.replay_buffer import ReplayBuffer
+from yw.ddpg_main.replay_buffer import *
 from yw.util.util import store_args, import_function
 from yw.util.tf_util import flatten_grads
 
 
 class DDPG(object):
-    @store_args
     def __init__(
         self,
         input_dims,
@@ -48,6 +47,7 @@ class DDPG(object):
         sample_rl_transitions,
         sample_demo_transitions,
         gamma,
+        info,
         reuse=False,
         **kwargs
     ):
@@ -97,6 +97,43 @@ class DDPG(object):
             aux_loss_weight    (float)        - Weight corresponding to the auxilliary loss also called the cloning loss
 
         """
+        # Store initial args passed into the function
+        self.init_args = locals()
+
+        # Parameters
+        self.input_dims = input_dims
+        self.num_sample = num_sample
+        self.ca_ratio = ca_ratio
+        self.hidden = hidden
+        self.layers = layers
+        self.polyak = polyak
+        self.buffer_size = buffer_size
+        self.batch_size = batch_size
+        self.Q_lr = Q_lr
+        self.pi_lr = pi_lr
+        self.norm_eps = norm_eps
+        self.norm_clip = norm_clip
+        self.max_u = max_u
+        self.action_l2 = action_l2
+        self.clip_obs = clip_obs
+        self.scope = scope
+        self.T = T
+        self.rollout_batch_size = rollout_batch_size
+        self.clip_pos_returns = clip_pos_returns
+        self.clip_return = clip_return
+        self.demo_critic = demo_critic
+        self.demo_actor = demo_actor
+        self.num_demo = num_demo
+        self.q_filter = q_filter
+        self.batch_size_demo = batch_size_demo
+        self.prm_loss_weight = prm_loss_weight
+        self.aux_loss_weight = aux_loss_weight
+        self.sample_rl_transitions = sample_rl_transitions
+        self.sample_demo_transitions = sample_demo_transitions
+        self.gamma = gamma
+        self.info = info
+        self.reuse = reuse
+
         # Prepare parameters
         self.dimo = self.input_dims["o"]
         self.dimg = self.input_dims["g"]
@@ -119,15 +156,27 @@ class DDPG(object):
         # add extra information
         for key, val in input_dims.items():
             if key.startswith("info"):
-                buffer_shapes["n"] = (self.T, *(tuple([val]) if val > 0 else tuple()))
+                buffer_shapes[key] = (self.T, *(tuple([val]) if val > 0 else tuple()))
         logger.debug("DDPG.__init__ -> The buffer shapes are: {}".format(buffer_shapes))
 
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
 
-        self.replay_buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_rl_transitions)
-        if self.demo_actor != "none" or self.demo_critic == "rb":
-            # initialize the demo buffer; in the same way as the primary data buffer
-            self.demo_buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_demo_transitions)
+        if not self.sample_rl_transitions:
+            pass
+        elif self.sample_rl_transitions["strategy"] == "her":
+            self.replay_buffer = HERReplayBuffer(
+                buffer_shapes, buffer_size, self.T, **self.sample_rl_transitions["args"]
+            )
+        else:
+            self.replay_buffer = UniformReplayBuffer(
+                buffer_shapes, buffer_size, self.T, **self.sample_rl_transitions["args"]
+            )
+
+        # initialize the demo buffer; in the same way as the primary data buffer
+        if not self.sample_demo_transitions:
+            pass
+        elif self.demo_actor != "none" or self.demo_critic == "rb":
+            self.demo_buffer = NStepReplayBuffer(buffer_shapes, buffer_size, self.T, **self.sample_demo_transitions)
 
         # Build computation core.
         with tf.variable_scope(self.scope):
@@ -163,10 +212,7 @@ class DDPG(object):
         # values to compute
         vals = [policy.Q_sample_tf, policy.Q_mean_tf, policy.Q_var_tf]
         # feed
-        feed = {
-            policy.o_tf: batch["o"].reshape(-1, self.dimo),
-            policy.u_tf: batch["u"].reshape(-1, self.dimu),
-        }
+        feed = {policy.o_tf: batch["o"].reshape(-1, self.dimo), policy.u_tf: batch["u"].reshape(-1, self.dimu)}
         if self.dimg != 0:
             feed[policy.g_tf] = batch["g"].reshape(-1, self.dimg)
 
@@ -246,39 +292,6 @@ class DDPG(object):
         if update_stats:
             self._update_stats(episode_batch)
 
-    # def init_demo_buffer_2(self, demo_data_file, update_stats=True):
-    #     """ Another function for initializing the demonstration buffer. Used for getting demonstration from OpenAI
-    #         environments only.
-    #     """
-    #     demo_data = np.load(demo_data_file)  # load the demonstration data from data file
-    #     info_keys = [key.replace("info_", "") for key in self.input_dims.keys() if key.startswith("info_")]
-    #     info_values = [np.empty((self.T, 1, self.input_dims["info_" + key]), np.float32) for key in info_keys]
-
-    #     for eps in range(self.num_demo):  # we initialize the whole demo buffer at the start of the training
-    #         obs, acts, goals, achieved_goals = [], [], [], []
-    #         i = 0
-    #         for transition in range(self.T):
-    #             obs.append([demo_data["obs"][eps][transition].get("observation")])
-    #             acts.append([demo_data["acs"][eps][transition]])
-    #             goals.append([demo_data["obs"][eps][transition].get("desired_goal")])
-    #             achieved_goals.append([demo_data["obs"][eps][transition].get("achieved_goal")])
-    #             for idx, key in enumerate(info_keys):
-    #                 info_values[idx][transition, i] = demo_data["info"][eps][transition][key]
-
-    #         obs.append([demo_data["obs"][eps][self.T].get("observation")])
-    #         achieved_goals.append([demo_data["obs"][eps][self.T].get("achieved_goal")])
-
-    #         episode = dict(o=obs, u=acts, g=goals, ag=achieved_goals)
-    #         for key, value in zip(info_keys, info_values):
-    #             episode["info_{}".format(key)] = value
-    #         episode = convert_episode_to_batch_major(episode)
-    #         # create the observation dict and append them into the demonstration buffer
-    #         self.demo_buffer.store_episode(episode)
-    #         if update_stats:
-    #             self._update_stats(episode)
-    #         episode.clear()
-    #     logger.info("Demo buffer size: ", self.demo_buffer.get_current_size())
-
     def store_episode(self, episode_batch, update_stats=True):
         """
         episode_batch: array of batch_size x (T or T+1) x dim_key
@@ -343,8 +356,12 @@ class DDPG(object):
     def train(self, stage=True):
         if stage:
             self.stage_batch()
-        critic_loss, actor_loss, Q_grad, pi_grad = self._grads()
-        self._update(Q_grad, pi_grad)
+        # Avoid feed_dict here for performance!
+        critic_loss, actor_loss, Q_grad, pi_grad = self.sess.run(
+            [self.Q_loss_tf, self.pi_loss_tf, self.Q_grad_tf, self.pi_grad_tf]
+        )
+        self.Q_adam.update(Q_grad, self.Q_lr)
+        self.pi_adam.update(pi_grad, self.pi_lr)
         logger.debug("DDPG.train -> critic_loss:{}, actor_loss:{}".format(critic_loss, actor_loss))
         return critic_loss, actor_loss
 
@@ -355,6 +372,9 @@ class DDPG(object):
         # method 0 rl only
         rl_q_var = self.sess.run(self.main.Q_var_tf)
         logger.info("DDPG.check_train -> rl variance {}".format(np.mean(rl_q_var)))
+
+    def init_target_net(self):
+        self.sess.run(self.init_target_net_op)
 
     def update_target_net(self):
         logger.debug("DDPG.update_target_net -> updating target net.")
@@ -395,12 +415,8 @@ class DDPG(object):
 
         # Creating a normalizer for goal and observation.
         with tf.variable_scope("o_stats") as vs:
-            if reuse:
-                vs.reuse_variables()
             self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
         with tf.variable_scope("g_stats") as vs:
-            if reuse:
-                vs.reuse_variables()
             self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
 
         # Networks
@@ -411,15 +427,9 @@ class DDPG(object):
             target_batch_tf["g"] = batch_tf["g_2"]
 
         with tf.variable_scope("main") as vs:
-            if reuse:
-                vs.reuse_variables()
             self.main = ActorCritic(batch_tf, net_type="main", **self.__dict__)
-            vs.reuse_variables()
         with tf.variable_scope("target") as vs:
-            if reuse:
-                vs.reuse_variables()
             self.target = ActorCritic(target_batch_tf, net_type="target", **self.__dict__)
-            vs.reuse_variables()
         assert len(self._vars("main")) == len(self._vars("target"))
 
         # Critic loss
@@ -428,7 +438,6 @@ class DDPG(object):
             tf.clip_by_value(batch_tf["r"] + np.power(self.gamma, batch_tf["n"]) * target_Q_pi_tf, *clip_range)
             for target_Q_pi_tf in self.target.Q_pi_tf
         ]
-        # target_min_tf = tf.reduce_min(target_list_tf, 0) # used for td3 training.
         self.Q_loss_tf = []
         self.demo_loss_tf = []
         self.global_step_tf = tf.get_variable("global_step", initializer=0.0, trainable=False, dtype=tf.float32)
@@ -541,7 +550,6 @@ class DDPG(object):
         # Polyak averaging
         self.main_vars = self._vars("main/Q") + self._vars("main/pi")
         self.target_vars = self._vars("target/Q") + self._vars("target/pi")
-        self.stats_vars = self._global_vars("o_stats") + self._global_vars("g_stats")  # what is this used for?
         self.init_target_net_op = list(map(lambda v: v[0].assign(v[1]), zip(self.target_vars, self.main_vars)))
         self.update_target_net_op = list(
             map(
@@ -554,39 +562,28 @@ class DDPG(object):
         logger.debug("Demo.__init__ -> Global variables are: {}".format(self._global_vars()))
         logger.debug("Demo.__init__ -> Trainable variables are: {}".format(self._vars()))
 
-        # initialize all variables
-        tf.variables_initializer(self._global_vars("")).run()
-        self._sync_optimizers()
-        self._init_target_net()
+        # Initialize all variables
+        # tf.variables_initializer(self._global_vars("")).run()
+        self.sess.run(tf.global_variables_initializer())
+        self.Q_adam.sync()
+        self.pi_adam.sync()
+        self.init_target_net()
 
-    def _global_vars(self, scope=""):
-        res = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope + "/" + scope)
-        return res
-
-    def _grads(self):
-        # Avoid feed_dict here for performance!
-        critic_loss, actor_loss, Q_grad, pi_grad = self.sess.run(
-            [self.Q_loss_tf, self.pi_loss_tf, self.Q_grad_tf, self.pi_grad_tf]
-        )
-        return critic_loss, actor_loss, Q_grad, pi_grad
-
-    def _init_target_net(self):
-        self.sess.run(self.init_target_net_op)
+    def _random_action(self, n):
+        return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
 
     def _preprocess_state(self, state):
         state = np.clip(state, -self.clip_obs, self.clip_obs)
         return state
 
-    def _random_action(self, n):
-        return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
+    def _global_vars(self, scope=""):
+        res = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope + "/" + scope)
+        return res
 
-    def _sync_optimizers(self):
-        self.Q_adam.sync()
-        self.pi_adam.sync()
-
-    def _update(self, Q_grad, pi_grad):
-        self.Q_adam.update(Q_grad, self.Q_lr)
-        self.pi_adam.update(pi_grad, self.pi_lr)
+    def _vars(self, scope=""):
+        res = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope + "/" + scope)
+        assert len(res) > 0
+        return res
 
     def _update_stats(self, episode_batch):
         # add transitions to normalizer
@@ -597,231 +594,35 @@ class DDPG(object):
         num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
         transitions = self.replay_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
 
-        transitions["o"] = self._preprocess_state(transitions["o"])
-        self.o_stats.update(transitions["o"])
+        self.o_stats.update(self._preprocess_state(transitions["o"]))
         self.o_stats.recompute_stats()
         if self.dimg != 0:
-            transitions["g"] = self._preprocess_state(transitions["g"])
-            self.g_stats.update(transitions["g"])
+            self.g_stats.update(self._preprocess_state(transitions["g"]))
             self.g_stats.recompute_stats()
 
-    def _vars(self, scope=""):
-        res = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope + "/" + scope)
-        assert len(res) > 0
-        return res
-
     def __getstate__(self):
-        """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
-        """
-        excluded_subnames = [
-            "_tf",
-            "_op",
-            "_vars",
-            "_adam",
-            "_stats",
-            "_buffer",
-            "_transitions",  # sample
-            "sess",
-            "main",
-            "target",
-            "lock",
-            "env",
-            "stage_shapes",
-        ]
 
-        state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
-        state["tf"] = self.sess.run([x for x in self._global_vars("") if "buffer" not in x.name])
+        # """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
+        # """
+        excluded_names = ["self", "sample_demo_transitions", "sample_rl_transitions"]
+
+        state = {k: v for k, v in self.init_args.items() if not k in excluded_names}
+        state["tf"] = self.sess.run([x for x in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)])
         return state
 
     def __setstate__(self, state):
+
         # We don't need these for playing the policy.
         assert "sample_rl_transitions" not in state
         assert "sample_demo_transitions" not in state
         state["sample_rl_transitions"] = None
         state["sample_demo_transitions"] = None
 
-        self.__init__(**state)
-        # set up stats (they are overwritten in __init__)
-        for k, v in state.items():
-            if k[-6:] == "_stats":
-                self.__dict__[k] = v
-        # load TF variables
-        vars = [x for x in self._global_vars("") if "buffer" not in x.name]
+        kwargs = state["kwargs"]
+        del state["kwargs"]
+
+        self.__init__(**state, **kwargs)
+        vars = [x for x in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)]
         assert len(vars) == len(state["tf"])
         node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
         self.sess.run(node)
-
-    ###########################################
-    # Queries
-    ###########################################
-
-    # Store the result you want to query in a npz file.
-
-    # Currently you can query the value of:
-    #     staging_tf          -> staged values
-    #     buffer_ph_tf        -> placeholders
-    #     demo_q_mean_tf      ->
-    #     demo_q_var_tf       ->
-    #     demo_q_sample_tf    ->
-    #     max_q_tf            ->
-    #     Q_loss_tf           -> a list of losses for each critic sample
-    #     pi_loss_tf          -> a list of losses for each pi sample
-    #     policy.pi_tf        -> list of output from actor
-    #     policy.Q_tf         ->
-    #     policy.Q_pi_tf      ->
-    #     policy.Q_pi_mean_tf ->
-    #     policy.Q_pi_var_tf  ->
-    #     policy._input_Q     ->
-
-    def query_ac_output(self, filename=None):
-        """Check the output from actor and critic based on the action selected by the actor. Also check the output from
-        the demonstration neural net if exists.
-
-        This check can only be used for the Reach2D environment and its variants.
-        """
-        logger.info("Query: ac_output: getting Q value and actions over epochs.")
-
-        num_point = 32
-        ls = np.linspace(-1.2, 1.2, num_point)
-        z1 = np.zeros((num_point * num_point, 1))
-        z2 = np.zeros((num_point * num_point, 2))
-        x, y = np.meshgrid(ls, ls)
-        xr = x.reshape((-1, 1))
-        yr = y.reshape((-1, 1))
-        if self.dimo == 2:
-            o = np.concatenate((xr, yr), 1)  # This has to be set accordingly
-        elif self.dimo == 4:
-            o = np.concatenate((z2, xr, yr), 1)
-        else:
-            assert False, "Observation dimension does not match!"
-        g = z2
-        ag = o
-        o, g = self._preprocess_og(o, ag, g)
-        u = z2
-        q = z1
-
-        policy = self.target
-        feed = {policy.o_tf: o, policy.g_tf: g, policy.u_tf: u}
-        # values to compute
-        name = ["x", "y", "action", "rl_q"]
-        queries = [policy.pi_tf, policy.Q_pi_mean_tf]
-        ret = self.sess.run(queries, feed_dict=feed)
-        ret[0] = np.mean(ret[0], axis=0)
-        ret = [x, y] + ret
-        if self.demo_policy is not None:
-            transitions = {"u": ret[2], "o": o, "g": g, "q": q}
-            demo_sample, demo_mean, demo_var = self.demo_policy.get_q_value(transitions)
-            name = name + ["demo_q"]
-            ret = ret + [demo_mean]
-
-        if filename:
-            logger.info("Query: ac_output: storing query results to {}".format(filename))
-            np.savez_compressed(filename, **dict(zip(name, ret)))
-        else:
-            logger.info("Query: ac_output: ", ret)
-
-    def query_critic_q(self, filename=None):
-        """Given some (s,a) pairs, get the output from the current critic. This is used to generate some training data
-        for the demonstration neutal net.
-
-        This check can only be used for the Reach2D environment and its variants.
-        """
-        logger.info("Query: critic_q: getting Q output from target network for (s,a) pairs over epochs.")
-
-        num_point = 8
-        z1 = np.zeros((pow(num_point, 4), 1))
-        z2 = np.zeros((pow(num_point, 4), 2))
-        # Method 1
-        ls = np.linspace(-1.0, 1.0, num_point)
-        x, y, ax, ay = np.meshgrid(ls, ls, ls, ls)
-        xr = x.reshape((-1, 1))
-        yr = y.reshape((-1, 1))
-        axr = ax.reshape((-1, 1))
-        ayr = ay.reshape((-1, 1))
-        if self.dimo == 2:
-            o = np.concatenate((xr, yr), 1)  # This has to be set accordingly
-        elif self.dimo == 4:
-            o = np.concatenate((z2, xr, yr), 1)  # This has to be set accordingly
-        else:
-            assert False, "Observation dimension does not match!"
-        g = z2
-        ag = o
-        o, g = self._preprocess_og(o, ag, g)
-        u = np.concatenate((axr, ayr), axis=1)
-        # Method 2
-        # max_o = 1.0
-        # max_g = 1.0
-        # o = np.random.rand(pow(num_point, 4), self.dimo) * 2 * max_o - max_o
-        # g = np.random.rand(pow(num_point, 4), self.dimg) * 2 * max_g - max_g
-        # u = np.random.rand(pow(num_point, 4), self.dimu) * 2 * self.max_u - self.max_u
-        # ag = o
-        # o, g = self._preprocess_og(o, ag, g)
-
-        policy = self.target
-        feed = {policy.o_tf: o, policy.g_tf: g, policy.u_tf: u}
-        name = ["o", "g", "u", "q"]
-        queries = [policy.Q_mean_tf]
-        ret = self.sess.run(queries, feed_dict=feed)
-        ret[0] = ret[0].reshape((-1, 1))
-        ret = [o, g, u] + ret
-
-        logger.info("Query: critic_q: number of transition pairs is {}.".format(ret[0].shape[0]))
-
-        if filename:
-            logger.info("Query: critic_q: storing query results to {}".format(filename))
-            np.savez_compressed(filename, **dict(zip(name, ret)))
-        else:
-            logger.info("Query: critic_q: ", ret)
-
-    def query_uncertainty(self, filename=None):
-        """Check the output from demonstration NN when the state is fixed and the action forms a 2d space.
-
-        This check can only be used for the Reach2DFirstOrder environment.
-        """
-        logger.info("Query: uncertainty: Plot the uncertainty of demonstration NN.")
-
-        num_point = 12
-        z1 = np.zeros((pow(num_point, 2), 1))
-        z2 = np.zeros((pow(num_point, 2), 2))
-        ls = np.linspace(-2.0, 2.0, num_point)
-        x, y = np.meshgrid(ls, ls)
-        xr = x.reshape((-1, 1))
-        yr = y.reshape((-1, 1))
-        u = np.concatenate((xr, yr), 1)  # This has to be set accordingly
-        q = z1
-        g = z2
-
-        policy = self.target
-        name = ["x", "y", "o", "g", "rl_q"]
-        if self.demo_policy is not None:
-            name = name + ["demo_q_mean", "demo_q_var"]
-        o1, o2 = np.meshgrid(np.linspace(-0.8, 0.8, 4), np.linspace(-0.8, 0.8, 4))
-        o1 = o1.reshape((-1, 1))
-        o2 = o2.reshape((-1, 1))
-        os = np.concatenate((o1, o2), 1)
-        rl_q = []
-        demo_q_mean = []
-        demo_q_var = []
-        o_sample = []
-        for o in os:
-            o = np.repeat(o.reshape((1, -1)), [z1.shape[0]], axis=0)
-            ag = o
-            o, g = self._preprocess_og(o, ag, g)
-            o_sample.append(o)
-            feed = {policy.o_tf: o, policy.g_tf: g, policy.u_tf: u}
-            queries = policy.Q_mean_tf
-            rl_q.append(self.sess.run(queries, feed_dict=feed).reshape((1, -1, 1)))
-            if self.demo_policy is not None:
-                transitions = {"u": u, "o": o, "g": g, "q": q}
-                demo_sample, demo_mean, demo_var = self.demo_policy.get_q_value(transitions)
-                demo_q_mean.append(demo_mean.reshape((1, -1, 1)))
-                demo_q_var.append(demo_var.reshape((1, -1, 1)))
-        ret = [x, y, o_sample, g] + [np.concatenate((rl_q), axis=0)]
-        if self.demo_policy is not None:
-            ret = ret + [np.concatenate((demo_q_mean), axis=0), np.concatenate((demo_q_var), axis=0)]
-
-        if filename:
-            logger.info("Query: uncertainty: storing query results to {}".format(filename))
-            np.savez_compressed(filename, **dict(zip(name, ret)))
-        else:
-            logger.info("Query: uncertainty: ", ret)

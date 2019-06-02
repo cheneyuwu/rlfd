@@ -9,7 +9,7 @@ def make_sample_her_transitions(strategy, k, reward_fun):
         k        (int) - the ratio between HER replays and regular replays (e.g. k = 4 -> 4 times as many HER replays as regular replays are used)
         reward_fun (function): function to re-compute the reward with substituted goals
     """
-    if strategy == "future":
+    if strategy == "her":
         future_p = 1 - (1.0 / (1 + k))
     else:  # 'strategy' == 'none'
         future_p = 0
@@ -80,7 +80,7 @@ def make_sample_nstep_transitions(gamma, n):
 
         # Get the transitions
         transitions = {}
-        for k in ["o", "u", "g", "ag", "q", "mask"]:
+        for k in ["o", "u", "g", "ag", "q", "mask", "info_is_success"]:
             transitions[k] = episode_batch[k][episode_idxs, t_samples].copy()
         # calculate n step return
         cum_reward = np.zeros_like(episode_batch["r"][episode_idxs, t_samples])

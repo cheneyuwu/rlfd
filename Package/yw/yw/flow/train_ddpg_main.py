@@ -70,7 +70,7 @@ def train_reinforce(
                 logger.record_tabular("step", i)
                 logger.record_tabular("loss", loss)
                 logger.dump_tabular()
-        policy._init_target_net()
+        policy.init_target_net()
 
     for epoch in range(n_epochs):
         logger.debug("train_ddpg_main.train_reinforce -> epoch: {}".format(epoch))
@@ -148,7 +148,7 @@ def train(
     rl_num_sample,
     rl_ca_ratio,
     exploit,
-    her_strategy,
+    replay_strategy,
     nstep_n,
     demo_critic,
     demo_actor,
@@ -194,8 +194,8 @@ def train(
     params["rl_ca_ratio"] = rl_ca_ratio
     params["rl_num_sample"] = rl_num_sample
     params["nstep_n"] = nstep_n
-    params["her_strategy"] = her_strategy  # For HER: future or none
-    params["config"] = "-".join(["ddpg", demo_critic, "r_sample:" + str(rl_num_sample), "her:" + her_strategy])
+    params["replay_strategy"] = replay_strategy  # For HER: future or none
+    params["config"] = "-".join(["ddpg", demo_critic, "r_sample:" + str(rl_num_sample), "replay:" + replay_strategy])
     # make it possible to override any parameter.
     for key, val in unknown_params.items():
         assert key in params.keys(), "Wrong override parameter: {}.".format(key)
@@ -263,10 +263,10 @@ if __name__ == "__main__":
     ap.parser.add_argument("--exploit", help="whether or not to use e-greedy exploration", type=int, default=0)
     ap.parser.add_argument("--nstep_n", help="Specify n step return for demonstration training.", type=int, default=50)
     ap.parser.add_argument(
-        "--her_strategy",
-        help="the HER replay strategy to be used. 'future' uses HER, 'none' disables HER",
+        "--replay_strategy",
+        help="the replay strategy to be used. 'future' uses HER, 'none' disables HER",
         type=str,
-        choices=["none", "future"],
+        choices=["none", "her"],
         default="none",
     )
     # demo configuration
