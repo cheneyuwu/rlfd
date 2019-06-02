@@ -20,7 +20,6 @@ class ActorCritic:
         ca_ratio,
         hidden,
         layers,
-        net_type="",
         **kwargs
     ):
         """The actor-critic network and related training code.
@@ -71,11 +70,4 @@ class ActorCritic:
             self.Q_mean_tf, self.Q_var_tf = tf.nn.moments(self.Q_sample_tf, 1)
             self.Q_pi_sample_tf = tf.concat(values=self.Q_pi_tf, axis=1)
             self.Q_pi_mean_tf, self.Q_pi_var_tf = tf.nn.moments(self.Q_pi_sample_tf, 1)
-
-        # Dump out debug info
-        logger.debug(
-            "ActorCritic.__init__ -> Creating ActorCritic with {} replications of type {}.".format(
-                self.num_sample, self.net_type
-            )
-        )
 

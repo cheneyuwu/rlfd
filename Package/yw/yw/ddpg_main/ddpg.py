@@ -48,7 +48,6 @@ class DDPG(object):
         sample_demo_transitions,
         gamma,
         info,
-        reuse=False,
         **kwargs
     ):
         """Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER).
@@ -180,32 +179,8 @@ class DDPG(object):
 
         # Build computation core.
         with tf.variable_scope(self.scope):
-            logger.info("Preparing staging area for feeding data to the model.")
-            stage_shapes = OrderedDict()
-            stage_shapes["o"] = (None, self.dimo)
-            stage_shapes["o_2"] = (None, self.dimo)
-            stage_shapes["u"] = (None, self.dimu)
-            stage_shapes["r"] = (None, 1)
-            # for multigoal environments
-            if self.dimg != 0:
-                stage_shapes["g"] = (None, self.dimg)
-                stage_shapes["g_2"] = (None, self.dimg)
-            # for bootstrapped DQN, to add mask
-            stage_shapes["mask"] = (None, self.num_sample)
-            # for demonstrations
-            stage_shapes["q"] = (None, 1)
-            stage_shapes["n"] = (None, 1)
-            self.stage_shapes = stage_shapes  # feeding data into model
-            logger.info("DDPG.__init__ -> The staging shapes are: {}".format(self.stage_shapes))
-
-            self.staging_tf = StagingArea(
-                dtypes=[tf.float32 for _ in self.stage_shapes.keys()], shapes=list(self.stage_shapes.values())
-            )
-            self.buffer_ph_tf = [tf.placeholder(tf.float32, shape=shape) for shape in self.stage_shapes.values()]
-            self.stage_op = self.staging_tf.put(self.buffer_ph_tf)
-
             logger.info("Creating a DDPG agent with action space %d x %s." % (self.dimu, self.max_u))
-            self._create_network(reuse=reuse)
+            self._create_network()
 
     def get_q_value(self, batch):
         policy = self.target
@@ -332,33 +307,19 @@ class DDPG(object):
 
         return transitions
 
-    def stage_batch(self, batch=None):
-        if batch is None:
-            batch = self.sample_batch()
-            batch = [batch[key] for key in self.stage_shapes.keys()]
-            self.current_batch = batch
-        assert len(self.buffer_ph_tf) == len(batch)
-        input_data = dict(zip(self.buffer_ph_tf, batch))
-        self.sess.run(self.stage_op, feed_dict=input_data)
-
-        # Debugging
-        for k in input_data.keys():
-            logger.debug("DDPG.stage_batch -> input of ", k, "is ", input_data[k].shape)
-        logger.debug("DDPG.stage_batch -> Order should match stage_shapes.")
-
     def pre_train(self, stage=True):
-        if stage:
-            self.stage_batch()
-        demo_loss, demo_grad = self.sess.run([self.demo_loss_tf, self.demo_grad_tf])
+        batch = self.sample_batch()
+        feed = {self.inputs_tf[k]: batch[k] for k in self.inputs_tf.keys()}
+        demo_loss, demo_grad = self.sess.run([self.demo_loss_tf, self.demo_grad_tf], feed_dict=feed)
         self.demo_adam.update(demo_grad, self.Q_lr)
         return demo_loss
 
     def train(self, stage=True):
-        if stage:
-            self.stage_batch()
+        batch = self.sample_batch()
+        feed = {self.inputs_tf[k]: batch[k] for k in self.inputs_tf.keys()}
         # Avoid feed_dict here for performance!
         critic_loss, actor_loss, Q_grad, pi_grad = self.sess.run(
-            [self.Q_loss_tf, self.pi_loss_tf, self.Q_grad_tf, self.pi_grad_tf]
+            [self.Q_loss_tf, self.pi_loss_tf, self.Q_grad_tf, self.pi_grad_tf], feed_dict=feed
         )
         self.Q_adam.update(Q_grad, self.Q_lr)
         self.pi_adam.update(pi_grad, self.pi_lr)
@@ -368,10 +329,11 @@ class DDPG(object):
     def check_train(self):
         """ For debugging only
         """
-        self.stage_batch(self.current_batch)
-        # method 0 rl only
-        rl_q_var = self.sess.run(self.main.Q_var_tf)
-        logger.info("DDPG.check_train -> rl variance {}".format(np.mean(rl_q_var)))
+        pass
+        # self.stage_batch(self.current_batch)
+        # # method 0 rl only
+        # rl_q_var = self.sess.run(self.main.Q_var_tf)
+        # logger.info("DDPG.check_train -> rl variance {}".format(np.mean(rl_q_var)))
 
     def init_target_net(self):
         self.sess.run(self.init_target_net_op)
@@ -402,16 +364,28 @@ class DDPG(object):
         else:
             return logs
 
-    def _create_network(self, reuse=False):
+    def _create_network(self):
         self.sess = tf.get_default_session()
         if self.sess is None:
             self.sess = tf.InteractiveSession()
 
-        # Mini-batch sampling.
-        # Note: batch_tf == {"o":(None, *int), "o_2":(None, *int), "g":(None, *int), "g_2":(None, *int), "u":(None, *int), "r":(None)}
-        batch = self.staging_tf.get()
-        batch_tf = OrderedDict([(key, batch[i]) for i, key in enumerate(self.stage_shapes.keys())])
-        logger.debug("DDPG._create_network -> self.stage_shapes.keys() are {}".format(self.stage_shapes.keys()))
+        self.inputs_tf = {}
+        self.inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
+        self.inputs_tf["o_2"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
+        self.inputs_tf["u"] = tf.placeholder(tf.float32, shape=(None, self.dimu))
+        self.inputs_tf["r"] = tf.placeholder(tf.float32, shape=(None, 1))
+        if self.dimg != 0:
+            self.inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
+            self.inputs_tf["g_2"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
+        self.inputs_tf["mask"] = tf.placeholder(tf.float32, shape=(None, self.num_sample))
+        self.inputs_tf["q"] = tf.placeholder(tf.float32, shape=(None, 1))
+        self.inputs_tf["n"] = tf.placeholder(tf.float32, shape=(None, 1))
+
+        self.target_inputs_tf = self.inputs_tf.copy()
+        # The input to the target network has to be the resultant observation and goal!
+        self.target_inputs_tf["o"] = self.inputs_tf["o_2"]
+        if self.dimg != 0:
+            self.target_inputs_tf["g"] = self.inputs_tf["g_2"]
 
         # Creating a normalizer for goal and observation.
         with tf.variable_scope("o_stats") as vs:
@@ -420,22 +394,42 @@ class DDPG(object):
             self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
 
         # Networks
-        target_batch_tf = batch_tf.copy()
-        # The input to the target network has to be the resultant observation and goal!
-        target_batch_tf["o"] = batch_tf["o_2"]
-        if self.dimg != 0:
-            target_batch_tf["g"] = batch_tf["g_2"]
-
         with tf.variable_scope("main") as vs:
-            self.main = ActorCritic(batch_tf, net_type="main", **self.__dict__)
+            self.main = ActorCritic(
+                inputs_tf=self.inputs_tf,
+                dimo=self.dimo,
+                dimg=self.dimg,
+                dimu=self.dimu,
+                max_u=self.max_u,
+                o_stats=self.o_stats,
+                g_stats=self.g_stats,
+                num_sample=self.num_sample,
+                ca_ratio=self.ca_ratio,
+                hidden=self.hidden,
+                layers=self.layers,
+            )
         with tf.variable_scope("target") as vs:
-            self.target = ActorCritic(target_batch_tf, net_type="target", **self.__dict__)
+            self.target = ActorCritic(
+                inputs_tf=self.target_inputs_tf,
+                dimo=self.dimo,
+                dimg=self.dimg,
+                dimu=self.dimu,
+                max_u=self.max_u,
+                o_stats=self.o_stats,
+                g_stats=self.g_stats,
+                num_sample=self.num_sample,
+                ca_ratio=self.ca_ratio,
+                hidden=self.hidden,
+                layers=self.layers,
+            )
         assert len(self._vars("main")) == len(self._vars("target"))
 
         # Critic loss
         clip_range = (-self.clip_return, 0.0 if self.clip_pos_returns else self.clip_return)
         target_list_tf = [
-            tf.clip_by_value(batch_tf["r"] + np.power(self.gamma, batch_tf["n"]) * target_Q_pi_tf, *clip_range)
+            tf.clip_by_value(
+                self.inputs_tf["r"] + np.power(self.gamma, self.inputs_tf["n"]) * target_Q_pi_tf, *clip_range
+            )
             for target_Q_pi_tf in self.target.Q_pi_tf
         ]
         self.Q_loss_tf = []
@@ -454,15 +448,15 @@ class DDPG(object):
                 # rl loss
                 rl_mse_tf = tf.boolean_mask(
                     tf.square(tf.stop_gradient(target_list_tf[i]) - self.main.Q_tf[i])
-                    * tf.reshape(batch_tf["mask"][:, i], [-1, 1]),
+                    * tf.reshape(self.inputs_tf["mask"][:, i], [-1, 1]),
                     rl_mask,
                 )
                 rl_loss_tf = tf.reduce_mean(rl_mse_tf)
                 # demo loss
                 demo_mse_tf = tf.boolean_mask(
-                    # tf.square(batch_tf["q"] - self.main.Q_tf[i])
+                    # tf.square(self.inputs_tf["q"] - self.main.Q_tf[i])
                     tf.square(tf.stop_gradient(target_list_tf[i]) - self.main.Q_tf[i])
-                    * tf.reshape(batch_tf["mask"][:, i], [-1, 1]),
+                    * tf.reshape(self.inputs_tf["mask"][:, i], [-1, 1]),
                     demo_mask,
                 )
                 demo_loss_tf = tf.reduce_mean(demo_mse_tf)
@@ -474,7 +468,7 @@ class DDPG(object):
             for i in range(self.num_sample):
                 self.max_q_tf = tf.stop_gradient(target_list_tf[i])
                 loss_tf = tf.reduce_mean(
-                    tf.square(self.max_q_tf - self.main.Q_tf[i]) * tf.reshape(batch_tf["mask"][:, i], [-1, 1])
+                    tf.square(self.max_q_tf - self.main.Q_tf[i]) * tf.reshape(self.inputs_tf["mask"][:, i], [-1, 1])
                 )
                 self.Q_loss_tf.append(loss_tf)
 
@@ -490,7 +484,7 @@ class DDPG(object):
             self.cloning_loss_tf = tf.reduce_sum(
                 tf.square(
                     tf.boolean_mask(tf.boolean_mask((self.main.pi_tf), mask), maskMain, axis=0)
-                    - tf.boolean_mask(tf.boolean_mask((batch_tf["u"]), mask), maskMain, axis=0)
+                    - tf.boolean_mask(tf.boolean_mask((self.inputs_tf["u"]), mask), maskMain, axis=0)
                 )
             )
             # primary loss scaled by it's respective weight prm_loss_weight
@@ -508,7 +502,7 @@ class DDPG(object):
                 (np.zeros(self.batch_size - self.batch_size_demo), np.ones(self.batch_size_demo)), axis=0
             )
             self.cloning_loss_tf = tf.reduce_sum(
-                tf.square(tf.boolean_mask((self.main.pi_tf), mask) - tf.boolean_mask((batch_tf["u"]), mask))
+                tf.square(tf.boolean_mask((self.main.pi_tf), mask) - tf.boolean_mask((self.inputs_tf["u"]), mask))
             )
             self.pi_loss_tf = -self.prm_loss_weight * tf.reduce_mean(self.main.Q_pi_tf[0])
             self.pi_loss_tf += (
