@@ -1,8 +1,5 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.contrib.staging import StagingArea
-
-from collections import OrderedDict
 
 from yw.tool import logger
 
@@ -254,7 +251,7 @@ class DDPG(object):
         demo_data = np.load(demo_file)  # load the demonstration data from data file
 
         assert self.num_demo <= demo_data["u"].shape[0], "No enough demonstration data!"
-        episode_batch = OrderedDict(**demo_data)
+        episode_batch = {**demo_data}
         # mask transitions for each bootstrapped head
         # select a distribution!
         for key in episode_batch.keys():
