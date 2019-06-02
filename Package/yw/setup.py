@@ -9,7 +9,15 @@ setup(
     author_email="cheney.wu@mail.utoronto.ca",
     license="MIT",
     packages=["yw"],
-    install_requires=["click", "gym", "matplotlib", "mpi4py", "tensorflow==1.13.1", "tensorflow_probability"],
+    install_requires=[
+        "click",
+        "gym",
+        "matplotlib",
+        "mpi4py",
+        "tensorflow==1.13.1",
+        "tensorflow_probability",
+        "pandas",
+    ],
     zip_safe=False,
 )
 
