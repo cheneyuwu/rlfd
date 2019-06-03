@@ -293,17 +293,17 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             sample_transitions (function): a function that samples from the replay buffer
         """
         super().__init__(buffer_shapes, size_in_transitions, T)
-        self._alpha = 0 # config this later
+        self._alpha = 1  # config this later
         self._beta = 1
         self._it_sum = SumSegmentTree(size_in_transitions)
         self._it_min = MinSegmentTree(size_in_transitions)
-        self._max_priority = 1.0
+        self._max_priority = 0.1#1.0
 
     def insert_transitions(self, idxs):
         for t in range(self.T):
             for i in idxs:
-                self._it_sum[i*self.T + t] = self._max_priority ** self._alpha
-                self._it_min[i*self.T + t] = self._max_priority ** self._alpha
+                self._it_sum[i * self.T + t] = self._max_priority ** self._alpha
+                self._it_min[i * self.T + t] = self._max_priority ** self._alpha
 
     def sample_transitions(self, buffers, batch_size):
         """Sample transitions of size batch_size randomly from episode_batch.
@@ -326,20 +326,23 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 
         assert transitions["u"].shape[0] == batch_size
 
-        transitions["idx"] = episode_idxs * self.T + t_samples
+        transitions["idx"] = np.array(episode_idxs) * self.T + np.array(t_samples)
 
         # compute importance weights for the experiences to correct for distribution shift
         weights = []
+        # get the scale down value
         p_min = self._it_min.min() / self._it_sum.sum()
         max_weight = (p_min * self.get_current_size()) ** (-self._beta)
 
         for idx in indices:
             p_sample = self._it_sum[idx] / self._it_sum.sum()
             weight = (p_sample * self.get_current_size()) ** (-self._beta)
-            weights.append(weight / max_weight)
-        weights = np.array(weights)
+            weights.append(weight)# / max_weight)
+        weights = np.array(weights).reshape(-1,1)
 
         transitions["weight"] = weights
+
+        # print(*list(zip(episode_idxs, t_samples, weights, [self._it_sum[i] for i in transitions["idx"]])), sep="\n")
 
         return transitions
 
@@ -354,8 +357,10 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         """
         assert len(indices) == len(priorities)
         for idx, priority in zip(indices, priorities):
+            if priority == 0:
+                priority += 1e-6
             assert priority > 0
-            assert 0 <= idx < len(self.get_current_size())
+            assert 0 <= idx < self.get_current_size()
             self._it_sum[idx] = priority ** self._alpha
             self._it_min[idx] = priority ** self._alpha
 

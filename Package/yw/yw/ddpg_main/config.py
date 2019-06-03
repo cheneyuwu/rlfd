@@ -109,7 +109,12 @@ class EnvCache:
 
 
 def add_env_params(params):
-    env_manager = EnvManager(params["env_name"], params["r_scale"], params["r_shift"], params["eps_length"])
+    env_manager = EnvManager(
+        env_name=params["env_name"],
+        r_scale=params["r_scale"],
+        r_shift=params["r_shift"],
+        eps_length=params["eps_length"],
+    )
     logger.info(
         "Using environment %s with r scale down by %f shift by %f and max episode %f"
         % (params["env_name"], params["r_scale"], params["r_shift"], params["eps_length"])
@@ -186,8 +191,6 @@ def configure_ddpg(params):
     rl_sample_params = {}
     if ddpg_params["replay_strategy"] == "her":
         rl_sample_params = configure_her(params)
-    if ddpg_params["replay_strategy"] == "prioritized":
-        pass # TODO
     ddpg_params["replay_strategy"] = {"strategy": ddpg_params["replay_strategy"], "args": rl_sample_params}
 
     demo_sample_params = configure_nstep(params)

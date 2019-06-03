@@ -148,6 +148,8 @@ class DDPG(object):
         # for demonstrations
         buffer_shapes["n"] = (self.T, 1)  # n step return
         buffer_shapes["q"] = (self.T, 1)  # expected q value
+        # for prioritized exp replay
+        buffer_shapes["weight"] = (self.T, 1)  # expected q value
         # add extra information
         for key, val in input_dims.items():
             if key.startswith("info"):
@@ -155,6 +157,7 @@ class DDPG(object):
         logger.debug("DDPG.__init__ -> The buffer shapes are: {}".format(buffer_shapes))
 
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
+        # buffer_size = 1048576
 
         if not self.replay_strategy:
             pass
@@ -259,6 +262,7 @@ class DDPG(object):
 
         episode_batch["mask"] = np.random.binomial(1, 1, (self.num_demo, self.T, self.num_sample))
         episode_batch["n"] = np.ones((self.num_demo, self.T, 1), dtype=np.float32)
+        episode_batch["weight"] = np.ones((self.num_demo, self.T, 1), dtype=np.float32)
         if self.demo_critic != "rb":
             # fill in the minimal value of q for rollout data.
             episode_batch["q"] = -100 * np.ones((self.num_demo, self.T, 1), dtype=np.float32)
@@ -280,6 +284,7 @@ class DDPG(object):
             np.random.binomial(1, 1, (self.rollout_batch_size, self.T, self.num_sample))
         )
         episode_batch["n"] = np.ones((self.rollout_batch_size, self.T, 1), dtype=np.float32)
+        episode_batch["weight"] = np.ones((self.rollout_batch_size, self.T, 1), dtype=np.float32)
         # fill in the minimal value of q for rollout data.
         episode_batch["q"] = -100 * np.ones((self.rollout_batch_size, self.T, 1), dtype=np.float32)
         self.replay_buffer.store_episode(episode_batch)
@@ -323,6 +328,11 @@ class DDPG(object):
         )
         self.Q_adam.update(Q_grad, self.Q_lr)
         self.pi_adam.update(pi_grad, self.pi_lr)
+
+        if self.replay_strategy["strategy"] == "prioritized":
+            critic_var = self.sess.run(self.main.Q_pi_var_tf, feed_dict=feed)
+            self.replay_buffer.update_priorities(batch["idx"], critic_var)
+
         logger.debug("DDPG.train -> critic_loss:{}, actor_loss:{}".format(critic_loss, actor_loss))
         return critic_loss, actor_loss
 
@@ -380,6 +390,8 @@ class DDPG(object):
         self.inputs_tf["mask"] = tf.placeholder(tf.float32, shape=(None, self.num_sample))
         self.inputs_tf["q"] = tf.placeholder(tf.float32, shape=(None, 1))
         self.inputs_tf["n"] = tf.placeholder(tf.float32, shape=(None, 1))
+        # prioritized replay also has a weight
+        self.inputs_tf["weight"] = tf.placeholder(tf.float32, shape=(None, 1))
 
         self.target_inputs_tf = self.inputs_tf.copy()
         # The input to the target network has to be the resultant observation and goal!
@@ -468,7 +480,7 @@ class DDPG(object):
             for i in range(self.num_sample):
                 self.max_q_tf = tf.stop_gradient(target_list_tf[i])
                 loss_tf = tf.reduce_mean(
-                    tf.square(self.max_q_tf - self.main.Q_tf[i]) * tf.reshape(self.inputs_tf["mask"][:, i], [-1, 1])
+                    self.inputs_tf["weight"] * tf.square(self.max_q_tf - self.main.Q_tf[i]) * tf.reshape(self.inputs_tf["mask"][:, i], [-1, 1])
                 )
                 self.Q_loss_tf.append(loss_tf)
 
