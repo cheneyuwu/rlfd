@@ -333,7 +333,7 @@ if __name__ == "__main__":
     demo_data_size = 512
     train_rl_epochs = 30
     seed = 2
-    for i in range(1):
+    for i in range(6):
         seed += i * 100
 
         # We can change the result directory without updating

@@ -157,7 +157,7 @@ class DDPG(object):
         logger.debug("DDPG.__init__ -> The buffer shapes are: {}".format(buffer_shapes))
 
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
-        # buffer_size = 1048576
+        buffer_size = 1048576 # delete this
 
         if not self.replay_strategy:
             pass
