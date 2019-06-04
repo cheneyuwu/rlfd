@@ -8,7 +8,6 @@ if tf.__version__.startswith("1"):
 else:
     from yw.ddpg_tf2.ddpg import DDPG
 from yw.ddpg_main.rollout import RolloutWorker
-from yw.ddpg_main.sampler import make_sample_her_transitions, make_sample_nstep_transitions
 
 from yw.env.env_manager import EnvManager
 

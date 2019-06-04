@@ -1,6 +1,8 @@
 import numpy as np
-
-import robosuite
+try:
+    import robosuite
+except:
+    pass
 
 
 def make(env_name, env_args):

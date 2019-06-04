@@ -157,15 +157,15 @@ class DDPG(object):
         logger.debug("DDPG.__init__ -> The buffer shapes are: {}".format(buffer_shapes))
 
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
-        buffer_size = 1048576 # delete this
 
         if not self.replay_strategy:
             pass
         elif self.replay_strategy["strategy"] == "her":
-            self.replay_buffer = HERReplayBuffer(
-                buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"]
-            )
+            self.replay_buffer = HERReplayBuffer(buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"])
         elif self.replay_strategy["strategy"] == "prioritized":
+            # for priortized replay, the buffer size has to be a power of two. however this should not be hard coded here.
+            # Instead, round the buffer size parameter to a power of two
+            buffer_size = 1048576
             self.replay_buffer = PrioritizedReplayBuffer(
                 buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"]
             )
@@ -178,7 +178,9 @@ class DDPG(object):
         if not self.demo_replay_strategy:
             pass
         elif self.demo_actor != "none" or self.demo_critic == "rb":
-            self.demo_buffer = NStepReplayBuffer(buffer_shapes, buffer_size, self.T, **self.demo_replay_strategy["args"])
+            self.demo_buffer = NStepReplayBuffer(
+                buffer_shapes, buffer_size, self.T, **self.demo_replay_strategy["args"]
+            )
 
         # Build computation core.
         with tf.variable_scope(self.scope):
@@ -268,8 +270,8 @@ class DDPG(object):
             episode_batch["q"] = -100 * np.ones((self.num_demo, self.T, 1), dtype=np.float32)
         self.demo_buffer.store_episode(episode_batch)
 
-        # if update_stats:
-        #     self._update_stats(episode_batch)
+        if update_stats:
+            self._update_stats(episode_batch)
 
     def store_episode(self, episode_batch, update_stats=True):
         """
@@ -289,8 +291,8 @@ class DDPG(object):
         episode_batch["q"] = -100 * np.ones((self.rollout_batch_size, self.T, 1), dtype=np.float32)
         self.replay_buffer.store_episode(episode_batch)
 
-        # if update_stats:
-        #     self._update_stats(episode_batch)
+        if update_stats:
+            self._update_stats(episode_batch)
 
     def sample_batch(self):
         # use demonstration buffer to sample as well if demo flag is set TRUE
@@ -480,7 +482,9 @@ class DDPG(object):
             for i in range(self.num_sample):
                 self.max_q_tf = tf.stop_gradient(target_list_tf[i])
                 loss_tf = tf.reduce_mean(
-                    self.inputs_tf["weight"] * tf.square(self.max_q_tf - self.main.Q_tf[i]) * tf.reshape(self.inputs_tf["mask"][:, i], [-1, 1])
+                    self.inputs_tf["weight"]
+                    * tf.square(self.max_q_tf - self.main.Q_tf[i])
+                    * tf.reshape(self.inputs_tf["mask"][:, i], [-1, 1])
                 )
                 self.Q_loss_tf.append(loss_tf)
 

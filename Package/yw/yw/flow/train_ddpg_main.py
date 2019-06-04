@@ -219,7 +219,8 @@ def train(
     policy = config.configure_ddpg(params=params)
     rollout_worker = config.config_rollout(params=params, policy=policy)
     evaluator = config.config_evaluator(params=params, policy=policy)
-    logger.info("Training the RL agent.")
+    
+    logger.info("Training the RL agent with n_epochs: {}, n_cycles: {}, n_batches: {}.".format(params["train_rl_epochs"], params["n_cycles"], params["n_batches"]))
     train_reinforce(
         save_path=save_path,
         save_interval=save_interval,

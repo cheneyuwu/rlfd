@@ -10,7 +10,6 @@ setup(
     license="MIT",
     packages=["yw"],
     install_requires=[
-        "click",
         "gym",
         "matplotlib",
         "mpi4py",
