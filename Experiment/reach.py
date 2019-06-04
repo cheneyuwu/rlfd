@@ -12,7 +12,7 @@ train_exp.env = environment
 train_exp.update()
 
 demo_data_size = 512
-train_rl_epochs = 100
+train_rl_epochs = 30
 seed = 2
 for i in range(6):
     seed += i * 100
@@ -46,20 +46,20 @@ for i in range(6):
     #     rl_batch_size=256,
     #     train_rl_epochs=train_rl_epochs,
     # )
-    assert not train_exp.rl_only(
-        r_scale=1.0,
-        r_shift=0.0,
-        rl_action_l2=0.5,
-        rl_scope="critic_demo",
-        n_cycles=10,
-        seed=seed + 10,
-        rl_num_sample=4,
-        rl_batch_size=256,
-        train_rl_epochs=train_rl_epochs,
-    )
+    # assert not train_exp.rl_only(
+    #     r_scale=1.0,
+    #     r_shift=0.0,
+    #     rl_action_l2=0.5,
+    #     rl_scope="critic_demo",
+    #     n_cycles=10,
+    #     seed=seed + 10,
+    #     rl_num_sample=4,
+    #     rl_batch_size=256,
+    #     train_rl_epochs=train_rl_epochs,
+    # )
 
-    # Generate demonstration data
-    assert not demo_exp.generate_demo(seed=seed + 30, num_itr=demo_data_size, entire_eps=1, shuffle=0)
+    # # Generate demonstration data
+    # assert not demo_exp.generate_demo(seed=seed + 30, num_itr=demo_data_size, entire_eps=1, shuffle=0)
 
     # Train the RL with demonstration
     # assert not train_exp.rl_with_demo_critic_rb(
@@ -91,4 +91,4 @@ assert not plot_exp.plot(dirs=plot_exp.result_dir)
 # assert not uncertainty.check()
 
 # Display a policy result (calls run_agent).
-# assert not display_exp.display(policy_file=display_exp.result_dir + "RLDemoCriticReplBuffer/rl/policy_latest.pkl")
+assert not display_exp.display(policy_file=display_exp.result_dir + "Exp0/RLNoDemo/rl/policy_latest.pkl")

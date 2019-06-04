@@ -27,12 +27,13 @@ class EnvManager:
 
         if self.make_env == None:
             try:
-                # there's no easy way to pass this
+                # there's no easy way to pass this, for now just hard coded here.
                 env_args = {
                     "has_renderer": False,  # no on-screen renderer
                     "has_offscreen_renderer": False,  # no off-screen renderer
                     "use_object_obs": True,  # use object-centric feature
                     "use_camera_obs": False,  # no camera observations)
+                    "reward_shaping": True,  # use dense rewards
                 }
                 _ = suite.make(env_name, env_args)
                 self.make_env = lambda: suite.make(env_name, env_args)
@@ -103,12 +104,12 @@ if __name__ == "__main__":
     env = env_manager.get_env()
     env.reset()
     env.seed(0)
-    for i in range(3):
+    for i in range(1000):
         action = np.random.randn(env.action_space.shape[0])  # sample random action
         state, r, extra, info = env.step(action)
         print(state)
         print(r)
         print(extra)
         print(info)
-        # env.render()
+        env.render()
 
