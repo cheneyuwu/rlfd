@@ -5,7 +5,7 @@ except:
     pass
 
 
-def make(env_name, env_args):
+def make(env_name, **env_args):
     try:
         _ = robosuite.make(env_name, **env_args)
     except:

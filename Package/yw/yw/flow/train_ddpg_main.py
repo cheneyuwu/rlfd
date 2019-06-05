@@ -143,6 +143,7 @@ def train(
     r_scale,
     r_shift,
     eps_length,
+    env_args,
     seed,
     train_rl_epochs,
     rl_num_sample,
@@ -187,6 +188,7 @@ def train(
     params["r_scale"] = r_scale
     params["r_shift"] = r_shift
     params["eps_length"] = eps_length
+    params["env_args"] = dict(env_args) if env_args else {}
     params["exploit"] = exploit
     params["train_rl_epochs"] = train_rl_epochs
     params["rl_demo_critic"] = demo_critic
@@ -252,6 +254,7 @@ if __name__ == "__main__":
     ap.parser.add_argument("--r_scale", help="down scale the reward", type=float, default=1.0)
     ap.parser.add_argument("--r_shift", help="shift the reward (before shifting)", type=float, default=0.0)
     ap.parser.add_argument("--eps_length", help="change the maximum episode length", type=int, default=0)
+    ap.parser.add_argument("--env_arg", action='append', type=lambda kv: kv.split(":"), dest="env_args")
     # training
     ap.parser.add_argument(
         "--train_rl_epochs", help="the number of training epochs to run for RL", type=int, default=1

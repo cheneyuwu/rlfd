@@ -6,16 +6,15 @@ import yw.env.suite_wrapper as suite
 class EnvManager:
     def __init__(self, env_name, env_args={}, r_scale=1, r_shift=0.05, eps_length=0):
         self.make_env = None
-        self.env_arg = {}
         # Search from our own environments
         if env_name == "Reach2D":
-            self.make_env = point_reach.Reach2D
+            self.make_env = lambda: point_reach.make(env_name, **env_args)
         elif env_name == "Reach2DSparse":
-            self.make_env = point_reach.Reach2D
-            self.env_arg["sparse"] = True
+            env_args["sparse"] = True
+            self.make_env = lambda: point_reach.make(env_name, **env_args)
         elif env_name == "Reach2DFirstOrder":
-            self.make_env = point_reach.Reach2D
-            self.env_arg["order"] = 1
+            env_args["order"] = 1
+            self.make_env = lambda: point_reach.make(env_name, **env_args)
 
         # Search from openai gym
         if self.make_env == None:
@@ -27,16 +26,8 @@ class EnvManager:
 
         if self.make_env == None:
             try:
-                # there's no easy way to pass this, for now just hard coded here.
-                env_args = {
-                    "has_renderer": False,  # no on-screen renderer
-                    "has_offscreen_renderer": False,  # no off-screen renderer
-                    "use_object_obs": True,  # use object-centric feature
-                    "use_camera_obs": False,  # no camera observations)
-                    "reward_shaping": True,  # use dense rewards
-                }
-                _ = suite.make(env_name, env_args)
-                self.make_env = lambda: suite.make(env_name, env_args)
+                _ = suite.make(env_name, **env_args)
+                self.make_env = lambda: suite.make(env_name, **env_args)
             except:
                 pass
 
@@ -49,11 +40,11 @@ class EnvManager:
         self.eps_length = eps_length
 
     def get_env(self):
-        return EnvManager.EnvWrapper(self.make_env, self.env_arg, self.r_scale, self.r_shift, self.eps_length)
+        return EnvManager.EnvWrapper(self.make_env, self.r_scale, self.r_shift, self.eps_length)
 
     class EnvWrapper:
-        def __init__(self, make_env, env_arg, r_scale, r_shift, eps_length):
-            self.env = make_env(**env_arg)
+        def __init__(self, make_env, r_scale, r_shift, eps_length):
+            self.env = make_env()
             self.r_scale = r_scale
             self.r_shift = r_shift
             self.eps_length = eps_length
