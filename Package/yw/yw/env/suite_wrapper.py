@@ -7,7 +7,8 @@ except:
 
 def make(env_name, **env_args):
     try:
-        _ = robosuite.make(env_name, **env_args)
+        tmp = robosuite.make(env_name, **env_args)
+        tmp.close()
     except:
         return NotImplementedError
 
@@ -60,3 +61,6 @@ class SuiteWrapper:
         }
         info["is_success"] = float(self.env._check_success())
         return state, r, extra, info
+    
+    def close(self):
+        return self.env.close()

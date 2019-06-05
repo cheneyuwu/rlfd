@@ -26,7 +26,8 @@ class EnvManager:
 
         if self.make_env == None:
             try:
-                _ = suite.make(env_name, **env_args)
+                tmp = suite.make(env_name, **env_args)
+                tmp.close()
                 self.make_env = lambda: suite.make(env_name, **env_args)
             except:
                 pass
@@ -71,36 +72,37 @@ class EnvManager:
             state, r, extra, info = self.env.step(action)
             r = (r + self.r_shift) / self.r_scale
             return state, r, extra, info
-
+        
+        def close(self):
+            return self.env.close()
 
 if __name__ == "__main__":
     import numpy as np
 
     # For a robosuite env
-    env_manager = EnvManager("SawyerLift")
+    env_manager = EnvManager("SawyerLift", env_args={
+    "has_renderer":True,
+    "ignore_done":True,
+    "use_camera_obs":False,
+    "control_freq":50,})
     env = env_manager.get_env()
     env.reset()
-    env.seed(0)
-    for i in range(3):
+    for i in range(100):
         action = np.random.randn(env.action_space.shape[0])  # sample random action
         state, r, extra, info = env.step(action)
-        print(state)
-        print(r)
-        print(extra)
-        print(info)
-        # env.render()
-
-    # For a openai env
-    env_manager = EnvManager("FetchPickAndPlace-v1")
-    env = env_manager.get_env()
-    env.reset()
-    env.seed(0)
-    for i in range(1000):
-        action = np.random.randn(env.action_space.shape[0])  # sample random action
-        state, r, extra, info = env.step(action)
-        print(state)
-        print(r)
-        print(extra)
-        print(info)
         env.render()
+
+    # # For a openai env
+    # env_manager = EnvManager("FetchPickAndPlace-v1")
+    # env = env_manager.get_env()
+    # env.reset()
+    # env.seed(0)
+    # for i in range(1000):
+    #     action = np.random.randn(env.action_space.shape[0])  # sample random action
+    #     state, r, extra, info = env.step(action)
+    #     print(state)
+    #     print(r)
+    #     print(extra)
+    #     print(info)
+    #     env.render()
 
