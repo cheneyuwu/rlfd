@@ -29,7 +29,7 @@ def play(policy_file, seed, num_itr, render, env_args, **kwargs):
     params["env_name"] = policy.info["env_name"]
     params["r_scale"] = policy.info["r_scale"]
     params["r_shift"] = policy.info["r_shift"]
-    params["eps_length"] = 1000# policy.info["eps_length"]
+    params["eps_length"] = policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T
     params["env_args"] = dict(env_args) if env_args != None else policy.info["env_args"]
     params["rank_seed"] = seed
     params["render"] = render
@@ -52,12 +52,18 @@ if __name__ == "__main__":
     from yw.util.cmd_util import ArgParser
 
     ap = ArgParser()
-    
+
     ap.parser.add_argument("--policy_file", help="demonstration training dataset", type=str, default=None)
     ap.parser.add_argument("--seed", help="RNG seed", type=int, default=413)
     ap.parser.add_argument("--num_itr", help="number of iterations", type=int, default=1)
     ap.parser.add_argument("--render", help="render or not", type=int, default=1)
-    ap.parser.add_argument("--env_arg", help="extra args passed to the environment", action='append', type=lambda kv: kv.split(":"), dest="env_args")
+    ap.parser.add_argument(
+        "--env_arg",
+        help="extra args passed to the environment",
+        action="append",
+        type=lambda kv: [kv.split(":")[0], eval(str(kv.split(":")[1] + '("' + kv.split(":")[2] + '")'))],
+        dest="env_args",
+    )
     ap.parse(sys.argv)
 
     play(**ap.get_dict())

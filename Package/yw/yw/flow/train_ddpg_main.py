@@ -197,7 +197,9 @@ def train(
     params["rl_num_sample"] = rl_num_sample
     params["nstep_n"] = nstep_n
     params["rl_replay_strategy"] = rl_replay_strategy  # For HER: future or none
-    params["config"] = "-".join(["ddpg", demo_critic, "r_sample:" + str(rl_num_sample), "replay:" + rl_replay_strategy])
+    params["config"] = "-".join(
+        ["ddpg", demo_critic, "r_sample:" + str(rl_num_sample), "replay:" + rl_replay_strategy]
+    )
     # make it possible to override any parameter.
     for key, val in unknown_params.items():
         assert key in params.keys(), "Wrong override parameter: {}.".format(key)
@@ -221,8 +223,12 @@ def train(
     policy = config.configure_ddpg(params=params)
     rollout_worker = config.config_rollout(params=params, policy=policy)
     evaluator = config.config_evaluator(params=params, policy=policy)
-    
-    logger.info("Training the RL agent with n_epochs: {}, n_cycles: {}, n_batches: {}.".format(params["train_rl_epochs"], params["n_cycles"], params["n_batches"]))
+
+    logger.info(
+        "Training the RL agent with n_epochs: {}, n_cycles: {}, n_batches: {}.".format(
+            params["train_rl_epochs"], params["n_cycles"], params["n_batches"]
+        )
+    )
     train_reinforce(
         save_path=save_path,
         save_interval=save_interval,
@@ -254,7 +260,12 @@ if __name__ == "__main__":
     ap.parser.add_argument("--r_scale", help="down scale the reward", type=float, default=1.0)
     ap.parser.add_argument("--r_shift", help="shift the reward (before shifting)", type=float, default=0.0)
     ap.parser.add_argument("--eps_length", help="change the maximum episode length", type=int, default=0)
-    ap.parser.add_argument("--env_arg", action='append', type=lambda kv: kv.split(":"), dest="env_args")
+    ap.parser.add_argument(
+        "--env_arg",
+        action="append",
+        type=lambda kv: [kv.split(":")[0], eval(str(kv.split(":")[1] + '("' + kv.split(":")[2] + '")'))],
+        dest="env_args",
+    )
     # training
     ap.parser.add_argument(
         "--train_rl_epochs", help="the number of training epochs to run for RL", type=int, default=1
@@ -294,6 +305,6 @@ if __name__ == "__main__":
         "--debug_params", help="override some parameters for internal regression tests", type=int, default=0
     )
     ap.parse(sys.argv)
-
+    
     print("Launching the training process.")
     train(**ap.get_dict())
