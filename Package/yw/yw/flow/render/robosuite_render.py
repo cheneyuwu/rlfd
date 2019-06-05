@@ -9,14 +9,16 @@ import numpy as np
 import pickle
 
 from yw.util.mpi_util import set_global_seeds
-from yw.ddpg_main import config
+from yw.env.suite_wrapper import make
+
+import robosuite as suite
 
 
 # DDPG Package import
 from yw.tool import logger
 
 
-def play(policy_file, seed, num_itr, render, env_args, **kwargs):
+def play(policy_file, seed, num_itr, eps_length, env_args, **kwargs):
 
     set_global_seeds(seed)
 
@@ -25,27 +27,26 @@ def play(policy_file, seed, num_itr, render, env_args, **kwargs):
         policy = pickle.load(f)
 
     # Prepare params.
-    params = {}
-    params["env_name"] = policy.info["env_name"]
-    params["r_scale"] = policy.info["r_scale"]
-    params["r_shift"] = policy.info["r_shift"]
-    params["eps_length"] = policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T
-    params["env_args"] = dict(env_args) if env_args != None else policy.info["env_args"]
-    params["rank_seed"] = seed
-    params["render"] = render
-    params["rollout_batch_size"] = 1
-    params = config.add_env_params(params=params)
-    demo = config.config_demo(params=params, policy=policy)
+    env_args = dict(env_args) if env_args != None else policy.info["env_args"]
+    eps_length = eps_length if eps_length != 0 else (policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T)
 
-    # Run evaluation.
-    demo.clear_history()
+    env = make(policy.info["env_name"], **env_args)
     for _ in range(num_itr):
-        demo.generate_rollouts()
+        obs = env.reset()
+        o = obs["observation"]
+        g = obs["desired_goal"]
+        # generate episodes
+        for _ in range(eps_length):
+            policy_output = policy.get_actions(
+                o, 0, g, compute_Q=False, noise_eps=0.0, random_eps=0.0, use_target_net=False
+            )
+            u = np.array(policy_output)
+            obs, _, _, _ = env.step(u)
+            o = obs["observation"]
+            g = obs["desired_goal"]
+            env.render()
+            
 
-    # record logs
-    for key, val in demo.logs("test"):
-        logger.record_tabular(key, np.mean(val))
-    logger.dump_tabular()
 
 if __name__ == "__main__":
     import sys
@@ -56,7 +57,7 @@ if __name__ == "__main__":
     ap.parser.add_argument("--policy_file", help="demonstration training dataset", type=str, default=None)
     ap.parser.add_argument("--seed", help="RNG seed", type=int, default=413)
     ap.parser.add_argument("--num_itr", help="number of iterations", type=int, default=1)
-    ap.parser.add_argument("--render", help="render or not", type=int, default=1)
+    ap.parser.add_argument("--eps_length", help="length of each episode", type=int, default=0)
     ap.parser.add_argument(
         "--env_arg",
         help="extra args passed to the environment",

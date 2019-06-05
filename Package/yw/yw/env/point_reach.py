@@ -6,6 +6,14 @@ import matplotlib
 matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode
 import matplotlib.pyplot as plt
 
+def make(env_name, **env_args):
+    # note: we only have one environment
+    try:
+        _ = Reach2D(**env_args)
+    except:
+        return NotImplementedError
+
+    return Reach2D(**env_args)
 
 class Reach2D:
     def __init__(self, order=2, sparse=False, seed=0):

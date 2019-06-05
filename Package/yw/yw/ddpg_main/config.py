@@ -30,6 +30,7 @@ DEFAULT_PARAMS = {
     "r_scale": 1.0,  # re-scale the reward. Only use this for dense rewards.
     "r_shift": 0.0,  # re-scale the reward. Only use this for dense rewards.
     "eps_length": 0,  # change the length of the episode.
+    "env_args": {},  # extra arguments passed to the environment.
     "max_u": 1.0,  # max absolute value of actions on different coordinates
     "no_pos_return": False,  # Whether or not this environment has positive return or not.
     # general ddpg config
@@ -110,6 +111,7 @@ class EnvCache:
 def add_env_params(params):
     env_manager = EnvManager(
         env_name=params["env_name"],
+        env_args=params["env_args"],
         r_scale=params["r_scale"],
         r_shift=params["r_shift"],
         eps_length=params["eps_length"],
@@ -211,6 +213,7 @@ def configure_ddpg(params):
         "r_scale": params["r_scale"],
         "r_shift": params["r_shift"],
         "eps_length": params["eps_length"],
+        "env_args": params["env_args"],
     }
     logger.info("*** ddpg_params ***")
     log_params(ddpg_params)

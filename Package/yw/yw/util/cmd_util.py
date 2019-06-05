@@ -29,8 +29,15 @@ class Command:
             run = []
             for key in cmd:
                 if key.startswith("-"):
-                    run.append(str(key))
-                run.append(str(cmd[key]))
+                    if type(cmd[key]) is dict:
+                        for v in cmd[key].keys():
+                            run.append(str(key))
+                            run.append(str(v)+":"+str(cmd[key][v]))
+                    else:
+                        run.append(str(key))
+                        run.append(str(cmd[key]))
+                else:
+                    run.append(str(cmd[key]))
             return Command.print_call(run, list(cmd.keys())[0])
 
         return wrapper
