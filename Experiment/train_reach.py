@@ -12,9 +12,9 @@ train_exp.env = environment
 train_exp.update()
 
 demo_data_size = 512
-train_rl_epochs = 30
+train_rl_epochs = 10
 seed = 2
-for i in range(6):
+for i in range(1):
     seed += i * 100
 
     # We can change the result directory without updating
@@ -24,17 +24,17 @@ for i in range(6):
     train_exp.result_dir = result_dir
 
     # Train the RL without demonstration
-    # assert not train_exp.rl_her_only(
-    #     r_scale=1.0,
-    #     r_shift=0.0,
-    #     rl_action_l2=0.5,
-    #     rl_scope="critic_demo",
-    #     n_cycles=10,
-    #     seed=seed + 20,
-    #     rl_num_sample=4,
-    #     rl_batch_size=256,
-    #     train_rl_epochs=train_rl_epochs,
-    # )
+    assert not train_exp.rl_her_only(
+        r_scale=1.0,
+        r_shift=0.0,
+        rl_action_l2=0.5,
+        rl_scope="critic_demo",
+        n_cycles=10,
+        seed=seed + 20,
+        rl_num_sample=4,
+        rl_batch_size=256,
+        train_rl_epochs=train_rl_epochs,
+    )
     # assert not train_exp.rl_prioritized_only(
     #     r_scale=1.0,
     #     r_shift=0.0,
@@ -78,7 +78,7 @@ for i in range(6):
     # )
 
 # Plot the training result
-assert not plot_exp.plot(dirs=plot_exp.result_dir)
+# assert not plot_exp.plot(dirs=plot_exp.result_dir)
 
 # Plot the query result
 # assert not animation.plot_animation(load_dir=os.path.join(animation.result_dir, "RLNoDemo/ac_output"))
@@ -91,4 +91,4 @@ assert not plot_exp.plot(dirs=plot_exp.result_dir)
 # assert not uncertainty.check()
 
 # Display a policy result (calls run_agent).
-assert not display_exp.display(policy_file=display_exp.result_dir + "Exp0/RLNoDemo/rl/policy_latest.pkl")
+assert not display_exp.display(policy_file=display_exp.result_dir + "Exp0/RLHERNoDemo/rl/policy_latest.pkl")
