@@ -8,12 +8,18 @@ class EnvManager:
         self.make_env = None
         # Search from our own environments
         if env_name == "Reach2D":
+            env_args["dim"] = 2
             self.make_env = lambda: point_reach.make(env_name, **env_args)
         elif env_name == "Reach2DSparse":
+            env_args["dim"] = 2
             env_args["sparse"] = True
             self.make_env = lambda: point_reach.make(env_name, **env_args)
         elif env_name == "Reach2DFirstOrder":
+            env_args["dim"] = 2
             env_args["order"] = 1
+            self.make_env = lambda: point_reach.make(env_name, **env_args)
+        elif env_name == "Reach1D":
+            env_args["dim"] = 1
             self.make_env = lambda: point_reach.make(env_name, **env_args)
 
         # Search from openai gym
