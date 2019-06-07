@@ -92,14 +92,14 @@ class Reacher:
 
         # Randomly select the initial state
         if self.order == 2:
-            # self.speed = np.zeros(2)
+            # self.speed = np.zeros(self.dim)
             self.speed = 2 * (self.random.rand(self.dim) - 0.5) * self.boundary
-            # self.goal = np.zeros(2)
+            # self.goal = np.zeros(self.dim)
             self.goal = 2 * (self.random.rand(self.dim) - 0.5) * self.boundary
             self.curr_pos = 2 * (self.random.rand(self.dim) - 0.5) * self.boundary
         else:  # 1
-            # self.goal = np.zeros(2)
-            self.goal = 2 * (self.random.rand(self.dim) - 0.5) * self.boundary
+            self.goal = 0.0 * np.ones(self.dim)
+            # self.goal = 2 * (self.random.rand(self.dim) - 0.5) * self.boundary
             self.curr_pos = 2 * (self.random.rand(self.dim) - 0.5) * self.boundary
 
         # Make it possible to override the initial state.

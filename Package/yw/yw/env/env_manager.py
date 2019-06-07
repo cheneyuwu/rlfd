@@ -21,6 +21,10 @@ class EnvManager:
         elif env_name == "Reach1D":
             env_args["dim"] = 1
             self.make_env = lambda: point_reach.make(env_name, **env_args)
+        elif env_name == "Reach1DFirstOrder":
+            env_args["dim"] = 1
+            env_args["order"] = 1
+            self.make_env = lambda: point_reach.make(env_name, **env_args)
 
         # Search from openai gym
         if self.make_env == None:
@@ -78,19 +82,18 @@ class EnvManager:
             state, r, extra, info = self.env.step(action)
             r = (r + self.r_shift) / self.r_scale
             return state, r, extra, info
-        
+
         def close(self):
             return self.env.close()
+
 
 if __name__ == "__main__":
     import numpy as np
 
     # For a robosuite env
-    env_manager = EnvManager("SawyerLift", env_args={
-    "has_renderer":True,
-    "ignore_done":True,
-    "use_camera_obs":False,
-    "control_freq":50,})
+    env_manager = EnvManager(
+        "SawyerLift", env_args={"has_renderer": True, "ignore_done": True, "use_camera_obs": False, "control_freq": 50}
+    )
     env = env_manager.get_env()
     env.reset()
     for i in range(100):
