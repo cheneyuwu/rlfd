@@ -64,7 +64,7 @@ def train_reinforce(
         rollout_worker.clear_history()
         episode = rollout_worker.generate_rollouts()
         policy.store_episode(episode)
-        for i in range(2000):
+        for i in range(100):
             loss = policy.pre_train()
             if rank == 0 and i % 100 == 0:
                 logger.record_tabular("step", i)
@@ -107,7 +107,7 @@ def train_reinforce(
         # Store anything we need into a numpyz file.
         # policy.query_ac_output(os.path.join(ac_output_save_path, "query_{:03d}.npz".format(epoch)))
         # policy.query_critic_q(os.path.join(critic_q_save_path, "query_latest.npz"))
-        # policy.query_uncertainty(os.path.join(uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
+        policy.query_uncertainty(os.path.join(uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
 
         # save the policy if it's better than the previous ones
         success_rate = mpi_average(evaluator.current_success_rate())
