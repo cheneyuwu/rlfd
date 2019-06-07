@@ -25,23 +25,20 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, shuffle, render, e
 
     # Extract environment construction information
     env_name = policy.info["env_name"]
-    r_scale = policy.info["r_scale"]
-    r_shift = policy.info["r_shift"]
-    eps_length = policy.info["eps_length"]
-    T = policy.T
-
-    max_concurrency = 10
+    T = policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T
+    max_concurrency = 10 # avoid too many envs
     num_eps = int(np.ceil(num_itr/T)) if shuffle and entire_eps else num_itr
 
     # Prepare params.
     params = {}
     params["env_name"] = env_name
-    params["r_scale"] = r_scale
-    params["r_shift"] = r_shift
-    params["eps_length"] = eps_length
+    params["r_scale"] = policy.info["r_scale"]
+    params["r_shift"] = policy.info["r_shift"]
+    params["eps_length"] = T
+    params["env_args"] = policy.info["env_args"]
+    params["rollout_batch_size"] = np.minimum(num_eps, max_concurrency)
     params["rank_seed"] = seed
     params["render"] = render
-    params["rollout_batch_size"] = np.minimum(num_eps, max_concurrency)
     params = config.add_env_params(params=params)
     demo = config.config_demo(params=params, policy=policy)
 
