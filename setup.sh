@@ -10,3 +10,5 @@ export PACKAGE=${PROJECT}/Package/
 export TF_CPP_MIN_LOG_LEVEL=2
 # Add regtest
 alias ywregtest=${PACKAGE}/yw/yw/flow/regtest/regtest.sh
+# Make some temp folders to store results
+mkdir -p ${PROJECT}/Result/Temp

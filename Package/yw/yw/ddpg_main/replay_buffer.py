@@ -254,10 +254,10 @@ class NStepReplayBuffer(ReplayBuffer):
 
         # Get the transitions
         transitions = {}
-        for k in ["o", "u", "g", "ag", "q", "mask", "info_is_success", "weight"]:
+        for k in ["o", "u", "g", "ag","o_2", "ag_2", "g_2", "r", "mask", "info_is_success", "weight"]:
             transitions[k] = buffers[k][episode_idxs, t_samples].copy()
         # calculate n step return
-        cum_reward = np.zeros_like(buffers["r"][episode_idxs, t_samples])
+        cum_reward = np.zeros_like(buffers["q"][episode_idxs, t_samples])
         cum_discount = np.zeros_like(buffers["n"][episode_idxs, t_samples])
         assert self.n >= 1
         for step in range(self.n):
@@ -267,13 +267,20 @@ class NStepReplayBuffer(ReplayBuffer):
                 0,
             )
             cum_discount += np.where(((t_samples + step) < self.T).reshape(cum_discount.shape), 1, 0)
-        transitions["r"] = cum_reward
+        transitions["q"] = cum_reward
         transitions["n"] = cum_discount
         # change the state it goes to
         n_step_t_samples = np.minimum(t_samples + self.n - 1, self.T - 1)
-        for k in ["o_2", "ag_2", "g_2"]:
-            transitions[k] = buffers[k][episode_idxs, n_step_t_samples].copy()
+        transitions["o_e"] = buffers["o_2"][episode_idxs, n_step_t_samples].copy()
+        transitions["ag_e"] = buffers["ag_2"][episode_idxs, n_step_t_samples].copy()
+        transitions["g_e"] = buffers["g_2"][episode_idxs, n_step_t_samples].copy()
+
+        # Make sure the transitions have correct shape
         transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:]) for k in transitions.keys()}
+
+        # For debugging
+        logger.debug("NStepReplayBuffer -> current buffer: ", buffers)
+        logger.debug("NStepReplayBuffer -> sampled transitions: ", transitions)
 
         assert transitions.keys() == buffers.keys()
         assert transitions["u"].shape[0] == batch_size
