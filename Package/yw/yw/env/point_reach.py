@@ -27,7 +27,7 @@ class Reacher:
         self.mass = 1
         self.boundary = 1.0
         self.threshold = self.boundary / 12
-        self._max_episode_steps = 42 if self.order == 2 else 24
+        self._max_episode_steps = 42 if self.order == 2 else 16
         self.max_u = 2
         self.action_space = self.ActionSpace(self.dim)
         plt.ion()
@@ -49,7 +49,7 @@ class Reacher:
         distance = np.sqrt(np.sum(np.square(achieved_goal - desired_goal), axis=1))
         if self.sparse == False:
             return -distance
-            # return 1.0 / (1.0 + distance)
+            # return 0.5 / (0.5 + distance)
         else:  # self.sparse == True
             return (distance < self.threshold).astype(np.int64)
 
@@ -100,6 +100,7 @@ class Reacher:
         else:  # 1
             self.goal = 0.0 * np.ones(self.dim)
             # self.goal = 2 * (self.random.rand(self.dim) - 0.5) * self.boundary
+            # self.curr_pos = -0.7 * np.ones(self.dim) + 0.2 * (self.random.rand(self.dim) - 0.5)
             self.curr_pos = 2 * (self.random.rand(self.dim) - 0.5) * self.boundary
 
         # Make it possible to override the initial state.
@@ -145,11 +146,8 @@ class Reacher:
         g = self.goal
         ag = self.curr_pos
         r = self.compute_reward(ag, g)
-        # g = np.empty((0))
-        # ag = np.empty((0))
         if self.order == 2:
             position_ok = r > -self.threshold if self.sparse == False else r == 1
-            # position_ok = r > 0.9 if self.sparse == False else r == 1
             speed_ok = np.sqrt(np.sum(np.square(self.speed))) < 0.25
             is_success = position_ok and speed_ok
         else:
