@@ -485,13 +485,14 @@ class DDPG(object):
         self.Q_loss_tf = []
         self.demo_loss_tf = []
         if self.demo_critic in ["rb"]:
-            # Method 1 choose only the demo buffer samples
+            # TODO (yuchen): tf.boolean_mask calls tf.gather to get gradients. The following use of boolean_task consumes huge
+            # amount of memory and may slow down the training process. Consider to use dynamic partition instead.
             demo_mask = np.concatenate(
                 (np.zeros(self.batch_size - self.batch_size_demo), np.ones(self.batch_size_demo)), axis=0
-            ).reshape(-1, 1)
+            )
             rl_mask = np.concatenate(
                 (np.ones(self.batch_size - self.batch_size_demo), np.zeros(self.batch_size_demo)), axis=0
-            ).reshape(-1, 1)
+            )
             for i in range(self.num_sample):
                 # calculate bellman target
                 target_tf = tf.clip_by_value(self.inputs_tf["r"] + self.gamma * self.target.Q_pi_tf[i], *clip_range)
