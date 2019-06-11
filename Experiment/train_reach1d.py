@@ -34,8 +34,8 @@ if __name__ == "__main__":
     train_exp.num_cpu = 1
     train_exp.update()
 
-    demo_data_size = 32
-    train_rl_epochs = 30
+    demo_data_size = 128
+    train_rl_epochs = 32
     seed = 2
     for i in range(1):
         seed += i * 100
@@ -72,8 +72,8 @@ if __name__ == "__main__":
         # assert not train_exp.rl_only(
         #     rl_action_l2=0.5,
         #     rl_scope="rl_only",
-        #     n_cycles=2,
-        #     n_batches=4,
+        #     n_cycles=4,
+        #     n_batches=8,
         #     seed=seed + 10,
         #     rl_num_sample=8,
         #     rl_batch_size=32,
@@ -93,8 +93,8 @@ if __name__ == "__main__":
         assert not train_exp.rl_with_demo_critic_rb(
             rl_action_l2=0.5,
             rl_scope="rl_with_demo",
-            n_cycles=2,
-            n_batches=4,
+            n_cycles=4,
+            n_batches=8,
             seed=seed + 40,
             rl_num_sample=8,
             rl_batch_size=64,
@@ -106,14 +106,7 @@ if __name__ == "__main__":
         )
 
     # Plot the training result
-    # assert not plot_exp.plot(dirs=plot_exp.result_dir)
-
-    # Plot the query result
-    # assert not animation.plot_animation(load_dir=os.path.join(animation.result_dir, "RLNoDemo/ac_output"))
-    # assert not animation.plot_animation(load_dir=os.path.join(animation.result_dir, "RLDemoCriticPolicy/ac_output"))
-
-    # Compare the real q and critic q from arbitrary initial state and action pair.
-    # assert not compare_q.compare()
+    assert not plot_exp.plot(dirs=plot_exp.result_dir)
 
     # Check the uncertainty output of the demonstration output
     assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "Exp"+str(i)+"/RLNoDemo/uncertainty/")

@@ -155,7 +155,7 @@ def nn(input, layers_sizes, reuse=None, flatten=False, name=""):
         input = tf.layers.dense(
             inputs=input,
             units=size,
-            kernel_initializer=tf.contrib.layers.xavier_initializer(),
+            kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False),
             reuse=reuse,
             name=name + "_" + str(i),
         )

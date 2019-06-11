@@ -58,7 +58,7 @@ DEFAULT_PARAMS = {
     "rl_norm_clip": 5,  # normalized observations are cropped to this values
     # Process I/Os
     "clip_obs": 200.0,
-    "clip_return": True,
+    "clip_return": False,
     # Exploration - for rollouts
     "exploit": False,  # whether or not to use e-greedy and add noise to output
     "random_eps": 0.3,  # percentage of time a random action is taken

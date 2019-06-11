@@ -59,9 +59,9 @@ for i in range(1):
     #     train_rl_epochs=train_rl_epochs,
     # )
 
-    # # # Generate demonstration data
+    # Generate demonstration data
     # assert not demo_exp.generate_demo(
-    #     policy_file=demo_exp.result_dir + "RLHERNoDemo/rl/policy_latest.pkl",
+    #     policy_file=demo_exp.result_dir + "RLNoDemo/rl/policy_latest.pkl",
     #     seed=seed + 30,
     #     num_itr=demo_data_size,
     #     entire_eps=1,

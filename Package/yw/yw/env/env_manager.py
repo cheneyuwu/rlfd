@@ -25,6 +25,11 @@ class EnvManager:
             env_args["dim"] = 1
             env_args["order"] = 1
             self.make_env = lambda: point_reach.make(env_name, **env_args)
+        elif env_name == "Reach1DFirstOrderSparse":
+            env_args["dim"] = 1
+            env_args["order"] = 1
+            env_args["sparse"] = True
+            self.make_env = lambda: point_reach.make(env_name, **env_args)
 
         # Search from openai gym
         if self.make_env == None:
