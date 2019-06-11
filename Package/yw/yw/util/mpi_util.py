@@ -5,31 +5,13 @@ import os
 import sys
 import subprocess
 
-from mpi4py import MPI
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
+
 import numpy as np
 import random
-
-
-def set_global_seeds(i):
-    try:
-        import MPI
-
-        rank = MPI.COMM_WORLD.Get_rank()
-    except ImportError:
-        rank = 0
-
-    myseed = i + 1000 * rank if i is not None else None
-    try:
-        import tensorflow as tf
-
-        if tf.__version__.startswith("1"):
-            tf.set_random_seed(myseed)
-        else:
-            tf.random.set_seed(myseed)
-    except ImportError:
-        pass
-    np.random.seed(myseed)
-    random.seed(myseed)
 
 
 def install_mpi_excepthook():
@@ -52,7 +34,10 @@ def mpi_average(value):
         value = [value]
     elif len(value) == 0:
         value = [0.0]
-    return mpi_moments(np.array(value))[0]
+    if MPI is None:
+        return value
+    else:
+        return mpi_moments(np.array(value))[0]
 
 
 def mpi_fork(n, extra_mpi_args=[]):

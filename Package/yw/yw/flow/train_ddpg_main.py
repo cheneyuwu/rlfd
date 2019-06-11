@@ -14,7 +14,10 @@
 import os
 import sys
 
-from mpi4py import MPI
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
 
 import json
 import pickle
@@ -22,7 +25,8 @@ import numpy as np
 
 from yw.tool import logger
 from yw.ddpg_main import config
-from yw.util.mpi_util import mpi_fork, mpi_average, set_global_seeds
+from yw.util.util import set_global_seeds
+from yw.util.mpi_util import mpi_average
 
 
 def train_reinforce(
@@ -38,7 +42,7 @@ def train_reinforce(
     demo_file,
     **kwargs,
 ):
-    rank = MPI.COMM_WORLD.Get_rank()
+    rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
 
     if save_path:
         policy_save_path = save_path + "/rl/"
@@ -130,11 +134,12 @@ def train_reinforce(
             evaluator.save_policy(latest_policy_path)
 
         # make sure that different threads have different seeds
-        local_uniform = np.random.uniform(size=(1,))
-        root_uniform = local_uniform.copy()
-        MPI.COMM_WORLD.Bcast(root_uniform, root=0)
-        if rank != 0:
-            assert local_uniform[0] != root_uniform[0]
+        if MPI != None:
+            local_uniform = np.random.uniform(size=(1,))
+            root_uniform = local_uniform.copy()
+            MPI.COMM_WORLD.Bcast(root_uniform, root=0)
+            if rank != 0:
+                assert local_uniform[0] != root_uniform[0]
 
 
 def train(
@@ -163,8 +168,8 @@ def train(
 ):
 
     # Consider rank as pid.
-    rank = MPI.COMM_WORLD.Get_rank()
-    num_cpu = MPI.COMM_WORLD.Get_size()
+    rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
+    num_cpu = MPI.COMM_WORLD.Get_size() if MPI != None else 1
 
     # Configure logging.
     if rank == 0:
