@@ -1,7 +1,11 @@
 import threading
 
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
+
 import numpy as np
-from mpi4py import MPI
 import tensorflow as tf
 
 
@@ -125,6 +129,8 @@ class Normalizer:
         self.sess.run(self.recompute_op)
 
     def _mpi_average(self, x):
+        if MPI is None:
+            return x
         buf = np.zeros_like(x)
         MPI.COMM_WORLD.Allreduce(x, buf, op=MPI.SUM)
         buf /= MPI.COMM_WORLD.Get_size()

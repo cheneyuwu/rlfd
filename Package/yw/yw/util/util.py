@@ -38,14 +38,21 @@ def store_args(method):
     return wrapper
 
 def set_global_seeds(i):
-    """
-    Use this function when MPI is not used.
-    """
-    myseed = i if i is not None else None
+    try:
+        import MPI
+
+        rank = MPI.COMM_WORLD.Get_rank()
+    except ImportError:
+        rank = 0
+
+    myseed = i + 1000 * rank if i is not None else None
     try:
         import tensorflow as tf
 
-        tf.set_random_seed(myseed)
+        if tf.__version__.startswith("1"):
+            tf.set_random_seed(myseed)
+        else:
+            tf.random.set_seed(myseed)
     except ImportError:
         pass
     np.random.seed(myseed)
