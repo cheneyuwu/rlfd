@@ -30,14 +30,13 @@ def install_mpi_excepthook():
 
 
 def mpi_average(value):
+    if MPI is None:
+        return value
     if not isinstance(value, list):
         value = [value]
     elif len(value) == 0:
         value = [0.0]
-    if MPI is None:
-        return value
-    else:
-        return mpi_moments(np.array(value))[0]
+    return mpi_moments(np.array(value))[0]
 
 
 def mpi_fork(n, extra_mpi_args=[]):
