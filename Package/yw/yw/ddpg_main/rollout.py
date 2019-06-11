@@ -3,6 +3,11 @@ from collections import deque
 import numpy as np
 import pickle
 
+try:
+    from mujoco_py import MujocoException
+except:
+    MujocoException = None
+
 
 from yw.tool import logger
 from yw.util.util import store_args
@@ -117,16 +122,20 @@ class RolloutWorker:
             success = np.zeros(self.rollout_batch_size)
             # compute new states and observations
             for i in range(self.rollout_batch_size):
-                curr_o_new, curr_r, _, info = self.envs[i].step(u[i])
-                r[i] = curr_r
-                if "is_success" in info:
-                    success[i] = info["is_success"]
-                o_new[i] = curr_o_new["observation"]
-                ag_new[i] = curr_o_new["achieved_goal"]
-                for idx, key in enumerate(self.info_keys):
-                    info_values[idx][t, i] = info[key]
-                if self.render:
-                    self.envs[i].render()
+                try:
+                    curr_o_new, curr_r, _, info = self.envs[i].step(u[i])
+                    r[i] = curr_r
+                    if "is_success" in info:
+                        success[i] = info["is_success"]
+                    o_new[i] = curr_o_new["observation"]
+                    ag_new[i] = curr_o_new["achieved_goal"]
+                    for idx, key in enumerate(self.info_keys):
+                        info_values[idx][t, i] = info[key]
+                    if self.render:
+                        self.envs[i].render()
+                except MujocoException:
+                    logger.warn("MujocoException caught during rollout generation. Trying again...")
+                    return self.generate_rollouts()
 
             if np.isnan(o_new).any():
                 logger.warn("NaN caught during rollout generation. Trying again...")
