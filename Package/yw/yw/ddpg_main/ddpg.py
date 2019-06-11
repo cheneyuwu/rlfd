@@ -715,6 +715,9 @@ class DDPG(object):
 
         This check can only be used for the Reach2DFirstOrder environment.
         """
+        if not "Reach" in self.info["env_name"]:
+            return
+        
         logger.info("Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.")
 
         num_point = 24

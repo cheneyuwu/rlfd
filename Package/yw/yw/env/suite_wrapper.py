@@ -20,7 +20,7 @@ class SuiteWrapper:
     def __init__(self, make_env):
         self.env = make_env()
         # need the following properties
-        self._max_episode_steps = 64  # reset this later
+        self._max_episode_steps = 128  # reset this later
         action_max = np.concatenate((-self.env.action_spec[0], self.env.action_spec[1]))
         self.max_u = np.max(action_max) # note that 1 is just for most envs
         assert all([v == self.max_u for v in action_max])
