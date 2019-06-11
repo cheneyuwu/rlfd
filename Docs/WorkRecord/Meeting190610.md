@@ -50,15 +50,19 @@ June 10th, 2019
             2. Biased demonstration
                 - After demonstration training, high variance at locations where no demonstration
                 - After RL training, low variance almost everywhere. Slightly higher variance at boundary.
+        2. Positive reward
+            1. Random demonstration
+                - After demonstration treaining, high variance (0.2-0.3) near goal state and farfrom goal state
+                - After RL training, the general variance is reduced by ~10 times, variance is noisy, almost low everywhere. (When there is no demonstration, the variance is also... almost uniform everywhere?)
+            2. Biased demonstration
+                - After dmeonstration traing, very high variance at locations where no demonstration
     3. Some observations
         1. High variance after training on demonstration; Significantly lower variance after trainig on rl.
         2. After demonstration, high variance on states not presenting in demonstration training set;
         3. After rl training, high variance on states not close to the goal state.
-        4. 
    
 
 
 ## Meeting Notes
-
 
 ## Reminder
