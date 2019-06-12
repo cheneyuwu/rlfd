@@ -32,7 +32,6 @@ DEFAULT_PARAMS = {
     "eps_length": 0,  # change the length of the episode.
     "env_args": {},  # extra arguments passed to the environment.
     "max_u": 1.0,  # max absolute value of actions on different coordinates
-    "no_pos_return": False,  # Whether or not this environment has positive return or not.
     # general ddpg config
     "buffer_size": int(1e6),  # for experience replay
     "rl_scope": "ddpg",  # can be tweaked for testing
@@ -59,6 +58,7 @@ DEFAULT_PARAMS = {
     # Process I/Os
     "clip_obs": 200.0,
     "clip_return": False,
+    "no_pos_return": False,  # Whether or not this environment has positive return or not.
     # Exploration - for rollouts
     "exploit": False,  # whether or not to use e-greedy and add noise to output
     "random_eps": 0.3,  # percentage of time a random action is taken
