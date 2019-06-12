@@ -272,7 +272,7 @@ class DDPG(object):
             episode_batch["ag_e"] = np.zeros((self.num_demo, self.T + 1, self.dimg), dtype=np.float32)
             episode_batch["g_e"] = np.zeros((self.num_demo, self.T, self.dimg), dtype=np.float32)
         # for boot strapped ensemble of actor critics
-        episode_batch["mask"] = np.random.binomial(1, 1, (self.num_demo, self.T, self.num_sample))
+        episode_batch["mask"] = np.random.binomial(1, 0.6, (self.num_demo, self.T, self.num_sample))
         # for priortized experience replay
         episode_batch["weight"] = np.ones((self.num_demo, self.T, 1), dtype=np.float32)
 
@@ -291,7 +291,7 @@ class DDPG(object):
         # mask transitions for each bootstrapped head
         # select a distribution!
         episode_batch["mask"] = np.float32(
-            np.random.binomial(1, 1, (self.rollout_batch_size, self.T, self.num_sample))
+            np.random.binomial(1, 0.6, (self.rollout_batch_size, self.T, self.num_sample))
         )
         # for priortized experience replay
         episode_batch["weight"] = np.ones((self.rollout_batch_size, self.T, 1), dtype=np.float32)
@@ -410,7 +410,7 @@ class DDPG(object):
         self.inputs_tf["q"] = tf.placeholder(tf.float32, shape=(None, 1))
         self.inputs_tf["n"] = tf.placeholder(tf.float32, shape=(None, 1))
         # boot strapped ensemble of actor critics
-        self.inputs_tf["mask"] = tf.placeholder(tf.float32, shape=(None, self.num_sample))
+        self.inputs_tf["mask"] = tf.placeholder(tf.int32, shape=(None, self.num_sample))
         # prioritized replay also has a weight
         self.inputs_tf["weight"] = tf.placeholder(tf.float32, shape=(None, 1))
 
@@ -488,10 +488,10 @@ class DDPG(object):
             # TODO (yuchen): tf.boolean_mask calls tf.gather to get gradients. The following use of boolean_task consumes huge
             # amount of memory and may slow down the training process. Consider to use dynamic partition instead.
             demo_mask = np.concatenate(
-                (np.zeros(self.batch_size - self.batch_size_demo), np.ones(self.batch_size_demo)), axis=0
+                (np.zeros(self.batch_size - self.batch_size_demo, dtype=np.int32), np.ones(self.batch_size_demo, dtype=np.int32)), axis=0
             )
             rl_mask = np.concatenate(
-                (np.ones(self.batch_size - self.batch_size_demo), np.zeros(self.batch_size_demo)), axis=0
+                (np.ones(self.batch_size - self.batch_size_demo, dtype=np.int32), np.zeros(self.batch_size_demo, dtype=np.int32)), axis=0
             )
             for i in range(self.num_sample):
                 # calculate bellman target
@@ -502,24 +502,21 @@ class DDPG(object):
                 )
                 # RL loss
                 rl_bellman_tf = tf.boolean_mask(
-                    tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i])
-                    * tf.reshape(self.inputs_tf["mask"][:, i], [-1, 1]),
-                    rl_mask,
+                    tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]),
+                    tf.bitwise.bitwise_and(rl_mask, self.inputs_tf["mask"][:, i]),
                 )
                 rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
                 # Demo loss
                 # bellman target loss
                 demo_bellman_tf = tf.boolean_mask(
                     # tf.square(self.inputs_tf["q"] - self.main.Q_tf[i])
-                    tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i])
-                    * tf.reshape(self.inputs_tf["mask"][:, i], [-1, 1]),
-                    demo_mask,
+                    tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]),
+                    tf.bitwise.bitwise_and(demo_mask, self.inputs_tf["mask"][:, i]),
                 )
                 # q target loss
                 demo_q_tf = tf.boolean_mask(
-                    tf.square(tf.stop_gradient(demo_target_tf) - self.main.Q_tf[i])
-                    * tf.reshape(self.inputs_tf["mask"][:, i], [-1, 1]),
-                    demo_mask,
+                    tf.square(tf.stop_gradient(demo_target_tf) - self.main.Q_tf[i]),
+                    tf.bitwise.bitwise_and(demo_mask, self.inputs_tf["mask"][:, i]),
                 )
                 demo_q_loss_tf = tf.reduce_mean(demo_q_tf)
                 demo_rl_loss_tf = tf.reduce_mean(demo_bellman_tf)
@@ -532,12 +529,11 @@ class DDPG(object):
             for i in range(self.num_sample):
                 # calculate bellman target
                 target_tf = tf.clip_by_value(self.inputs_tf["r"] + self.gamma * self.target.Q_pi_tf[i], *clip_range)
-                loss_tf = tf.reduce_mean(
-                    self.inputs_tf["weight"]
-                    * tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i])
-                    * tf.reshape(self.inputs_tf["mask"][:, i], [-1, 1])
+                rl_bellman_tf = tf.boolean_mask(
+                    tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
                 )
-                self.Q_loss_tf.append(loss_tf)
+                rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
+                self.Q_loss_tf.append(rl_loss_tf)
 
         # Actor Loss
         if self.demo_actor != "none" and self.q_filter == 1:
@@ -717,7 +713,7 @@ class DDPG(object):
         """
         if not "Reach" in self.info["env_name"]:
             return
-        
+
         logger.info("Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.")
 
         num_point = 24
