@@ -7,3 +7,6 @@
 [submodule "Package/spinningup"]
 	path = Package/spinningup
 	url = git@github.com:cheneyuwu/spinningup.git
+[submodule "Experiment/ExpData"]
+	path = Experiment/ExpData
+	url = git@github.com:cheneyuwu/ExpData.git
