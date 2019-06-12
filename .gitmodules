@@ -4,3 +4,6 @@
 [submodule "Package/robosuite"]
 	path = Package/robosuite
 	url = git@github.com:cheneyuwu/robosuite.git
+[submodule "Package/spinningup"]
+	path = Package/spinningup
+	url = git@github.com:cheneyuwu/spinningup.git

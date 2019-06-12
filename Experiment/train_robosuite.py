@@ -25,7 +25,7 @@ class Render(Experiment):
             "control_freq": "int:50",
         }
         command["--num_itr"] = 10
-        command["--eps_length"] = 1000
+        # command["--eps_length"] = 1000
         return command
 
 
@@ -69,14 +69,14 @@ if __name__ == "__main__":
                 "use_object_obs": "bool:*",  # use object-centric feature
                 "use_camera_obs": "bool:",  # no camera observations)
                 "reward_shaping": "bool:*",  # use dense rewards
-                "control_freq": "int:50",
+                "control_freq": "int:20",
             },
         )
 
     # Plot the training result
-    # plot_exp.plot(dirs=plot_exp.result_dir)
+    assert not plot_exp.plot(dir=plot_exp.result_dir)
 
     # Render a policy result (calls robosuite_render.py).
     # assert not render_exp.render(
-    #     policy_file=render_exp.result_dir + "../Jun05RoboSuite/Exp0/RLNoDemo/rl/policy_latest.pkl"
+    #     policy_file=render_exp.result_dir + "/Exp0/RLNoDemo/rl/policy_latest.pkl"
     # )

@@ -86,7 +86,7 @@ for i in range(1):
     )
 
 # Plot the training result
-# assert not plot_exp.plot(dirs=plot_exp.result_dir)
+# assert not plot_exp.plot(dir=plot_exp.result_dir)
 
 # Plot the query result
 # assert not animation.plot_animation(load_dir=os.path.join(animation.result_dir, "RLNoDemo/ac_output"))

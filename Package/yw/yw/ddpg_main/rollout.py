@@ -53,6 +53,7 @@ class RolloutWorker:
         self.info_keys = [key.replace("info_", "") for key in dims.keys() if key.startswith("info_")]
 
         self.success_history = deque(maxlen=history_len)
+        self.total_reward_history = deque(maxlen=history_len)
         self.Q_history = deque(maxlen=history_len)
         self.n_episodes = 0
 
@@ -163,10 +164,17 @@ class RolloutWorker:
         episode = RolloutWorker.convert_episode_to_batch_major(episode)
 
         # Stats
+        # success rate
         successful = np.array(successes)[-1, :]
         assert successful.shape == (self.rollout_batch_size,)
         success_rate = np.mean(successful)
         self.success_history.append(success_rate)
+        # total reward
+        total_rewards = np.sum(np.array(rewards), axis=0).reshape(-1)
+        assert total_rewards.shape == (self.rollout_batch_size,), total_rewards.shape
+        total_reward = np.mean(total_rewards)
+        self.total_reward_history.append(total_reward)
+        # Q output from critic networks
         if self.compute_Q:
             self.Q_history.append(np.mean(Qs))
         self.n_episodes += self.rollout_batch_size
@@ -176,8 +184,12 @@ class RolloutWorker:
     def clear_history(self):
         """Clears all histories that are used for statistics
         """
+        self.total_reward_history.clear()
         self.success_history.clear()
         self.Q_history.clear()
+
+    def current_total_reward(self):
+        return np.mean(self.total_reward_history)
 
     def current_success_rate(self):
         return np.mean(self.success_history)
@@ -196,6 +208,7 @@ class RolloutWorker:
         """
         logs = []
         logs += [("success_rate", np.mean(self.success_history))]
+        logs += [("total_reward", np.mean(self.total_reward_history))]
         if self.compute_Q:
             logs += [("mean_Q", np.mean(self.Q_history))]
         logs += [("episode", self.n_episodes)]

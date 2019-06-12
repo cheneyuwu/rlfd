@@ -106,7 +106,7 @@ if __name__ == "__main__":
         # )
 
     # Plot the training result
-    # assert not plot_exp.plot(dirs=plot_exp.result_dir)
+    assert not plot_exp.plot(dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"])
 
     # Check the uncertainty output of the demonstration output
     assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RLNoDemo/uncertainty/")

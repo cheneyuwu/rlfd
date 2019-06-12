@@ -69,7 +69,6 @@ def plot_results(allresults, dir, smooth=False):
             continue
         epoch = results["progress"]["epoch"]
         env_id = results["params"]["env_name"]
-        env_id = env_id.replace("Dense", "")
         # currently we only plot the success_rate
         success_rate = results["progress"]["test/success_rate"]
 
