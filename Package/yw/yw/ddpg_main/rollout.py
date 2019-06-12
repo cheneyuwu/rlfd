@@ -14,7 +14,6 @@ from yw.util.util import store_args
 
 
 class RolloutWorker:
-    @store_args
     def __init__(
         self,
         make_env,
@@ -47,6 +46,17 @@ class RolloutWorker:
             history_len        (int)         - length of history for statistics smoothing
             render             (bool)        - whether or not to render the rollouts
         """
+        # Parameters
+        self.policy = policy
+        self.dims = dims
+        self.T = T
+        self.rollout_batch_size = rollout_batch_size
+        self.exploit = exploit
+        self.use_target_net = self.use_target_net
+        self.compute_Q = compute_Q
+        self.noise_eps = noise_eps
+        self.random_eps = random_eps
+        self.render = render
 
         assert self.T > 0
 
@@ -112,14 +122,14 @@ class RolloutWorker:
             if self.compute_Q:
                 u = policy_output[0]
                 Q = policy_output[1]
-                Q = Q.reshape(-1,1)
+                Q = Q.reshape(-1, 1)
             else:
                 u = np.array(policy_output)
             u = u.reshape(-1, self.dims["u"])
 
             o_new = np.empty((self.rollout_batch_size, self.dims["o"]))
             ag_new = np.empty((self.rollout_batch_size, self.dims["g"]))
-            r = np.empty((self.rollout_batch_size, 1)) # reward
+            r = np.empty((self.rollout_batch_size, 1))  # reward
             success = np.zeros(self.rollout_batch_size)
             # compute new states and observations
             for i in range(self.rollout_batch_size):

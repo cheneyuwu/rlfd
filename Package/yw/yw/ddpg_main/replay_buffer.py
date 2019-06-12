@@ -76,7 +76,7 @@ class ReplayBuffer:
             self.n_transitions_stored += batch_size * self.T
 
     def sample_transitions(self, buffers, batch_size):
-        return NotImplementedError
+        raise NotImplementedError
 
     def insert_transitions(self, idxs):
         pass
@@ -339,7 +339,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         weights = []
         # get the scale down value
         p_min = self._it_min.min() / self._it_sum.sum()
-        max_weight = (p_min * self.get_current_size()) ** (-self._beta)
+        # max_weight = (p_min * self.get_current_size()) ** (-self._beta)
 
         for idx in indices:
             p_sample = self._it_sum[idx] / self._it_sum.sum()

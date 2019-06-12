@@ -56,7 +56,7 @@ def load_results(root_dir_or_dirs):
     allresults = []
     for rootdir in rootdirs:
         assert osp.exists(rootdir), "%s doesn't exist" % rootdir
-        for dirname, dirs, files in os.walk(rootdir):
+        for dirname, _, files in os.walk(rootdir):
             if all([file in files for file in ["params.json", "progress.csv"]]):
                 result = {"dirname": dirname}
                 progcsv = os.path.join(dirname, "progress.csv")
