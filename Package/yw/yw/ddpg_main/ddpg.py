@@ -272,7 +272,7 @@ class DDPG(object):
             episode_batch["ag_e"] = np.zeros((self.num_demo, self.T + 1, self.dimg), dtype=np.float32)
             episode_batch["g_e"] = np.zeros((self.num_demo, self.T, self.dimg), dtype=np.float32)
         # for boot strapped ensemble of actor critics
-        episode_batch["mask"] = np.random.binomial(1, 0.6, (self.num_demo, self.T, self.num_sample))
+        episode_batch["mask"] = np.random.binomial(1, 1, (self.num_demo, self.T, self.num_sample))
         # for priortized experience replay
         episode_batch["weight"] = np.ones((self.num_demo, self.T, 1), dtype=np.float32)
 
@@ -291,7 +291,7 @@ class DDPG(object):
         # mask transitions for each bootstrapped head
         # select a distribution!
         episode_batch["mask"] = np.float32(
-            np.random.binomial(1, 0.6, (self.rollout_batch_size, self.T, self.num_sample))
+            np.random.binomial(1, 1, (self.rollout_batch_size, self.T, self.num_sample))
         )
         # for priortized experience replay
         episode_batch["weight"] = np.ones((self.rollout_batch_size, self.T, 1), dtype=np.float32)
