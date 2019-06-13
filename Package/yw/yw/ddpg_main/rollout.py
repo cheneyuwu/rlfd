@@ -52,7 +52,7 @@ class RolloutWorker:
         self.T = T
         self.rollout_batch_size = rollout_batch_size
         self.exploit = exploit
-        self.use_target_net = self.use_target_net
+        self.use_target_net = use_target_net
         self.compute_Q = compute_Q
         self.noise_eps = noise_eps
         self.random_eps = random_eps
