@@ -16,7 +16,7 @@ class Uncertainty(Experiment):
     @Command.execute
     def check(self, **override):
         command = self.run.copy()
-        command["--load_dir"] = self.result_dir + "Exp0/RLNoDemo/uncertainty/"
+        command["--load_dir"] = self.result_dir + "RLNoDemo/uncertainty/"
         command["--save"] = 1
         return command
 
@@ -29,20 +29,20 @@ if __name__ == "__main__":
     uncertainty_exp = Uncertainty()
 
 
-    environment = "Reach1DFirstOrder"
+    environment = "Reach1DFirstOrderSparse"
     train_exp.env = environment
     train_exp.num_cpu = 1
     train_exp.update()
 
     demo_data_size = 128
-    train_rl_epochs = 32
+    train_rl_epochs = 64
     seed = 2
     for i in range(1):
         seed += i * 100
 
         # We can change the result directory without updating
         exp_dir = os.getenv("EXPERIMENT")
-        result_dir = os.path.join(exp_dir, "Result/Temp/Exp" + str(i) + "/")
+        result_dir = os.path.join(exp_dir, "Result/Temp/")
         demo_exp.result_dir = result_dir
         train_exp.result_dir = result_dir
 
@@ -90,27 +90,27 @@ if __name__ == "__main__":
         # )
 
         # Train the RL with demonstration
-        assert not train_exp.rl_with_demo_critic_rb(
-            rl_action_l2=0.5,
-            rl_scope="rl_with_demo",
-            n_cycles=4,
-            n_batches=8,
-            seed=seed + 40,
-            rl_num_sample=8,
-            rl_batch_size=64,
-            rl_batch_size_demo=32,
-            train_rl_epochs=train_rl_epochs,
-            demo_file=result_dir + "DemoData/" + environment + ".npz",
-            rl_num_demo=demo_data_size,
-            rl_replay_strategy="none",
-        )
+        # assert not train_exp.rl_with_demo_critic_rb(
+        #     rl_action_l2=0.5,
+        #     rl_scope="rl_with_demo",
+        #     n_cycles=4,
+        #     n_batches=8,
+        #     seed=seed + 40,
+        #     rl_num_sample=8,
+        #     rl_batch_size=64,
+        #     rl_batch_size_demo=32,
+        #     train_rl_epochs=train_rl_epochs,
+        #     demo_file=result_dir + "DemoData/" + environment + ".npz",
+        #     rl_num_demo=demo_data_size,
+        #     rl_replay_strategy="none",
+        # )
 
     # Plot the training result
-    assert not plot_exp.plot(dirs=plot_exp.result_dir)
+    assert not plot_exp.plot(dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"])
 
     # Check the uncertainty output of the demonstration output
-    assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "Exp"+str(i)+"/RLNoDemo/uncertainty/")
-    assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "Exp"+str(i)+"/RLDemoCriticReplBuffer/uncertainty/")
+    assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RLNoDemo/uncertainty/")
+    assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RLDemoCriticReplBuffer/uncertainty/")
 
     # Display a policy result (calls run_agent).
-    # assert not display_exp.display(policy_file=display_exp.result_dir + "Exp0/RLNoDemo/rl/policy_latest.pkl", num_itr=3)
+    # assert not display_exp.display(policy_file=display_exp.result_dir + "RLNoDemo/rl/policy_latest.pkl", num_itr=3)

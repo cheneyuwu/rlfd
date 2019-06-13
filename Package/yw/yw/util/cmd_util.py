@@ -33,6 +33,10 @@ class Command:
                         for v in cmd[key].keys():
                             run.append(str(key))
                             run.append(str(v)+":"+str(cmd[key][v]))
+                    elif type(cmd[key]) is list:
+                        for v in cmd[key]:
+                            run.append(str(key))
+                            run.append(str(v))
                     else:
                         run.append(str(key))
                         run.append(str(cmd[key]))

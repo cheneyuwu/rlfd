@@ -1,4 +1,3 @@
-import click
 import os
 import numpy as np
 import pickle
@@ -29,7 +28,7 @@ def animate(frame, fig, data):
     fig.clf()
     ax = fig.add_subplot(211, projection="3d")
     ax.plot_surface(x, y, surface["q_var"])
-    # ax.set_zlim(0, 0.01)
+    ax.set_zlim(0, 3)
     ax.set_xlabel("observation")
     ax.set_ylabel("action")
     ax.set_zlabel("q_var")

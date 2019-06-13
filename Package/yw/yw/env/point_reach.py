@@ -9,15 +9,6 @@ import matplotlib.pyplot as plt
 def make(env_name, **env_args):
     # note: we only have one environment
     try:
-        _ = Reach2D(**env_args)
-    except:
-        return NotImplementedError
-
-    return Reach2D(**env_args)
-
-def make(env_name, **env_args):
-    # note: we only have one environment
-    try:
         _ = Reacher(**env_args)
     except:
         return NotImplementedError

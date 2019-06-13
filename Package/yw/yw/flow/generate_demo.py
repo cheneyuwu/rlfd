@@ -6,7 +6,7 @@ import pickle
 from yw.ddpg_main import config
 
 
-from yw.util.mpi_util import set_global_seeds
+from yw.util.util import set_global_seeds
 from yw.util.lit_util import toy_regression_data
 
 # DDPG Package import

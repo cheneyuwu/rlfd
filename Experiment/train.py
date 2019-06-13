@@ -127,7 +127,8 @@ class Plot(Experiment):
     @Command.execute
     def plot(self, **override):
         command = self.run.copy()
-        command["--dirs"] = self.result_dir + "/RLNoDemo"
+        command["--dir"] = [self.result_dir + "/RLNoDemo"]
+        command["--xy"] = ["epoch:test/success_rate"]
         return command
 
 

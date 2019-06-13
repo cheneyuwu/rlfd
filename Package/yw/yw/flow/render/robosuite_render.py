@@ -8,7 +8,7 @@ import os
 import numpy as np
 import pickle
 
-from yw.util.mpi_util import set_global_seeds
+from yw.util.util import set_global_seeds
 from yw.env.suite_wrapper import make
 
 import robosuite as suite

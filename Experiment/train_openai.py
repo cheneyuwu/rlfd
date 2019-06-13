@@ -59,7 +59,7 @@ for i in range(3):
     )
 
 # Plot the training result
-plot_exp.plot(dirs=plot_exp.result_dir)
+plot_exp.plot(dir=plot_exp.result_dir)
 
 # Display a policy result (calls run_agent).
 assert not display_exp.display(policy_file=display_exp.result_dir + "Exp0/RLNoDemo/rl/policy_latest.pkl")
