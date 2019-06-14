@@ -3,6 +3,10 @@
 import argparse
 from subprocess import call
 
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
 
 class Command:
     @staticmethod
@@ -32,7 +36,7 @@ class Command:
                     if type(cmd[key]) is dict:
                         for v in cmd[key].keys():
                             run.append(str(key))
-                            run.append(str(v)+":"+str(cmd[key][v]))
+                            run.append(str(v) + ":" + str(cmd[key][v]))
                     elif type(cmd[key]) is list:
                         for v in cmd[key]:
                             run.append(str(key))
@@ -50,13 +54,14 @@ class Command:
 class ArgParser:
     def __init__(self):
         self.parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        self.dump = not MPI.COMM_WORLD.Get_rank() if MPI != None else True
 
-    def parse(self, args, dump=True):
+    def parse(self, args):
         known, unknown = self.parser.parse_known_args(args)
         self.known_dict = vars(known)
         self.unknown_dict = self._parse_unknown_args(unknown)
 
-        if dump:
+        if self.dump:
             print("\nKnown arguments:")
             print("-----------------------------------")
             print("{:<30}{:<30}".format("Option", "Value"))
