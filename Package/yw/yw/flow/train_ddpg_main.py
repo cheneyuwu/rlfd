@@ -314,5 +314,4 @@ if __name__ == "__main__":
     )
     ap.parse(sys.argv)
 
-    print("Launching the training process.")
     train(**ap.get_dict())
