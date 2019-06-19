@@ -94,8 +94,8 @@ if __name__ == "__main__":
     assert not plot_exp.plot(dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"])
 
     # Check the uncertainty output of the demonstration output
-    assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RL/uncertainty/", save=0)
-    assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RLDemoShaping/uncertainty/", save=0)
+    # assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RL/uncertainty/", save=0)
+    # assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RLDemoShaping/uncertainty/", save=0)
 
     # Display a policy result (calls run_agent).
-    assert not display_exp.display(policy_file=display_exp.result_dir + "RLDemoShaping/rl/policy_latest.pkl", num_itr=3)
+    # assert not display_exp.display(policy_file=display_exp.result_dir + "RLDemoShaping/rl/policy_latest.pkl", num_itr=3)

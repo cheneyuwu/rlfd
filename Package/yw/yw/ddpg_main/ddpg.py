@@ -424,7 +424,7 @@ class DDPG(object):
                         u=self.inputs_tf["u"],
                         o_2=self.inputs_tf["o_2"],
                         g_2=self.inputs_tf["g_2"],
-                        u_2=self.main_shaping.pi_tf[i],
+                        u_2=self.target.pi_tf[i],
                         gamma=self.gamma,
                     ))
                     self.demo_actor_shaping_ls.append(DemoShaping(
@@ -433,7 +433,7 @@ class DDPG(object):
                         u=self.main.pi_tf[i],
                         o_2=self.inputs_tf["o_2"],
                         g_2=self.inputs_tf["g_2"],
-                        u_2=self.main_shaping.pi_tf[i],
+                        u_2=self.target.pi_tf[i],
                         gamma=self.gamma,
                     ))
 

@@ -25,5 +25,5 @@ class DemoShaping:
         Just return negative value of distance between current state and goal state
         """
         # ret = -tf.abs(o - g) * 10
-        ret = -((g - o) * 10 - u) ** 2 / 5
+        ret = -((g - o) * 10 - u) ** 2
         return ret
