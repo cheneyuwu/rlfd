@@ -156,14 +156,15 @@ class Reacher:
 
 if __name__ == "__main__":
 
-    env = make("", dim=1)
+    env = make("", dim=1, order=1)
     obs = env.reset()
     for i in range(32):
-        obs, r, done, info = env.step([-np.sin(i / 10)])
+        action = (obs["desired_goal"] - obs["observation"])
+        obs, r, done, info = env.step(action)
         env.render()
 
-    env = make("", dim=2)
-    obs = env.reset()
-    for i in range(32):
-        obs, r, done, info = env.step([-np.sin(i / 10), -np.cos(i / 10)])
-        env.render()
+    # env = make("", dim=2)
+    # obs = env.reset()
+    # for i in range(32):
+    #     obs, r, done, info = env.step([-np.sin(i / 10), -np.cos(i / 10)])
+    #     env.render()

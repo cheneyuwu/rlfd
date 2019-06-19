@@ -414,27 +414,28 @@ class DDPG(object):
 
         # Add shaping reward
         if self.demo_critic == "shaping":
+            self.demo_critic_shaping_ls = []
+            self.demo_actor_shaping_ls = []
             with tf.variable_scope("shaping") as vs:
-                self.demo_critic_shaping = DemoShaping(
-                    o=self.inputs_tf["o"],
-                    g=self.inputs_tf["g"],
-                    u=self.inputs_tf["u"],
-                    o_2=self.inputs_tf["o_2"],
-                    g_2=self.inputs_tf["g_2"],
-                    u_2=self.main_shaping.pi_tf,
-                    num_sample=self.num_sample,
-                    gamma=self.gamma,
-                )
-                self.demo_actor_shaping = DemoShaping(
-                    o=self.inputs_tf["o"],
-                    g=self.inputs_tf["g"],
-                    u=self.main.pi_tf,
-                    o_2=self.inputs_tf["o_2"],
-                    g_2=self.inputs_tf["g_2"],
-                    u_2=self.main_shaping.pi_tf,
-                    num_sample=self.num_sample,
-                    gamma=self.gamma,
-                )
+                for i in range(self.num_sample):
+                    self.demo_critic_shaping_ls.append(DemoShaping(
+                        o=self.inputs_tf["o"],
+                        g=self.inputs_tf["g"],
+                        u=self.inputs_tf["u"],
+                        o_2=self.inputs_tf["o_2"],
+                        g_2=self.inputs_tf["g_2"],
+                        u_2=self.main_shaping.pi_tf[i],
+                        gamma=self.gamma,
+                    ))
+                    self.demo_actor_shaping_ls.append(DemoShaping(
+                        o=self.inputs_tf["o"],
+                        g=self.inputs_tf["g"],
+                        u=self.main.pi_tf[i],
+                        o_2=self.inputs_tf["o_2"],
+                        g_2=self.inputs_tf["g_2"],
+                        u_2=self.main_shaping.pi_tf[i],
+                        gamma=self.gamma,
+                    ))
 
         # Critic loss
         # clip bellman target return
@@ -444,9 +445,10 @@ class DDPG(object):
         if self.demo_critic == "shaping":
             for i in range(self.num_sample):
                 # calculate bellman target (with shaping reward added)
-                # TODO support ensemble!
                 target_tf = tf.clip_by_value(
-                    self.inputs_tf["r"] + tf.stop_gradient(self.demo_critic_shaping.reward[i]) + self.gamma * self.target.Q_pi_tf[i],
+                    self.inputs_tf["r"]
+                    + tf.stop_gradient(self.demo_critic_shaping_ls[i].reward)
+                    + self.gamma * self.target.Q_pi_tf[i],
                     *clip_range
                 )
                 rl_bellman_tf = tf.boolean_mask(
@@ -457,11 +459,7 @@ class DDPG(object):
         else:
             for i in range(self.num_sample):
                 # calculate bellman target (with shaping reward added)
-                # TODO support ensemble!
-                target_tf = tf.clip_by_value(
-                    self.inputs_tf["r"] + self.gamma * self.target.Q_pi_tf[i],
-                    *clip_range
-                )
+                target_tf = tf.clip_by_value(self.inputs_tf["r"] + self.gamma * self.target.Q_pi_tf[i], *clip_range)
                 rl_bellman_tf = tf.boolean_mask(
                     tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
                 )
@@ -509,7 +507,7 @@ class DDPG(object):
         elif self.demo_critic == "shaping":
             self.pi_loss_tf = [
                 -tf.reduce_mean(self.main.Q_pi_tf[i])
-                -tf.reduce_mean(self.demo_actor_shaping.potential)
+                - tf.reduce_mean(self.demo_actor_shaping_ls[i].potential)
                 + self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf[i] / self.max_u))
                 for i in range(self.num_sample)
             ]
@@ -662,6 +660,11 @@ class DDPG(object):
         feed = {policy.o_tf: o_r, policy.g_tf: g_r, policy.u_tf: u_r}
         queries = [policy.Q_var_tf, policy.Q_mean_tf]
         res = self.sess.run(queries, feed_dict=feed)
+
+        if self.demo_critic == "shaping":
+            temp = self.sess.run(self.demo_critic_shaping_ls[0].potential, feed_dict=feed)
+            temp = temp.reshape(-1)
+            res[1] += temp
 
         o_r = o.reshape((num_point, num_point))
         u_r = u.reshape((num_point, num_point))
