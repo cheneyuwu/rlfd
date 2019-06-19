@@ -1,0 +1,1896 @@
+Logging to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo/
+Launching the training process with 4 cpu core(s).
+Setting log level to 2.
+Using environment SawyerNutAssemblySquare with r scale down by 1.000000 shift by 0.000000 and max episode 1000.000000
+*** nstep_params ***
+gamma                         0.999
+n                             50
+*** nstep_params ***
+*** ddpg_params ***
+Q_lr                          0.001
+T                             1000
+action_l2                     1.0
+aux_loss_weight               0.0078
+batch_size                    256
+batch_size_demo               128
+buffer_size                   1000000
+ca_ratio                      1
+clip_obs                      200.0
+clip_pos_returns              False
+clip_return                   inf
+demo_actor                    none
+demo_critic                   none
+demo_replay_strategy          {'strategy': 'none', 'args': {'n': 50, 'gamma': 0.999}}
+gamma                         0.999
+hidden                        256
+info                          {'env_name': 'SawyerNutAssemblySquare', 'r_scale': 1.0, 'r_shift': 0.0, 'eps_length': 1000, 'env_args': {'has_renderer': False, 'has_offscreen_renderer': False, 'use_object_obs': True, 'use_camera_obs': False, 'reward_shaping': True, 'control_freq': 20}}
+input_dims                    {'o': 44, 'u': 8, 'g': 0, 'info_is_success': 1}
+layers                        3
+max_u                         1.0
+norm_clip                     5
+norm_eps                      0.01
+num_demo                      1000
+num_sample                    1
+pi_lr                         0.001
+polyak                        0.95
+prm_loss_weight               0.001
+q_filter                      0
+replay_strategy               {'strategy': 'none', 'args': {}}
+rollout_batch_size            4
+scope                         rl_only
+*** ddpg_params ***
+Configuring the replay buffer.
+Creating a DDPG agent with action space 8 x 1.0.
+
+*** rollout_params ***
+T                             1000
+compute_Q                     False
+dims                          {'o': 44, 'u': 8, 'g': 0, 'info_is_success': 1}
+exploit                       0
+noise_eps                     0.2
+random_eps                    0.3
+rollout_batch_size            4
+use_demo_states               True
+use_target_net                False
+*** rollout_params ***
+*** eval_params ***
+T                             1000
+compute_Q                     True
+dims                          {'o': 44, 'u': 8, 'g': 0, 'info_is_success': 1}
+exploit                       1
+noise_eps                     0.2
+random_eps                    0.3
+rollout_batch_size            5
+use_demo_states               False
+use_target_net                False
+*** eval_params ***
+Training the RL agent with n_epochs: 1000, n_cycles: 20, n_batches: 40.
+-------------------------------------------
+| epoch              | 0                  |
+| stats_o/mean       | 0.089679845        |
+| stats_o/std        | 0.44068068         |
+| test/episode       | 5.0                |
+| test/mean_Q        | -0.11971836        |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 1.7495108653324563 |
+| train/episode      | 80.0               |
+| train/success_rate | 0.0                |
+| train/total_reward | 1.884876986187602  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_0.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 1                  |
+| stats_o/mean       | 0.09598864         |
+| stats_o/std        | 0.45391798         |
+| test/episode       | 10.0               |
+| test/mean_Q        | 0.003032771        |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 1.8180890236279392 |
+| train/episode      | 160.0              |
+| train/success_rate | 0.0                |
+| train/total_reward | 1.7881465665155618 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 2                  |
+| stats_o/mean       | 0.10531171         |
+| stats_o/std        | 0.45959798         |
+| test/episode       | 15.0               |
+| test/mean_Q        | 0.056516506        |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 1.9940936601677028 |
+| train/episode      | 240.0              |
+| train/success_rate | 0.0                |
+| train/total_reward | 1.7880128486472011 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_2.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 3                  |
+| stats_o/mean       | 0.11409368         |
+| stats_o/std        | 0.4585002          |
+| test/episode       | 20.0               |
+| test/mean_Q        | 0.106878266        |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 1.770190203542609  |
+| train/episode      | 320.0              |
+| train/success_rate | 0.0                |
+| train/total_reward | 1.8494579969730738 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 4                  |
+| stats_o/mean       | 0.12014146         |
+| stats_o/std        | 0.45537174         |
+| test/episode       | 25.0               |
+| test/mean_Q        | 0.14143479         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 1.9538056688466907 |
+| train/episode      | 400.0              |
+| train/success_rate | 0.0                |
+| train/total_reward | 1.8533360910381345 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_4.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 5                  |
+| stats_o/mean       | 0.12507066         |
+| stats_o/std        | 0.45100114         |
+| test/episode       | 30.0               |
+| test/mean_Q        | 0.14801984         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 1.8301480779311443 |
+| train/episode      | 480.0              |
+| train/success_rate | 0.0                |
+| train/total_reward | 1.9283752609349638 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 6                  |
+| stats_o/mean       | 0.12961243         |
+| stats_o/std        | 0.44652727         |
+| test/episode       | 35.0               |
+| test/mean_Q        | 0.17313623         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 1.8749617803026726 |
+| train/episode      | 560.0              |
+| train/success_rate | 0.0                |
+| train/total_reward | 1.944394711429005  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_6.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 7                  |
+| stats_o/mean       | 0.13233815         |
+| stats_o/std        | 0.4421584          |
+| test/episode       | 40.0               |
+| test/mean_Q        | 0.15906209         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 1.8025325213847316 |
+| train/episode      | 640.0              |
+| train/success_rate | 0.0                |
+| train/total_reward | 1.8759252473342314 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 8                 |
+| stats_o/mean       | 0.13477375        |
+| stats_o/std        | 0.43842295        |
+| test/episode       | 45.0              |
+| test/mean_Q        | 0.16135319        |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 1.885946585819245 |
+| train/episode      | 720.0             |
+| train/success_rate | 0.0               |
+| train/total_reward | 1.985833298549446 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_8.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 9                  |
+| stats_o/mean       | 0.1368919          |
+| stats_o/std        | 0.43502057         |
+| test/episode       | 50.0               |
+| test/mean_Q        | 0.17737421         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 1.9016695380458466 |
+| train/episode      | 800.0              |
+| train/success_rate | 0.0                |
+| train/total_reward | 1.967921623156109  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 10                |
+| stats_o/mean       | 0.13905177        |
+| stats_o/std        | 0.43198413        |
+| test/episode       | 55.0              |
+| test/mean_Q        | 0.16374785        |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 2.063262133529193 |
+| train/episode      | 880.0             |
+| train/success_rate | 0.0               |
+| train/total_reward | 1.962725500338316 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_10.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 11                 |
+| stats_o/mean       | 0.14066416         |
+| stats_o/std        | 0.42913815         |
+| test/episode       | 60.0               |
+| test/mean_Q        | 0.17324337         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 2.5794173223325734 |
+| train/episode      | 960.0              |
+| train/success_rate | 0.0                |
+| train/total_reward | 1.9589308069741909 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 12                |
+| stats_o/mean       | 0.1417736         |
+| stats_o/std        | 0.4265412         |
+| test/episode       | 65.0              |
+| test/mean_Q        | 0.16202071        |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 2.641539326555298 |
+| train/episode      | 1040.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 2.187364804970657 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_12.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 13                 |
+| stats_o/mean       | 0.14302287         |
+| stats_o/std        | 0.42426643         |
+| test/episode       | 70.0               |
+| test/mean_Q        | 0.18968913         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 11.649598331216321 |
+| train/episode      | 1120.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 2.0419156376106846 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 14                 |
+| stats_o/mean       | 0.14419256         |
+| stats_o/std        | 0.4218088          |
+| test/episode       | 75.0               |
+| test/mean_Q        | 0.21993609         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 31.52899617655263  |
+| train/episode      | 1200.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 2.1510725326657756 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_14.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 15                 |
+| stats_o/mean       | 0.14563316         |
+| stats_o/std        | 0.4197512          |
+| test/episode       | 80.0               |
+| test/mean_Q        | 0.23395458         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 46.00132715068884  |
+| train/episode      | 1280.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 2.2263790651256814 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 16                 |
+| stats_o/mean       | 0.14658779         |
+| stats_o/std        | 0.41773224         |
+| test/episode       | 85.0               |
+| test/mean_Q        | 0.27256107         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 73.92399440401988  |
+| train/episode      | 1360.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 2.4431705122917604 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_16.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 17                 |
+| stats_o/mean       | 0.14751837         |
+| stats_o/std        | 0.4161927          |
+| test/episode       | 90.0               |
+| test/mean_Q        | 0.24049748         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 30.486525720617482 |
+| train/episode      | 1440.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 2.76655446538563   |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 18                 |
+| stats_o/mean       | 0.14840543         |
+| stats_o/std        | 0.41456565         |
+| test/episode       | 95.0               |
+| test/mean_Q        | 0.31646955         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 27.093946459698117 |
+| train/episode      | 1520.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 3.3358856960034022 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_18.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 19                 |
+| stats_o/mean       | 0.1490923          |
+| stats_o/std        | 0.4130439          |
+| test/episode       | 100.0              |
+| test/mean_Q        | 0.24601063         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 83.41284726066137  |
+| train/episode      | 1600.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 3.8305710465782363 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 20                |
+| stats_o/mean       | 0.14987038        |
+| stats_o/std        | 0.41163513        |
+| test/episode       | 105.0             |
+| test/mean_Q        | 0.4414588         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 139.6112185358764 |
+| train/episode      | 1680.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 4.597642789322247 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_20.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 21                |
+| stats_o/mean       | 0.15059334        |
+| stats_o/std        | 0.4108141         |
+| test/episode       | 110.0             |
+| test/mean_Q        | 0.4108582         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 80.00733269821305 |
+| train/episode      | 1760.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 7.220440754354291 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 22                |
+| stats_o/mean       | 0.15157034        |
+| stats_o/std        | 0.4100437         |
+| test/episode       | 115.0             |
+| test/mean_Q        | 0.43017757        |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 71.10855582396161 |
+| train/episode      | 1840.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 7.949287234732658 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_22.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 23                |
+| stats_o/mean       | 0.1524805         |
+| stats_o/std        | 0.4101043         |
+| test/episode       | 120.0             |
+| test/mean_Q        | 0.54387176        |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 77.35159483458334 |
+| train/episode      | 1920.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 9.536079924509487 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 24                 |
+| stats_o/mean       | 0.15330184         |
+| stats_o/std        | 0.41065064         |
+| test/episode       | 125.0              |
+| test/mean_Q        | 0.6405517          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 94.16235880013129  |
+| train/episode      | 2000.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 11.864789279720512 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_24.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 25                 |
+| stats_o/mean       | 0.15418772         |
+| stats_o/std        | 0.41123465         |
+| test/episode       | 130.0              |
+| test/mean_Q        | 0.76447856         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 150.97984658932856 |
+| train/episode      | 2080.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 13.116899979293322 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 26                 |
+| stats_o/mean       | 0.1549977          |
+| stats_o/std        | 0.41142514         |
+| test/episode       | 135.0              |
+| test/mean_Q        | 0.82123685         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 145.44169092784216 |
+| train/episode      | 2160.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 15.631494242699093 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_26.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 27                |
+| stats_o/mean       | 0.15569808        |
+| stats_o/std        | 0.41179654        |
+| test/episode       | 140.0             |
+| test/mean_Q        | 0.89983666        |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 219.5249090706453 |
+| train/episode      | 2240.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 17.52319126036251 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 28                 |
+| stats_o/mean       | 0.1562495          |
+| stats_o/std        | 0.41209367         |
+| test/episode       | 145.0              |
+| test/mean_Q        | 0.7855891          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 93.84734743377412  |
+| train/episode      | 2320.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 17.832950483552118 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_28.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 29                 |
+| stats_o/mean       | 0.15698169         |
+| stats_o/std        | 0.41236973         |
+| test/episode       | 150.0              |
+| test/mean_Q        | 0.951402           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 158.18786128189674 |
+| train/episode      | 2400.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 16.62524606035343  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 30                 |
+| stats_o/mean       | 0.15769029         |
+| stats_o/std        | 0.41238144         |
+| test/episode       | 155.0              |
+| test/mean_Q        | 1.0555735          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 169.32169998914594 |
+| train/episode      | 2480.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 20.052889294914387 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_30.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 31                 |
+| stats_o/mean       | 0.15834318         |
+| stats_o/std        | 0.41240203         |
+| test/episode       | 160.0              |
+| test/mean_Q        | 1.1947917          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 242.71704690171782 |
+| train/episode      | 2560.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 19.688402256955403 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 32                 |
+| stats_o/mean       | 0.15908977         |
+| stats_o/std        | 0.41215447         |
+| test/episode       | 165.0              |
+| test/mean_Q        | 1.2617104          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 250.93839744089948 |
+| train/episode      | 2640.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 23.924400548711922 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_32.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 33                 |
+| stats_o/mean       | 0.1597725          |
+| stats_o/std        | 0.4118632          |
+| test/episode       | 170.0              |
+| test/mean_Q        | 1.296954           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 163.41691788654043 |
+| train/episode      | 2720.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 23.75550159129334  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 34                 |
+| stats_o/mean       | 0.16040789         |
+| stats_o/std        | 0.41179782         |
+| test/episode       | 175.0              |
+| test/mean_Q        | 1.4880002          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 262.822128807032   |
+| train/episode      | 2800.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 22.356030568477802 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_34.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 35                |
+| stats_o/mean       | 0.16112302        |
+| stats_o/std        | 0.41158992        |
+| test/episode       | 180.0             |
+| test/mean_Q        | 1.5565414         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 305.2479423771488 |
+| train/episode      | 2880.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 27.092396071234   |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 36                 |
+| stats_o/mean       | 0.16169356         |
+| stats_o/std        | 0.41136476         |
+| test/episode       | 185.0              |
+| test/mean_Q        | 1.6165638          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 217.642670815103   |
+| train/episode      | 2960.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 28.029881754325526 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_36.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 37                 |
+| stats_o/mean       | 0.16230991         |
+| stats_o/std        | 0.41104603         |
+| test/episode       | 190.0              |
+| test/mean_Q        | 1.7396604          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 235.2499105377892  |
+| train/episode      | 3040.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 29.519356772200226 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 38                 |
+| stats_o/mean       | 0.16287282         |
+| stats_o/std        | 0.4106311          |
+| test/episode       | 195.0              |
+| test/mean_Q        | 1.8042417          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 319.8278658233229  |
+| train/episode      | 3120.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 31.627054711157154 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_38.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 39                |
+| stats_o/mean       | 0.16349031        |
+| stats_o/std        | 0.41010666        |
+| test/episode       | 200.0             |
+| test/mean_Q        | 1.8674943         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 260.9530761274637 |
+| train/episode      | 3200.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 34.21237779359609 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 40                 |
+| stats_o/mean       | 0.16423327         |
+| stats_o/std        | 0.40979758         |
+| test/episode       | 205.0              |
+| test/mean_Q        | 2.1079798          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 309.58932491241535 |
+| train/episode      | 3280.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 34.06826290631764  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_40.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 41                 |
+| stats_o/mean       | 0.16498123         |
+| stats_o/std        | 0.40941474         |
+| test/episode       | 210.0              |
+| test/mean_Q        | 2.2070956          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 311.36569904063936 |
+| train/episode      | 3360.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 38.49998451050886  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 42                 |
+| stats_o/mean       | 0.16559748         |
+| stats_o/std        | 0.4091388          |
+| test/episode       | 215.0              |
+| test/mean_Q        | 2.299179           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 332.96550429845746 |
+| train/episode      | 3440.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 38.84149528130711  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_42.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 43                |
+| stats_o/mean       | 0.16608304        |
+| stats_o/std        | 0.4089236         |
+| test/episode       | 220.0             |
+| test/mean_Q        | 2.4963646         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 342.4083942184933 |
+| train/episode      | 3520.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 36.70887482354999 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 44                 |
+| stats_o/mean       | 0.1666929          |
+| stats_o/std        | 0.40859795         |
+| test/episode       | 225.0              |
+| test/mean_Q        | 2.6610289          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 312.99104756844855 |
+| train/episode      | 3600.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 43.76505309791774  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_44.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 45                |
+| stats_o/mean       | 0.16722149        |
+| stats_o/std        | 0.40823907        |
+| test/episode       | 230.0             |
+| test/mean_Q        | 2.7677517         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 301.5944411253946 |
+| train/episode      | 3680.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 47.54492117893439 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 46                 |
+| stats_o/mean       | 0.16771366         |
+| stats_o/std        | 0.40803042         |
+| test/episode       | 235.0              |
+| test/mean_Q        | 2.8066535          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 295.4914804390765  |
+| train/episode      | 3760.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 55.045356588217345 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_46.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 47                 |
+| stats_o/mean       | 0.1681696          |
+| stats_o/std        | 0.4077649          |
+| test/episode       | 240.0              |
+| test/mean_Q        | 3.0485647          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 308.5915689037534  |
+| train/episode      | 3840.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 55.241806340276995 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 48                |
+| stats_o/mean       | 0.16857105        |
+| stats_o/std        | 0.40748832        |
+| test/episode       | 245.0             |
+| test/mean_Q        | 3.4507134         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 317.1897460860383 |
+| train/episode      | 3920.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 60.20509970552467 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_48.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 49                 |
+| stats_o/mean       | 0.16898413         |
+| stats_o/std        | 0.40732935         |
+| test/episode       | 250.0              |
+| test/mean_Q        | 3.737078           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 318.70909081100694 |
+| train/episode      | 4000.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 59.84092659882984  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 50                |
+| stats_o/mean       | 0.16942829        |
+| stats_o/std        | 0.40718472        |
+| test/episode       | 255.0             |
+| test/mean_Q        | 3.8561313         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 279.6540598378189 |
+| train/episode      | 4080.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 64.01160764325404 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_50.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 51                 |
+| stats_o/mean       | 0.1697781          |
+| stats_o/std        | 0.40714785         |
+| test/episode       | 260.0              |
+| test/mean_Q        | 4.385376           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 292.95305552664433 |
+| train/episode      | 4160.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 69.90578302341217  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 52                |
+| stats_o/mean       | 0.17019449        |
+| stats_o/std        | 0.407111          |
+| test/episode       | 265.0             |
+| test/mean_Q        | 4.2825003         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 281.2811334374336 |
+| train/episode      | 4240.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 70.83361368561097 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_52.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 53                |
+| stats_o/mean       | 0.17059614        |
+| stats_o/std        | 0.40730193        |
+| test/episode       | 270.0             |
+| test/mean_Q        | 4.005747          |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 261.3053970490304 |
+| train/episode      | 4320.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 71.48981664057206 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 54                 |
+| stats_o/mean       | 0.17088772         |
+| stats_o/std        | 0.40760022         |
+| test/episode       | 275.0              |
+| test/mean_Q        | 6.0320206          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 315.07563619675807 |
+| train/episode      | 4400.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 66.55861800228297  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_54.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 55                 |
+| stats_o/mean       | 0.17126283         |
+| stats_o/std        | 0.40790927         |
+| test/episode       | 280.0              |
+| test/mean_Q        | 5.8884716          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 319.92983301741526 |
+| train/episode      | 4480.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 62.99007530850094  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 56                |
+| stats_o/mean       | 0.17157717        |
+| stats_o/std        | 0.4082082         |
+| test/episode       | 285.0             |
+| test/mean_Q        | 7.10838           |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 348.9368083770846 |
+| train/episode      | 4560.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 59.32684939436673 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_56.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 57                 |
+| stats_o/mean       | 0.17186223         |
+| stats_o/std        | 0.40861142         |
+| test/episode       | 290.0              |
+| test/mean_Q        | 6.5931215          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 337.9117938929263  |
+| train/episode      | 4640.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 56.895262301179564 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 58                 |
+| stats_o/mean       | 0.17215203         |
+| stats_o/std        | 0.40886357         |
+| test/episode       | 295.0              |
+| test/mean_Q        | 6.0862722          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 317.55661178696647 |
+| train/episode      | 4720.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 61.32314397111749  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_58.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 59                 |
+| stats_o/mean       | 0.17233159         |
+| stats_o/std        | 0.4092142          |
+| test/episode       | 300.0              |
+| test/mean_Q        | 7.4732537          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 350.08657367332864 |
+| train/episode      | 4800.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 58.834156502871195 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 60                |
+| stats_o/mean       | 0.1726415         |
+| stats_o/std        | 0.4094198         |
+| test/episode       | 305.0             |
+| test/mean_Q        | 7.4823933         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 331.7769868853647 |
+| train/episode      | 4880.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 67.75963654035408 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_60.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 61                |
+| stats_o/mean       | 0.17288084        |
+| stats_o/std        | 0.40974778        |
+| test/episode       | 310.0             |
+| test/mean_Q        | 9.090828          |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 322.6081103580567 |
+| train/episode      | 4960.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 69.33174563722997 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 62                 |
+| stats_o/mean       | 0.17311913         |
+| stats_o/std        | 0.41025037         |
+| test/episode       | 315.0              |
+| test/mean_Q        | 8.747566           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 277.96249649003784 |
+| train/episode      | 5040.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 65.20984718502936  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_62.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 63                |
+| stats_o/mean       | 0.17329255        |
+| stats_o/std        | 0.41073596        |
+| test/episode       | 320.0             |
+| test/mean_Q        | 8.29229           |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 301.3385159496337 |
+| train/episode      | 5120.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 62.57335221410953 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 64                 |
+| stats_o/mean       | 0.17346993         |
+| stats_o/std        | 0.4112167          |
+| test/episode       | 325.0              |
+| test/mean_Q        | 8.8797655          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 344.44623226297864 |
+| train/episode      | 5200.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 69.04699619280032  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_64.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 65                |
+| stats_o/mean       | 0.17363821        |
+| stats_o/std        | 0.41159496        |
+| test/episode       | 330.0             |
+| test/mean_Q        | 5.0460634         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 277.3162554922547 |
+| train/episode      | 5280.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 70.47787173278554 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 66                |
+| stats_o/mean       | 0.17379093        |
+| stats_o/std        | 0.41231588        |
+| test/episode       | 335.0             |
+| test/mean_Q        | 8.180233          |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 318.6867130256043 |
+| train/episode      | 5360.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 59.89491167051189 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_66.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 67                 |
+| stats_o/mean       | 0.17406611         |
+| stats_o/std        | 0.41305864         |
+| test/episode       | 340.0              |
+| test/mean_Q        | 9.6618             |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 412.05613094196417 |
+| train/episode      | 5440.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 56.91731042575468  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 68                 |
+| stats_o/mean       | 0.17423728         |
+| stats_o/std        | 0.41369048         |
+| test/episode       | 345.0              |
+| test/mean_Q        | 10.745752          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 313.1165484222475  |
+| train/episode      | 5520.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 55.059055552352305 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_68.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 69                |
+| stats_o/mean       | 0.17428194        |
+| stats_o/std        | 0.4142787         |
+| test/episode       | 350.0             |
+| test/mean_Q        | 4.233162          |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 133.9539246933386 |
+| train/episode      | 5600.0            |
+| train/success_rate | 0.00625           |
+| train/total_reward | 64.65178260195816 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 70                 |
+| stats_o/mean       | 0.1744245          |
+| stats_o/std        | 0.41538125         |
+| test/episode       | 355.0              |
+| test/mean_Q        | 4.503796           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 176.03249419699176 |
+| train/episode      | 5680.0             |
+| train/success_rate | 0.00625            |
+| train/total_reward | 52.803620989997576 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_70.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 71                |
+| stats_o/mean       | 0.17461826        |
+| stats_o/std        | 0.4164909         |
+| test/episode       | 360.0             |
+| test/mean_Q        | 10.5289           |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 284.4777168599917 |
+| train/episode      | 5760.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 42.09269771926944 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 72                 |
+| stats_o/mean       | 0.17464939         |
+| stats_o/std        | 0.41740733         |
+| test/episode       | 365.0              |
+| test/mean_Q        | 11.482513          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 281.53960086948314 |
+| train/episode      | 5840.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 45.596250131252916 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_72.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 73                 |
+| stats_o/mean       | 0.17466594         |
+| stats_o/std        | 0.41882476         |
+| test/episode       | 370.0              |
+| test/mean_Q        | 12.677134          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 270.8684200988975  |
+| train/episode      | 5920.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 34.751171919081436 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 74                 |
+| stats_o/mean       | 0.17469414         |
+| stats_o/std        | 0.4197649          |
+| test/episode       | 375.0              |
+| test/mean_Q        | 9.481612           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 145.68935837117846 |
+| train/episode      | 6000.0             |
+| train/success_rate | 0.003125           |
+| train/total_reward | 37.642557276726315 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_74.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 75                 |
+| stats_o/mean       | 0.17481703         |
+| stats_o/std        | 0.4209714          |
+| test/episode       | 380.0              |
+| test/mean_Q        | 10.5428705         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 235.32874409456863 |
+| train/episode      | 6080.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 29.214080409951848 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 76                 |
+| stats_o/mean       | 0.17493027         |
+| stats_o/std        | 0.42232448         |
+| test/episode       | 385.0              |
+| test/mean_Q        | 11.120237          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 258.98370162448447 |
+| train/episode      | 6160.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 27.681855478476386 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_76.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 77                |
+| stats_o/mean       | 0.17497991        |
+| stats_o/std        | 0.42365018        |
+| test/episode       | 390.0             |
+| test/mean_Q        | 8.443578          |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 181.3055884455354 |
+| train/episode      | 6240.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 27.6688379992086  |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 78                |
+| stats_o/mean       | 0.17501009        |
+| stats_o/std        | 0.42485064        |
+| test/episode       | 395.0             |
+| test/mean_Q        | 4.218001          |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 63.73456132859046 |
+| train/episode      | 6320.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 22.64362251184598 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_78.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 79                 |
+| stats_o/mean       | 0.17510177         |
+| stats_o/std        | 0.42625082         |
+| test/episode       | 400.0              |
+| test/mean_Q        | 6.741037           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 141.77054605859968 |
+| train/episode      | 6400.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 23.919376073825124 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 80                 |
+| stats_o/mean       | 0.1750794          |
+| stats_o/std        | 0.42774427         |
+| test/episode       | 405.0              |
+| test/mean_Q        | 9.359838           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 194.91233406026583 |
+| train/episode      | 6480.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 18.80815345359209  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_80.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 81                 |
+| stats_o/mean       | 0.17500421         |
+| stats_o/std        | 0.42911512         |
+| test/episode       | 410.0              |
+| test/mean_Q        | 4.4123545          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 65.79561169874265  |
+| train/episode      | 6560.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 15.530973659938132 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 82                 |
+| stats_o/mean       | 0.1750068          |
+| stats_o/std        | 0.4305727          |
+| test/episode       | 415.0              |
+| test/mean_Q        | 6.1411724          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 112.77867772860127 |
+| train/episode      | 6640.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 14.224258457909288 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_82.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 83                 |
+| stats_o/mean       | 0.17487796         |
+| stats_o/std        | 0.43208435         |
+| test/episode       | 420.0              |
+| test/mean_Q        | 0.468291           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 5.264078520238492  |
+| train/episode      | 6720.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 13.779618978046015 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 84                |
+| stats_o/mean       | 0.17471367        |
+| stats_o/std        | 0.43390462        |
+| test/episode       | 425.0             |
+| test/mean_Q        | 5.5496716         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 71.5160941533147  |
+| train/episode      | 6800.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 9.893809938010287 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_84.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 85                 |
+| stats_o/mean       | 0.17454962         |
+| stats_o/std        | 0.43552816         |
+| test/episode       | 430.0              |
+| test/mean_Q        | 1.1628504          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 9.833147533174795  |
+| train/episode      | 6880.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 10.504552282257523 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 86                |
+| stats_o/mean       | 0.17459379        |
+| stats_o/std        | 0.4370058         |
+| test/episode       | 435.0             |
+| test/mean_Q        | 4.2332797         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 65.69157822098096 |
+| train/episode      | 6960.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 9.864575418784934 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_86.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 87                 |
+| stats_o/mean       | 0.17455803         |
+| stats_o/std        | 0.43840712         |
+| test/episode       | 440.0              |
+| test/mean_Q        | 1.8909162          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 25.70571874790297  |
+| train/episode      | 7040.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 10.592303702809806 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 88                |
+| stats_o/mean       | 0.17447188        |
+| stats_o/std        | 0.43989685        |
+| test/episode       | 445.0             |
+| test/mean_Q        | 1.2069597         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 9.297942086146683 |
+| train/episode      | 7120.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 10.44735528118186 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_88.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 89                 |
+| stats_o/mean       | 0.17435858         |
+| stats_o/std        | 0.4414981          |
+| test/episode       | 450.0              |
+| test/mean_Q        | 2.4970198          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 45.97717731637495  |
+| train/episode      | 7200.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 11.606936478000327 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 90                 |
+| stats_o/mean       | 0.17414428         |
+| stats_o/std        | 0.44287348         |
+| test/episode       | 455.0              |
+| test/mean_Q        | 2.8474674          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 42.11769725657521  |
+| train/episode      | 7280.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 11.725434752405814 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_90.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 91                 |
+| stats_o/mean       | 0.174026           |
+| stats_o/std        | 0.44424847         |
+| test/episode       | 460.0              |
+| test/mean_Q        | 2.0922632          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 22.35655892278718  |
+| train/episode      | 7360.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 11.231268589371368 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 92                 |
+| stats_o/mean       | 0.17397065         |
+| stats_o/std        | 0.445814           |
+| test/episode       | 465.0              |
+| test/mean_Q        | 0.91463596         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 5.170929937524841  |
+| train/episode      | 7440.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 10.447785879522199 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_92.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 93                |
+| stats_o/mean       | 0.17390035        |
+| stats_o/std        | 0.447125          |
+| test/episode       | 470.0             |
+| test/mean_Q        | 1.771911          |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 13.43449345525462 |
+| train/episode      | 7520.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 13.36787232520351 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 94                 |
+| stats_o/mean       | 0.17372791         |
+| stats_o/std        | 0.44840318         |
+| test/episode       | 475.0              |
+| test/mean_Q        | 15.273505          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 193.15068298560567 |
+| train/episode      | 7600.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 16.071412049543003 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_94.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 95                 |
+| stats_o/mean       | 0.17356136         |
+| stats_o/std        | 0.44949973         |
+| test/episode       | 480.0              |
+| test/mean_Q        | 8.810972           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 84.1916612154194   |
+| train/episode      | 7680.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 14.918731917277302 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 96                 |
+| stats_o/mean       | 0.17333421         |
+| stats_o/std        | 0.4504793          |
+| test/episode       | 485.0              |
+| test/mean_Q        | 9.630882           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 111.92810176745704 |
+| train/episode      | 7760.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 17.325695686842955 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_96.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 97                 |
+| stats_o/mean       | 0.17318468         |
+| stats_o/std        | 0.45132932         |
+| test/episode       | 490.0              |
+| test/mean_Q        | 4.3526287          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 31.757842247602078 |
+| train/episode      | 7840.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 12.691026554440054 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 98                 |
+| stats_o/mean       | 0.17291173         |
+| stats_o/std        | 0.452139           |
+| test/episode       | 495.0              |
+| test/mean_Q        | 5.6266418          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 45.17492389789423  |
+| train/episode      | 7920.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 17.296759270683765 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_98.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 99                 |
+| stats_o/mean       | 0.1727332          |
+| stats_o/std        | 0.45294818         |
+| test/episode       | 500.0              |
+| test/mean_Q        | 14.6377735         |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 123.4421482629007  |
+| train/episode      | 8000.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 14.173692301229366 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 100                |
+| stats_o/mean       | 0.17254514         |
+| stats_o/std        | 0.45365018         |
+| test/episode       | 505.0              |
+| test/mean_Q        | 23.801813          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 167.15536620014964 |
+| train/episode      | 8080.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 19.57081081412199  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_100.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 101               |
+| stats_o/mean       | 0.17229353        |
+| stats_o/std        | 0.45449927        |
+| test/episode       | 510.0             |
+| test/mean_Q        | 10.346521         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 57.38482360101485 |
+| train/episode      | 8160.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 19.63511771458589 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 102                |
+| stats_o/mean       | 0.1721368          |
+| stats_o/std        | 0.45525733         |
+| test/episode       | 515.0              |
+| test/mean_Q        | 14.450262          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 103.20967922460127 |
+| train/episode      | 8240.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 19.355881939470336 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_102.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 103                |
+| stats_o/mean       | 0.17206205         |
+| stats_o/std        | 0.45584103         |
+| test/episode       | 520.0              |
+| test/mean_Q        | 5.1333795          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 65.53720810589589  |
+| train/episode      | 8320.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 19.139036816747385 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 104               |
+| stats_o/mean       | 0.17197654        |
+| stats_o/std        | 0.4564336         |
+| test/episode       | 525.0             |
+| test/mean_Q        | 14.3228           |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 81.90240550728134 |
+| train/episode      | 8400.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 11.86359419971032 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_104.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 105                |
+| stats_o/mean       | 0.17179257         |
+| stats_o/std        | 0.4569251          |
+| test/episode       | 530.0              |
+| test/mean_Q        | 4.20128            |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 15.703597241616805 |
+| train/episode      | 8480.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 15.82607619623902  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 106                |
+| stats_o/mean       | 0.17156436         |
+| stats_o/std        | 0.45741138         |
+| test/episode       | 535.0              |
+| test/mean_Q        | 8.304797           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 47.04262934302038  |
+| train/episode      | 8560.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 12.618430958655882 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_106.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 107                |
+| stats_o/mean       | 0.17144431         |
+| stats_o/std        | 0.4577843          |
+| test/episode       | 540.0              |
+| test/mean_Q        | 8.116364           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 41.71720805847783  |
+| train/episode      | 8640.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 15.160616784978469 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 108                |
+| stats_o/mean       | 0.17139421         |
+| stats_o/std        | 0.45809647         |
+| test/episode       | 545.0              |
+| test/mean_Q        | 12.177139          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 49.40073891956226  |
+| train/episode      | 8720.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 14.236476931429788 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_108.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 109                |
+| stats_o/mean       | 0.17137398         |
+| stats_o/std        | 0.45851824         |
+| test/episode       | 550.0              |
+| test/mean_Q        | 16.083368          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 82.88708593795573  |
+| train/episode      | 8800.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 11.538363543973698 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 110                |
+| stats_o/mean       | 0.17137484         |
+| stats_o/std        | 0.45887375         |
+| test/episode       | 555.0              |
+| test/mean_Q        | 18.538094          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 94.08545611252897  |
+| train/episode      | 8880.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 14.246983826039118 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_110.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 111                |
+| stats_o/mean       | 0.17140917         |
+| stats_o/std        | 0.4591788          |
+| test/episode       | 560.0              |
+| test/mean_Q        | 15.019247          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 85.84254856817009  |
+| train/episode      | 8960.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 17.898903790944118 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 112                |
+| stats_o/mean       | 0.1714101          |
+| stats_o/std        | 0.4593958          |
+| test/episode       | 565.0              |
+| test/mean_Q        | 52.500984          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 263.29697993195344 |
+| train/episode      | 9040.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 25.61054990585239  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_112.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 113                |
+| stats_o/mean       | 0.17138389         |
+| stats_o/std        | 0.45971835         |
+| test/episode       | 570.0              |
+| test/mean_Q        | 25.272833          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 128.77905852782732 |
+| train/episode      | 9120.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 32.16459528217767  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 114                |
+| stats_o/mean       | 0.17127639         |
+| stats_o/std        | 0.45993292         |
+| test/episode       | 575.0              |
+| test/mean_Q        | 25.73954           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 135.6949686801241  |
+| train/episode      | 9200.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 33.042040267570904 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_114.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 115                |
+| stats_o/mean       | 0.17119433         |
+| stats_o/std        | 0.4601867          |
+| test/episode       | 580.0              |
+| test/mean_Q        | 70.67479           |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 335.59600132273994 |
+| train/episode      | 9280.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 29.35229771167478  |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+-------------------------------------------
+| epoch              | 116                |
+| stats_o/mean       | 0.17111172         |
+| stats_o/std        | 0.46041754         |
+| test/episode       | 585.0              |
+| test/mean_Q        | 19.577541          |
+| test/success_rate  | 0.0                |
+| test/total_reward  | 74.75170212923257  |
+| train/episode      | 9360.0             |
+| train/success_rate | 0.0                |
+| train/total_reward | 25.186697156779534 |
+-------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_116.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
+------------------------------------------
+| epoch              | 117               |
+| stats_o/mean       | 0.17103636        |
+| stats_o/std        | 0.46066254        |
+| test/episode       | 590.0             |
+| test/mean_Q        | 61.576073         |
+| test/success_rate  | 0.0               |
+| test/total_reward  | 293.9862484183506 |
+| train/episode      | 9440.0            |
+| train/success_rate | 0.0               |
+| train/total_reward | 30.87211721723434 |
+------------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_best.pkl.
+Saving latest policy to /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/Experiment/Result/Temp/Exp0/RLNoDemo//rl/policy_latest.pkl.
