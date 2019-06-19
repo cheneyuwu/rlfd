@@ -415,10 +415,20 @@ class DDPG(object):
         # Add shaping reward
         if self.demo_critic == "shaping":
             with tf.variable_scope("shaping") as vs:
-                self.demo_shaping = DemoShaping(
+                self.demo_critic_shaping = DemoShaping(
                     o=self.inputs_tf["o"],
                     g=self.inputs_tf["g"],
                     u=self.inputs_tf["u"],
+                    o_2=self.inputs_tf["o_2"],
+                    g_2=self.inputs_tf["g_2"],
+                    u_2=self.main_shaping.pi_tf,
+                    num_sample=self.num_sample,
+                    gamma=self.gamma,
+                )
+                self.demo_actor_shaping = DemoShaping(
+                    o=self.inputs_tf["o"],
+                    g=self.inputs_tf["g"],
+                    u=self.main.pi_tf,
                     o_2=self.inputs_tf["o_2"],
                     g_2=self.inputs_tf["g_2"],
                     u_2=self.main_shaping.pi_tf,
@@ -436,7 +446,7 @@ class DDPG(object):
                 # calculate bellman target (with shaping reward added)
                 # TODO support ensemble!
                 target_tf = tf.clip_by_value(
-                    self.inputs_tf["r"] + tf.stop_gradient(self.demo_shaping.reward[i]) + self.gamma * self.target.Q_pi_tf[i],
+                    self.inputs_tf["r"] + tf.stop_gradient(self.demo_critic_shaping.reward[i]) + self.gamma * self.target.Q_pi_tf[i],
                     *clip_range
                 )
                 rl_bellman_tf = tf.boolean_mask(
@@ -499,7 +509,7 @@ class DDPG(object):
         elif self.demo_critic == "shaping":
             self.pi_loss_tf = [
                 -tf.reduce_mean(self.main.Q_pi_tf[i])
-                -tf.reduce_mean(self.demo_shaping.potential)
+                -tf.reduce_mean(self.demo_actor_shaping.potential)
                 + self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf[i] / self.max_u))
                 for i in range(self.num_sample)
             ]
