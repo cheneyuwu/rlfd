@@ -66,8 +66,6 @@ DEFAULT_PARAMS = {
     # Replay strategy to be used
     "rl_replay_strategy": "none",  # supported modes: future, none for uniform
     "rl_demo_replay_strategy": "none",  # supported modes: future, none for uniform
-    # N step return
-    "nstep_n": 1,
     # HER
     "her_k": 4,  # number of additional goals used for replay, only used if off_policy_data=future
     # DDPG Training
@@ -169,18 +167,6 @@ def configure_her(params):
     return her_params
 
 
-def configure_nstep(params):
-
-    # Prepare configuration for HER.
-    nstep_params = extract_params(params, "nstep_")
-    nstep_params.update({"gamma": params["gamma"]})
-    logger.info("*** nstep_params ***")
-    log_params(nstep_params)
-    logger.info("*** nstep_params ***")
-
-    return nstep_params
-
-
 def configure_ddpg(params):
     # Extract relevant parameters.
     ddpg_params = extract_params(params, "rl_")
@@ -194,8 +180,7 @@ def configure_ddpg(params):
         rl_sample_params = configure_her(params)
     ddpg_params["replay_strategy"] = {"strategy": ddpg_params["replay_strategy"], "args": rl_sample_params}
 
-    demo_sample_params = configure_nstep(params)
-    ddpg_params["demo_replay_strategy"] = {"strategy": ddpg_params["demo_replay_strategy"], "args": demo_sample_params}
+    ddpg_params["demo_replay_strategy"] = {"strategy": ddpg_params["demo_replay_strategy"], "args": {}}
 
     # Update parameters
     ddpg_params.update(

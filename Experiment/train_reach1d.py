@@ -29,13 +29,13 @@ if __name__ == "__main__":
     uncertainty_exp = Uncertainty()
 
 
-    environment = "Reach1DFirstOrder"
+    environment = "Reach1DFirstOrderSparse"
     train_exp.env = environment
     train_exp.num_cpu = 1
     train_exp.update()
 
     demo_data_size = 128
-    train_rl_epochs = 16
+    train_rl_epochs = 32
     seed = 2
     for i in range(1):
         seed += i * 100
@@ -58,27 +58,16 @@ if __name__ == "__main__":
         #     rl_batch_size=256,
         #     train_rl_epochs=train_rl_epochs,
         # )
-        # assert not train_exp.rl_prioritized_only(
-        #     r_scale=1.0,
-        #     r_shift=0.0,
+        # assert not train_exp.rl_only(
         #     rl_action_l2=0.5,
-        #     rl_scope="critic_demo",
-        #     n_cycles=10,
+        #     rl_scope="rl_only",
+        #     n_cycles=4,
+        #     n_batches=8,
         #     seed=seed + 10,
         #     rl_num_sample=1,
-        #     rl_batch_size=256,
+        #     rl_batch_size=32,
         #     train_rl_epochs=train_rl_epochs,
         # )
-        assert not train_exp.rl_only(
-            rl_action_l2=0.5,
-            rl_scope="rl_only",
-            n_cycles=4,
-            n_batches=8,
-            seed=seed + 10,
-            rl_num_sample=8,
-            rl_batch_size=32,
-            train_rl_epochs=train_rl_epochs,
-        )
 
         # Generate demonstration data
         # assert not demo_exp.generate_demo(
@@ -89,28 +78,23 @@ if __name__ == "__main__":
         #     shuffle=0,
         # )
 
-        # Train the RL with demonstration
-        # assert not train_exp.rl_with_demo_critic_rb(
-        #     rl_action_l2=0.5,
-        #     rl_scope="rl_with_demo",
-        #     n_cycles=4,
-        #     n_batches=8,
-        #     seed=seed + 40,
-        #     rl_num_sample=8,
-        #     rl_batch_size=64,
-        #     rl_batch_size_demo=32,
-        #     train_rl_epochs=train_rl_epochs,
-        #     demo_file=result_dir + "DemoData/" + environment + ".npz",
-        #     rl_num_demo=demo_data_size,
-        #     rl_replay_strategy="none",
-        # )
+        assert not train_exp.rl_only(
+            rl_action_l2=0.5,
+            rl_scope="rl_only",
+            n_cycles=4,
+            n_batches=8,
+            seed=seed + 10,
+            rl_num_sample=1,
+            rl_batch_size=32,
+            train_rl_epochs=train_rl_epochs,
+            demo_critic="shaping",
+        )
 
     # Plot the training result
-    # assert not plot_exp.plot(dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"])
+    assert not plot_exp.plot(dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"])
 
     # Check the uncertainty output of the demonstration output
     assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RLNoDemo/uncertainty/", save=0)
-    # assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RLDemoCriticReplBuffer/uncertainty/")
 
     # Display a policy result (calls run_agent).
     assert not display_exp.display(policy_file=display_exp.result_dir + "RLNoDemo/rl/policy_latest.pkl", num_itr=3)
