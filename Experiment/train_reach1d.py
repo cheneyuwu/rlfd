@@ -34,15 +34,15 @@ if __name__ == "__main__":
     train_exp.num_cpu = 1
     train_exp.update()
 
-    demo_data_size = 128
-    train_rl_epochs = 32
+    demo_data_size = 10
+    train_rl_epochs = 16
     seed = 2
-    for i in range(1):
+    for i in range(5):
         seed += i * 100
 
         # We can change the result directory without updating
         exp_dir = os.getenv("EXPERIMENT")
-        result_dir = os.path.join(exp_dir, "Result/Temp/")
+        result_dir = os.path.join(exp_dir, "Result/Temp/Exp"+str(i)+"/")
         demo_exp.result_dir = result_dir
         train_exp.result_dir = result_dir
 
@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
         # Generate demonstration data
         # assert not demo_exp.generate_demo(
-        #     policy_file=demo_exp.result_dir + "RLNoDemo/rl/policy_latest.pkl",
+        #     policy_file=demo_exp.result_dir + "RL/rl/policy_latest.pkl",
         #     seed=seed + 30,
         #     num_itr=demo_data_size,
         #     entire_eps=1,
@@ -88,6 +88,8 @@ if __name__ == "__main__":
             rl_batch_size=32,
             train_rl_epochs=train_rl_epochs,
             demo_critic="shaping",
+            num_demo=demo_data_size,
+            demo_file=train_exp.result_dir+"/../DemoData/Reach1DFirstOrderSparse.npz"
         )
 
     # Plot the training result
@@ -95,7 +97,7 @@ if __name__ == "__main__":
 
     # Check the uncertainty output of the demonstration output
     # assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RL/uncertainty/", save=0)
-    # assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RLDemoShaping/uncertainty/", save=0)
+    assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RLDemoShaping/uncertainty/", save=0)
 
     # Display a policy result (calls run_agent).
     # assert not display_exp.display(policy_file=display_exp.result_dir + "RLDemoShaping/rl/policy_latest.pkl", num_itr=3)

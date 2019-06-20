@@ -33,7 +33,7 @@ class Demo(Experiment):
     @Command.execute
     def generate_demo(self, **override):
         command = self.run.copy()
-        command["--policy_file"] = self.result_dir + "RLHERNoDemo/rl/policy_latest.pkl"
+        command["--policy_file"] = self.result_dir + "RL/rl/policy_latest.pkl"
         command["--store_dir"] = self.result_dir + "DemoData/"
         command["--num_itr"] = 128
         command["--entire_eps"] = 1

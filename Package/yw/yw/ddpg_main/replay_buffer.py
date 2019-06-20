@@ -35,6 +35,32 @@ class ReplayBuffer:
         with self.lock:
             return self.current_size == self.size
 
+    def sample_all(self):
+        """Returns all the transitions currently stored in the replay buffer.
+        """
+        buffers = {}
+
+        with self.lock:
+            assert self.current_size > 0
+            for key in self.buffers.keys():
+                buffers[key] = self.buffers[key][: self.current_size]
+
+        # Split obs and goal (i.e. for (s, a, s'), put s and s' to two entries)
+        buffers["o_2"] = buffers["o"][:, 1:, :]
+        buffers["o"] = buffers["o"][:, :-1, :]
+        if "ag" in buffers.keys():
+            buffers["ag_2"] = buffers["ag"][:, 1:, :]
+            buffers["ag"] = buffers["ag"][:, :-1, :]
+        if "g" in buffers.keys():
+            buffers["g_2"] = buffers["g"][:, :, :]
+        
+        # Merge the first and second dimension (dimensions are : episode x T or )
+        transitions = {k: buffers[k].reshape([-1]+ list(buffers[k].shape[2:])) for k in buffers.keys()}
+
+        assert all([buffers[k].shape == buffers["u"].shape for k in buffers.keys()])
+
+        return transitions
+
     def sample(self, batch_size):
         """Returns a dict {key: array(batch_size x shapes[key])}
         """

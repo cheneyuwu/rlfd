@@ -21,9 +21,81 @@ class DemoShaping:
         self.reward = gamma * next_potential - potential
 
     def calc_potential(self, o, g, u):
+        raise NotImplementedError
+
+
+class ManualDemoShaping(DemoShaping):
+    def __init__(self, o, g, u, o_2, g_2, u_2, gamma):
+        """
+        Implement the state, action based potential function and corresponding actions
+        Args:
+            o - observation
+            g - goal
+            u - action
+            o_2 - observation that goes to
+            g_2 - same as g, idk why I must make this specific
+            u_2 - output from the actor of the main network
+        """
+        super().__init__(o, g, u, o_2, g_2, u_2, gamma)
+
+    def calc_potential(self, o, g, u):
         """
         Just return negative value of distance between current state and goal state
         """
         # ret = -tf.abs(o - g) * 10
-        ret = -((g - o) * 10 - u) ** 2
+        ret = -(tf.clip_by_value((g - o) * 10, -2, 2) - u) ** 2
         return ret
+
+
+class GaussianDemoShaping(DemoShaping):
+    def __init__(self, o, g, u, o_2, g_2, u_2, gamma, demo_inputs_tf):
+        """
+        Implement the state, action based potential function and corresponding actions
+        Args:
+            o - observation
+            g - goal
+            u - action
+            o_2 - observation that goes to
+            g_2 - same as g, idk why I must make this specific
+            u_2 - output from the actor of the main network
+            demo_inputs_tf - demo_inputs that contains all the transitons from demonstration
+        """
+        self.demo_inputs_tf = demo_inputs_tf
+        super().__init__(o, g, u, o_2, g_2, u_2, gamma)
+
+    def calc_potential(self, o, g, u):
+        """
+        Just return negative value of distance between current state and goal state
+        """
+        # Concat demonstration inputs
+        demo_state_tf = self.demo_inputs_tf["o"]
+        if self.demo_inputs_tf["g"] != None:
+            # for multigoal environments, we have goal as another states
+            demo_state_tf = tf.concat(axis=1, values=[demo_state_tf, self.demo_inputs_tf["g"]])
+        demo_state_tf = tf.concat(axis=1, values=[demo_state_tf, self.demo_inputs_tf["u"]])
+        # note: shape of demo_state_tf is (num_demo, k), where k is sum of dim o g u
+
+        # Concatenate obs goal and action
+        state_tf = o
+        if g != None:
+            # for multigoal environments, we have goal as another states
+            state_tf = tf.concat(axis=1, values=[state_tf, g])
+        state_tf = tf.concat(axis=1, values=[state_tf, u])
+        # note: shape of state_tf is (batch_size, k), where k is sum of dim o g u
+
+        # Calculate the potential
+        # expand dimension of demo_state and state so that they have the same shape: (batch_size, num_demo, k)
+        expanded_demo_state_tf = tf.tile(tf.expand_dims(demo_state_tf, 0), [tf.shape(state_tf)[0], 1, 1])
+        expanded_state_tf = tf.tile(tf.expand_dims(state_tf, 1), [1, tf.shape(demo_state_tf)[0], 1])
+        # calculate distance, result shape is (batch_size, num_demo, k)
+        distance_tf = expanded_state_tf - expanded_demo_state_tf
+        # calculate L2 Norm square, result shape is (batch_size, num_demo)
+        norm_tf = tf.norm(distance_tf, ord=2, axis=-1)
+        # cauculate multi var gaussian, result shape is (batch_size, num_demo)
+        gaussian_tf = tf.exp(-0.5 * norm_tf * norm_tf)
+        # sum the result from all demo transitions and get the final result, shape is (batch_size, 1)
+        potential = tf.reduce_sum(gaussian_tf, axis=-1, keepdims=True)
+
+        # potential = -(tf.clip_by_value((g - o) * 10, -2, 2) - u) ** 2
+
+        return potential
