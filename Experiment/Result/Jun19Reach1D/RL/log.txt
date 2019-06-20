@@ -1,0 +1,655 @@
+Logging to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL/
+Launching the training process with 1 cpu core(s).
+Setting log level to 2.
+Using environment Reach1DFirstOrderSparse with r scale down by 1.000000 shift by 0.000000 and max episode 0.000000
+*** ddpg_params ***
+Q_lr                          0.001
+T                             16
+action_l2                     0.5
+aux_loss_weight               0.0078
+batch_size                    32
+batch_size_demo               128
+buffer_size                   1000000
+ca_ratio                      1
+clip_obs                      200.0
+clip_pos_returns              False
+clip_return                   inf
+demo_actor                    none
+demo_critic                   none
+demo_replay_strategy          {'strategy': 'none', 'args': {}}
+gamma                         0.9375
+hidden                        256
+info                          {'env_name': 'Reach1DFirstOrderSparse', 'r_scale': 1.0, 'r_shift': 0.0, 'eps_length': 0, 'env_args': {'dim': 1, 'order': 1, 'sparse': True}}
+input_dims                    {'o': 1, 'u': 1, 'g': 1, 'info_is_success': 1}
+layers                        3
+max_u                         2
+norm_clip                     5
+norm_eps                      0.01
+num_demo                      1000
+num_sample                    1
+pi_lr                         0.001
+polyak                        0.95
+prm_loss_weight               0.001
+q_filter                      0
+replay_strategy               {'strategy': 'none', 'args': {}}
+rollout_batch_size            4
+scope                         rl_only
+*** ddpg_params ***
+Configuring the replay buffer.
+Creating a DDPG agent with action space 1 x 2.
+
+*** rollout_params ***
+T                             16
+compute_Q                     False
+dims                          {'o': 1, 'u': 1, 'g': 1, 'info_is_success': 1}
+exploit                       0
+noise_eps                     0.2
+random_eps                    0.3
+rollout_batch_size            4
+use_demo_states               True
+use_target_net                False
+*** rollout_params ***
+*** eval_params ***
+T                             16
+compute_Q                     True
+dims                          {'o': 1, 'u': 1, 'g': 1, 'info_is_success': 1}
+exploit                       1
+noise_eps                     0.2
+random_eps                    0.3
+rollout_batch_size            20
+use_demo_states               False
+use_target_net                False
+*** eval_params ***
+Training the RL agent with n_epochs: 32, n_cycles: 4, n_batches: 8.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_000.npz
+-------------------------------------
+| epoch              | 0            |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.051118206 |
+| stats_o/std        | 0.67255276   |
+| test/episode       | 20.0         |
+| test/mean_Q        | -0.033146642 |
+| test/success_rate  | 0.0          |
+| test/total_reward  | 0.45         |
+| train/episode      | 16.0         |
+| train/success_rate | 0.0625       |
+| train/total_reward | 0.75         |
+-------------------------------------
+New best success rate: 0.0.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_0.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_001.npz
+-------------------------------------
+| epoch              | 1            |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | 0.0031227926 |
+| stats_o/std        | 0.66651106   |
+| test/episode       | 40.0         |
+| test/mean_Q        | 0.106434025  |
+| test/success_rate  | 0.2          |
+| test/total_reward  | 2.85         |
+| train/episode      | 32.0         |
+| train/success_rate | 0.0625       |
+| train/total_reward | 1.8125       |
+-------------------------------------
+New best success rate: 0.2.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_002.npz
+---------------------------------------
+| epoch              | 2              |
+| stats_g/mean       | 0.0            |
+| stats_g/std        | 0.01           |
+| stats_o/mean       | -0.00087282655 |
+| stats_o/std        | 0.61892986     |
+| test/episode       | 60.0           |
+| test/mean_Q        | 0.25242695     |
+| test/success_rate  | 0.5            |
+| test/total_reward  | 4.4            |
+| train/episode      | 48.0           |
+| train/success_rate | 0.125          |
+| train/total_reward | 1.1875         |
+---------------------------------------
+New best success rate: 0.5.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_2.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_003.npz
+-------------------------------------
+| epoch              | 3            |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.012858105 |
+| stats_o/std        | 0.58111656   |
+| test/episode       | 80.0         |
+| test/mean_Q        | 0.83111036   |
+| test/success_rate  | 0.7          |
+| test/total_reward  | 9.65         |
+| train/episode      | 64.0         |
+| train/success_rate | 0.4375       |
+| train/total_reward | 6.1875       |
+-------------------------------------
+New best success rate: 0.7.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_004.npz
+------------------------------------
+| epoch              | 4           |
+| stats_g/mean       | 0.0         |
+| stats_g/std        | 0.01        |
+| stats_o/mean       | 0.005457158 |
+| stats_o/std        | 0.5687138   |
+| test/episode       | 100.0       |
+| test/mean_Q        | 0.64097166  |
+| test/success_rate  | 0.6         |
+| test/total_reward  | 7.8         |
+| train/episode      | 80.0        |
+| train/success_rate | 0.3125      |
+| train/total_reward | 6.0625      |
+------------------------------------
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_4.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_005.npz
+-------------------------------------
+| epoch              | 5            |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | 0.0042913994 |
+| stats_o/std        | 0.61398023   |
+| test/episode       | 120.0        |
+| test/mean_Q        | 0.6913825    |
+| test/success_rate  | 0.65         |
+| test/total_reward  | 8.1          |
+| train/episode      | 96.0         |
+| train/success_rate | 0.1875       |
+| train/total_reward | 1.625        |
+-------------------------------------
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_006.npz
+-------------------------------------
+| epoch              | 6            |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | 0.0072248783 |
+| stats_o/std        | 0.6039458    |
+| test/episode       | 140.0        |
+| test/mean_Q        | 0.56105024   |
+| test/success_rate  | 0.5          |
+| test/total_reward  | 6.5          |
+| train/episode      | 112.0        |
+| train/success_rate | 0.25         |
+| train/total_reward | 4.75         |
+-------------------------------------
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_6.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_007.npz
+-----------------------------------
+| epoch              | 7          |
+| stats_g/mean       | 0.0        |
+| stats_g/std        | 0.01       |
+| stats_o/mean       | 0.01614192 |
+| stats_o/std        | 0.6141795  |
+| test/episode       | 160.0      |
+| test/mean_Q        | 0.56841135 |
+| test/success_rate  | 0.4        |
+| test/total_reward  | 5.7        |
+| train/episode      | 128.0      |
+| train/success_rate | 0.3125     |
+| train/total_reward | 4.3125     |
+-----------------------------------
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_008.npz
+------------------------------------
+| epoch              | 8           |
+| stats_g/mean       | 0.0         |
+| stats_g/std        | 0.01        |
+| stats_o/mean       | 0.017901776 |
+| stats_o/std        | 0.6077196   |
+| test/episode       | 180.0       |
+| test/mean_Q        | 0.8227478   |
+| test/success_rate  | 0.55        |
+| test/total_reward  | 7.7         |
+| train/episode      | 144.0       |
+| train/success_rate | 0.375       |
+| train/total_reward | 4.75        |
+------------------------------------
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_8.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_009.npz
+------------------------------------
+| epoch              | 9           |
+| stats_g/mean       | 0.0         |
+| stats_g/std        | 0.01        |
+| stats_o/mean       | 0.031054689 |
+| stats_o/std        | 0.59498155  |
+| test/episode       | 200.0       |
+| test/mean_Q        | 0.7603958   |
+| test/success_rate  | 0.45        |
+| test/total_reward  | 6.3         |
+| train/episode      | 160.0       |
+| train/success_rate | 0.625       |
+| train/total_reward | 8.375       |
+------------------------------------
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_010.npz
+------------------------------------
+| epoch              | 10          |
+| stats_g/mean       | 0.0         |
+| stats_g/std        | 0.01        |
+| stats_o/mean       | 0.039110105 |
+| stats_o/std        | 0.5971933   |
+| test/episode       | 220.0       |
+| test/mean_Q        | 1.2217612   |
+| test/success_rate  | 0.7         |
+| test/total_reward  | 10.1        |
+| train/episode      | 176.0       |
+| train/success_rate | 0.5625      |
+| train/total_reward | 5.625       |
+------------------------------------
+New best success rate: 0.7.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_10.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_011.npz
+-----------------------------------
+| epoch              | 11         |
+| stats_g/mean       | 0.0        |
+| stats_g/std        | 0.01       |
+| stats_o/mean       | 0.03908958 |
+| stats_o/std        | 0.5870029  |
+| test/episode       | 240.0      |
+| test/mean_Q        | 1.2509892  |
+| test/success_rate  | 0.65       |
+| test/total_reward  | 9.15       |
+| train/episode      | 192.0      |
+| train/success_rate | 0.6875     |
+| train/total_reward | 8.125      |
+-----------------------------------
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_012.npz
+-------------------------------------
+| epoch              | 12           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | 0.0139430165 |
+| stats_o/std        | 0.59191114   |
+| test/episode       | 260.0        |
+| test/mean_Q        | 1.8950039    |
+| test/success_rate  | 0.9          |
+| test/total_reward  | 12.8         |
+| train/episode      | 208.0        |
+| train/success_rate | 0.3125       |
+| train/total_reward | 6.8125       |
+-------------------------------------
+New best success rate: 0.9.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_12.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_013.npz
+-------------------------------------
+| epoch              | 13           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | 0.0076071825 |
+| stats_o/std        | 0.5848483    |
+| test/episode       | 280.0        |
+| test/mean_Q        | 1.3089881    |
+| test/success_rate  | 0.55         |
+| test/total_reward  | 8.2          |
+| train/episode      | 224.0        |
+| train/success_rate | 0.4375       |
+| train/total_reward | 6.75         |
+-------------------------------------
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_014.npz
+--------------------------------------
+| epoch              | 14            |
+| stats_g/mean       | 0.0           |
+| stats_g/std        | 0.01          |
+| stats_o/mean       | -0.0036143383 |
+| stats_o/std        | 0.5809472     |
+| test/episode       | 300.0         |
+| test/mean_Q        | 1.6819832     |
+| test/success_rate  | 0.7           |
+| test/total_reward  | 10.25         |
+| train/episode      | 240.0         |
+| train/success_rate | 0.625         |
+| train/total_reward | 6.4375        |
+--------------------------------------
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_14.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_015.npz
+--------------------------------------
+| epoch              | 15            |
+| stats_g/mean       | 0.0           |
+| stats_g/std        | 0.01          |
+| stats_o/mean       | -0.0021042773 |
+| stats_o/std        | 0.5740056     |
+| test/episode       | 320.0         |
+| test/mean_Q        | 1.6201134     |
+| test/success_rate  | 0.65          |
+| test/total_reward  | 9.1           |
+| train/episode      | 256.0         |
+| train/success_rate | 0.625         |
+| train/total_reward | 9.3125        |
+--------------------------------------
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_016.npz
+--------------------------------------
+| epoch              | 16            |
+| stats_g/mean       | 0.0           |
+| stats_g/std        | 0.01          |
+| stats_o/mean       | -0.0143719455 |
+| stats_o/std        | 0.5708312     |
+| test/episode       | 340.0         |
+| test/mean_Q        | 2.6066356     |
+| test/success_rate  | 0.95          |
+| test/total_reward  | 13.7          |
+| train/episode      | 272.0         |
+| train/success_rate | 0.625         |
+| train/total_reward | 7.8125        |
+--------------------------------------
+New best success rate: 0.95.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_16.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_017.npz
+-------------------------------------
+| epoch              | 17           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.015280681 |
+| stats_o/std        | 0.56189305   |
+| test/episode       | 360.0        |
+| test/mean_Q        | 2.235827     |
+| test/success_rate  | 0.0          |
+| test/total_reward  | 1.8          |
+| train/episode      | 288.0        |
+| train/success_rate | 0.75         |
+| train/total_reward | 9.3125       |
+-------------------------------------
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_018.npz
+-------------------------------------
+| epoch              | 18           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.016223878 |
+| stats_o/std        | 0.5560498    |
+| test/episode       | 380.0        |
+| test/mean_Q        | 3.001735     |
+| test/success_rate  | 1.0          |
+| test/total_reward  | 14.3         |
+| train/episode      | 304.0        |
+| train/success_rate | 0.375        |
+| train/total_reward | 6.6875       |
+-------------------------------------
+New best success rate: 1.0.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_18.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_019.npz
+-------------------------------------
+| epoch              | 19           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.019766843 |
+| stats_o/std        | 0.55031013   |
+| test/episode       | 400.0        |
+| test/mean_Q        | 2.3626275    |
+| test/success_rate  | 0.85         |
+| test/total_reward  | 10.75        |
+| train/episode      | 320.0        |
+| train/success_rate | 0.3125       |
+| train/total_reward | 7.8125       |
+-------------------------------------
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_020.npz
+-------------------------------------
+| epoch              | 20           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.014548109 |
+| stats_o/std        | 0.5437727    |
+| test/episode       | 420.0        |
+| test/mean_Q        | 2.6642873    |
+| test/success_rate  | 0.85         |
+| test/total_reward  | 12.15        |
+| train/episode      | 336.0        |
+| train/success_rate | 0.75         |
+| train/total_reward | 9.0625       |
+-------------------------------------
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_20.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_021.npz
+-------------------------------------
+| epoch              | 21           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.010128731 |
+| stats_o/std        | 0.5374265    |
+| test/episode       | 440.0        |
+| test/mean_Q        | 2.7966847    |
+| test/success_rate  | 0.9          |
+| test/total_reward  | 11.8         |
+| train/episode      | 352.0        |
+| train/success_rate | 0.6875       |
+| train/total_reward | 8.9375       |
+-------------------------------------
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_022.npz
+-------------------------------------
+| epoch              | 22           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.014917288 |
+| stats_o/std        | 0.53245103   |
+| test/episode       | 460.0        |
+| test/mean_Q        | 3.2839074    |
+| test/success_rate  | 1.0          |
+| test/total_reward  | 13.6         |
+| train/episode      | 368.0        |
+| train/success_rate | 0.625        |
+| train/total_reward | 8.6875       |
+-------------------------------------
+New best success rate: 1.0.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_22.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_023.npz
+-------------------------------------
+| epoch              | 23           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.010569778 |
+| stats_o/std        | 0.5271116    |
+| test/episode       | 480.0        |
+| test/mean_Q        | 3.2848518    |
+| test/success_rate  | 0.95         |
+| test/total_reward  | 13.05        |
+| train/episode      | 384.0        |
+| train/success_rate | 0.625        |
+| train/total_reward | 8.1875       |
+-------------------------------------
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_024.npz
+-------------------------------------
+| epoch              | 24           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.011021293 |
+| stats_o/std        | 0.5216108    |
+| test/episode       | 500.0        |
+| test/mean_Q        | 3.5474563    |
+| test/success_rate  | 1.0          |
+| test/total_reward  | 13.5         |
+| train/episode      | 400.0        |
+| train/success_rate | 0.75         |
+| train/total_reward | 8.3125       |
+-------------------------------------
+New best success rate: 1.0.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_24.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_025.npz
+-------------------------------------
+| epoch              | 25           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.007072969 |
+| stats_o/std        | 0.5169534    |
+| test/episode       | 520.0        |
+| test/mean_Q        | 3.750856     |
+| test/success_rate  | 0.95         |
+| test/total_reward  | 14.15        |
+| train/episode      | 416.0        |
+| train/success_rate | 0.5625       |
+| train/total_reward | 9.5625       |
+-------------------------------------
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_026.npz
+--------------------------------------
+| epoch              | 26            |
+| stats_g/mean       | 0.0           |
+| stats_g/std        | 0.01          |
+| stats_o/mean       | -0.0076869163 |
+| stats_o/std        | 0.50884974    |
+| test/episode       | 540.0         |
+| test/mean_Q        | 3.9465275     |
+| test/success_rate  | 1.0           |
+| test/total_reward  | 14.15         |
+| train/episode      | 432.0         |
+| train/success_rate | 0.75          |
+| train/total_reward | 9.875         |
+--------------------------------------
+New best success rate: 1.0.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_26.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_027.npz
+-------------------------------------
+| epoch              | 27           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.013413909 |
+| stats_o/std        | 0.50600517   |
+| test/episode       | 560.0        |
+| test/mean_Q        | 4.161108     |
+| test/success_rate  | 1.0          |
+| test/total_reward  | 14.55        |
+| train/episode      | 448.0        |
+| train/success_rate | 0.625        |
+| train/total_reward | 8.25         |
+-------------------------------------
+New best success rate: 1.0.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_028.npz
+--------------------------------------
+| epoch              | 28            |
+| stats_g/mean       | 0.0           |
+| stats_g/std        | 0.01          |
+| stats_o/mean       | -0.0147628095 |
+| stats_o/std        | 0.499128      |
+| test/episode       | 580.0         |
+| test/mean_Q        | 4.380234      |
+| test/success_rate  | 1.0           |
+| test/total_reward  | 14.25         |
+| train/episode      | 464.0         |
+| train/success_rate | 0.6875        |
+| train/total_reward | 9.8125        |
+--------------------------------------
+New best success rate: 1.0.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_28.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_029.npz
+-------------------------------------
+| epoch              | 29           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.014895427 |
+| stats_o/std        | 0.49319673   |
+| test/episode       | 600.0        |
+| test/mean_Q        | 4.523042     |
+| test/success_rate  | 1.0          |
+| test/total_reward  | 14.35        |
+| train/episode      | 480.0        |
+| train/success_rate | 0.875        |
+| train/total_reward | 9.625        |
+-------------------------------------
+New best success rate: 1.0.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_030.npz
+-------------------------------------
+| epoch              | 30           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.014871048 |
+| stats_o/std        | 0.48727742   |
+| test/episode       | 620.0        |
+| test/mean_Q        | 4.6754045    |
+| test/success_rate  | 1.0          |
+| test/total_reward  | 14.55        |
+| train/episode      | 496.0        |
+| train/success_rate | 0.5625       |
+| train/total_reward | 9.125        |
+-------------------------------------
+New best success rate: 1.0.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving periodic policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_30.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.
+Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.
+Query: uncertainty -> storing query results to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//uncertainty/query_031.npz
+-------------------------------------
+| epoch              | 31           |
+| stats_g/mean       | 0.0          |
+| stats_g/std        | 0.01         |
+| stats_o/mean       | -0.014174989 |
+| stats_o/std        | 0.4814299    |
+| test/episode       | 640.0        |
+| test/mean_Q        | 4.604581     |
+| test/success_rate  | 1.0          |
+| test/total_reward  | 14.45        |
+| train/episode      | 512.0        |
+| train/success_rate | 0.8125       |
+| train/total_reward | 9.625        |
+-------------------------------------
+New best success rate: 1.0.
+Saving policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_best.pkl.
+Saving latest policy to /home/yuchen/Research/RLProject/Experiment/Result/Temp/RL//rl/policy_latest.pkl.

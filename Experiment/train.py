@@ -71,33 +71,25 @@ class Train(Experiment):
     @Command.execute
     def rl_her_only(self, **kwargs):
         command = self.run.copy()
-        command["--logdir"] = self.result_dir + "RLHERNoDemo/"
-        command["--save_path"] = self.result_dir + "RLHERNoDemo/"
+        command["--logdir"] = self.result_dir + "RLHER/"
+        command["--save_path"] = self.result_dir + "RLHER/"
         command["--rl_replay_strategy"] = "her"
-        return command
-
-    @Command.execute
-    def rl_prioritized_only(self, **kwargs):
-        command = self.run.copy()
-        command["--logdir"] = self.result_dir + "RLPrtNoDemo/"
-        command["--save_path"] = self.result_dir + "RLPrtNoDemo/"
-        command["--rl_replay_strategy"] = "prioritized"
         return command
 
     @Command.execute
     def rl_only(self, **kwargs):
         command = self.run.copy()
-        command["--logdir"] = self.result_dir + "RLNoDemo/"
-        command["--save_path"] = self.result_dir + "RLNoDemo/"
+        command["--logdir"] = self.result_dir + "RL/"
+        command["--save_path"] = self.result_dir + "RL/"
         command["--rl_replay_strategy"] = "none"
         return command
 
     @Command.execute
-    def rl_with_demo_critic_rb(self, **kwargs):
+    def rl_with_shaping(self, **kwargs):
         command = self.run.copy()
-        command["--logdir"] = self.result_dir + "RLDemoCriticReplBuffer"
-        command["--save_path"] = self.result_dir + "RLDemoCriticReplBuffer/"
-        command["--demo_critic"] = "rb"
+        command["--logdir"] = self.result_dir + "RLDemoShaping"
+        command["--save_path"] = self.result_dir + "RLDemoShaping/"
+        command["--demo_critic"] = "shaping"
         return command
 
 
@@ -132,63 +124,11 @@ class Plot(Experiment):
         return command
 
 
-class Animation(Experiment):
-    """For result plotting
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.run = OrderedDict([("python", os.path.join(self.flow_dir, "query/query_animation.py"))])
-
-    @Command.execute
-    def plot_animation(self, **override):
-        command = self.run.copy()
-        command["--load_dir"] = self.result_dir + "/RLDemoCriticPolicy/query"
-        command["--save"] = 1
-        return command
-
-
-class CompareQ(Experiment):
-    """For result plotting
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.run = OrderedDict([("python", os.path.join(self.flow_dir, "query/query_compare_q.py"))])
-
-    @Command.execute
-    def compare(self, **override):
-        command = self.run.copy()
-        command["--query_file"] = self.result_dir + "/RLNoDemo/critic_q/query_latest.npz"
-        command["--policy_file"] = self.result_dir + "/RLNoDemo/rl/policy_latest.pkl"
-        command["--store_dir"] = self.result_dir
-        return command
-
-
-class Uncertainty(Experiment):
-    """For result plotting
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.run = OrderedDict([("python", os.path.join(self.flow_dir, "query/query_uncertainty.py"))])
-
-    @Command.execute
-    def check(self, **override):
-        command = self.run.copy()
-        command["--load_dir"] = self.result_dir + "RLDemoCriticPolicy/uncertainty/"
-        command["--save"] = 1
-        return command
-
-
 if __name__ == "__main__":
     demo_exp = Demo()
     train_exp = Train()
     display_exp = Display()
     plot_exp = Plot()
-    animation = Animation()
-    compare_q = CompareQ()
-    uncertainty = Uncertainty()
 
     # Quick checks
     ###################################################################################################################

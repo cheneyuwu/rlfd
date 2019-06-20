@@ -7,7 +7,7 @@ from yw.ddpg_main.mpi_adam import MpiAdam
 from yw.ddpg_main.normalizer import Normalizer
 from yw.ddpg_main.actor_critic import ActorCritic
 from yw.ddpg_main.replay_buffer import *
-from yw.ddpg_main.demo_shaping import ReacherStateDemoShaping
+from yw.ddpg_main.demo_shaping import DemoShaping
 from yw.util.util import store_args, import_function
 from yw.util.tf_util import flatten_grads
 
@@ -144,9 +144,6 @@ class DDPG(object):
             buffer_shapes["g"] = (self.T, self.dimg)
         # for bootstrapped ensemble of actor critics
         buffer_shapes["mask"] = (self.T, self.num_sample)  # mask for training each head with different dataset
-        # for reward shaping using demonstration
-        buffer_shapes["f"] = (self.T, 1)
-        # buffer_shapes["phi"] = (self.T, 1)
         # add extra information
         for key, val in input_dims.items():
             if key.startswith("info"):
@@ -171,10 +168,6 @@ class DDPG(object):
             self.demo_buffer = UniformReplayBuffer(
                 buffer_shapes, buffer_size, self.T, **self.demo_replay_strategy["args"]
             )
-
-        # Add shaping reward
-        if self.demo_critic == "shaping":
-            self.demo_shaping = ReacherStateDemoShaping(gamma=self.gamma)
 
         # Build computation core.
         with tf.variable_scope(self.scope):
@@ -255,9 +248,6 @@ class DDPG(object):
         # the demo buffer should already have: o, u, r, ag, g and necessary infos.
         # for boot strapped ensemble of actor critics
         episode_batch["mask"] = np.random.binomial(1, 1, (self.num_demo, self.T, self.num_sample))
-        # for reward shaping using demonstration
-        episode_batch["f"] = np.zeros((self.num_demo, self.T, 1), dtype=np.float32)
-        # episode_batch["phi"] = np.zeros((self.num_demo, self.T, 1), dtype=np.float32)
 
         self.demo_buffer.store_episode(episode_batch)
 
@@ -276,9 +266,6 @@ class DDPG(object):
         episode_batch["mask"] = np.float32(
             np.random.binomial(1, 1, (self.rollout_batch_size, self.T, self.num_sample))
         )
-        # for reward shaping using demonstration
-        episode_batch["f"] = np.zeros((self.rollout_batch_size, self.T, 1), dtype=np.float32)
-        # episode_batch["phi"] = np.zeros((self.rollout_batch_size, self.T, 1), dtype=np.float32)
 
         self.replay_buffer.store_episode(episode_batch)
 
@@ -302,19 +289,6 @@ class DDPG(object):
         if self.dimg != 0:
             transitions["g"] = self._preprocess_state(transitions["g"])
             transitions["g_2"] = self._preprocess_state(transitions["g_2"])
-
-        # Add shaping reward
-        # feed
-        feed = {
-            self.main.o_tf: transitions["o_2"].reshape(-1, self.dimo),
-            self.main.u_tf: np.zeros((transitions["o_2"].size // self.dimo, self.dimu), dtype=np.float32),
-        }
-        if self.dimg != 0:
-            feed[self.main.g_tf] = transitions["g_2"].reshape(-1, self.dimg)
-        transitions["u_2"] = self.sess.run(self.main.pi_tf, feed_dict=feed)[0] ## !!!!This is wrong for ensemble! TODO
-        #  takes o, g, u, o_2, g_2, u_2
-        transitions["f"] = self.demo_shaping.get_reward(**transitions)
-        # transitions["phi"] = self.demo_shaping.get_reward(**transitions)
 
         return transitions
 
@@ -375,16 +349,18 @@ class DDPG(object):
         if self.dimg != 0:
             self.inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
             self.inputs_tf["g_2"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
+        else:
+            self.inputs_tf["g"] = self.inputs_tf["g_2"] = None
         # boot strapped ensemble of actor critics
         self.inputs_tf["mask"] = tf.placeholder(tf.int32, shape=(None, self.num_sample))
-        # for reward shaping using demonstration
-        self.inputs_tf["f"] = tf.placeholder(tf.float32, shape=(None, 1))
 
         self.target_inputs_tf = self.inputs_tf.copy()
         # The input to the target network has to be the resultant observation and goal!
         self.target_inputs_tf["o"] = self.inputs_tf["o_2"]
         if self.dimg != 0:
             self.target_inputs_tf["g"] = self.inputs_tf["g_2"]
+        else:
+            self.target_inputs_tf["g"] = None
 
         # Creating a normalizer for goal and observation.
         with tf.variable_scope("o_stats") as vs:
@@ -393,9 +369,22 @@ class DDPG(object):
             self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
 
         # Networks
-        with tf.variable_scope("main") as vs:
+        with tf.variable_scope("main", reuse=tf.AUTO_REUSE) as vs:
             self.main = ActorCritic(
                 inputs_tf=self.inputs_tf,
+                dimo=self.dimo,
+                dimg=self.dimg,
+                dimu=self.dimu,
+                max_u=self.max_u,
+                o_stats=self.o_stats,
+                g_stats=self.g_stats,
+                num_sample=self.num_sample,
+                ca_ratio=self.ca_ratio,
+                hidden=self.hidden,
+                layers=self.layers,
+            )
+            self.main_shaping = ActorCritic(
+                inputs_tf=self.target_inputs_tf,
                 dimo=self.dimo,
                 dimg=self.dimg,
                 dimu=self.dimu,
@@ -423,21 +412,59 @@ class DDPG(object):
             )
         assert len(self._vars("main")) == len(self._vars("target"))
 
+        # Add shaping reward
+        if self.demo_critic == "shaping":
+            self.demo_critic_shaping_ls = []
+            self.demo_actor_shaping_ls = []
+            with tf.variable_scope("shaping") as vs:
+                for i in range(self.num_sample):
+                    self.demo_critic_shaping_ls.append(DemoShaping(
+                        o=self.inputs_tf["o"],
+                        g=self.inputs_tf["g"],
+                        u=self.inputs_tf["u"],
+                        o_2=self.inputs_tf["o_2"],
+                        g_2=self.inputs_tf["g_2"],
+                        u_2=self.target.pi_tf[i],
+                        gamma=self.gamma,
+                    ))
+                    self.demo_actor_shaping_ls.append(DemoShaping(
+                        o=self.inputs_tf["o"],
+                        g=self.inputs_tf["g"],
+                        u=self.main.pi_tf[i],
+                        o_2=self.inputs_tf["o_2"],
+                        g_2=self.inputs_tf["g_2"],
+                        u_2=self.target.pi_tf[i],
+                        gamma=self.gamma,
+                    ))
+
         # Critic loss
         # clip bellman target return
         clip_range = (-self.clip_return, 0.0 if self.clip_pos_returns else self.clip_return)
         self.Q_loss_tf = []
         self.demo_loss_tf = []
-        for i in range(self.num_sample):
-            # calculate bellman target (with shaping reward added)
-            target_tf = tf.clip_by_value(
-                self.inputs_tf["r"] + self.inputs_tf["f"] + self.gamma * self.target.Q_pi_tf[i], *clip_range
-            )
-            rl_bellman_tf = tf.boolean_mask(
-                tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
-            )
-            rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
-            self.Q_loss_tf.append(rl_loss_tf)
+        if self.demo_critic == "shaping":
+            for i in range(self.num_sample):
+                # calculate bellman target (with shaping reward added)
+                target_tf = tf.clip_by_value(
+                    self.inputs_tf["r"]
+                    + tf.stop_gradient(self.demo_critic_shaping_ls[i].reward)
+                    + self.gamma * self.target.Q_pi_tf[i],
+                    *clip_range
+                )
+                rl_bellman_tf = tf.boolean_mask(
+                    tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
+                )
+                rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
+                self.Q_loss_tf.append(rl_loss_tf)
+        else:
+            for i in range(self.num_sample):
+                # calculate bellman target (with shaping reward added)
+                target_tf = tf.clip_by_value(self.inputs_tf["r"] + self.gamma * self.target.Q_pi_tf[i], *clip_range)
+                rl_bellman_tf = tf.boolean_mask(
+                    tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
+                )
+                rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
+                self.Q_loss_tf.append(rl_loss_tf)
 
         # Actor Loss
         if self.demo_actor != "none" and self.q_filter == 1:
@@ -476,6 +503,14 @@ class DDPG(object):
                 self.prm_loss_weight * self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
             )
             self.pi_loss_tf += self.aux_loss_weight * self.cloning_loss_tf
+
+        elif self.demo_critic == "shaping":
+            self.pi_loss_tf = [
+                -tf.reduce_mean(self.main.Q_pi_tf[i])
+                - tf.reduce_mean(self.demo_actor_shaping_ls[i].potential)
+                + self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf[i] / self.max_u))
+                for i in range(self.num_sample)
+            ]
 
         else:  # If not training with demonstrations
             self.pi_loss_tf = [
@@ -625,6 +660,11 @@ class DDPG(object):
         feed = {policy.o_tf: o_r, policy.g_tf: g_r, policy.u_tf: u_r}
         queries = [policy.Q_var_tf, policy.Q_mean_tf]
         res = self.sess.run(queries, feed_dict=feed)
+
+        if self.demo_critic == "shaping":
+            temp = self.sess.run(self.demo_critic_shaping_ls[0].potential, feed_dict=feed)
+            temp = temp.reshape(-1)
+            res[1] += temp
 
         o_r = o.reshape((num_point, num_point))
         u_r = u.reshape((num_point, num_point))

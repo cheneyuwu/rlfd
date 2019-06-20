@@ -58,16 +58,16 @@ if __name__ == "__main__":
         #     rl_batch_size=256,
         #     train_rl_epochs=train_rl_epochs,
         # )
-        # assert not train_exp.rl_only(
-        #     rl_action_l2=0.5,
-        #     rl_scope="rl_only",
-        #     n_cycles=4,
-        #     n_batches=8,
-        #     seed=seed + 10,
-        #     rl_num_sample=1,
-        #     rl_batch_size=32,
-        #     train_rl_epochs=train_rl_epochs,
-        # )
+        assert not train_exp.rl_only(
+            rl_action_l2=0.5,
+            rl_scope="rl_only",
+            n_cycles=4,
+            n_batches=8,
+            seed=seed + 10,
+            rl_num_sample=1,
+            rl_batch_size=32,
+            train_rl_epochs=train_rl_epochs,
+        )
 
         # Generate demonstration data
         # assert not demo_exp.generate_demo(
@@ -78,7 +78,7 @@ if __name__ == "__main__":
         #     shuffle=0,
         # )
 
-        assert not train_exp.rl_only(
+        assert not train_exp.rl_with_shaping(
             rl_action_l2=0.5,
             rl_scope="rl_only",
             n_cycles=4,
@@ -94,7 +94,8 @@ if __name__ == "__main__":
     assert not plot_exp.plot(dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"])
 
     # Check the uncertainty output of the demonstration output
-    assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RLNoDemo/uncertainty/", save=0)
+    # assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RL/uncertainty/", save=0)
+    # assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RLDemoShaping/uncertainty/", save=0)
 
     # Display a policy result (calls run_agent).
-    assert not display_exp.display(policy_file=display_exp.result_dir + "RLNoDemo/rl/policy_latest.pkl", num_itr=3)
+    # assert not display_exp.display(policy_file=display_exp.result_dir + "RLDemoShaping/rl/policy_latest.pkl", num_itr=3)
