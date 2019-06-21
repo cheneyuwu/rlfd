@@ -61,26 +61,31 @@ class GaussianDemoShaping(DemoShaping):
             demo_inputs_tf - demo_inputs that contains all the transitons from demonstration
         """
         self.demo_inputs_tf = demo_inputs_tf
+        self.sigma = 1 # a hyperparam to be tuned
+        self.scale = 10 # another hyperparam to be tuned
         super().__init__(o, g, u, o_2, g_2, u_2, gamma)
 
     def calc_potential(self, o, g, u):
         """
         Just return negative value of distance between current state and goal state
         """
+        # similar to use of sigma
+        goal_importance = 6.0
+        state_importance = 3.0
         # Concat demonstration inputs
-        demo_state_tf = self.demo_inputs_tf["o"]
+        demo_state_tf = self.demo_inputs_tf["o"] * state_importance
         if self.demo_inputs_tf["g"] != None:
             # for multigoal environments, we have goal as another states
-            demo_state_tf = tf.concat(axis=1, values=[demo_state_tf, self.demo_inputs_tf["g"]])
-        demo_state_tf = tf.concat(axis=1, values=[demo_state_tf, self.demo_inputs_tf["u"]])
+            demo_state_tf = tf.concat(axis=1, values=[demo_state_tf, goal_importance * self.demo_inputs_tf["g"]])
+        # demo_state_tf = tf.concat(axis=1, values=[demo_state_tf, self.demo_inputs_tf["u"]])
         # note: shape of demo_state_tf is (num_demo, k), where k is sum of dim o g u
 
         # Concatenate obs goal and action
-        state_tf = o
+        state_tf = o * state_importance
         if g != None:
             # for multigoal environments, we have goal as another states
-            state_tf = tf.concat(axis=1, values=[state_tf, g])
-        state_tf = tf.concat(axis=1, values=[state_tf, u])
+            state_tf = tf.concat(axis=1, values=[state_tf, goal_importance * g])
+        # state_tf = tf.concat(axis=1, values=[state_tf, u])
         # note: shape of state_tf is (batch_size, k), where k is sum of dim o g u
 
         # Calculate the potential
@@ -92,10 +97,8 @@ class GaussianDemoShaping(DemoShaping):
         # calculate L2 Norm square, result shape is (batch_size, num_demo)
         norm_tf = tf.norm(distance_tf, ord=2, axis=-1)
         # cauculate multi var gaussian, result shape is (batch_size, num_demo)
-        gaussian_tf = tf.exp(-0.5 * norm_tf * norm_tf)
+        gaussian_tf = tf.exp(-0.5 * self.sigma * norm_tf * norm_tf) # let sigma be 5
         # sum the result from all demo transitions and get the final result, shape is (batch_size, 1)
-        potential = tf.reduce_sum(gaussian_tf, axis=-1, keepdims=True)
-
-        # potential = -(tf.clip_by_value((g - o) * 10, -2, 2) - u) ** 2
+        potential = self.scale * tf.reduce_mean(gaussian_tf, axis=-1, keepdims=True)
 
         return potential

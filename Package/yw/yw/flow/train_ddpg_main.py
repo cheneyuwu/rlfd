@@ -59,7 +59,7 @@ def train_reinforce(
         # Store anything we need into a numpyz file.
         # policy.query_ac_output(os.path.join(ac_output_save_path, "query_{:03d}.npz".format(epoch)))
         # policy.query_critic_q(os.path.join(critic_q_save_path, "query_latest.npz"))
-        policy.query_uncertainty(os.path.join(uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
+        # policy.query_uncertainty(os.path.join(uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
 
         # Train
         rollout_worker.clear_history()

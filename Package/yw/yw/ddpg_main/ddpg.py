@@ -300,6 +300,9 @@ class DDPG(object):
         # feed demonstration data
         if self.demo_critic == "shaping":
             demo_data = self.demo_buffer.sample_all()
+            demo_data["o"] = self._preprocess_state(demo_data["o"])
+            if self.dimg != 0:
+                demo_data["g"] = self._preprocess_state(demo_data["g"])
             for k in self.demo_inputs_tf.keys():
                 feed[self.demo_inputs_tf[k]] = demo_data[k]
 

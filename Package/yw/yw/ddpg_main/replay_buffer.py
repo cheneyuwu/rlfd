@@ -57,7 +57,7 @@ class ReplayBuffer:
         # Merge the first and second dimension (dimensions are : episode x T or )
         transitions = {k: buffers[k].reshape([-1]+ list(buffers[k].shape[2:])) for k in buffers.keys()}
 
-        assert all([buffers[k].shape == buffers["u"].shape for k in buffers.keys()])
+        assert all([buffers[k].shape[0:2] == buffers["u"].shape[0:2] for k in buffers.keys()])
 
         return transitions
 
