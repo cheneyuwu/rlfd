@@ -85,6 +85,15 @@ class Train(Experiment):
         return command
 
     @Command.execute
+    def rl_her_with_shaping(self, **kwargs):
+        command = self.run.copy()
+        command["--logdir"] = self.result_dir + "RLHERDemoShaping"
+        command["--save_path"] = self.result_dir + "RLDemoShaping/"
+        command["--rl_replay_strategy"] = "her"
+        command["--demo_critic"] = "shaping"
+        return command
+
+    @Command.execute
     def rl_with_shaping(self, **kwargs):
         command = self.run.copy()
         command["--logdir"] = self.result_dir + "RLDemoShaping"
