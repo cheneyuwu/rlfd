@@ -22,7 +22,7 @@ class Render(Experiment):
             "use_object_obs": "bool:*",
             "use_camera_obs": "bool:",
             "ignore_done": "bool:*",
-            "control_freq": "int:50",
+            "control_freq": "int:20",
         }
         command["--num_itr"] = 10
         # command["--eps_length"] = 1000
@@ -37,13 +37,13 @@ if __name__ == "__main__":
     plot_exp = Plot()
     render_exp = Render()
 
-    environment = "SawyerLift"
+    environment = "SawyerNutAssemblySquare"
     train_exp.env = environment
-    train_exp.num_cpu = 3
+    train_exp.num_cpu = 8
     train_exp.update()
 
-    train_rl_epochs = 50
-    seed = 1
+    train_rl_epochs = 1000
+    seed = 0
 
     for i in range(1):
         seed += i * 100
@@ -63,6 +63,7 @@ if __name__ == "__main__":
             train_rl_epochs=train_rl_epochs,
             rollout_batch_size=4,
             n_test_rollouts=5,  # for evaluation only, cannot make this larger because we will run out of memory
+            eps_length=1000,
             env_arg={
                 "has_renderer": "bool:",  # no on-screen renderer
                 "has_offscreen_renderer": "bool:",  # no off-screen renderer
