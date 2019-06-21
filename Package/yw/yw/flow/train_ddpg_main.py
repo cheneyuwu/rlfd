@@ -30,17 +30,7 @@ from yw.util.mpi_util import mpi_average
 
 
 def train_reinforce(
-    save_path,
-    save_interval,
-    policy,
-    rollout_worker,
-    evaluator,
-    n_epochs,
-    n_cycles,
-    n_batches,
-    n_test_rollouts,
-    demo_file,
-    **kwargs,
+    save_path, save_interval, policy, rollout_worker, evaluator, n_epochs, n_batches, n_cycles, demo_file, **kwargs
 ):
     rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
 
@@ -58,37 +48,21 @@ def train_reinforce(
         os.makedirs(critic_q_save_path, exist_ok=True)
         os.makedirs(uncertainty_save_path, exist_ok=True)
 
-    if policy.demo_actor != "none" or policy.demo_critic == "rb":
-        policy.init_demo_buffer(demo_file)
+    if policy.demo_actor != "none" or policy.demo_critic == "shaping":
+        policy.init_demo_buffer(demo_file, update_stats=policy.demo_actor != "none")
 
     best_success_rate = -1
-    query = 0
-
-    if policy.demo_critic == "rb":
-        logger.info("Pre-training on demonstration data only.")
-        rollout_worker.clear_history()
-        episode = rollout_worker.generate_rollouts()
-        policy.store_episode(episode)
-        for i in range(500):
-            # if rank == 0 and i % 2 == 0:
-            #     policy.query_uncertainty(os.path.join(uncertainty_save_path, "query_{:03d}.npz".format(query)))
-            #     query += 1
-            loss = policy.pre_train()
-            if rank == 0 and i % 20 == 0:
-                logger.info("step: ", i, "  loss: ", loss)
-        policy.init_target_net()
 
     for epoch in range(n_epochs):
+        logger.debug("train_ddpg_main.train_reinforce -> epoch: {}".format(epoch))
 
         # Store anything we need into a numpyz file.
         # policy.query_ac_output(os.path.join(ac_output_save_path, "query_{:03d}.npz".format(epoch)))
         # policy.query_critic_q(os.path.join(critic_q_save_path, "query_latest.npz"))
-        policy.query_uncertainty(os.path.join(uncertainty_save_path, "query_{:03d}.npz".format(epoch + query)))
+        # policy.query_uncertainty(os.path.join(uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
 
-        logger.debug("train_ddpg_main.train_reinforce -> epoch: {}".format(epoch))
-        # train
+        # Train
         rollout_worker.clear_history()
-        policy.update_global_step()
         for cycle in range(n_cycles):
             logger.debug("train_ddpg_main.train_reinforce -> cycle: {}".format(cycle))
             episode = rollout_worker.generate_rollouts()
@@ -104,7 +78,7 @@ def train_reinforce(
         evaluator.clear_history()
         evaluator.generate_rollouts()
 
-        # record logs
+        # Log
         logger.record_tabular("epoch", epoch)
         for key, val in evaluator.logs("test"):
             logger.record_tabular(key, mpi_average(val))
@@ -116,7 +90,7 @@ def train_reinforce(
         if rank == 0:
             logger.dump_tabular()
 
-        # save the policy if it's better than the previous ones
+        # Save the policy if it's better than the previous ones
         success_rate = mpi_average(evaluator.current_success_rate())
         if rank == 0 and success_rate >= best_success_rate and save_path:
             best_success_rate = success_rate
@@ -133,7 +107,7 @@ def train_reinforce(
             logger.info("Saving latest policy to {}.".format(latest_policy_path))
             evaluator.save_policy(latest_policy_path)
 
-        # make sure that different threads have different seeds
+        # Make sure that different threads have different seeds
         if MPI != None:
             local_uniform = np.random.uniform(size=(1,))
             root_uniform = local_uniform.copy()
@@ -158,7 +132,7 @@ def train(
     rl_ca_ratio,
     exploit,
     rl_replay_strategy,
-    nstep_n,
+    num_demo,
     demo_critic,
     demo_actor,
     demo_file,
@@ -197,16 +171,21 @@ def train(
     params["r_shift"] = r_shift
     params["eps_length"] = eps_length
     params["env_args"] = dict(env_args) if env_args else {}
-    params["exploit"] = exploit
     params["train_rl_epochs"] = train_rl_epochs
-    params["rl_demo_critic"] = demo_critic
-    params["rl_demo_actor"] = demo_actor
     params["rl_ca_ratio"] = rl_ca_ratio
     params["rl_num_sample"] = rl_num_sample
-    params["nstep_n"] = nstep_n
+    params["exploit"] = exploit
     params["rl_replay_strategy"] = rl_replay_strategy  # For HER: future or none
+    params["rl_num_demo"] = num_demo
+    params["rl_demo_critic"] = demo_critic
+    params["rl_demo_actor"] = demo_actor
     params["config"] = "-".join(
-        ["ddpg", demo_critic, "r_sample:" + str(rl_num_sample), "replay:" + rl_replay_strategy]
+        [
+            "ddpg:" + demo_critic,
+            "num_demo:" + str(num_demo),
+            "r_sample:" + str(rl_num_sample),
+            "replay:" + rl_replay_strategy,
+        ]
     )
     # make it possible to override any parameter.
     for key, val in unknown_params.items():
@@ -246,7 +225,6 @@ def train(
         n_epochs=params["train_rl_epochs"],
         n_cycles=params["n_cycles"],
         n_batches=params["n_batches"],
-        n_test_rollouts=params["n_test_rollouts"],
         demo_file=demo_file,
     )
 
@@ -284,27 +262,27 @@ if __name__ == "__main__":
         "--rl_ca_ratio", help="use 2 for td3 or 1 for normal ddpg", type=int, choices=[1, 2], default=1
     )  # do not use this flag for now
     ap.parser.add_argument("--exploit", help="whether or not to use e-greedy exploration", type=int, default=0)
-    ap.parser.add_argument("--nstep_n", help="Specify n step return for demonstration training.", type=int, default=50)
     ap.parser.add_argument(
         "--rl_replay_strategy",
         help="the replay strategy to be used. 'future' uses HER, 'none' disables HER",
         type=str,
-        choices=["none", "her", "prioritized"],
+        choices=["none", "her"],
         default="none",
     )
     # demo configuration
+    ap.parser.add_argument("--num_demo", help="Number of demonstrations, measured in episodes.", type=int, default=0)
     ap.parser.add_argument(
         "--demo_critic",
         help="use a neural network as critic or a gaussian process. Need to provide or train a demo policy if not set to none",
         type=str,
-        choices=["rb", "none"],
+        choices=["shaping", "none"],
         default="none",
     )
     ap.parser.add_argument(
         "--demo_actor",
         help="use a neural network as actor. Need to provide or train a demo policy if not set to none",
         type=str,
-        choices=["rb", "none"],
+        choices=["shaping", "none"],
         default="none",
     )
     ap.parser.add_argument("--demo_file", help="demonstration training dataset", type=str, default=None)

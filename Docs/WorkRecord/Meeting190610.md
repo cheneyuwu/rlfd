@@ -19,7 +19,7 @@ June 10th, 2019
         3. How to make sure that the Q function prefers the action from demonstration after pre-training?
             - Maybe adding a BC loss to actor?
 2. More environments/experiments to show that our current method is beneficial.
-    - Added robosuite envs
+    - Added robosuite envs, TODO: customized environments?
     - Maybe add the navigation problem, e.g. the  OpenAI CarRacing environment?
 3. How to acquire the training set of the demonstration neural net? Or, how to acquire or ask for a demonstration?
     1. Random:
@@ -41,7 +41,8 @@ June 10th, 2019
             - Xavier initialization gives very low initial variance
             - Other initialization does not converge even on this simple problem (tried uniform and normal)
         2. Output of the network?
-        3. Whether or not to learn from demonstration during RL training?
+        3. High variance where no demonstration data after demonstration training.
+        4. Whether or not to learn from demonstration during RL training?
     2. Experiments
         1. Negative reward
             1. Random demonstration

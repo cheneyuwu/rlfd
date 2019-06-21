@@ -1,4 +1,9 @@
-# Compute Canada Cluster
+# HowTos
+
+## Florian's lab computer
+- ssh -Y <username>@bali.utm.utoronto.ca
+
+## Compute Canada Cluster
 - [Wiki](https://docs.computecanada.ca/wiki/Main_Page)
 - Connect
   - `ssh -Y yuchenwu@cedar.computecanada.ca`

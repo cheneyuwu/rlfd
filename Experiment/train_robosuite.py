@@ -75,9 +75,9 @@ if __name__ == "__main__":
         )
 
     # Plot the training result
-    assert not plot_exp.plot(dir=plot_exp.result_dir)
+    # assert not plot_exp.plot(dir=plot_exp.result_dir)
 
     # Render a policy result (calls robosuite_render.py).
-    # assert not render_exp.render(
-    #     policy_file=render_exp.result_dir + "/Exp0/RLNoDemo/rl/policy_latest.pkl"
-    # )
+    assert not render_exp.render(
+        policy_file=render_exp.result_dir + "../Jun15RoboSuite/RLNoDemo/rl/policy_latest.pkl"
+    )

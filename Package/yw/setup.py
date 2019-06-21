@@ -13,7 +13,7 @@ setup(
         "gym",
         "matplotlib",
         "mpi4py",
-        "tensorflow==1.13.1",
+        # "tensorflow==1.13.1",
         "tensorflow_probability",
         "pandas",
     ],

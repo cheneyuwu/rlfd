@@ -93,8 +93,8 @@ class Reacher:
         if self.order == 2:
             # self.speed = np.zeros(self.dim)
             self.speed = 2 * (self.random.rand(self.dim) - 0.5) * self.boundary
-            # self.goal = np.zeros(self.dim)
-            self.goal = 2 * (self.random.rand(self.dim) - 0.5) * self.boundary
+            self.goal = np.zeros(self.dim)
+            # self.goal = 2 * (self.random.rand(self.dim) - 0.5) * self.boundary
             self.curr_pos = 2 * (self.random.rand(self.dim) - 0.5) * self.boundary
         else:  # 1
             self.goal = 0.0 * np.ones(self.dim)
@@ -156,14 +156,15 @@ class Reacher:
 
 if __name__ == "__main__":
 
-    env = make("", dim=1)
+    env = make("", dim=1, order=1)
     obs = env.reset()
     for i in range(32):
-        obs, r, done, info = env.step([-np.sin(i / 10)])
+        action = (obs["desired_goal"] - obs["observation"])
+        obs, r, done, info = env.step(action)
         env.render()
 
-    env = make("", dim=2)
-    obs = env.reset()
-    for i in range(32):
-        obs, r, done, info = env.step([-np.sin(i / 10), -np.cos(i / 10)])
-        env.render()
+    # env = make("", dim=2)
+    # obs = env.reset()
+    # for i in range(32):
+    #     obs, r, done, info = env.step([-np.sin(i / 10), -np.cos(i / 10)])
+    #     env.render()
