@@ -3,14 +3,10 @@ import os
 import numpy as np
 import pickle
 
-from yw.ddpg_main import config
-
-
-from yw.util.util import set_global_seeds
-from yw.util.lit_util import toy_regression_data
-
 # DDPG Package import
 from yw.tool import logger
+from yw.ddpg_main import config
+from yw.util.util import set_global_seeds
 
 
 def generate_demo_data(policy_file, store_dir, seed, num_itr, shuffle, render, entire_eps, **kwargs):
@@ -26,8 +22,8 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, shuffle, render, e
     # Extract environment construction information
     env_name = policy.info["env_name"]
     T = policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T
-    max_concurrency = 10 # avoid too many envs
-    num_eps = int(np.ceil(num_itr/T)) if shuffle and entire_eps else num_itr
+    max_concurrency = 10  # avoid too many envs
+    num_eps = int(np.ceil(num_itr / T)) if shuffle and entire_eps else num_itr
 
     # Prepare params.
     params = {}
@@ -50,9 +46,9 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, shuffle, render, e
         eps = demo.generate_rollouts()
         num_eps_to_store = np.minimum(num_eps_togo, max_concurrency)
         if episode == None:
-            episode = {k: eps[k][:num_eps_to_store,...] for k in eps.keys()}
+            episode = {k: eps[k][:num_eps_to_store, ...] for k in eps.keys()}
         else:
-            episode = {k:np.concatenate((episode[k], eps[k][:num_eps_to_store,...]), axis=0) for k in eps.keys()}
+            episode = {k: np.concatenate((episode[k], eps[k][:num_eps_to_store, ...]), axis=0) for k in eps.keys()}
         num_eps_togo -= num_eps_to_store
 
     assert all([episode[k].shape[0] == num_eps for k in episode.keys()])
@@ -79,7 +75,7 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, shuffle, render, e
         result = episode
     else:
         if entire_eps:
-            result["o"] = episode["o"][:, :-1, ...] # observation is T+1
+            result["o"] = episode["o"][:, :-1, ...]  # observation is T+1
             result["g"] = episode["g"][:, :, ...]
             result["u"] = episode["u"][:, :, ...]
             result["q"] = episode["q"][:, :, ...]
@@ -116,7 +112,12 @@ if __name__ == "__main__":
     ap = ArgParser()
     ap.parser.add_argument("--policy_file", help="input policy for training", type=str, default=None)
     ap.parser.add_argument("--loglevel", help="log level", type=int, default=2)
-    ap.parser.add_argument("--store_dir", help="policy store directory", type=str, default=os.getenv("PROJECT") + "/Temp/generate_demo/fake_data.npz")
+    ap.parser.add_argument(
+        "--store_dir",
+        help="policy store directory",
+        type=str,
+        default=os.getenv("PROJECT") + "/Temp/generate_demo/fake_data.npz",
+    )
     ap.parser.add_argument("--seed", help="RNG seed", type=int, default=0)
     ap.parser.add_argument("--num_itr", help="number of iterations or episodes", type=int, default=1000)
     ap.parser.add_argument("--shuffle", help="whether or not to shuffle and reshape the data", type=int, default=1)
@@ -126,5 +127,4 @@ if __name__ == "__main__":
 
     print("Launching the training process.")
     main(**ap.get_dict())
-
 

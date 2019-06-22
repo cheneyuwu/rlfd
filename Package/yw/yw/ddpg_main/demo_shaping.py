@@ -62,7 +62,7 @@ class GaussianDemoShaping(DemoShaping):
         """
         self.demo_inputs_tf = demo_inputs_tf
         self.sigma = 1 # a hyperparam to be tuned
-        self.scale = 10 # another hyperparam to be tuned
+        self.scale = 100 # another hyperparam to be tuned
         super().__init__(o, g, u, o_2, g_2, u_2, gamma)
 
     def calc_potential(self, o, g, u):
@@ -70,8 +70,8 @@ class GaussianDemoShaping(DemoShaping):
         Just return negative value of distance between current state and goal state
         """
         # similar to use of sigma
-        goal_importance = 1.0
-        state_importance = 1.0
+        goal_importance = 5.0
+        state_importance = 3.0
         # Concat demonstration inputs
         demo_state_tf = self.demo_inputs_tf["o"] * state_importance
         if self.demo_inputs_tf["g"] != None:
@@ -99,6 +99,6 @@ class GaussianDemoShaping(DemoShaping):
         # cauculate multi var gaussian, result shape is (batch_size, num_demo)
         gaussian_tf = tf.exp(-0.5 * self.sigma * norm_tf * norm_tf) # let sigma be 5
         # sum the result from all demo transitions and get the final result, shape is (batch_size, 1)
-        potential = self.scale * tf.reduce_mean(gaussian_tf, axis=-1, keepdims=True)
+        potential = self.scale * tf.reduce_max(gaussian_tf, axis=-1, keepdims=True)
 
         return potential
