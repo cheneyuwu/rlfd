@@ -29,13 +29,13 @@ if __name__ == "__main__":
     uncertainty_exp = Uncertainty()
 
 
-    environment = "Reach1DFirstOrderSparse"
+    environment = "Reach1DSparse"
     train_exp.env = environment
     train_exp.num_cpu = 1
     train_exp.update()
 
-    demo_data_size = 128
-    train_rl_epochs = 32
+    demo_data_size = 64
+    train_rl_epochs = 128
     seed = 2
     for i in range(1):
         seed += i * 100
@@ -58,20 +58,20 @@ if __name__ == "__main__":
         #     rl_batch_size=256,
         #     train_rl_epochs=train_rl_epochs,
         # )
-        assert not train_exp.rl_only(
-            rl_action_l2=0.5,
-            rl_scope="rl_only",
-            n_cycles=4,
-            n_batches=8,
-            seed=seed + 10,
-            rl_num_sample=1,
-            rl_batch_size=32,
-            train_rl_epochs=train_rl_epochs,
-        )
+        # assert not train_exp.rl_only(
+        #     rl_action_l2=0.5,
+        #     rl_scope="rl_only",
+        #     n_cycles=4,
+        #     n_batches=8,
+        #     seed=seed + 10,
+        #     rl_num_sample=1,
+        #     rl_batch_size=32,
+        #     train_rl_epochs=train_rl_epochs,
+        # )
 
         # Generate demonstration data
         # assert not demo_exp.generate_demo(
-        #     policy_file=demo_exp.result_dir + "RLNoDemo/rl/policy_latest.pkl",
+        #     policy_file=demo_exp.result_dir + "RL/rl/policy_latest.pkl",
         #     seed=seed + 30,
         #     num_itr=demo_data_size,
         #     entire_eps=1,
@@ -88,6 +88,8 @@ if __name__ == "__main__":
             rl_batch_size=32,
             train_rl_epochs=train_rl_epochs,
             demo_critic="shaping",
+            num_demo=demo_data_size,
+            demo_file=train_exp.result_dir+"/DemoData/Reach1DSparse.npz"
         )
 
     # Plot the training result

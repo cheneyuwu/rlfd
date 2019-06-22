@@ -33,7 +33,7 @@ class Demo(Experiment):
     @Command.execute
     def generate_demo(self, **override):
         command = self.run.copy()
-        command["--policy_file"] = self.result_dir + "RLHERNoDemo/rl/policy_latest.pkl"
+        command["--policy_file"] = self.result_dir + "RL/rl/policy_latest.pkl"
         command["--store_dir"] = self.result_dir + "DemoData/"
         command["--num_itr"] = 128
         command["--entire_eps"] = 1
@@ -85,10 +85,20 @@ class Train(Experiment):
         return command
 
     @Command.execute
+    def rl_her_with_shaping(self, **kwargs):
+        command = self.run.copy()
+        command["--logdir"] = self.result_dir + "RLHERDemoShaping"
+        command["--save_path"] = self.result_dir + "RLDemoShaping/"
+        command["--rl_replay_strategy"] = "her"
+        command["--demo_critic"] = "shaping"
+        return command
+
+    @Command.execute
     def rl_with_shaping(self, **kwargs):
         command = self.run.copy()
         command["--logdir"] = self.result_dir + "RLDemoShaping"
         command["--save_path"] = self.result_dir + "RLDemoShaping/"
+        command["--rl_replay_strategy"] = "none"
         command["--demo_critic"] = "shaping"
         return command
 

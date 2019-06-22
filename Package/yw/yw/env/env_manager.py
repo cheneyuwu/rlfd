@@ -14,6 +14,11 @@ class EnvManager:
             env_args["dim"] = 2
             env_args["sparse"] = True
             self.make_env = lambda: point_reach.make(env_name, **env_args)
+        elif env_name == "Reach2DFirstOrderSparse":
+            env_args["dim"] = 2
+            env_args["order"] = 1
+            env_args["sparse"] = True
+            self.make_env = lambda: point_reach.make(env_name, **env_args)
         elif env_name == "Reach2DFirstOrder":
             env_args["dim"] = 2
             env_args["order"] = 1
@@ -28,6 +33,10 @@ class EnvManager:
         elif env_name == "Reach1DFirstOrderSparse":
             env_args["dim"] = 1
             env_args["order"] = 1
+            env_args["sparse"] = True
+            self.make_env = lambda: point_reach.make(env_name, **env_args)
+        elif env_name == "Reach1DSparse":
+            env_args["dim"] = 1
             env_args["sparse"] = True
             self.make_env = lambda: point_reach.make(env_name, **env_args)
 

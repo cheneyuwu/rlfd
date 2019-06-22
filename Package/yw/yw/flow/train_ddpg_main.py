@@ -30,16 +30,7 @@ from yw.util.mpi_util import mpi_average
 
 
 def train_reinforce(
-    save_path,
-    save_interval,
-    policy,
-    rollout_worker,
-    evaluator,
-    n_epochs,
-    n_batches,
-    n_cycles,
-    demo_file,
-    **kwargs,
+    save_path, save_interval, policy, rollout_worker, evaluator, n_epochs, n_batches, n_cycles, demo_file, **kwargs
 ):
     rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
 
@@ -57,8 +48,8 @@ def train_reinforce(
         os.makedirs(critic_q_save_path, exist_ok=True)
         os.makedirs(uncertainty_save_path, exist_ok=True)
 
-    if policy.demo_actor != "none" or policy.demo_critic == "rb":
-        policy.init_demo_buffer(demo_file)
+    if policy.demo_actor != "none" or policy.demo_critic == "shaping":
+        policy.init_demo_buffer(demo_file, update_stats=policy.demo_actor != "none")
 
     best_success_rate = -1
 
@@ -68,7 +59,7 @@ def train_reinforce(
         # Store anything we need into a numpyz file.
         # policy.query_ac_output(os.path.join(ac_output_save_path, "query_{:03d}.npz".format(epoch)))
         # policy.query_critic_q(os.path.join(critic_q_save_path, "query_latest.npz"))
-        policy.query_uncertainty(os.path.join(uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
+        # policy.query_uncertainty(os.path.join(uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
 
         # Train
         rollout_worker.clear_history()
@@ -79,7 +70,7 @@ def train_reinforce(
             for batch in range(n_batches):
                 logger.debug("train_ddpg_main.train_reinforce -> batch: {}".format(batch))
                 policy.train()
-            # policy.check_train()
+            policy.check_train()
             policy.update_target_net()
 
         # Test
@@ -141,6 +132,7 @@ def train(
     rl_ca_ratio,
     exploit,
     rl_replay_strategy,
+    num_demo,
     demo_critic,
     demo_actor,
     demo_file,
@@ -184,10 +176,16 @@ def train(
     params["rl_num_sample"] = rl_num_sample
     params["exploit"] = exploit
     params["rl_replay_strategy"] = rl_replay_strategy  # For HER: future or none
+    params["rl_num_demo"] = num_demo
     params["rl_demo_critic"] = demo_critic
     params["rl_demo_actor"] = demo_actor
     params["config"] = "-".join(
-        ["ddpg", demo_critic, "r_sample:" + str(rl_num_sample), "replay:" + rl_replay_strategy]
+        [
+            "ddpg:" + demo_critic,
+            "num_demo:" + str(num_demo),
+            "r_sample:" + str(rl_num_sample),
+            "replay:" + rl_replay_strategy,
+        ]
     )
     # make it possible to override any parameter.
     for key, val in unknown_params.items():
@@ -272,6 +270,7 @@ if __name__ == "__main__":
         default="none",
     )
     # demo configuration
+    ap.parser.add_argument("--num_demo", help="Number of demonstrations, measured in episodes.", type=int, default=0)
     ap.parser.add_argument(
         "--demo_critic",
         help="use a neural network as critic or a gaussian process. Need to provide or train a demo policy if not set to none",
