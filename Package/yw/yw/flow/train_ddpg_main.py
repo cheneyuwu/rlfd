@@ -70,7 +70,7 @@ def train_reinforce(
             for batch in range(n_batches):
                 logger.debug("train_ddpg_main.train_reinforce -> batch: {}".format(batch))
                 policy.train()
-            # policy.check_train()
+            policy.check_train()
             policy.update_target_net()
 
         # Test

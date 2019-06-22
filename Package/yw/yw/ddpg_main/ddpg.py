@@ -313,12 +313,26 @@ class DDPG(object):
         self.pi_adam.update(pi_grad, self.pi_lr)
 
         logger.debug("DDPG.train -> critic_loss:{}, actor_loss:{}".format(critic_loss, actor_loss))
+        # for debugging
+        self.current_batch = batch
+
         return critic_loss, actor_loss
 
     def check_train(self):
         """ For debugging only
         """
         pass
+        # feed = {self.inputs_tf[k]: self.current_batch[k] for k in self.inputs_tf.keys()}
+        # # feed demonstration data
+        # if self.demo_critic == "shaping":
+        #     demo_data = self.demo_buffer.sample_all()
+        #     demo_data["o"] = self._preprocess_state(demo_data["o"])
+        #     if self.dimg != 0:
+        #         demo_data["g"] = self._preprocess_state(demo_data["g"])
+        #     for k in self.demo_inputs_tf.keys():
+        #         feed[self.demo_inputs_tf[k]] = demo_data[k]
+        # potential, reward = self.sess.run([self.demo_critic_shaping_ls[0].potential, self.demo_critic_shaping_ls[0].reward], feed_dict=feed)
+        # print(np.stack((potential, reward), axis=1))
 
     def init_target_net(self):
         self.sess.run(self.init_target_net_op)

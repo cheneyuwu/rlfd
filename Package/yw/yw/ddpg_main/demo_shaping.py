@@ -70,8 +70,8 @@ class GaussianDemoShaping(DemoShaping):
         Just return negative value of distance between current state and goal state
         """
         # similar to use of sigma
-        goal_importance = 6.0
-        state_importance = 3.0
+        goal_importance = 1.0
+        state_importance = 1.0
         # Concat demonstration inputs
         demo_state_tf = self.demo_inputs_tf["o"] * state_importance
         if self.demo_inputs_tf["g"] != None:
