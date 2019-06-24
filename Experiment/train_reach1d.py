@@ -20,6 +20,7 @@ class Uncertainty(Experiment):
         command["--save"] = 1
         return command
 
+
 if __name__ == "__main__":
 
     demo_exp = Demo()
@@ -28,14 +29,13 @@ if __name__ == "__main__":
     plot_exp = Plot()
     uncertainty_exp = Uncertainty()
 
-
-    environment = "Reach1DSparse"
+    environment = "Reach1DFirstOrderSparse"
     train_exp.env = environment
     train_exp.num_cpu = 1
     train_exp.update()
 
-    demo_data_size = 64
-    train_rl_epochs = 128
+    demo_data_size = 128
+    train_rl_epochs = 32
     seed = 2
     for i in range(1):
         seed += i * 100
@@ -78,22 +78,24 @@ if __name__ == "__main__":
         #     shuffle=0,
         # )
 
-        assert not train_exp.rl_with_shaping(
-            rl_action_l2=0.5,
-            rl_scope="rl_only",
-            n_cycles=4,
-            n_batches=8,
-            seed=seed + 10,
-            rl_num_sample=1,
-            rl_batch_size=32,
-            train_rl_epochs=train_rl_epochs,
-            demo_critic="shaping",
-            num_demo=demo_data_size,
-            demo_file=train_exp.result_dir+"/DemoData/Reach1DSparse.npz"
-        )
+        # assert not train_exp.rl_with_shaping(
+        #     rl_action_l2=0.5,
+        #     rl_scope="rl_only",
+        #     n_cycles=4,
+        #     n_batches=8,
+        #     seed=seed + 10,
+        #     rl_num_sample=1,
+        #     rl_batch_size=32,
+        #     train_rl_epochs=train_rl_epochs,
+        #     demo_critic="nf",
+        #     num_demo=demo_data_size,
+        #     demo_file=train_exp.result_dir + "/DemoData/" + environment + ".npz",
+        # )
 
     # Plot the training result
-    assert not plot_exp.plot(dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"])
+    # assert not plot_exp.plot(
+    #     dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"]
+    # )
 
     # Check the uncertainty output of the demonstration output
     # assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RL/uncertainty/", save=0)

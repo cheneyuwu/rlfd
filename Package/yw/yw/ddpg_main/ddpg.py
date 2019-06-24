@@ -7,7 +7,7 @@ from yw.ddpg_main.mpi_adam import MpiAdam
 from yw.ddpg_main.normalizer import Normalizer
 from yw.ddpg_main.actor_critic import ActorCritic
 from yw.ddpg_main.replay_buffer import *
-from yw.ddpg_main.demo_shaping import ManualDemoShaping, GaussianDemoShaping
+from yw.ddpg_main.demo_shaping import ManualDemoShaping, GaussianDemoShaping, NormalizingFlowDemoShaping
 from yw.util.util import store_args, import_function
 from yw.util.tf_util import flatten_grads
 
@@ -164,7 +164,7 @@ class DDPG(object):
         # Initialize the demo buffer; in the same way as the primary data buffer
         if not self.demo_replay_strategy:
             pass
-        elif self.demo_actor != "none" or self.demo_critic == "shaping":
+        elif self.demo_actor != "none" or self.demo_critic != "none":
             self.demo_buffer = UniformReplayBuffer(
                 buffer_shapes, buffer_size, self.T, **self.demo_replay_strategy["args"]
             )
@@ -251,7 +251,7 @@ class DDPG(object):
 
         self.demo_buffer.store_episode(episode_batch)
 
-        # currently we do not update status if using demo_critic==shaping
+        # currently we do not update status if using demo_actor==none
         if update_stats:
             logger.info("DDPG:init_demo_buffer -> Updating stats.")
             self._update_stats(episode_batch)
@@ -294,7 +294,21 @@ class DDPG(object):
 
         return transitions
 
-    def train(self, stage=True):
+    def train_shaping(self):
+        # train normalizing flow
+        loss = None
+        if self.demo_critic == "nf":
+            demo_data = self.demo_buffer.sample_all()
+            demo_data["o"] = self._preprocess_state(demo_data["o"])
+            if self.dimg != 0:
+                demo_data["g"] = self._preprocess_state(demo_data["g"])
+            feed = {}
+            for k in self.demo_inputs_tf.keys():
+                feed[self.demo_inputs_tf[k]] = demo_data[k]
+            loss, _ = self.sess.run([self.demo_shaping.loss, self.demo_shaping.train_op], feed_dict=feed)
+        return loss
+
+    def train(self):
         batch = self.sample_batch()
         feed = {self.inputs_tf[k]: batch[k] for k in self.inputs_tf.keys()}
         # feed demonstration data
@@ -433,9 +447,11 @@ class DDPG(object):
         assert len(self._vars("main")) == len(self._vars("target"))
 
         # Add shaping reward
-        if self.demo_critic == "shaping":
+        if self.demo_critic != "none":
             self.demo_critic_shaping_ls = []
             self.demo_actor_shaping_ls = []
+            # for debugging
+            self.demo_shaping_check_ls = []
             # dict for demonstration input
             self.demo_inputs_tf = {}
             self.demo_inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
@@ -443,31 +459,34 @@ class DDPG(object):
                 self.demo_inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
             self.demo_inputs_tf["u"] = tf.placeholder(tf.float32, shape=(None, self.dimu))
             with tf.variable_scope("shaping") as vs:
+                if self.demo_critic == "shaping":
+                    self.demo_shaping = GaussianDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
+                    # self.demo_shaping = ManualDemoShaping(gamma=self.gamma)
+                elif self.demo_critic == "nf":
+                    self.demo_shaping = NormalizingFlowDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
                 for i in range(self.num_sample):
-                    # self.demo_critic_shaping_ls.append(ManualDemoShaping(
                     self.demo_critic_shaping_ls.append(
-                        GaussianDemoShaping(
+                        self.demo_shaping.reward(
                             o=self.inputs_tf["o"],
                             g=self.inputs_tf["g"] if self.dimg != 0 else None,
                             u=self.inputs_tf["u"],
                             o_2=self.inputs_tf["o_2"],
                             g_2=self.inputs_tf["g_2"] if self.dimg != 0 else None,
                             u_2=self.target.pi_tf[i],
-                            gamma=self.gamma,
-                            demo_inputs_tf=self.demo_inputs_tf,
                         )
                     )
-                    # self.demo_actor_shaping_ls.append(ManualDemoShaping(
+                    self.demo_shaping_check_ls.append(
+                        self.demo_shaping.potential(
+                            o=self.inputs_tf["o"],
+                            g=self.inputs_tf["g"] if self.dimg != 0 else None,
+                            u=self.inputs_tf["u"],
+                        )
+                    )
                     self.demo_actor_shaping_ls.append(
-                        GaussianDemoShaping(
+                        self.demo_shaping.potential(
                             o=self.inputs_tf["o"],
                             g=self.inputs_tf["g"] if self.dimg != 0 else None,
                             u=self.main.pi_tf[i],
-                            o_2=self.inputs_tf["o_2"],
-                            g_2=self.inputs_tf["g_2"] if self.dimg != 0 else None,
-                            u_2=self.target.pi_tf[i],
-                            gamma=self.gamma,
-                            demo_inputs_tf=self.demo_inputs_tf,
                         )
                     )
 
@@ -476,12 +495,12 @@ class DDPG(object):
         clip_range = (-self.clip_return, 0.0 if self.clip_pos_returns else self.clip_return)
         self.Q_loss_tf = []
         self.demo_loss_tf = []
-        if self.demo_critic == "shaping":
+        if self.demo_critic != "none":
             for i in range(self.num_sample):
                 # calculate bellman target (with shaping reward added)
                 target_tf = tf.clip_by_value(
                     self.inputs_tf["r"]
-                    + tf.stop_gradient(self.demo_critic_shaping_ls[i].reward)
+                    + tf.stop_gradient(self.demo_critic_shaping_ls[i])
                     + self.gamma * self.target.Q_pi_tf[i],
                     *clip_range
                 )
@@ -538,10 +557,10 @@ class DDPG(object):
             )
             self.pi_loss_tf += self.aux_loss_weight * self.cloning_loss_tf
 
-        elif self.demo_critic == "shaping":
+        elif self.demo_critic != "none":
             self.pi_loss_tf = [
                 -tf.reduce_mean(self.main.Q_pi_tf[i])
-                - tf.reduce_mean(self.demo_actor_shaping_ls[i].potential)
+                - tf.reduce_mean(self.demo_actor_shaping_ls[i])
                 + self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf[i] / self.max_u))
                 for i in range(self.num_sample)
             ]
@@ -694,15 +713,15 @@ class DDPG(object):
         name = ["o", "u", "g", "q_var", "q_mean"]
         feed = {policy.o_tf: o_r, policy.g_tf: g_r, policy.u_tf: u_r}
         # feed demonstration data
-        if self.demo_critic == "shaping":
+        if self.demo_critic != "none":
             demo_data = self.demo_buffer.sample_all()
             for k in self.demo_inputs_tf.keys():
                 feed[self.demo_inputs_tf[k]] = demo_data[k]
         queries = [policy.Q_var_tf, policy.Q_mean_tf]
         res = self.sess.run(queries, feed_dict=feed)
 
-        if self.demo_critic == "shaping":
-            temp = self.sess.run(self.demo_critic_shaping_ls[0].potential, feed_dict=feed)
+        if self.demo_critic != "none":
+            temp = self.sess.run(self.demo_shaping_check_ls[0], feed_dict=feed)
             temp = temp.reshape(-1)
             res[1] = temp
 
