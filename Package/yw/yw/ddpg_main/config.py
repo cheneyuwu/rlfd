@@ -228,11 +228,13 @@ def config_rollout(params, policy):
 
 def config_evaluator(params, policy):
     eval_params = {
-        "exploit": 1,
+        "exploit": False,
         "use_target_net": params["test_with_polyak"],
         "use_demo_states": False,
         "compute_Q": True,
         "T": params["T"],
+        "random_eps": 0.0,
+        "noise_eps": 0.05,
         "rollout_batch_size": params["n_test_rollouts"],
     }
     for name in ["dims", "noise_eps", "random_eps"]:
@@ -247,11 +249,13 @@ def config_evaluator(params, policy):
 
 def config_demo(params, policy):
     demo_params = {
-        "exploit": True,
+        "exploit": False,
         "use_target_net": True,
         "use_demo_states": False,
         "compute_Q": True,
         "compute_r": True,
+        "random_eps": 0.0,
+        "noise_eps": 0.05,
         "render": params["render"],
         "T": policy.T,
         "rollout_batch_size": params["rollout_batch_size"],

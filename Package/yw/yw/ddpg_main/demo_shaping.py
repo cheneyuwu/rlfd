@@ -210,8 +210,10 @@ def test_nf(demo_file, **kwargs):
             pl.scatter(X1[idx, 0], X1[idx, 1], s=10, color="black")
             # pl.xlim([-5, 30])
             # pl.ylim([-10, 10])
-            pl.xlim([-2, 2])
-            pl.ylim([-2, 2])
+            pl.xlim([-1, 1])
+            pl.ylim([-1, 1])
+            pl.xlabel("state")
+            pl.ylabel("action")
             pl.title(titles[j])
 
     tf.set_random_seed(1)
@@ -222,8 +224,12 @@ def test_nf(demo_file, **kwargs):
         np_samples = sess.run(x_samples)
     else:
         demo_data = np.load(demo_file)  # load the demonstration data from data file
+        # reach1d first order
         o = demo_data["o"][:, :-1, :].reshape((-1, 1))
         u = demo_data["u"].reshape((-1, 1))
+        # reach1d second order
+        # o = demo_data["o"][:, :-1, :].reshape((-1, 2))[:, 0:1]
+        # u = demo_data["o"][:, :-1, :].reshape((-1, 2))[:, 1:2]
         np_samples = np.concatenate((o, u), axis=1)
 
     pl.figure()
@@ -234,8 +240,10 @@ def test_nf(demo_file, **kwargs):
     pl.scatter(np_samples[:, 0], np_samples[:, 1], s=10, color="red")
     # pl.xlim([-5, 30])
     # pl.ylim([-10, 10])
-    pl.xlim([-2, 2])
-    pl.ylim([-2, 2])
+    pl.xlim([-1, 1])
+    pl.ylim([-1, 1])
+    pl.xlabel("state")
+    pl.ylabel("action")
     pl.title("Training samples")
 
     inputs_tf = {}
@@ -250,7 +258,7 @@ def test_nf(demo_file, **kwargs):
     samples_no_training = sess.run(samples_no_training)
     visualize_flow(gs, 1, samples_no_training, ["Base dist", "Samples w/o training"])
 
-    for i in range(5000):
+    for i in range(3000):
         if demo_file == None:
             np_samples = sess.run(x_samples)
             feed = {inputs_tf["o"]: np_samples[:, 0:1], inputs_tf["u"]: np_samples[:, 1:]}
@@ -267,10 +275,10 @@ def test_nf(demo_file, **kwargs):
 
 
     # Check potential function
-    potential = demo_shaping.potential(inputs_tf["o"], None, inputs_tf["u"])
+    potential = tf.clip_by_value(demo_shaping.potential(inputs_tf["o"], None, inputs_tf["u"]), -10., 10.)
     
     num_point = 24
-    ls = np.linspace(-1.0, 1.0, num_point)
+    ls = np.linspace(-0.5, 0.5, num_point)
     ls2 = ls * 2
     o, u = np.meshgrid(ls, ls2)
     o_r = o.reshape((-1, 1))

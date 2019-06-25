@@ -9,36 +9,40 @@ class EnvManager:
         # Search from our own environments
         if env_name == "Reach2D":
             env_args["dim"] = 2
-            self.make_env = lambda: point_reach.make(env_name, **env_args)
+            self.make_env = lambda: point_reach.make("Reacher", **env_args)
         elif env_name == "Reach2DSparse":
             env_args["dim"] = 2
             env_args["sparse"] = True
-            self.make_env = lambda: point_reach.make(env_name, **env_args)
+            self.make_env = lambda: point_reach.make("Reacher", **env_args)
         elif env_name == "Reach2DFirstOrderSparse":
             env_args["dim"] = 2
             env_args["order"] = 1
             env_args["sparse"] = True
-            self.make_env = lambda: point_reach.make(env_name, **env_args)
+            self.make_env = lambda: point_reach.make("Reacher", **env_args)
         elif env_name == "Reach2DFirstOrder":
             env_args["dim"] = 2
             env_args["order"] = 1
-            self.make_env = lambda: point_reach.make(env_name, **env_args)
+            self.make_env = lambda: point_reach.make("Reacher", **env_args)
         elif env_name == "Reach1D":
             env_args["dim"] = 1
-            self.make_env = lambda: point_reach.make(env_name, **env_args)
+            self.make_env = lambda: point_reach.make("Reacher", **env_args)
         elif env_name == "Reach1DFirstOrder":
             env_args["dim"] = 1
             env_args["order"] = 1
-            self.make_env = lambda: point_reach.make(env_name, **env_args)
+            self.make_env = lambda: point_reach.make("Reacher", **env_args)
         elif env_name == "Reach1DFirstOrderSparse":
             env_args["dim"] = 1
             env_args["order"] = 1
             env_args["sparse"] = True
-            self.make_env = lambda: point_reach.make(env_name, **env_args)
+            self.make_env = lambda: point_reach.make("Reacher", **env_args)
         elif env_name == "Reach1DSparse":
             env_args["dim"] = 1
             env_args["sparse"] = True
-            self.make_env = lambda: point_reach.make(env_name, **env_args)
+            self.make_env = lambda: point_reach.make("Reacher", **env_args)
+        elif env_name == "BlockReachFirstOrder":
+            env_args["sparse"] = False
+            env_args["order"] = 1
+            self.make_env = lambda: point_reach.make("BlockReacher", **env_args)
 
         # Search from openai gym
         if self.make_env == None:

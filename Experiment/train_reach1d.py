@@ -29,13 +29,13 @@ if __name__ == "__main__":
     plot_exp = Plot()
     uncertainty_exp = Uncertainty()
 
-    environment = "Reach1DFirstOrderSparse"
+    environment = "Reach1D"
     train_exp.env = environment
     train_exp.num_cpu = 1
     train_exp.update()
 
     demo_data_size = 128
-    train_rl_epochs = 32
+    train_rl_epochs = 64
     seed = 2
     for i in range(1):
         seed += i * 100

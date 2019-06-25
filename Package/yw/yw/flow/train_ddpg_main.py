@@ -52,7 +52,7 @@ def train_reinforce(
         policy.init_demo_buffer(demo_file, update_stats=policy.demo_actor != "none")
 
     if policy.demo_critic != "none":
-        for epoch in range(10000):
+        for epoch in range(5000):
             loss = policy.train_shaping()
             if epoch % 1000 == 0:
                 print(loss)
@@ -65,7 +65,7 @@ def train_reinforce(
         # Store anything we need into a numpyz file.
         # policy.query_ac_output(os.path.join(ac_output_save_path, "query_{:03d}.npz".format(epoch)))
         # policy.query_critic_q(os.path.join(critic_q_save_path, "query_latest.npz"))
-        policy.query_uncertainty(os.path.join(uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
+        # policy.query_uncertainty(os.path.join(uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
 
         # Train
         rollout_worker.clear_history()
