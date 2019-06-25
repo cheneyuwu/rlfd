@@ -170,12 +170,12 @@ class BlockReacher:
         self.mass = 1
         self.boundary = 1.0
         self.threshold = self.boundary / 12
-        self._max_episode_steps = 42 if self.order == 2 else 16
+        self._max_episode_steps = 42 if self.order == 2 else 24
         self.max_u = 2
         self.action_space = self.ActionSpace(self.dim)
         # add blocks manually added
         self.blocks = []
-        self.blocks.append(self.Block((-0.25, -0.25), 0.5, 0.5))
+        self.blocks.append(self.Block((-0.5, -0.5), 1, 1))
         plt.ion()
         plt.show()
         self.reset()
@@ -212,7 +212,7 @@ class BlockReacher:
                 and point[1] > self.start[1]
                 and point[1] < self.start[1] + self.height
             )
-
+        
     def compute_reward(self, achieved_goal, desired_goal, info=0):
         achieved_goal = achieved_goal.reshape(-1, self.dim)
         desired_goal = desired_goal.reshape(-1, self.dim)
@@ -262,11 +262,11 @@ class BlockReacher:
         # The initial state and final goal is fixed
         if self.order == 2:
             self.speed = np.zeros(self.dim)
-            self.goal = 0.5 * np.ones(self.dim) * self.boundary
-            self.curr_pos = -0.5 * np.ones(self.dim) * self.boundary
+            self.goal = 0.8 * np.ones(self.dim) * self.boundary
+            self.curr_pos = -0.8 * np.ones(self.dim) * self.boundary
         else:  # 1
-            self.goal = 0.5 * np.ones(self.dim) * self.boundary
-            self.curr_pos = -0.5 * np.ones(self.dim) * self.boundary
+            self.goal = 0.8 * np.ones(self.dim) * self.boundary
+            self.curr_pos = -0.8 * np.ones(self.dim) * self.boundary
 
         self.T = 0
         self.history = {"position": [], "goal": [], "t": [], "r": [], "v": []}

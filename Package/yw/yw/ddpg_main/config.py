@@ -236,9 +236,8 @@ def config_evaluator(params, policy):
         "random_eps": 0.0,
         "noise_eps": 0.05,
         "rollout_batch_size": params["n_test_rollouts"],
+        "dims": params["dims"],
     }
-    for name in ["dims", "noise_eps", "random_eps"]:
-        eval_params[name] = params[name]
     logger.info("*** eval_params ***")
     log_params(eval_params)
     logger.info("*** eval_params ***")
@@ -250,7 +249,7 @@ def config_evaluator(params, policy):
 def config_demo(params, policy):
     demo_params = {
         "exploit": False,
-        "use_target_net": True,
+        "use_target_net": False,
         "use_demo_states": False,
         "compute_Q": True,
         "compute_r": True,

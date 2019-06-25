@@ -132,7 +132,7 @@ class NormalizingFlowDemoShaping(DemoShaping):
         demo_state_dim = int(demo_state_tf.shape[1])
         self.base_dist = tfd.MultivariateNormalDiag(loc=tf.zeros([demo_state_dim], tf.float32))
         # normalizing flow nn
-        self.nn = NormalizingFlow(base_dist=self.base_dist, d=demo_state_dim, r=demo_state_dim, num_layers=3)
+        self.nn = NormalizingFlow(base_dist=self.base_dist, d=demo_state_dim, r=demo_state_dim, num_layers=10)
         # loss function that tries to maximize log prob
         self.loss = -tf.reduce_mean(self.nn(demo_state_tf))
         self.train_op = tf.train.AdamOptimizer(1e-3).minimize(self.loss)
@@ -225,11 +225,11 @@ def test_nf(demo_file, **kwargs):
     else:
         demo_data = np.load(demo_file)  # load the demonstration data from data file
         # reach1d first order
-        o = demo_data["o"][:, :-1, :].reshape((-1, 1))
-        u = demo_data["u"].reshape((-1, 1))
+        # o = demo_data["o"][:, :-1, :].reshape((-1, 1))
+        # u = demo_data["u"].reshape((-1, 1))
         # reach1d second order
-        # o = demo_data["o"][:, :-1, :].reshape((-1, 2))[:, 0:1]
-        # u = demo_data["o"][:, :-1, :].reshape((-1, 2))[:, 1:2]
+        o = demo_data["o"][:, :-1, :].reshape((-1, 2))[:, 0:1]
+        u = demo_data["o"][:, :-1, :].reshape((-1, 2))[:, 1:2]
         np_samples = np.concatenate((o, u), axis=1)
 
     pl.figure()
@@ -258,7 +258,7 @@ def test_nf(demo_file, **kwargs):
     samples_no_training = sess.run(samples_no_training)
     visualize_flow(gs, 1, samples_no_training, ["Base dist", "Samples w/o training"])
 
-    for i in range(3000):
+    for i in range(20000):
         if demo_file == None:
             np_samples = sess.run(x_samples)
             feed = {inputs_tf["o"]: np_samples[:, 0:1], inputs_tf["u"]: np_samples[:, 1:]}
