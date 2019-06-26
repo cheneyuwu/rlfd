@@ -312,7 +312,8 @@ class MAF:
                 )
             )
             # BatchNorm helps to stabilize deep normalizing flows, esp. Real-NVP
-            # self.bijectors.append(tfb.BatchNormalization())
+            # if i % 4 == 0:
+            #     self.bijectors.append(tfb.BatchNormalization())
             self.bijectors.append(tfb.Permute(permutation=list(range(0, dim))[::-1]))
 
         # Discard the last Permute layer.

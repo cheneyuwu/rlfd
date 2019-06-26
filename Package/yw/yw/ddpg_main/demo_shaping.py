@@ -172,16 +172,16 @@ class MAFDemoShaping(DemoShaping):
             demo_inputs_tf - demo_inputs that contains all the transitons from demonstration
         """
         self.demo_inputs_tf = demo_inputs_tf
-        demo_state_tf = self._concat_inputs(
+        demo_state_tf = self._cast_concat_inputs(
             self.demo_inputs_tf["o"],
             self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
             self.demo_inputs_tf["u"],
         )
 
         demo_state_dim = int(demo_state_tf.shape[1])
-        self.base_dist = tfd.MultivariateNormalDiag(loc=tf.zeros([demo_state_dim], tf.float32))
+        self.base_dist = tfd.MultivariateNormalDiag(loc=tf.zeros([demo_state_dim], tf.float64))
         # normalizing flow nn
-        self.nn = MAF(base_dist=self.base_dist, dim=demo_state_dim, num_layers=3)
+        self.nn = MAF(base_dist=self.base_dist, dim=demo_state_dim, num_layers=6)
         # loss function that tries to maximize log prob
         self.loss = -tf.reduce_mean(self.nn(demo_state_tf))
         self.train_op = tf.train.AdamOptimizer(1e-3).minimize(self.loss)
@@ -192,19 +192,20 @@ class MAFDemoShaping(DemoShaping):
         """
         Just return negative value of distance between current state and goal state
         """
-        state_tf = self._concat_inputs(o, g, u)
+        state_tf = self._cast_concat_inputs(o, g, u)
         potential = self.nn(state_tf)
-        potential = 10 * tf.clip_by_value(potential, -10.0, 10.0)
+        # scale and clip
+        potential = 1.0 * tf.clip_by_value(potential, -10.0, 10.0)
 
         return potential
 
-    def _concat_inputs(self, o, g, u):
+    def _cast_concat_inputs(self, o, g, u):
         # Concat demonstration inputs
-        state_tf = o
+        state_tf = tf.cast(o, tf.float64)
         # if g != None:
         #     # for multigoal environments, we have goal as another states
-        #     state_tf = tf.concat(axis=1, values=[state_tf, g])
-        # state_tf = tf.concat(axis=1, values=[state_tf, u])
+        #     state_tf = tf.concat(axis=1, values=[state_tf, tf.cast(g, tf.float64)])
+        state_tf = tf.concat(axis=1, values=[state_tf, tf.cast(u, tf.float64)])
         # note: shape of state_tf is (num_demo, k), where k is sum of dim o g u
         return state_tf
 
@@ -268,7 +269,7 @@ def test_nf(demo_file, **kwargs):
             pl.ylabel("action")
             pl.title(titles[j])
 
-    tf.set_random_seed(1)
+    tf.set_random_seed(0)
     sess = tf.Session(config=tf.ConfigProto(log_device_placement=False))
 
     if demo_file == None:
@@ -303,8 +304,8 @@ def test_nf(demo_file, **kwargs):
     pl.title("Training samples")
 
     inputs_tf = {}
-    inputs_tf["o"] = tf.placeholder(shape=(None, 1), dtype=tf.float32)
-    inputs_tf["u"] = tf.placeholder(shape=(None, 1), dtype=tf.float32)
+    inputs_tf["o"] = tf.placeholder(shape=(None, 1), dtype=tf.float64)
+    inputs_tf["u"] = tf.placeholder(shape=(None, 1), dtype=tf.float64)
     # demo_shaping = NormalizingFlowDemoShaping(gamma=1.0, demo_inputs_tf=inputs_tf)
     demo_shaping = MAFDemoShaping(gamma=1.0, demo_inputs_tf=inputs_tf)
 
@@ -332,7 +333,7 @@ def test_nf(demo_file, **kwargs):
             visualize_flow(gs, 2, samples_with_training, ["Base dist", "Samples w/ training"])
 
             # Check potential function
-            potential = tf.clip_by_value(demo_shaping.potential(inputs_tf["o"], None, inputs_tf["u"]), -10.0, 10.0)
+            potential = demo_shaping.potential(inputs_tf["o"], None, inputs_tf["u"])
 
             num_point = 24
             ls = np.linspace(-1.0, 1.0, num_point)

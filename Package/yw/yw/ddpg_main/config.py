@@ -35,7 +35,7 @@ DEFAULT_PARAMS = {
     # general ddpg config
     "buffer_size": int(1e6),  # for experience replay
     "rl_scope": "ddpg",  # can be tweaked for testing
-    "rl_ca_ratio": 1,  # ratio of critic over actor, 1 -> ddpg, 2 -> td3
+    "rl_use_td3": 0,  # whether or not to use td3
     "rl_num_sample": 1,  # number of ensemble of actor_critics
     "rl_layers": 3,  # number of layers in the critic/actor networks
     "rl_hidden": 256,  # number of neurons in each hidden layers
@@ -253,10 +253,10 @@ def config_demo(params, policy):
         "use_demo_states": False,
         "compute_Q": True,
         "compute_r": True,
-        "random_eps": 0.0,
-        "noise_eps": 0.05,
+        "random_eps": 0.1,
+        "noise_eps": 0.1,
         "render": params["render"],
-        "T": policy.T,
+        "T": params["eps_length"],
         "rollout_batch_size": params["rollout_batch_size"],
         "dims": params["dims"],
     }

@@ -7,9 +7,19 @@ from yw.ddpg_main.mpi_adam import MpiAdam
 from yw.ddpg_main.normalizer import Normalizer
 from yw.ddpg_main.actor_critic import ActorCritic
 from yw.ddpg_main.replay_buffer import *
-from yw.ddpg_main.demo_shaping import ManualDemoShaping, GaussianDemoShaping, NormalizingFlowDemoShaping, MAFDemoShaping
+from yw.ddpg_main.demo_shaping import (
+    ManualDemoShaping,
+    GaussianDemoShaping,
+    NormalizingFlowDemoShaping,
+    MAFDemoShaping,
+)
 from yw.util.util import store_args, import_function
 from yw.util.tf_util import flatten_grads
+
+# temp
+import matplotlib.pylab as pl
+import matplotlib.gridspec as gridspec
+from mpl_toolkits.mplot3d import Axes3D
 
 
 class DDPG(object):
@@ -17,7 +27,7 @@ class DDPG(object):
         self,
         input_dims,
         num_sample,
-        ca_ratio,
+        use_td3,
         hidden,
         layers,
         polyak,
@@ -99,7 +109,7 @@ class DDPG(object):
         # Parameters
         self.input_dims = input_dims
         self.num_sample = num_sample
-        self.ca_ratio = ca_ratio
+        self.use_td3 = use_td3
         self.hidden = hidden
         self.layers = layers
         self.polyak = polyak
@@ -413,7 +423,7 @@ class DDPG(object):
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
                 num_sample=self.num_sample,
-                ca_ratio=self.ca_ratio,
+                use_td3=self.use_td3,
                 hidden=self.hidden,
                 layers=self.layers,
             )
@@ -426,7 +436,7 @@ class DDPG(object):
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
                 num_sample=self.num_sample,
-                ca_ratio=self.ca_ratio,
+                use_td3=self.use_td3,
                 hidden=self.hidden,
                 layers=self.layers,
             )
@@ -440,7 +450,7 @@ class DDPG(object):
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
                 num_sample=self.num_sample,
-                ca_ratio=self.ca_ratio,
+                use_td3=self.use_td3,
                 hidden=self.hidden,
                 layers=self.layers,
             )
@@ -467,27 +477,36 @@ class DDPG(object):
                     self.demo_shaping = MAFDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
                 for i in range(self.num_sample):
                     self.demo_critic_shaping_ls.append(
-                        self.demo_shaping.reward(
-                            o=self.inputs_tf["o"],
-                            g=self.inputs_tf["g"] if self.dimg != 0 else None,
-                            u=self.inputs_tf["u"],
-                            o_2=self.inputs_tf["o_2"],
-                            g_2=self.inputs_tf["g_2"] if self.dimg != 0 else None,
-                            u_2=self.target.pi_tf[i],
+                        tf.cast(
+                            self.demo_shaping.reward(
+                                o=self.inputs_tf["o"],
+                                g=self.inputs_tf["g"] if self.dimg != 0 else None,
+                                u=self.inputs_tf["u"],
+                                o_2=self.inputs_tf["o_2"],
+                                g_2=self.inputs_tf["g_2"] if self.dimg != 0 else None,
+                                u_2=self.target.pi_tf[i],
+                            ),
+                            tf.float32,
                         )
                     )
                     self.demo_shaping_check_ls.append(
-                        self.demo_shaping.potential(
-                            o=self.inputs_tf["o"],
-                            g=self.inputs_tf["g"] if self.dimg != 0 else None,
-                            u=self.inputs_tf["u"],
+                        tf.cast(
+                            self.demo_shaping.potential(
+                                o=self.inputs_tf["o"],
+                                g=self.inputs_tf["g"] if self.dimg != 0 else None,
+                                u=self.inputs_tf["u"],
+                            ),
+                            tf.float32,
                         )
                     )
                     self.demo_actor_shaping_ls.append(
-                        self.demo_shaping.potential(
-                            o=self.inputs_tf["o"],
-                            g=self.inputs_tf["g"] if self.dimg != 0 else None,
-                            u=self.main.pi_tf[i],
+                        tf.cast(
+                            self.demo_shaping.potential(
+                                o=self.inputs_tf["o"],
+                                g=self.inputs_tf["g"] if self.dimg != 0 else None,
+                                u=self.main.pi_tf[i],
+                            ),
+                            tf.float32,
                         )
                     )
 
@@ -495,29 +514,61 @@ class DDPG(object):
         # clip bellman target return
         clip_range = (-self.clip_return, 0.0 if self.clip_pos_returns else self.clip_return)
         self.Q_loss_tf = []
-        self.demo_loss_tf = []
         if self.demo_critic != "none":
             for i in range(self.num_sample):
-                # calculate bellman target (with shaping reward added)
-                target_tf = tf.clip_by_value(
-                    self.inputs_tf["r"]
-                    + tf.stop_gradient(self.demo_critic_shaping_ls[i])
-                    + self.gamma * self.target.Q_pi_tf[i],
-                    *clip_range
-                )
-                rl_bellman_tf = tf.boolean_mask(
-                    tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
-                )
-                rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
+                if self.use_td3:
+                    # calculate bellman target (with shaping reward added)
+                    target_tf = tf.clip_by_value(
+                        self.inputs_tf["r"]
+                        + tf.stop_gradient(self.demo_critic_shaping_ls[i])
+                        + self.gamma * tf.minimum(self.target.Q_pi_tf[i], self.target.Q2_pi_tf[i]),
+                        *clip_range
+                    )
+                    rl_bellman_1_tf = tf.boolean_mask(
+                        tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
+                    )
+                    rl_bellman_2_tf = tf.boolean_mask(
+                        tf.square(tf.stop_gradient(target_tf) - self.main.Q2_tf[i]), self.inputs_tf["mask"][:, i]
+                    )
+                    rl_loss_tf = (tf.reduce_mean(rl_bellman_1_tf) + tf.reduce_mean(rl_bellman_2_tf)) / 2.0
+
+                else:
+                    # calculate bellman target (with shaping reward added)
+                    target_tf = tf.clip_by_value(
+                        self.inputs_tf["r"]
+                        + tf.stop_gradient(self.demo_critic_shaping_ls[i])
+                        + self.gamma * self.target.Q_pi_tf[i],
+                        *clip_range
+                    )
+                    rl_bellman_tf = tf.boolean_mask(
+                        tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
+                    )
+                    rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
                 self.Q_loss_tf.append(rl_loss_tf)
         else:
             for i in range(self.num_sample):
-                # calculate bellman target (with shaping reward added)
-                target_tf = tf.clip_by_value(self.inputs_tf["r"] + self.gamma * self.target.Q_pi_tf[i], *clip_range)
-                rl_bellman_tf = tf.boolean_mask(
-                    tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
-                )
-                rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
+                if self.use_td3:
+                    # calculate bellman target (with shaping reward added)
+                    target_tf = tf.clip_by_value(
+                        self.inputs_tf["r"] + self.gamma * tf.minimum(self.target.Q_pi_tf[i], self.target.Q2_pi_tf[i]),
+                        *clip_range
+                    )
+                    rl_bellman_1_tf = tf.boolean_mask(
+                        tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
+                    )
+                    rl_bellman_2_tf = tf.boolean_mask(
+                        tf.square(tf.stop_gradient(target_tf) - self.main.Q2_tf[i]), self.inputs_tf["mask"][:, i]
+                    )
+                    rl_loss_tf = (tf.reduce_mean(rl_bellman_1_tf) + tf.reduce_mean(rl_bellman_2_tf)) / 2.0
+                else:
+                    # calculate bellman target (with shaping reward added)
+                    target_tf = tf.clip_by_value(
+                        self.inputs_tf["r"] + self.gamma * self.target.Q_pi_tf[i], *clip_range
+                    )
+                    rl_bellman_tf = tf.boolean_mask(
+                        tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
+                    )
+                    rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
                 self.Q_loss_tf.append(rl_loss_tf)
 
         # Actor Loss
@@ -690,6 +741,119 @@ class DDPG(object):
     #     policy.Q_pi_mean_tf ->
     #     policy.Q_pi_var_tf  ->
     #     policy._input_Q     ->
+
+    def query_potential(self, filenam=None):
+        """Check the output from demo shaping potential function
+        """
+        if not "Reach" in self.info["env_name"]:
+            return
+
+        logger.info("Query: potential -> Plot the potential over (s, a) space of demo shaping.")
+
+        def sample_flow(base_dist, transformed_dist):
+            x = base_dist.sample(512)
+            samples = [x]
+            names = [base_dist.name]
+            for bijector in reversed(transformed_dist.bijector.bijectors):
+                x = bijector.forward(x)
+                samples.append(x)
+                names.append(bijector.name)
+
+            return x, samples, names
+
+        def visualize_flow(gs, row, samples, titles):
+            X0 = samples[0]
+
+            for i, j in zip([0, len(samples) - 1], [0, 1]):  # range(len(samples)):
+                X1 = samples[i]
+
+                idx = np.logical_and(X0[:, 0] < 0, X0[:, 1] < 0)
+                ax = pl.subplot(gs[row, j])
+                ax.clear()
+                ax.scatter(X1[idx, 0], X1[idx, 1], s=10, color="red")
+
+                idx = np.logical_and(X0[:, 0] > 0, X0[:, 1] < 0)
+                ax.scatter(X1[idx, 0], X1[idx, 1], s=10, color="green")
+
+                idx = np.logical_and(X0[:, 0] < 0, X0[:, 1] > 0)
+                ax.scatter(X1[idx, 0], X1[idx, 1], s=10, color="blue")
+
+                idx = np.logical_and(X0[:, 0] > 0, X0[:, 1] > 0)
+                ax.scatter(X1[idx, 0], X1[idx, 1], s=10, color="black")
+                ax.set_xlim([-1, 1])
+                ax.set_ylim([-1, 1])
+                ax.set_xlabel("state")
+                ax.set_ylabel("action")
+                ax.set_title(titles[j])
+
+        demo_data = self.demo_buffer.sample_all()
+
+        # reach1d first order
+        # o = demo_data["o"][:, :-1, :].reshape((-1, 1))
+        # u = demo_data["u"].reshape((-1, 1))
+        # reach1d second order
+        o = demo_data["o"][:, 0:1]
+        u = demo_data["o"][:, 1:2]
+        np_samples = np.concatenate((o, u), axis=1)
+
+        # Turn on interactive mode to see immediate change
+        pl.ion()
+        # pl.figure() # open a figure and switch to the figure
+        gs = gridspec.GridSpec(2, 2)
+
+        # Plot Training dataset
+        ax = pl.subplot(gs[0, 0])
+        ax.clear()
+        ax.scatter(np_samples[:, 0], np_samples[:, 1], s=10, color="red")
+        ax.set_xlim([-1, 1])
+        ax.set_ylim([-1, 1])
+        ax.set_xlabel("state")
+        ax.set_ylabel("action")
+        ax.set_title("Training samples")
+
+        # demo_shaping = NormalizingFlowDemoShaping(gamma=1.0, demo_inputs_tf=inputs_tf)
+        # demo_shaping = MAFDemoShaping(gamma=1.0, demo_inputs_tf=inputs_tf)
+        demo_shaping = self.demo_shaping
+
+        # Flow after training
+        _, samples_with_training, _ = sample_flow(demo_shaping.base_dist, demo_shaping.nn.dist)
+        samples_with_training = self.sess.run(samples_with_training)
+        visualize_flow(gs, 1, samples_with_training, ["Base dist", "Samples w/ training"])
+
+        potential = self.demo_shaping_check_ls[0]
+
+        num_point = 24
+        ls = np.linspace(-1.0, 1.0, num_point)
+        ls2 = ls * 2
+        o_1, o_2 = np.meshgrid(ls, ls)
+        u_1, u_2 = np.meshgrid(ls2, ls2)
+        o_r = np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1)
+        u_r = np.concatenate((u_1.reshape(-1, 1), u_2.reshape(-1, 1)), axis=1)
+
+        feed = {self.inputs_tf["o"]: o_r, self.inputs_tf["u"]: u_r}
+        ret = self.sess.run([potential], feed_dict=feed)
+
+        o_r = o_1
+        u_r = o_2
+        for i in range(len(ret)):
+            ret[i] = ret[i].reshape((num_point, num_point))
+
+        ax = pl.subplot(gs[0, 1], projection="3d")
+        ax.clear()
+        ax.plot_surface(o_r, u_r, ret[0])
+        ax.set_xlabel("observation")
+        ax.set_ylabel("action")
+        ax.set_zlabel("potential")
+        for item in (
+            [ax.title, ax.xaxis.label, ax.yaxis.label, ax.zaxis.label]
+            + ax.get_xticklabels()
+            + ax.get_yticklabels()
+            + ax.get_zticklabels()
+        ):
+            item.set_fontsize(6)
+
+        pl.show()
+        pl.pause(0.001)
 
     def query_uncertainty(self, filename=None):
         """Check the output from demonstration NN when the state is fixed and the action forms a 2d space.

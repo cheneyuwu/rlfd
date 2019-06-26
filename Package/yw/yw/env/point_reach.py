@@ -166,18 +166,19 @@ class BlockReacher:
         self.order = order
         self.dim = 2  # fixed
         self.sparse = sparse
-        self.interval = 0.1
+        self.interval = 0.04
         self.mass = 1
         self.boundary = 1.0
         self.threshold = self.boundary / 12
-        self._max_episode_steps = 42 if self.order == 2 else 24
+        self._max_episode_steps = 70 if self.order == 2 else 45
         self.max_u = 2
         self.action_space = self.ActionSpace(self.dim)
         # add blocks manually added
+        self.workspace = self.Block((-1.0, -1.0), 2.0, 2.0)
         self.blocks = []
-        self.blocks.append(self.Block((-0.5, -0.5), 1, 1))
+        self.blocks.append(self.Block((-0.5, -0.5), 1.0, 1.0))
         plt.ion()
-        plt.show()
+        # plt.show()
         self.reset()
 
     class ActionSpace:
@@ -190,7 +191,7 @@ class BlockReacher:
             return self.random.rand(self.dim)
 
     class Block:
-        def __init__(self, start, height, width):
+        def __init__(self, start, width, height):
             """
             start (float) - (x, y) as the center of the square
             height
@@ -212,7 +213,15 @@ class BlockReacher:
                 and point[1] > self.start[1]
                 and point[1] < self.start[1] + self.height
             )
-        
+
+        def outside(self, point):
+            return (
+                point[0] <= self.start[0]
+                or point[0] >= self.start[0] + self.width
+                or point[1] <= self.start[1]
+                or point[1] >= self.start[1] + self.height
+            )
+
     def compute_reward(self, achieved_goal, desired_goal, info=0):
         achieved_goal = achieved_goal.reshape(-1, self.dim)
         desired_goal = desired_goal.reshape(-1, self.dim)
@@ -282,14 +291,14 @@ class BlockReacher:
             acc = action / self.mass
             new_curr_pos = self.curr_pos + self.speed * self.interval + self.interval * self.interval * acc * 0.5
             new_speed = self.speed + acc * self.interval
-            if all([not block.inside(new_curr_pos) for block in self.blocks]):
+            if all([block.outside(new_curr_pos) for block in self.blocks]) and self.workspace.inside(new_curr_pos):
                 self.curr_pos = new_curr_pos
                 self.speed = new_speed
             else:
                 self.speed = 0.0 * self.speed
         else:  # 1
             new_curr_pos = self.curr_pos + action * self.interval
-            if all([not block.inside(new_curr_pos) for block in self.blocks]):
+            if all([block.outside(new_curr_pos) for block in self.blocks]) and self.workspace.inside(new_curr_pos):
                 self.curr_pos = new_curr_pos
 
         self.T = self.T + 1
@@ -340,6 +349,6 @@ if __name__ == "__main__":
         obs, r, done, info = env.step(action)
         env.render()
     for i in range(32):
-        action = - obs["desired_goal"] + obs["observation"]
+        action = -obs["desired_goal"] + obs["observation"]
         obs, r, done, info = env.step(action)
         env.render()
