@@ -52,10 +52,10 @@ def train_reinforce(
         policy.init_demo_buffer(demo_file, update_stats=policy.demo_actor != "none")
 
     if policy.demo_critic != "none":
-        for epoch in range(5000):
+        for epoch in range(7000):
             loss = policy.train_shaping()
-            if epoch % 1000 == 0:
-                print(loss)
+            if epoch % 100 == 0:
+                print("epoch: {} demo shaping loss: {}".format(epoch, loss))
 
     best_success_rate = -1
 

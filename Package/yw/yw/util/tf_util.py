@@ -298,6 +298,32 @@ class NormalizingFlow:
         return self.dist.log_prob(input)
 
 
+# MAF
+# =============================================================================
+
+class MAF:
+    def __init__(self, base_dist, dim=2, num_layers=6):
+        self.bijectors = []
+
+        for _ in range(num_layers):
+            self.bijectors.append(
+                tfb.MaskedAutoregressiveFlow(
+                    shift_and_log_scale_fn=tfb.masked_autoregressive_default_template(hidden_layers=[512, 512])
+                )
+            )
+            # BatchNorm helps to stabilize deep normalizing flows, esp. Real-NVP
+            # self.bijectors.append(tfb.BatchNormalization())
+            self.bijectors.append(tfb.Permute(permutation=list(range(0, dim))[::-1]))
+
+        # Discard the last Permute layer.
+        flow_bijector = tfb.Chain(list(reversed(self.bijectors[:-1])))
+
+        self.dist = tfd.TransformedDistribution(distribution=base_dist, bijector=flow_bijector)
+
+    def __call__(self, input):
+        return self.dist.log_prob(input)
+
+
 if __name__ == "__main__":
 
     import matplotlib.pylab as pl
@@ -375,7 +401,6 @@ if __name__ == "__main__":
 
     loss = -tf.reduce_mean(nn(x_samples))
     train_op = tf.train.AdamOptimizer(1e-3).minimize(loss)
-
 
     sess.run(tf.global_variables_initializer())
 

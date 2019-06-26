@@ -43,6 +43,10 @@ class EnvManager:
             env_args["sparse"] = False
             env_args["order"] = 1
             self.make_env = lambda: point_reach.make("BlockReacher", **env_args)
+        elif env_name == "BlockReachFirstOrderSparse":
+            env_args["sparse"] = True
+            env_args["order"] = 1
+            self.make_env = lambda: point_reach.make("BlockReacher", **env_args)
 
         # Search from openai gym
         if self.make_env == None:

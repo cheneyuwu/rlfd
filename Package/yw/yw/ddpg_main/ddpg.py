@@ -7,7 +7,7 @@ from yw.ddpg_main.mpi_adam import MpiAdam
 from yw.ddpg_main.normalizer import Normalizer
 from yw.ddpg_main.actor_critic import ActorCritic
 from yw.ddpg_main.replay_buffer import *
-from yw.ddpg_main.demo_shaping import ManualDemoShaping, GaussianDemoShaping, NormalizingFlowDemoShaping
+from yw.ddpg_main.demo_shaping import ManualDemoShaping, GaussianDemoShaping, NormalizingFlowDemoShaping, MAFDemoShaping
 from yw.util.util import store_args, import_function
 from yw.util.tf_util import flatten_grads
 
@@ -463,7 +463,8 @@ class DDPG(object):
                     self.demo_shaping = GaussianDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
                     # self.demo_shaping = ManualDemoShaping(gamma=self.gamma)
                 elif self.demo_critic == "nf":
-                    self.demo_shaping = NormalizingFlowDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
+                    # self.demo_shaping = NormalizingFlowDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
+                    self.demo_shaping = MAFDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
                 for i in range(self.num_sample):
                     self.demo_critic_shaping_ls.append(
                         self.demo_shaping.reward(

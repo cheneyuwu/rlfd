@@ -4,7 +4,7 @@ import tensorflow_probability as tfp
 tfd = tfp.distributions
 tfb = tfp.bijectors
 
-from yw.util.tf_util import NormalizingFlow
+from yw.util.tf_util import NormalizingFlow, MAF
 
 
 class DemoShaping:
@@ -158,6 +158,57 @@ class NormalizingFlowDemoShaping(DemoShaping):
         return state_tf
 
 
+class MAFDemoShaping(DemoShaping):
+    def __init__(self, gamma, demo_inputs_tf):
+        """
+        Implement the state, action based potential function and corresponding actions
+        Args:
+            o - observation
+            g - goal
+            u - action
+            o_2 - observation that goes to
+            g_2 - same as g, idk why I must make this specific
+            u_2 - output from the actor of the main network
+            demo_inputs_tf - demo_inputs that contains all the transitons from demonstration
+        """
+        self.demo_inputs_tf = demo_inputs_tf
+        demo_state_tf = self._concat_inputs(
+            self.demo_inputs_tf["o"],
+            self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
+            self.demo_inputs_tf["u"],
+        )
+
+        demo_state_dim = int(demo_state_tf.shape[1])
+        self.base_dist = tfd.MultivariateNormalDiag(loc=tf.zeros([demo_state_dim], tf.float32))
+        # normalizing flow nn
+        self.nn = MAF(base_dist=self.base_dist, dim=demo_state_dim, num_layers=3)
+        # loss function that tries to maximize log prob
+        self.loss = -tf.reduce_mean(self.nn(demo_state_tf))
+        self.train_op = tf.train.AdamOptimizer(1e-3).minimize(self.loss)
+
+        super().__init__(gamma)
+
+    def potential(self, o, g, u):
+        """
+        Just return negative value of distance between current state and goal state
+        """
+        state_tf = self._concat_inputs(o, g, u)
+        potential = self.nn(state_tf)
+        potential = 10 * tf.clip_by_value(potential, -10.0, 10.0)
+
+        return potential
+
+    def _concat_inputs(self, o, g, u):
+        # Concat demonstration inputs
+        state_tf = o
+        # if g != None:
+        #     # for multigoal environments, we have goal as another states
+        #     state_tf = tf.concat(axis=1, values=[state_tf, g])
+        # state_tf = tf.concat(axis=1, values=[state_tf, u])
+        # note: shape of state_tf is (num_demo, k), where k is sum of dim o g u
+        return state_tf
+
+
 # Testing
 # =====================================
 
@@ -198,6 +249,7 @@ def test_nf(demo_file, **kwargs):
 
             idx = np.logical_and(X0[:, 0] < 0, X0[:, 1] < 0)
             ax = pl.subplot(gs[row, j])
+            ax.clear()
             pl.scatter(X1[idx, 0], X1[idx, 1], s=10, color="red")
 
             idx = np.logical_and(X0[:, 0] > 0, X0[:, 1] < 0)
@@ -232,12 +284,16 @@ def test_nf(demo_file, **kwargs):
         u = demo_data["o"][:, :-1, :].reshape((-1, 2))[:, 1:2]
         np_samples = np.concatenate((o, u), axis=1)
 
+    # Turn on interactive mode to see immediate change
+    pl.ion()
+
     pl.figure()
     gs = gridspec.GridSpec(3, 2)
 
     # Training dataset
     ax = pl.subplot(gs[0, 0])
-    pl.scatter(np_samples[:, 0], np_samples[:, 1], s=10, color="red")
+    ax.clear()
+    ax.scatter(np_samples[:, 0], np_samples[:, 1], s=10, color="red")
     # pl.xlim([-5, 30])
     # pl.ylim([-10, 10])
     pl.xlim([-1, 1])
@@ -249,7 +305,8 @@ def test_nf(demo_file, **kwargs):
     inputs_tf = {}
     inputs_tf["o"] = tf.placeholder(shape=(None, 1), dtype=tf.float32)
     inputs_tf["u"] = tf.placeholder(shape=(None, 1), dtype=tf.float32)
-    demo_shaping = NormalizingFlowDemoShaping(gamma=1.0, demo_inputs_tf=inputs_tf)
+    # demo_shaping = NormalizingFlowDemoShaping(gamma=1.0, demo_inputs_tf=inputs_tf)
+    demo_shaping = MAFDemoShaping(gamma=1.0, demo_inputs_tf=inputs_tf)
 
     sess.run(tf.global_variables_initializer())
 
@@ -258,50 +315,57 @@ def test_nf(demo_file, **kwargs):
     samples_no_training = sess.run(samples_no_training)
     visualize_flow(gs, 1, samples_no_training, ["Base dist", "Samples w/o training"])
 
-    for i in range(20000):
+    for i in range(40000):
         if demo_file == None:
             np_samples = sess.run(x_samples)
             feed = {inputs_tf["o"]: np_samples[:, 0:1], inputs_tf["u"]: np_samples[:, 1:]}
         else:
             feed = {inputs_tf["o"]: o, inputs_tf["u"]: u}
         _, np_loss = sess.run([demo_shaping.train_op, demo_shaping.loss], feed_dict=feed)
-        if i % int(1000) == 0:
+        if i % int(100) == 0:
             print(i, np_loss)
 
-    # Flow after training
-    _, samples_with_training, _ = sample_flow(demo_shaping.base_dist, demo_shaping.nn.dist)
-    samples_with_training = sess.run(samples_with_training)
-    visualize_flow(gs, 2, samples_with_training, ["Base dist", "Samples w/ training"])
+        if i % int(100) == 0:
+            # Flow after training
+            _, samples_with_training, _ = sample_flow(demo_shaping.base_dist, demo_shaping.nn.dist)
+            samples_with_training = sess.run(samples_with_training)
+            visualize_flow(gs, 2, samples_with_training, ["Base dist", "Samples w/ training"])
 
+            # Check potential function
+            potential = tf.clip_by_value(demo_shaping.potential(inputs_tf["o"], None, inputs_tf["u"]), -10.0, 10.0)
 
-    # Check potential function
-    potential = tf.clip_by_value(demo_shaping.potential(inputs_tf["o"], None, inputs_tf["u"]), -10., 10.)
-    
-    num_point = 24
-    ls = np.linspace(-0.5, 0.5, num_point)
-    ls2 = ls * 2
-    o, u = np.meshgrid(ls, ls2)
-    o_r = o.reshape((-1, 1))
-    u_r = u.reshape((-1, 1))
+            num_point = 24
+            ls = np.linspace(-1.0, 1.0, num_point)
+            ls2 = ls  # * 2
+            o_test, u_test = np.meshgrid(ls, ls2)
+            o_r = o_test.reshape((-1, 1))
+            u_r = u_test.reshape((-1, 1))
 
-    feed = {inputs_tf["o"]: o_r, inputs_tf["u"]: u_r}
-    ret = sess.run([potential], feed_dict=feed)
+            feed = {inputs_tf["o"]: o_r, inputs_tf["u"]: u_r}
+            ret = sess.run([potential], feed_dict=feed)
 
-    o_r = o.reshape((num_point, num_point))
-    u_r = u.reshape((num_point, num_point))
-    for i in range(len(ret)):
-        ret[i] = ret[i].reshape((num_point, num_point))
+            o_r = o_test.reshape((num_point, num_point))
+            u_r = u_test.reshape((num_point, num_point))
+            for i in range(len(ret)):
+                ret[i] = ret[i].reshape((num_point, num_point))
 
-    ax = pl.subplot(gs[0, 1],projection="3d")
-    ax.plot_surface(o_r, u_r, ret[0])
-    # ax.set_zlim(0, 3)
-    ax.set_xlabel("observation")
-    ax.set_ylabel("action")
-    ax.set_zlabel("potential")
-    for item in [ax.title, ax.xaxis.label, ax.yaxis.label, ax.zaxis.label] + ax.get_xticklabels() + ax.get_yticklabels() + ax.get_zticklabels():
-        item.set_fontsize(6)
+            ax = pl.subplot(gs[0, 1], projection="3d")
+            ax.clear()
+            ax.plot_surface(o_r, u_r, ret[0])
+            # ax.set_zlim(0, 3)
+            ax.set_xlabel("observation")
+            ax.set_ylabel("action")
+            ax.set_zlabel("potential")
+            for item in (
+                [ax.title, ax.xaxis.label, ax.yaxis.label, ax.zaxis.label]
+                + ax.get_xticklabels()
+                + ax.get_yticklabels()
+                + ax.get_zticklabels()
+            ):
+                item.set_fontsize(6)
 
-    pl.show()
+            pl.show()
+            pl.pause(0.001)
 
 
 if __name__ == "__main__":

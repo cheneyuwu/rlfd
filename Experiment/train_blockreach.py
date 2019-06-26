@@ -9,14 +9,14 @@ if __name__ == "__main__":
     plot_exp = Plot()
 
 
-    environment = "BlockReachFirstOrder"
+    environment = "BlockReachFirstOrderSparse"
     train_exp.env = environment
     train_exp.num_cpu = 1
     train_exp.update()
 
-    demo_data_size = 64
-    train_rl_epochs = 32
-    seed = 2
+    demo_data_size = 16
+    train_rl_epochs = 64
+    seed = 1
     for i in range(1):
         seed += i * 100
 
@@ -36,15 +36,15 @@ if __name__ == "__main__":
         #     rl_batch_size=256,
         #     train_rl_epochs=train_rl_epochs,
         # )
-        assert not train_exp.rl_only(
-            rl_action_l2=0.5,
-            rl_scope="rl_only",
-            n_cycles=10,
-            seed=seed + 10,
-            rl_num_sample=1,
-            rl_batch_size=256,
-            train_rl_epochs=train_rl_epochs,
-        )
+        # assert not train_exp.rl_only(
+        #     rl_action_l2=0.5,
+        #     rl_scope="rl_only",
+        #     n_cycles=10,
+        #     seed=seed + 10,
+        #     rl_num_sample=1,
+        #     rl_batch_size=256,
+        #     train_rl_epochs=train_rl_epochs,
+        # )
 
         # Generate demonstration data
         # assert not demo_exp.generate_demo(
@@ -64,13 +64,13 @@ if __name__ == "__main__":
         #     rl_num_sample=1,
         #     rl_batch_size=256,
         #     train_rl_epochs=train_rl_epochs,
-        #     demo_critic="shaping",
+        #     demo_critic="nf",
         #     num_demo=demo_data_size,
-        #     demo_file=train_exp.result_dir+"/DemoData/Reach2DSparse.npz"
+        #     demo_file=train_exp.result_dir+"/DemoData/merged_demo.npz"
         # )
 
     # Plot the training result
     # assert not plot_exp.plot(dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"])
 
     # Display a policy result (calls run_agent).
-    assert not display_exp.display(policy_file=display_exp.result_dir + "/RL/rl/policy_latest.pkl", num_itr=3)
+    # assert not display_exp.display(policy_file=display_exp.result_dir + "/RLDemoShaping/rl/policy_latest.pkl", num_itr=3)
