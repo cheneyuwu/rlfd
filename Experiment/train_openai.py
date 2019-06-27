@@ -13,8 +13,8 @@ if __name__ == "__main__":
     train_exp.num_cpu = 1
     train_exp.update()
 
-    demo_data_size = 128
-    train_rl_epochs = 16
+    demo_data_size = 32
+    train_rl_epochs = 32
 
     seed = 100
     for i in range(1):
@@ -36,15 +36,15 @@ if __name__ == "__main__":
         #     rl_batch_size=256,
         #     train_rl_epochs=train_rl_epochs,
         # )
-        # assert not train_exp.rl_only(
-        #     r_shift=1.0,
-        #     rl_scope="rl_only",
-        #     n_cycles=10,
-        #     seed=seed+10,
-        #     rl_num_sample=1,
-        #     rl_batch_size=256,
-        #     train_rl_epochs=train_rl_epochs,
-        # )
+        assert not train_exp.rl_only(
+            r_shift=1.0,
+            rl_scope="rl_only",
+            n_cycles=10,
+            seed=seed+10,
+            rl_num_sample=1,
+            rl_batch_size=256,
+            train_rl_epochs=train_rl_epochs,
+        )
 
         # Generate demonstration data
         # assert not demo_exp.generate_demo(
@@ -74,13 +74,13 @@ if __name__ == "__main__":
             seed=seed + 40,
             rl_num_sample=1,
             train_rl_epochs=train_rl_epochs,
-            demo_critic="shaping",
+            demo_critic="nf",
             num_demo=demo_data_size,
             demo_file=train_exp.result_dir+"/DemoData/"+environment+".npz"
         )
 
     # Plot the training result
-    assert not plot_exp.plot(dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"])
+    # assert not plot_exp.plot(dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"])
 
     # Display a policy result (calls run_agent).
-    # assert not display_exp.display(policy_file=display_exp.result_dir + "/RL/rl/policy_latest.pkl", num_itr=3)
+    assert not display_exp.display(policy_file=display_exp.result_dir + "/RLDemoShaping/rl/policy_latest.pkl", num_itr=3)

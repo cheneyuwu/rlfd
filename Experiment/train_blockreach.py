@@ -14,7 +14,7 @@ if __name__ == "__main__":
     train_exp.num_cpu = 1
     train_exp.update()
 
-    demo_data_size = 16
+    demo_data_size = 32
     train_rl_epochs = 64
     seed = 1
     for i in range(1):

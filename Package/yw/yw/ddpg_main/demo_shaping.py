@@ -195,7 +195,7 @@ class MAFDemoShaping(DemoShaping):
         state_tf = self._cast_concat_inputs(o, g, u)
         potential = self.nn(state_tf)
         # scale and clip
-        potential = 1.0 * tf.clip_by_value(potential, -10.0, 10.0)
+        potential = 1.0 * tf.clip_by_value(potential, -100.0, 10.0)
 
         return potential
 
