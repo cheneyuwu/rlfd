@@ -177,5 +177,3 @@ if __name__ == "__main__":
     visualize_flow(gs, 2, samples_with_training, ['Base dist', 'Samples w/ training'])
     
     pl.show()
-
-    

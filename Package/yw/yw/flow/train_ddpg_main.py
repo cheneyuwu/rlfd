@@ -53,14 +53,14 @@ def train_reinforce(
 
     # Pre-Training a potential function
     if policy.demo_critic != "none":
-        for epoch in range(4000):
+        for epoch in range(2000):
             loss = policy.train_shaping()
             if epoch % 100 == 0:
                 print("epoch: {} demo shaping loss: {}".format(epoch, loss))
-                policy.query_potential()
-            if loss < -0.5:  # assume this value is small enough
-                policy.query_potential()
-                break
+                # policy.query_potential()
+            # if loss < -0.5:  # assume this value is small enough
+            #     policy.query_potential()
+            #     break
 
     best_success_rate = -1
 
