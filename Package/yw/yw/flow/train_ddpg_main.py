@@ -48,8 +48,19 @@ def train_reinforce(
         os.makedirs(critic_q_save_path, exist_ok=True)
         os.makedirs(uncertainty_save_path, exist_ok=True)
 
-    if policy.demo_actor != "none" or policy.demo_critic == "shaping":
+    if policy.demo_actor != "none" or policy.demo_critic != "none":
         policy.init_demo_buffer(demo_file, update_stats=policy.demo_actor != "none")
+
+    # Pre-Training a potential function
+    if policy.demo_critic != "none":
+        for epoch in range(4000):
+            loss = policy.train_shaping()
+            if epoch % 100 == 0:
+                print("epoch: {} demo shaping loss: {}".format(epoch, loss))
+                policy.query_potential()
+            if loss < -0.5:  # assume this value is small enough
+                policy.query_potential()
+                break
 
     best_success_rate = -1
 
@@ -70,7 +81,7 @@ def train_reinforce(
             for batch in range(n_batches):
                 logger.debug("train_ddpg_main.train_reinforce -> batch: {}".format(batch))
                 policy.train()
-            # policy.check_train()
+            policy.check_train()
             policy.update_target_net()
 
         # Test
@@ -129,7 +140,7 @@ def train(
     seed,
     train_rl_epochs,
     rl_num_sample,
-    rl_ca_ratio,
+    rl_use_td3,
     exploit,
     rl_replay_strategy,
     num_demo,
@@ -172,7 +183,7 @@ def train(
     params["eps_length"] = eps_length
     params["env_args"] = dict(env_args) if env_args else {}
     params["train_rl_epochs"] = train_rl_epochs
-    params["rl_ca_ratio"] = rl_ca_ratio
+    params["rl_use_td3"] = rl_use_td3
     params["rl_num_sample"] = rl_num_sample
     params["exploit"] = exploit
     params["rl_replay_strategy"] = rl_replay_strategy  # For HER: future or none
@@ -258,9 +269,7 @@ if __name__ == "__main__":
     )
     # DDPG configuration
     ap.parser.add_argument("--rl_num_sample", help="number of ddpg heads", type=int, default=1)
-    ap.parser.add_argument(
-        "--rl_ca_ratio", help="use 2 for td3 or 1 for normal ddpg", type=int, choices=[1, 2], default=1
-    )  # do not use this flag for now
+    ap.parser.add_argument("--rl_use_td3", help="whether or not to use td3", type=int, default=1)
     ap.parser.add_argument("--exploit", help="whether or not to use e-greedy exploration", type=int, default=0)
     ap.parser.add_argument(
         "--rl_replay_strategy",
@@ -275,7 +284,7 @@ if __name__ == "__main__":
         "--demo_critic",
         help="use a neural network as critic or a gaussian process. Need to provide or train a demo policy if not set to none",
         type=str,
-        choices=["shaping", "none"],
+        choices=["nf", "shaping", "none"],
         default="none",
     )
     ap.parser.add_argument(

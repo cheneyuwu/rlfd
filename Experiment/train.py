@@ -98,6 +98,7 @@ class Train(Experiment):
         command = self.run.copy()
         command["--logdir"] = self.result_dir + "RLDemoShaping"
         command["--save_path"] = self.result_dir + "RLDemoShaping/"
+        command["--rl_replay_strategy"] = "none"
         command["--demo_critic"] = "shaping"
         return command
 
