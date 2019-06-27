@@ -1,25 +1,5 @@
 import os
-from collections import OrderedDict
-
-from yw.util.cmd_util import Command
-from train import Experiment, Demo, Train, Display, Plot
-
-
-class Uncertainty(Experiment):
-    """For result plotting
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.run = OrderedDict([("python", os.path.join(self.flow_dir, "query/query_uncertainty_2.py"))])
-
-    @Command.execute
-    def check(self, **override):
-        command = self.run.copy()
-        command["--load_dir"] = self.result_dir + "RLNoDemo/uncertainty/"
-        command["--save"] = 1
-        return command
-
+from train import Demo, Train, Display, Plot
 
 if __name__ == "__main__":
 
@@ -27,16 +7,16 @@ if __name__ == "__main__":
     train_exp = Train()
     display_exp = Display()
     plot_exp = Plot()
-    uncertainty_exp = Uncertainty()
 
-    environment = "Reach1D"
+
+    environment = "BlockReachFirstOrderSparse"
     train_exp.env = environment
     train_exp.num_cpu = 1
     train_exp.update()
 
-    demo_data_size = 128
+    demo_data_size = 16
     train_rl_epochs = 64
-    seed = 2
+    seed = 1
     for i in range(1):
         seed += i * 100
 
@@ -48,8 +28,6 @@ if __name__ == "__main__":
 
         # Train the RL without demonstration
         # assert not train_exp.rl_her_only(
-        #     r_scale=1.0,
-        #     r_shift=0.0,
         #     rl_action_l2=0.5,
         #     rl_scope="critic_demo",
         #     n_cycles=10,
@@ -61,11 +39,10 @@ if __name__ == "__main__":
         # assert not train_exp.rl_only(
         #     rl_action_l2=0.5,
         #     rl_scope="rl_only",
-        #     n_cycles=4,
-        #     n_batches=8,
+        #     n_cycles=10,
         #     seed=seed + 10,
         #     rl_num_sample=1,
-        #     rl_batch_size=32,
+        #     rl_batch_size=256,
         #     train_rl_epochs=train_rl_epochs,
         # )
 
@@ -78,28 +55,22 @@ if __name__ == "__main__":
         #     shuffle=0,
         # )
 
+        # Train the RL with demonstration
         # assert not train_exp.rl_with_shaping(
         #     rl_action_l2=0.5,
-        #     rl_scope="rl_only",
-        #     n_cycles=4,
-        #     n_batches=8,
+        #     rl_scope="rl_with_shaping",
+        #     n_cycles=10,
         #     seed=seed + 10,
         #     rl_num_sample=1,
-        #     rl_batch_size=32,
+        #     rl_batch_size=256,
         #     train_rl_epochs=train_rl_epochs,
         #     demo_critic="nf",
         #     num_demo=demo_data_size,
-        #     demo_file=train_exp.result_dir + "/DemoData/" + environment + ".npz",
+        #     demo_file=train_exp.result_dir+"/DemoData/merged_demo.npz"
         # )
 
     # Plot the training result
-    # assert not plot_exp.plot(
-    #     dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"]
-    # )
-
-    # Check the uncertainty output of the demonstration output
-    # assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RL/uncertainty/", save=0)
-    # assert not uncertainty_exp.check(load_dir=uncertainty_exp.result_dir + "RLDemoShaping/uncertainty/", save=0)
+    # assert not plot_exp.plot(dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"])
 
     # Display a policy result (calls run_agent).
-    # assert not display_exp.display(policy_file=display_exp.result_dir + "RLDemoShaping/rl/policy_latest.pkl", num_itr=3)
+    # assert not display_exp.display(policy_file=display_exp.result_dir + "/RLDemoShaping/rl/policy_latest.pkl", num_itr=3)
