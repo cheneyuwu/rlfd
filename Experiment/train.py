@@ -33,8 +33,8 @@ class Demo(Experiment):
     @Command.execute
     def generate_demo(self, **override):
         command = self.run.copy()
-        command["--policy_file"] = self.result_dir + "RL/rl/policy_latest.pkl"
-        command["--store_dir"] = self.result_dir + "DemoData/"
+        command["--policy_file"] = os.path.join(self.result_dir, "RL/rl/policy_latest.pkl")
+        command["--store_dir"] = os.path.join(self.result_dir, "DemoData")
         command["--num_itr"] = 128
         command["--entire_eps"] = 1
         command["--seed"] = 0
@@ -71,24 +71,24 @@ class Train(Experiment):
     @Command.execute
     def rl_her_only(self, **kwargs):
         command = self.run.copy()
-        command["--logdir"] = self.result_dir + "RLHER/"
-        command["--save_path"] = self.result_dir + "RLHER/"
+        command["--logdir"] = os.path.join(self.result_dir, "RLHER")
+        command["--save_path"] = os.path.join(self.result_dir, "RLHER")
         command["--rl_replay_strategy"] = "her"
         return command
 
     @Command.execute
     def rl_only(self, **kwargs):
         command = self.run.copy()
-        command["--logdir"] = self.result_dir + "RL/"
-        command["--save_path"] = self.result_dir + "RL/"
+        command["--logdir"] = os.path.join(self.result_dir, "RL")
+        command["--save_path"] = os.path.join(self.result_dir, "RL")
         command["--rl_replay_strategy"] = "none"
         return command
 
     @Command.execute
     def rl_her_with_shaping(self, **kwargs):
         command = self.run.copy()
-        command["--logdir"] = self.result_dir + "RLHERDemoShaping"
-        command["--save_path"] = self.result_dir + "RLDemoShaping/"
+        command["--logdir"] = os.path.join(self.result_dir, "RLHERDemoShaping")
+        command["--save_path"] = os.path.join(self.result_dir, "RLDemoShaping")
         command["--rl_replay_strategy"] = "her"
         command["--demo_critic"] = "shaping"
         return command
@@ -96,8 +96,8 @@ class Train(Experiment):
     @Command.execute
     def rl_with_shaping(self, **kwargs):
         command = self.run.copy()
-        command["--logdir"] = self.result_dir + "RLDemoShaping"
-        command["--save_path"] = self.result_dir + "RLDemoShaping/"
+        command["--logdir"] = os.path.join(self.result_dir, "RLDemoShaping")
+        command["--save_path"] = os.path.join(self.result_dir, "RLDemoShaping")
         command["--rl_replay_strategy"] = "none"
         command["--demo_critic"] = "shaping"
         return command
@@ -114,7 +114,7 @@ class Display(Experiment):
     @Command.execute
     def display(self, **override):
         command = self.run.copy()
-        command["--policy_file"] = self.result_dir + "RLDemoCriticPolicy/rl/policy_latest.pkl"
+        command["--policy_file"] = os.path.join(self.result_dir, "RLDemoCriticPolicy/rl/policy_latest.pkl")
         return command
 
 
@@ -129,7 +129,7 @@ class Plot(Experiment):
     @Command.execute
     def plot(self, **override):
         command = self.run.copy()
-        command["--dir"] = [self.result_dir + "/RLNoDemo"]
+        command["--dir"] = [os.path.join(self.result_dir, "RLNoDemo")]
         command["--xy"] = ["epoch:test/success_rate"]
         return command
 

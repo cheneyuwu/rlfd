@@ -30,7 +30,17 @@ from yw.util.mpi_util import mpi_average
 
 
 def train_reinforce(
-    save_path, save_interval, policy, rollout_worker, evaluator, n_epochs, n_batches, n_cycles, demo_file, **kwargs
+    save_path,
+    save_interval,
+    policy,
+    rollout_worker,
+    evaluator,
+    n_epochs,
+    n_batches,
+    n_cycles,
+    demo_file,
+    shaping_policy=None,
+    **kwargs,
 ):
     rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
 
@@ -40,12 +50,14 @@ def train_reinforce(
         latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
         best_policy_path = os.path.join(policy_save_path, "policy_best.pkl")
         periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")
+        # shaping
+        shaping_save_path = save_path + "/shaping/"
+        os.makedirs(shaping_save_path, exist_ok=True)
+        latest_shaping_path = os.path.join(shaping_save_path, "shaping_latest.ckpt")
+        # best_shaping_path = os.path.join(shaping_save_path, "shaping_best.ckpt")
+        # periodic_shaping_path = os.path.join(shaping_save_path, "policy_{}.ckpt")
         # queries
-        ac_output_save_path = save_path + "/ac_output/"
-        critic_q_save_path = save_path + "/critic_q/"
         uncertainty_save_path = save_path + "/uncertainty/"
-        os.makedirs(ac_output_save_path, exist_ok=True)
-        os.makedirs(critic_q_save_path, exist_ok=True)
         os.makedirs(uncertainty_save_path, exist_ok=True)
 
     if policy.demo_actor != "none" or policy.demo_critic != "none":
@@ -53,14 +65,20 @@ def train_reinforce(
 
     # Pre-Training a potential function
     if policy.demo_critic != "none":
-        for epoch in range(4000):
-            loss = policy.train_shaping()
-            if epoch % 100 == 0:
-                print("epoch: {} demo shaping loss: {}".format(epoch, loss))
-                policy.query_potential()
-            if loss < -0.5:  # assume this value is small enough
-                policy.query_potential()
-                break
+        if shaping_policy == None:
+            logger.info("Training the policy for reward shaping.")
+            for epoch in range(200):
+                loss = policy.train_shaping()
+                if rank == 0 and epoch % 100 == 0:
+                    logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
+                if rank == 0 and save_path and epoch % 100 == 0:
+                    logger.info("Saving latest policy to {}.".format(latest_shaping_path))
+                    policy.save_shaping_weights(latest_shaping_path)
+                # if loss < -0.5:  # assume this value is small enough
+                #     break
+        else:
+            logger.info("Use the provided policy weights: {}".format(shaping_policy))
+            policy.load_shaping_weights(shaping_policy)
 
     best_success_rate = -1
 
@@ -147,6 +165,7 @@ def train(
     demo_critic,
     demo_actor,
     demo_file,
+    shaping_policy,
     debug_params,
     unknown_params,
     **kwargs,
@@ -237,6 +256,7 @@ def train(
         n_cycles=params["n_cycles"],
         n_batches=params["n_batches"],
         demo_file=demo_file,
+        shaping_policy=shaping_policy,
     )
 
 
@@ -295,6 +315,7 @@ if __name__ == "__main__":
         default="none",
     )
     ap.parser.add_argument("--demo_file", help="demonstration training dataset", type=str, default=None)
+    ap.parser.add_argument("--shaping_policy", help="well trained reward shaping policy", type=str, default=None)
     # others
     ap.parser.add_argument(
         "--debug_params", help="override some parameters for internal regression tests", type=int, default=0
