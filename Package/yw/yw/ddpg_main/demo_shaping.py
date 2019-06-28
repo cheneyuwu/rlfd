@@ -20,6 +20,8 @@ class DemoShaping:
             u_2 - output from the actor of the main network
         """
         self.gamma = gamma
+        self.scope = tf.get_variable_scope()
+        self.saver = tf.train.Saver(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name))
 
     def reward(self, o, g, u, o_2, g_2, u_2):
         potential = self.potential(o, g, u)
@@ -28,6 +30,12 @@ class DemoShaping:
 
     def potential(self, o, g, u):
         raise NotImplementedError
+
+    def save_weights(self, sess, path):
+        self.saver.save(sess, path)
+
+    def load_weights(self, sess, path):
+        self.saver.restore(sess, path)
 
 
 class ManualDemoShaping(DemoShaping):
@@ -171,6 +179,7 @@ class MAFDemoShaping(DemoShaping):
             u_2 - output from the actor of the main network
             demo_inputs_tf - demo_inputs that contains all the transitons from demonstration
         """
+
         self.demo_inputs_tf = demo_inputs_tf
         demo_state_tf = self._cast_concat_inputs(
             self.demo_inputs_tf["o"],
@@ -261,10 +270,10 @@ def test_nf(demo_file, **kwargs):
 
             idx = np.logical_and(X0[:, 0] > 0, X0[:, 1] > 0)
             pl.scatter(X1[idx, 0], X1[idx, 1], s=10, color="black")
-            # pl.xlim([-5, 30])
-            # pl.ylim([-10, 10])
-            pl.xlim([-1, 1])
-            pl.ylim([-1, 1])
+            pl.xlim([-5, 30])
+            pl.ylim([-10, 10])
+            # pl.xlim([-1, 1])
+            # pl.ylim([-1, 1])
             pl.xlabel("state")
             pl.ylabel("action")
             pl.title(titles[j])
@@ -295,10 +304,10 @@ def test_nf(demo_file, **kwargs):
     ax = pl.subplot(gs[0, 0])
     ax.clear()
     ax.scatter(np_samples[:, 0], np_samples[:, 1], s=10, color="red")
-    # pl.xlim([-5, 30])
-    # pl.ylim([-10, 10])
-    pl.xlim([-1, 1])
-    pl.ylim([-1, 1])
+    pl.xlim([-5, 30])
+    pl.ylim([-10, 10])
+    # pl.xlim([-1, 1])
+    # pl.ylim([-1, 1])
     pl.xlabel("state")
     pl.ylabel("action")
     pl.title("Training samples")

@@ -318,6 +318,14 @@ class DDPG(object):
             loss, _ = self.sess.run([self.demo_shaping.loss, self.demo_shaping.train_op], feed_dict=feed)
         return loss
 
+    def save_shaping_weights(self, path):
+        # save the weights of the potential function
+        self.demo_shaping.save_weights(self.sess, path)
+
+    def load_shaping_weights(self, path):
+        # save the weights of the potential function
+        self.demo_shaping.load_weights(self.sess, path)
+
     def train(self):
         batch = self.sample_batch()
         feed = {self.inputs_tf[k]: batch[k] for k in self.inputs_tf.keys()}
