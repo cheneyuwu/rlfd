@@ -758,6 +758,65 @@ class DDPG(object):
 
         logger.info("Query: potential -> Plot the potential over (s, a) space of demo shaping.")
 
+        def visualize_training_data(gs, row, dim1, dim2):
+            # sample all training data
+            demo_data = self.demo_buffer.sample_all()
+            # select some dimension of the concatenated data (concatenate the data in the same order as in demo_shaping)
+            concat_demo_data = demo_data["o"]
+            # if g != None:
+            #     # for multigoal environments, we have goal as another states
+            #     concat_demo_data = np.concatenate([concat_demo_data, demo_data["g"]], axis=1)
+            concat_demo_data = np.concatenate([concat_demo_data, demo_data["u"]], axis=1)
+
+            x = concat_demo_data[:, dim1 : dim1 + 1]
+            y = concat_demo_data[:, dim2 : dim2 + 1]
+            np_samples = np.concatenate((x, y), axis=1)
+
+            # Plot Training dataset
+            ax = pl.subplot(gs[row, 0])
+            ax.clear()
+            ax.scatter(np_samples[:, 0], np_samples[:, 1], s=10, color="red")
+            ax.set_xlim([-1, 1])
+            ax.set_ylim([-1, 1])
+            ax.set_xlabel("state")
+            ax.set_ylabel("action")
+            ax.set_title("Training samples")
+
+        def visualize_potential(gs, row):
+            """Only use this function for 1d first order reacher problem
+            """
+            potential = self.demo_shaping_check_ls[0]
+
+            num_point = 24
+            ls = np.linspace(-1.0, 1.0, num_point)
+            ls2 = ls * 2
+            o_1, o_2 = np.meshgrid(ls, ls)
+            u_1, u_2 = np.meshgrid(ls2, ls2)
+            o_r = np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1)
+            u_r = np.concatenate((u_1.reshape(-1, 1), u_2.reshape(-1, 1)), axis=1)
+
+            feed = {self.inputs_tf["o"]: o_r, self.inputs_tf["u"]: u_r}
+            ret = self.sess.run([potential], feed_dict=feed)
+
+            o_r = o_1
+            u_r = o_2
+            for i in range(len(ret)):
+                ret[i] = ret[i].reshape((num_point, num_point))
+
+            ax = pl.subplot(gs[row, 1], projection="3d")
+            ax.clear()
+            ax.plot_surface(o_r, u_r, ret[0])
+            ax.set_xlabel("observation")
+            ax.set_ylabel("action")
+            ax.set_zlabel("potential")
+            for item in (
+                [ax.title, ax.xaxis.label, ax.yaxis.label, ax.zaxis.label]
+                + ax.get_xticklabels()
+                + ax.get_yticklabels()
+                + ax.get_zticklabels()
+            ):
+                item.set_fontsize(6)
+
         def sample_flow(base_dist, transformed_dist):
             x = base_dist.sample(512)
             samples = [x]
@@ -769,96 +828,49 @@ class DDPG(object):
 
             return x, samples, names
 
-        def visualize_flow(gs, row, samples, titles):
+        def visualize_flow(gs, row, samples, titles, dim1, dim2):
             X0 = samples[0]
 
             for i, j in zip([0, len(samples) - 1], [0, 1]):  # range(len(samples)):
                 X1 = samples[i]
 
-                idx = np.logical_and(X0[:, 0] < 0, X0[:, 1] < 0)
                 ax = pl.subplot(gs[row, j])
                 ax.clear()
-                ax.scatter(X1[idx, 0], X1[idx, 1], s=10, color="red")
 
-                idx = np.logical_and(X0[:, 0] > 0, X0[:, 1] < 0)
-                ax.scatter(X1[idx, 0], X1[idx, 1], s=10, color="green")
+                idx = np.logical_and(X0[:, dim1] < 0, X0[:, dim2] < 0)
+                ax.scatter(X1[idx, dim1], X1[idx, dim2], s=10, color="red")
 
-                idx = np.logical_and(X0[:, 0] < 0, X0[:, 1] > 0)
-                ax.scatter(X1[idx, 0], X1[idx, 1], s=10, color="blue")
+                idx = np.logical_and(X0[:, dim1] > 0, X0[:, dim2] < 0)
+                ax.scatter(X1[idx, dim1], X1[idx, dim2], s=10, color="green")
 
-                idx = np.logical_and(X0[:, 0] > 0, X0[:, 1] > 0)
-                ax.scatter(X1[idx, 0], X1[idx, 1], s=10, color="black")
+                idx = np.logical_and(X0[:, dim1] < 0, X0[:, dim2] > 0)
+                ax.scatter(X1[idx, dim1], X1[idx, dim2], s=10, color="blue")
+
+                idx = np.logical_and(X0[:, dim1] > 0, X0[:, dim2] > 0)
+                ax.scatter(X1[idx, dim1], X1[idx, dim2], s=10, color="black")
+
                 ax.set_xlim([-1, 1])
                 ax.set_ylim([-1, 1])
                 ax.set_xlabel("state")
                 ax.set_ylabel("action")
                 ax.set_title(titles[j])
 
-        demo_data = self.demo_buffer.sample_all()
-
-        # reach1d first order
-        # o = demo_data["o"][:, :-1, :].reshape((-1, 1))
-        # u = demo_data["u"].reshape((-1, 1))
-        # reach1d second order
-        o = demo_data["o"][:, 0:1]
-        u = demo_data["o"][:, 1:2]
-        np_samples = np.concatenate((o, u), axis=1)
-
         # Turn on interactive mode to see immediate change
         pl.ion()
         # pl.figure() # open a figure and switch to the figure
         gs = gridspec.GridSpec(2, 2)
 
-        # Plot Training dataset
-        ax = pl.subplot(gs[0, 0])
-        ax.clear()
-        ax.scatter(np_samples[:, 0], np_samples[:, 1], s=10, color="red")
-        ax.set_xlim([-1, 1])
-        ax.set_ylim([-1, 1])
-        ax.set_xlabel("state")
-        ax.set_ylabel("action")
-        ax.set_title("Training samples")
+        # Select dimension, the order is [o1,..., on, g1,..., gm, a1,...,ak]
+        dim1 = 1
+        dim2 = 3
 
-        # demo_shaping = NormalizingFlowDemoShaping(gamma=1.0, demo_inputs_tf=inputs_tf)
-        # demo_shaping = MAFDemoShaping(gamma=1.0, demo_inputs_tf=inputs_tf)
-        demo_shaping = self.demo_shaping
+        # Plot training data distribution
+        visualize_training_data(gs, 0, dim1, dim2)
 
         # Flow after training
-        _, samples_with_training, _ = sample_flow(demo_shaping.base_dist, demo_shaping.nn.dist)
+        _, samples_with_training, _ = sample_flow(self.demo_shaping.base_dist, self.demo_shaping.nn.dist)
         samples_with_training = self.sess.run(samples_with_training)
-        visualize_flow(gs, 1, samples_with_training, ["Base dist", "Samples w/ training"])
-
-        potential = self.demo_shaping_check_ls[0]
-
-        num_point = 24
-        ls = np.linspace(-1.0, 1.0, num_point)
-        ls2 = ls * 2
-        o_1, o_2 = np.meshgrid(ls, ls)
-        u_1, u_2 = np.meshgrid(ls2, ls2)
-        o_r = np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1)
-        u_r = np.concatenate((u_1.reshape(-1, 1), u_2.reshape(-1, 1)), axis=1)
-
-        feed = {self.inputs_tf["o"]: o_r, self.inputs_tf["u"]: u_r}
-        ret = self.sess.run([potential], feed_dict=feed)
-
-        o_r = o_1
-        u_r = o_2
-        for i in range(len(ret)):
-            ret[i] = ret[i].reshape((num_point, num_point))
-
-        ax = pl.subplot(gs[0, 1], projection="3d")
-        ax.clear()
-        ax.plot_surface(o_r, u_r, ret[0])
-        ax.set_xlabel("observation")
-        ax.set_ylabel("action")
-        ax.set_zlabel("potential")
-        for item in (
-            [ax.title, ax.xaxis.label, ax.yaxis.label, ax.zaxis.label]
-            + ax.get_xticklabels()
-            + ax.get_yticklabels()
-            + ax.get_zticklabels()
-        ):
-            item.set_fontsize(6)
+        visualize_flow(gs, 1, samples_with_training, ["Base dist", "Samples w/ training"], dim1, dim2)
 
         pl.show()
         pl.pause(0.001)
