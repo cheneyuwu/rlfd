@@ -6,7 +6,20 @@ from yw.util.tf_util import nn
 
 class ActorCritic:
     def __init__(
-        self, inputs_tf, dimo, dimg, dimu, max_u, o_stats, g_stats, num_sample, use_td3, hidden, layers, **kwargs
+        self,
+        inputs_tf,
+        dimo,
+        dimg,
+        dimu,
+        max_u,
+        o_stats,
+        g_stats,
+        num_sample,
+        use_td3,
+        add_pi_noise,
+        hidden,
+        layers,
+        **kwargs
     ):
         """The actor-critic network and related training code.
 
@@ -41,7 +54,14 @@ class ActorCritic:
         with tf.variable_scope("pi"):
             for i in range(num_sample):
                 with tf.variable_scope("pi" + str(i)):
-                    self.pi_tf.append(max_u * tf.tanh(nn(state, [hidden] * layers + [dimu])))
+                    nn_pi_tf = tf.tanh(nn(state, [hidden] * layers + [dimu]))
+                    if add_pi_noise: # for td3, add noise!
+                        nn_pi_tf += tf.distributions.Normal(loc=[0.0] * dimu, scale=1.0).sample(
+                            [tf.shape(self.o_tf)[0]]
+                        )
+                        nn_pi_tf = tf.clip_by_value(nn_pi_tf, -1.0, 1.0)
+                    pi_tf = max_u * nn_pi_tf
+                    self.pi_tf.append(pi_tf)
         with tf.variable_scope("Q"):
             self._input_Q = []
             self.Q_pi_tf = []

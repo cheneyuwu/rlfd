@@ -57,8 +57,10 @@ def train_reinforce(
         # best_shaping_path = os.path.join(shaping_save_path, "shaping_best.ckpt")
         # periodic_shaping_path = os.path.join(shaping_save_path, "policy_{}.ckpt")
         # queries
-        uncertainty_save_path = save_path + "/uncertainty/"
-        os.makedirs(uncertainty_save_path, exist_ok=True)
+        query_uncertainty_save_path = save_path + "/uncertainty/"
+        os.makedirs(query_uncertainty_save_path, exist_ok=True)
+        query_shaping_save_path = save_path + "/query_shaping/"
+        os.makedirs(query_shaping_save_path, exist_ok=True)
 
     if policy.demo_actor != "none" or policy.demo_critic != "none":
         policy.init_demo_buffer(demo_file, update_stats=policy.demo_actor != "none")
@@ -69,9 +71,19 @@ def train_reinforce(
             logger.info("Training the policy for reward shaping.")
             for epoch in range(2000):
                 loss = policy.train_shaping()
+
                 if rank == 0 and epoch % 100 == 0:
                     logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-                    policy.query_potential()
+                    # query
+                    dim1, dim2 = 0, 1
+                    policy.query_potential(
+                        dim1=dim1,
+                        dim2=dim2,
+                        filename=os.path.join(
+                            query_shaping_save_path, "dim_{}_{}_{:03d}.jpg".format(dim1, dim2, epoch)
+                        ),
+                    )
+
                 if rank == 0 and save_path and epoch % 100 == 0:
                     logger.info("Saving latest policy to {}.".format(latest_shaping_path))
                     policy.save_shaping_weights(latest_shaping_path)
@@ -87,9 +99,7 @@ def train_reinforce(
         logger.debug("train_ddpg_main.train_reinforce -> epoch: {}".format(epoch))
 
         # Store anything we need into a numpyz file.
-        # policy.query_ac_output(os.path.join(ac_output_save_path, "query_{:03d}.npz".format(epoch)))
-        # policy.query_critic_q(os.path.join(critic_q_save_path, "query_latest.npz"))
-        # policy.query_uncertainty(os.path.join(uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
+        # policy.query_uncertainty(os.path.join(query_uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
 
         # Train
         rollout_worker.clear_history()
