@@ -750,7 +750,7 @@ class DDPG(object):
     #     policy.Q_pi_var_tf  ->
     #     policy._input_Q     ->
 
-    def query_potential(self, filenam=None):
+    def query_potential(self, dim1=0, dim2=1, filename=None):
         """Check the output from demo shaping potential function
         """
         if not "Reach" in self.info["env_name"]:
@@ -860,10 +860,6 @@ class DDPG(object):
         # pl.figure() # open a figure and switch to the figure
         gs = gridspec.GridSpec(2, 2)
 
-        # Select dimension, the order is [o1,..., on, g1,..., gm, a1,...,ak]
-        dim1 = 1
-        dim2 = 3
-
         # Plot training data distribution
         visualize_training_data(gs, 0, dim1, dim2)
 
@@ -872,6 +868,9 @@ class DDPG(object):
         samples_with_training = self.sess.run(samples_with_training)
         visualize_flow(gs, 1, samples_with_training, ["Base dist", "Samples w/ training"], dim1, dim2)
 
+        if filename != None:
+            logger.info("Query: potential -> storing query results to {}".format(filename))
+            pl.savefig(filename)
         pl.show()
         pl.pause(0.001)
 
