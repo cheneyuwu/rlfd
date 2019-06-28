@@ -74,7 +74,6 @@ def train_reinforce(
 
                 if rank == 0 and epoch % 100 == 0:
                     logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-
                     # query
                     dim1, dim2 = 0, 1
                     policy.query_potential(

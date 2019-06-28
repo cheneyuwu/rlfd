@@ -341,11 +341,16 @@ class DDPG(object):
         critic_loss, actor_loss, Q_grad, pi_grad = self.sess.run(
             [self.Q_loss_tf, self.pi_loss_tf, self.Q_grad_tf, self.pi_grad_tf], feed_dict=feed
         )
-        self.Q_adam.update(Q_grad, self.Q_lr)
-        self.pi_adam.update(pi_grad, self.pi_lr)
 
-        logger.debug("DDPG.train -> critic_loss:{}, actor_loss:{}".format(critic_loss, actor_loss))
+        # update Q every time
+        self.Q_adam.update(Q_grad, self.Q_lr)
+        # update Pi every other time
+        if self.training_step % 2 == 0:
+            self.pi_adam.update(pi_grad, self.pi_lr)
+        self.training_step += 1
+
         # for debugging
+        logger.debug("DDPG.train -> critic_loss:{}, actor_loss:{}".format(critic_loss, actor_loss))
         self.current_batch = batch
 
         return critic_loss, actor_loss
@@ -434,6 +439,7 @@ class DDPG(object):
                 use_td3=self.use_td3,
                 hidden=self.hidden,
                 layers=self.layers,
+                add_pi_noise=False,
             )
             self.main_shaping = ActorCritic(
                 inputs_tf=self.target_inputs_tf,
@@ -447,6 +453,7 @@ class DDPG(object):
                 use_td3=self.use_td3,
                 hidden=self.hidden,
                 layers=self.layers,
+                add_pi_noise=False,
             )
         with tf.variable_scope("target") as vs:
             self.target = ActorCritic(
@@ -461,6 +468,7 @@ class DDPG(object):
                 use_td3=self.use_td3,
                 hidden=self.hidden,
                 layers=self.layers,
+                add_pi_noise=True,
             )
         assert len(self._vars("main")) == len(self._vars("target"))
 
@@ -669,6 +677,7 @@ class DDPG(object):
         self.Q_adam.sync()
         self.pi_adam.sync()
         self.init_target_net()
+        self.training_step = 0 # initialize number of training step
 
     def _random_action(self, n):
         return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
