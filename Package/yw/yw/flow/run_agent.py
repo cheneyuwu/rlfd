@@ -5,8 +5,10 @@
 
 """
 import os
-import numpy as np
 import pickle
+
+import numpy as np
+import tensorflow as tf
 
 try:
     from mpi4py import MPI
@@ -23,7 +25,13 @@ from yw.tool import logger
 
 def main(policy_file, seed, num_itr, render, env_args, **kwargs):
 
-    rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
+    # Reset default graph every time this function is called.
+    tf.reset_default_graph()
+    tf.InteractiveSession()
+
+    rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0    
+    
+    # Seed everything
     set_global_seeds(seed)
 
     # Load policy.

@@ -1,7 +1,9 @@
 import sys
 import os
-import numpy as np
 import pickle
+
+import numpy as np
+import tensorflow as tf
 
 try:
     from mpi4py import MPI
@@ -20,6 +22,10 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, shuffle, render, e
     assert policy_file is not None, "Must provide the policy_file!"
 
     # Setup
+    # reset default graph every time this function is called.
+    tf.reset_default_graph()
+    tf.InteractiveSession()
+    
     rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
     set_global_seeds(seed)
 

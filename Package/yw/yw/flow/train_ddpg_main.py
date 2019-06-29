@@ -22,6 +22,7 @@ except ImportError:
 import json
 import pickle
 import numpy as np
+import tensorflow as tf
 
 from yw.tool import logger
 from yw.util.cmd_util import ArgParser
@@ -186,6 +187,10 @@ def main(
     # Consider rank as pid.
     rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
     num_cpu = MPI.COMM_WORLD.Get_size() if MPI != None else 1
+    
+    # Reset default graph every time this function is called.
+    tf.reset_default_graph()
+    tf.InteractiveSession()
 
     # Configure logging.
     if rank == 0:
