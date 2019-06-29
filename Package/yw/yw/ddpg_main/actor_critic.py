@@ -1,4 +1,7 @@
 import tensorflow as tf
+import tensorflow_probability as tfp
+
+tfd = tfp.distributions
 
 from yw.tool import logger
 from yw.util.tf_util import nn
@@ -55,8 +58,8 @@ class ActorCritic:
             for i in range(num_sample):
                 with tf.variable_scope("pi" + str(i)):
                     nn_pi_tf = tf.tanh(nn(state, [hidden] * layers + [dimu]))
-                    if add_pi_noise: # for td3, add noise!
-                        nn_pi_tf += tf.distributions.Normal(loc=[0.0] * dimu, scale=1.0).sample(
+                    if use_td3 and add_pi_noise: # for td3, add noise!
+                        nn_pi_tf += tfd.Normal(loc=[0.0] * dimu, scale=1.0).sample(
                             [tf.shape(self.o_tf)[0]]
                         )
                         nn_pi_tf = tf.clip_by_value(nn_pi_tf, -1.0, 1.0)

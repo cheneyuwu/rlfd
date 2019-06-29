@@ -64,6 +64,7 @@ class RolloutWorker:
 
         self.success_history = deque(maxlen=history_len)
         self.total_reward_history = deque(maxlen=history_len)
+        self.total_shaping_reward_history = deque(maxlen=history_len)
         self.Q_history = deque(maxlen=history_len)
         self.n_episodes = 0
 
@@ -103,7 +104,7 @@ class RolloutWorker:
         ag[:] = self.initial_ag
 
         # generate episodes
-        obs, achieved_goals, acts, goals, rewards, successes = [], [], [], [], [], []
+        obs, achieved_goals, acts, goals, rewards, successes, shaping_rewards = [], [], [], [], [], [], []
         info_values = [
             np.empty((self.T, self.rollout_batch_size, self.dims["info_" + key]), np.float32) for key in self.info_keys
         ]
@@ -130,7 +131,9 @@ class RolloutWorker:
             o_new = np.empty((self.rollout_batch_size, self.dims["o"]))
             ag_new = np.empty((self.rollout_batch_size, self.dims["g"]))
             r = np.empty((self.rollout_batch_size, 1))  # reward
+            # from info
             success = np.zeros(self.rollout_batch_size)
+            shaping_reward = np.zeros((self.rollout_batch_size, 1))
             # compute new states and observations
             for i in range(self.rollout_batch_size):
                 try:
@@ -138,6 +141,8 @@ class RolloutWorker:
                     r[i] = curr_r
                     if "is_success" in info:
                         success[i] = info["is_success"]
+                    if "shaping_reward" in info:
+                        shaping_reward[i] = info["shaping_reward"]
                     o_new[i] = curr_o_new["observation"]
                     ag_new[i] = curr_o_new["achieved_goal"]
                     for idx, key in enumerate(self.info_keys):
@@ -154,10 +159,11 @@ class RolloutWorker:
 
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
-            successes.append(success.copy())
-            acts.append(u.copy())
             goals.append(self.g.copy())
+            acts.append(u.copy())
             rewards.append(r.copy())
+            successes.append(success.copy())
+            shaping_rewards.append(shaping_reward.copy())
             if self.compute_Q:
                 Qs.append(Q.copy())
             o[...] = o_new
@@ -179,6 +185,11 @@ class RolloutWorker:
         assert successful.shape == (self.rollout_batch_size,)
         success_rate = np.mean(successful)
         self.success_history.append(success_rate)
+        # shaping reward
+        total_shaping_rewards = np.sum(np.array(shaping_rewards), axis=0).reshape(-1)
+        assert total_shaping_rewards.shape == (self.rollout_batch_size,), total_shaping_rewards.shape
+        total_shaping_reward = np.mean(total_shaping_rewards)
+        self.total_shaping_reward_history.append(total_shaping_reward)
         # total reward
         total_rewards = np.sum(np.array(rewards), axis=0).reshape(-1)
         assert total_rewards.shape == (self.rollout_batch_size,), total_rewards.shape
@@ -195,11 +206,15 @@ class RolloutWorker:
         """Clears all histories that are used for statistics
         """
         self.total_reward_history.clear()
+        self.total_shaping_reward_history.clear()
         self.success_history.clear()
         self.Q_history.clear()
 
     def current_total_reward(self):
         return np.mean(self.total_reward_history)
+
+    def current_total_shaping_reward(self):
+        return np.mean(self.total_shaping_reward_history)
 
     def current_success_rate(self):
         return np.mean(self.success_history)
@@ -217,8 +232,9 @@ class RolloutWorker:
         """Generates a dictionary that contains all collected statistics.
         """
         logs = []
-        logs += [("success_rate", np.mean(self.success_history))]
         logs += [("total_reward", np.mean(self.total_reward_history))]
+        logs += [("total_shaping_reward", np.mean(self.total_shaping_reward_history))]
+        logs += [("success_rate", np.mean(self.success_history))]
         if self.compute_Q:
             logs += [("mean_Q", np.mean(self.Q_history))]
         logs += [("episode", self.n_episodes)]

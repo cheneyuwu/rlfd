@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 
+from yw.util.cmd_util import ArgParser
 from yw.util.reader_util import load_csv
 
 
@@ -69,12 +70,12 @@ def load_results(root_dir_or_dirs):
 
 
 def plot_results(allresults, xys, target_dir, smooth=False):
-    
+
     # collect data
     data = {}
     for results in allresults:
         # get environment name and algorithm configuration summary (should always exist)
-        env_id = results["params"]["env_name"]
+        env_id = results["params"]["env_name"].replace("Dense", "")
         config = results["params"]["config"]
         assert config != ""
 
@@ -113,7 +114,7 @@ def plot_results(allresults, xys, target_dir, smooth=False):
                 ax.fill_between(xs[0], np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25)
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_label)
-                ax.legend(fontsize=6)
+                ax.legend(fontsize=4)
                 # fig.ylim(0, 1)
         fig.suptitle(env_id)
         save_path = os.path.join(target_dir, "fig_{}.png".format(env_id))
@@ -121,27 +122,26 @@ def plot_results(allresults, xys, target_dir, smooth=False):
         plt.savefig(save_path)
 
 
-def plot(dirs, xys, save_path, smooth, **kwargs):
+def main(dirs, xys, save_path, smooth, **kwargs):
     results = load_results(dirs)
     # get directory to save results
     target_dir = save_path if save_path else dirs[0]
     plot_results(results, xys, target_dir, smooth)
 
 
-if __name__ == "__main__":
-    from yw.util.cmd_util import ArgParser
+ap = ArgParser()
+ap.parser.add_argument("--dir", help="result directory", type=str, action="append", dest="dirs")
+ap.parser.add_argument("--save_path", help="plot saving directory", type=str, default=None)
+ap.parser.add_argument(
+    "--xy",
+    help="value on x and y axis, splitted by :",
+    type=str,
+    # default=["epoch:test/success_rate"],
+    action="append",
+    dest="xys",
+)
+ap.parser.add_argument("--smooth", help="smooth the curve", type=int, default=0)
 
-    ap = ArgParser()
-    ap.parser.add_argument("--dir", help="result directory", type=str, action="append", dest="dirs")
-    ap.parser.add_argument("--save_path", help="plot saving directory", type=str, default=None)
-    ap.parser.add_argument(
-        "--xy",
-        help="value on x and y axis, splitted by :",
-        type=str,
-        # default=["epoch:test/success_rate"],
-        action="append",
-        dest="xys",
-    )
-    ap.parser.add_argument("--smooth", help="smooth the curve", type=int, default=0)
+if __name__ == "__main__":
     ap.parse(sys.argv)
-    plot(**ap.get_dict())
+    main(**ap.get_dict())

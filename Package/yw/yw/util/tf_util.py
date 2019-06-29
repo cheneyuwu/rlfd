@@ -321,9 +321,9 @@ class MAF:
 
         self.dist = tfd.TransformedDistribution(distribution=base_dist, bijector=flow_bijector)
 
-    def __call__(self, input):
-        return self.dist.log_prob(input)
-
+        # output
+        self.log_prob = self.dist.log_prob
+        self.prob = self.dist.prob
 
 if __name__ == "__main__":
 

@@ -186,15 +186,21 @@ class MAFDemoShaping(DemoShaping):
             self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
             self.demo_inputs_tf["u"],
         )
-        
+
         # normalizing flow nn
         demo_state_dim = int(demo_state_tf.shape[1])
         self.base_dist = tfd.MultivariateNormalDiag(loc=tf.zeros([demo_state_dim], tf.float64))
         self.nn = MAF(base_dist=self.base_dist, dim=demo_state_dim, num_layers=6)
-        
+
         # loss function that tries to maximize log prob
-        self.entropy_weight = 1.0
-        self.loss = -tf.reduce_mean(self.nn(demo_state_tf))
+        # log probability
+        neg_log_prob = -tf.reduce_mean(tf.reshape(self.nn.log_prob(demo_state_tf), (-1, 1)))
+        # regularizer
+        # neg_entropy = tf.reduce_mean(
+        #     tf.reshape(self.nn.prob(demo_state_tf), (-1, 1)) * tf.reshape(self.nn.log_prob(demo_state_tf), (-1, 1))
+        # )
+        # entropy_weight = 10.0
+        self.loss = neg_log_prob  # + neg_entropy * entropy_weight
         self.train_op = tf.train.AdamOptimizer(1e-3).minimize(self.loss)
 
         super().__init__(gamma)
@@ -204,7 +210,26 @@ class MAFDemoShaping(DemoShaping):
         Just return negative value of distance between current state and goal state
         """
         state_tf = self._cast_concat_inputs(o, g, u)
-        potential = self.nn(state_tf)
+
+        # method 1 add noise to the state and take avg
+        potential = []
+        noise_dist = tfd.Normal(loc=[0.0] * o.shape[1], scale=0.2)
+        for _ in range(4):
+            if g != None:
+                noise_tf = tf.concat(
+                    (noise_dist.sample(tf.shape(o)[0]), tf.zeros(shape=(tf.shape(o)[0], g.shape[1] + u.shape[1]))),
+                    axis=1,
+                )
+            else:
+                noise_tf = tf.concat(
+                    (noise_dist.sample(tf.shape(o)[0]), tf.zeros(shape=(tf.shape(o)[0], u.shape[1]))), axis=1
+                )
+            state_with_noise_tf = state_tf + tf.cast(noise_tf, tf.float64)
+            potential.append(tf.reshape(self.nn.log_prob(state_with_noise_tf), (-1, 1)))
+        potential = tf.reduce_mean(potential, axis=0)
+        # method 2 no noise
+        # potential = tf.reshape(self.nn.log_prob(state_tf), (-1,1))
+
         # scale and clip
         potential = 1.0 * tf.clip_by_value(potential, -100.0, 10.0)
 
@@ -213,9 +238,9 @@ class MAFDemoShaping(DemoShaping):
     def _cast_concat_inputs(self, o, g, u):
         # Concat demonstration inputs
         state_tf = tf.cast(o, tf.float64)
-        # if g != None:
-        #     # for multigoal environments, we have goal as another states
-        #     state_tf = tf.concat(axis=1, values=[state_tf, tf.cast(g, tf.float64)])
+        if g != None:
+            # for multigoal environments, we have goal as another states
+            state_tf = tf.concat(axis=1, values=[state_tf, tf.cast(g, tf.float64)])
         state_tf = tf.concat(axis=1, values=[state_tf, tf.cast(u, tf.float64)])
         # note: shape of state_tf is (num_demo, k), where k is sum of dim o g u
         return state_tf

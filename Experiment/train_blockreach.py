@@ -1,4 +1,5 @@
 import os
+
 from train import Demo, Train, Display, Plot
 
 if __name__ == "__main__":
@@ -8,64 +9,88 @@ if __name__ == "__main__":
     display_exp = Display()
     plot_exp = Plot()
 
-    environment = "BlockReachFirstOrder"
-    train_exp.env = environment
-    train_exp.num_cpu = 1
-    train_exp.update()
+    # Common result directory
+    exp_dir = os.getenv("EXPERIMENT")
+    result_dir = os.path.join(exp_dir, "Result/Temp")
+    train_exp.result_dir = result_dir
+    demo_exp.result_dir = result_dir
+    display_exp.result_dir = result_dir
+    plot_exp.result_dir = result_dir
 
+    # Specify the environment and reward type.
+    # If you want to use dense reward, add "Dense" to the reward name and make sure the env manager recognizes that.
+    # Please follow this convention so that you can plot the same env with different reward types in the same graph.
+    environment = "BlockReachFirstOrder"  # "BlockReachFirstOrderDense" for dense reward
     demo_data_size = 16
-    train_rl_epochs = 32
-    seed = 1
+    seed = 0 # change seed value inside the for loop
+
+    train_exp.set_shared_cmd(
+        env=environment,
+        rl_action_l2=0.5,
+        n_cycles=10,
+        rl_num_sample=1,
+        rl_batch_size=256,
+        train_rl_epochs=64,
+    )
+
+    demo_exp.set_shared_cmd(
+        num_demo=demo_data_size,
+    )
+
     for i in range(1):
+        
+        # Change seed value in each iteration
         seed += i * 100
 
-        # We can change the result directory without updating
-        exp_dir = os.getenv("EXPERIMENT")
-        result_dir = os.path.join(exp_dir, "Result/Temp/")
-        demo_exp.result_dir = result_dir
+        # Change the result directory so that different seed goes to different directory
         train_exp.result_dir = result_dir
+        demo_exp.result_dir = result_dir
 
-        # Train the RL without demonstration
-        # assert not train_exp.rl_only(
-        #     rl_action_l2=0.5,
-        #     rl_scope="rl_only",
-        #     n_cycles=10,
-        #     seed=seed + 10,
-        #     rl_num_sample=1,
-        #     rl_batch_size=256,
-        #     train_rl_epochs=train_rl_epochs,
-        # )
+        # Train the RL without demonstration using dense reward.
+        train_exp.rl_only_dense(
+            env=environment + "Dense", # use env with dense reward
+            seed=seed + 0,
+        )
+
+        # Train the RL without demonstration using sparse reward.
+        train_exp.rl_only(
+            seed=seed + 10,
+        )
 
         # Generate demonstration data
-        # assert not demo_exp.generate_demo(
-        #     policy_file=os.path.join(demo_exp.result_dir, "RL/rl/policy_latest.pkl"),
-        #     seed=seed + 30,
-        #     num_itr=demo_data_size,
-        #     entire_eps=1,
-        #     shuffle=0,
-        # )
+        demo_exp.generate_demo(
+            policy_file=os.path.join(demo_exp.result_dir, "RLDense/rl/policy_latest.pkl"),
+            seed=seed + 20,
+        )
 
-        # # Train the RL with demonstration
-        assert not train_exp.rl_with_shaping(
-            rl_action_l2=0.5,
-            rl_scope="rl_with_shaping",
-            n_cycles=10,
-            seed=seed + 10,
-            rl_num_sample=1,
-            rl_batch_size=256,
-            train_rl_epochs=train_rl_epochs,
-            demo_critic="nf",
+        # Train the RL with demonstration through BC
+        train_exp.rl_with_bc(
+            seed=seed + 40,
+            rl_batch_size_demo=128,
+            num_demo=demo_data_size,
+            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment+".npz"),
+        )
+
+        # Train the RL with demonstration through shaping
+        train_exp.rl_with_shaping(
+            seed=seed + 30,
             num_demo=demo_data_size,
             demo_file=os.path.join(train_exp.result_dir, "DemoData", environment+".npz"),
             # shaping_policy=os.path.join(train_exp.result_dir, "RLDemoShaping", "shaping/shaping_latest.ckpt"),
         )
 
     # Plot the training result
-    # assert not plot_exp.plot(
-    #     dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"]
-    # )
+    plot_exp.plot(
+        dir=plot_exp.result_dir,
+        xy=[
+            "epoch:test/success_rate",
+            "epoch:test/total_shaping_reward",
+            "epoch:test/total_reward",
+            "epoch:test/mean_Q",
+        ],
+    )
 
     # Display a policy result (calls run_agent).
-    # assert not display_exp.display(
-    #     policy_file=os.path.join(display_exp.result_dir + "RL/rl/policy_latest.pkl"), num_itr=3
-    # )
+    display_exp.display(
+        policy_file=os.path.join(display_exp.result_dir, "RLDemoBC/rl/policy_latest.pkl"), num_itr=3
+    )
