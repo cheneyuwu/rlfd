@@ -184,17 +184,6 @@ class DDPG(object):
             logger.info("Creating a DDPG agent with action space %d x %s." % (self.dimu, self.max_u))
             self._create_network()
 
-    def get_q_value(self, batch):
-        policy = self.target
-        # values to compute
-        vals = [policy.Q_sample_tf, policy.Q_mean_tf, policy.Q_var_tf]
-        # feed
-        feed = {policy.o_tf: batch["o"].reshape(-1, self.dimo), policy.u_tf: batch["u"].reshape(-1, self.dimu)}
-        if self.dimg != 0:
-            feed[policy.g_tf] = batch["g"].reshape(-1, self.dimg)
-
-        return self.sess.run(vals, feed_dict=feed)
-
     def get_actions(self, o, ag, g, noise_eps=0.0, random_eps=0.0, use_target_net=False, compute_Q=False):
         policy = self.target if use_target_net else self.main
         # values to compute
@@ -306,16 +295,17 @@ class DDPG(object):
 
     def train_shaping(self):
         # train normalizing flow
-        loss = None
+        loss = 0
         if self.demo_critic == "nf":
-            demo_data = self.demo_buffer.sample_all()
-            demo_data["o"] = self._preprocess_state(demo_data["o"])
-            if self.dimg != 0:
-                demo_data["g"] = self._preprocess_state(demo_data["g"])
-            feed = {}
-            for k in self.demo_inputs_tf.keys():
-                feed[self.demo_inputs_tf[k]] = demo_data[k]
-            loss, _ = self.sess.run([self.demo_shaping.loss, self.demo_shaping.train_op], feed_dict=feed)
+            self.sess.run(self.demo_iter_tf.initializer)
+            losses = np.empty(0)
+            while True:
+                try:
+                    loss, _ = self.sess.run([self.demo_shaping.loss, self.demo_shaping.train_op])
+                    losses = np.append(losses, loss)
+                except tf.errors.OutOfRangeError:
+                    loss = np.mean(losses)
+                    break
         return loss
 
     def save_shaping_weights(self, path):
@@ -478,16 +468,42 @@ class DDPG(object):
             self.demo_actor_shaping_ls = []
             # for debugging
             self.demo_shaping_check_ls = []
-            # dict for demonstration input
-            self.demo_inputs_tf = {}
-            self.demo_inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
+
+            # input dataset that loads from demo_buffer
+            demo_shapes = {}
+            demo_shapes["o"] = (self.dimo,)
             if self.dimg != 0:
-                self.demo_inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
-            self.demo_inputs_tf["u"] = tf.placeholder(tf.float32, shape=(None, self.dimu))
+                demo_shapes["g"] = (self.dimg,)
+            demo_shapes["u"] = (self.dimu,)
+            num_transitions = self.num_demo * self.T
+
+            def generate_demo_data():
+                demo_data = self.demo_buffer.sample_all()
+                demo_data["o"] = self._preprocess_state(demo_data["o"])
+                if self.dimg != 0:
+                    demo_data["g"] = self._preprocess_state(demo_data["g"])
+                assert all([demo_data[k].shape[0] == num_transitions for k in demo_data.keys()])
+                for i in range(num_transitions):
+                    yield {k: demo_data[k][i] for k in demo_shapes.keys()}
+
+            demo_dataset = (
+                tf.data.Dataset.from_generator(
+                    generate_demo_data,
+                    output_types={k: tf.float32 for k in demo_shapes.keys()},
+                    output_shapes=demo_shapes,
+                )
+                .take(num_transitions)
+                .shuffle(num_transitions)
+                .repeat(1)
+                .batch(128)
+            )
+            self.demo_iter_tf = demo_dataset.make_initializable_iterator()
+            self.demo_inputs_tf = self.demo_iter_tf.get_next()
+
             with tf.variable_scope("shaping") as vs:
                 if self.demo_critic == "shaping":
-                    self.demo_shaping = GaussianDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
                     # self.demo_shaping = ManualDemoShaping(gamma=self.gamma)
+                    self.demo_shaping = GaussianDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
                 elif self.demo_critic == "nf":
                     # self.demo_shaping = NormalizingFlowDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
                     self.demo_shaping = MAFDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
@@ -525,6 +541,9 @@ class DDPG(object):
                             tf.float32,
                         )
                     )
+                    
+                assert all([ele.shape[1] == 1 for ele in self.demo_critic_shaping_ls])
+                assert all([ele.shape[1] == 1 for ele in self.demo_actor_shaping_ls])
 
         # Critic loss
         # clip bellman target return
@@ -540,6 +559,7 @@ class DDPG(object):
                         + self.gamma * tf.minimum(self.target.Q_pi_tf[i], self.target.Q2_pi_tf[i]),
                         *clip_range
                     )
+                    assert target_tf.shape[1] == 1
                     rl_bellman_1_tf = tf.boolean_mask(
                         tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
                     )
@@ -556,6 +576,7 @@ class DDPG(object):
                         + self.gamma * self.target.Q_pi_tf[i],
                         *clip_range
                     )
+                    assert target_tf.shape[1] == 1
                     rl_bellman_tf = tf.boolean_mask(
                         tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
                     )
@@ -569,6 +590,7 @@ class DDPG(object):
                         self.inputs_tf["r"] + self.gamma * tf.minimum(self.target.Q_pi_tf[i], self.target.Q2_pi_tf[i]),
                         *clip_range
                     )
+                    assert target_tf.shape[1] == 1
                     rl_bellman_1_tf = tf.boolean_mask(
                         tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
                     )
@@ -581,6 +603,7 @@ class DDPG(object):
                     target_tf = tf.clip_by_value(
                         self.inputs_tf["r"] + self.gamma * self.target.Q_pi_tf[i], *clip_range
                     )
+                    assert target_tf.shape[1] == 1
                     rl_bellman_tf = tf.boolean_mask(
                         tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
                     )
@@ -677,7 +700,7 @@ class DDPG(object):
         self.Q_adam.sync()
         self.pi_adam.sync()
         self.init_target_net()
-        self.training_step = 0 # initialize number of training step
+        self.training_step = 0  # initialize number of training step
 
     def _random_action(self, n):
         return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
