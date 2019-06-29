@@ -253,7 +253,7 @@ def config_demo(params, policy):
         "use_demo_states": False,
         "compute_Q": True,
         "compute_r": True,
-        "random_eps": 0.1,
+        "random_eps": 0.0,
         "noise_eps": 0.1,
         "render": params["render"],
         "T": params["eps_length"],

@@ -8,6 +8,11 @@ import os
 import numpy as np
 import pickle
 
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
+
 from yw.util.util import set_global_seeds
 from yw.ddpg_main import config
 
@@ -16,8 +21,9 @@ from yw.ddpg_main import config
 from yw.tool import logger
 
 
-def play(policy_file, seed, num_itr, render, env_args, **kwargs):
+def main(policy_file, seed, num_itr, render, env_args, **kwargs):
 
+    rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
     set_global_seeds(seed)
 
     # Load policy.
@@ -45,25 +51,29 @@ def play(policy_file, seed, num_itr, render, env_args, **kwargs):
     # record logs
     for key, val in demo.logs("test"):
         logger.record_tabular(key, np.mean(val))
-    logger.dump_tabular()
+    if rank == 0:
+        logger.dump_tabular()
+
+
+import sys
+from yw.util.cmd_util import ArgParser
+
+ap = ArgParser()
+
+ap.parser.add_argument("--policy_file", help="demonstration training dataset", type=str, default=None)
+ap.parser.add_argument("--seed", help="RNG seed", type=int, default=413)
+ap.parser.add_argument("--num_itr", help="number of iterations", type=int, default=1)
+ap.parser.add_argument("--render", help="render or not", type=int, default=1)
+ap.parser.add_argument(
+    "--env_arg",
+    help="extra args passed to the environment",
+    action="append",
+    type=lambda kv: [kv.split(":")[0], eval(str(kv.split(":")[1] + '("' + kv.split(":")[2] + '")'))],
+    dest="env_args",
+)
+
 
 if __name__ == "__main__":
-    import sys
-    from yw.util.cmd_util import ArgParser
-
-    ap = ArgParser()
-
-    ap.parser.add_argument("--policy_file", help="demonstration training dataset", type=str, default=None)
-    ap.parser.add_argument("--seed", help="RNG seed", type=int, default=413)
-    ap.parser.add_argument("--num_itr", help="number of iterations", type=int, default=1)
-    ap.parser.add_argument("--render", help="render or not", type=int, default=1)
-    ap.parser.add_argument(
-        "--env_arg",
-        help="extra args passed to the environment",
-        action="append",
-        type=lambda kv: [kv.split(":")[0], eval(str(kv.split(":")[1] + '("' + kv.split(":")[2] + '")'))],
-        dest="env_args",
-    )
     ap.parse(sys.argv)
 
-    play(**ap.get_dict())
+    main(**ap.get_dict())

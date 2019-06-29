@@ -24,6 +24,7 @@ import pickle
 import numpy as np
 
 from yw.tool import logger
+from yw.util.cmd_util import ArgParser
 from yw.ddpg_main import config
 from yw.util.util import set_global_seeds
 from yw.util.mpi_util import mpi_average
@@ -80,7 +81,7 @@ def train_reinforce(
                         dim1=dim1,
                         dim2=dim2,
                         filename=os.path.join(
-                            query_shaping_save_path, "dim_{}_{}_{:03d}.jpg".format(dim1, dim2, epoch)
+                            query_shaping_save_path, "dim_{}_{}_{:04d}.jpg".format(dim1, dim2, epoch)
                         ),
                     )
 
@@ -156,7 +157,7 @@ def train_reinforce(
                 assert local_uniform[0] != root_uniform[0]
 
 
-def train(
+def main(
     logdir,
     loglevel,
     save_path,
@@ -222,9 +223,11 @@ def train(
     params["rl_demo_actor"] = demo_actor
     params["config"] = "-".join(
         [
-            "ddpg:" + demo_critic,
+            "sparse:" + ("false" if "Dense" in env else "true"),
+            "shaping:" + demo_critic,
+            "bc:" + demo_actor,
             "num_demo:" + str(num_demo),
-            "r_sample:" + str(rl_num_sample),
+            "rl_sample:" + str(rl_num_sample),
             "replay:" + rl_replay_strategy,
         ]
     )
@@ -271,66 +274,62 @@ def train(
     )
 
 
+ap = ArgParser()
+# logging
+ap.parser.add_argument("--logdir", help="log directory", type=str, default=os.getenv("TEMPDIR") + "/Train/log")
+ap.parser.add_argument("--loglevel", help="log level", type=int, default=2)
+# save results - this will be for both demo and rl
+ap.parser.add_argument("--save_path", help="policy path", type=str, default=os.getenv("TEMPDIR") + "/Train/policy")
+ap.parser.add_argument("--save_interval", help="the interval which policy pickles are saved", type=int, default=0)
+# program - TODO: test if this works for the demonstration training part.
+ap.parser.add_argument("--seed", help="RNG seed", type=int, default=0)
+# environment setup
+ap.parser.add_argument("--env", help="name of the environment", type=str, default="Reach2DFirstOrder")
+ap.parser.add_argument("--r_scale", help="down scale the reward", type=float, default=1.0)
+ap.parser.add_argument("--r_shift", help="shift the reward (before shifting)", type=float, default=0.0)
+ap.parser.add_argument("--eps_length", help="change the maximum episode length", type=int, default=0)
+ap.parser.add_argument(
+    "--env_arg",
+    action="append",
+    type=lambda kv: [kv.split(":")[0], eval(str(kv.split(":")[1] + '("' + kv.split(":")[2] + '")'))],
+    dest="env_args",
+)
+# training
+ap.parser.add_argument("--train_rl_epochs", help="the number of training epochs to run for RL", type=int, default=1)
+# DDPG configuration
+ap.parser.add_argument("--rl_num_sample", help="number of ddpg heads", type=int, default=1)
+ap.parser.add_argument("--rl_use_td3", help="whether or not to use td3", type=int, default=1)
+ap.parser.add_argument("--exploit", help="whether or not to use e-greedy exploration", type=int, default=0)
+ap.parser.add_argument(
+    "--rl_replay_strategy",
+    help="the replay strategy to be used. 'future' uses HER, 'none' disables HER",
+    type=str,
+    choices=["none", "her"],
+    default="none",
+)
+# demo configuration
+ap.parser.add_argument("--num_demo", help="Number of demonstrations, measured in episodes.", type=int, default=0)
+ap.parser.add_argument(
+    "--demo_critic",
+    help="use a neural network as critic or a gaussian process. Need to provide or train a demo policy if not set to none",
+    type=str,
+    choices=["nf", "shaping", "none"],
+    default="none",
+)
+ap.parser.add_argument(
+    "--demo_actor",
+    help="use a neural network as actor. Need to provide or train a demo policy if not set to none",
+    type=str,
+    choices=["bc", "none"],
+    default="none",
+)
+ap.parser.add_argument("--demo_file", help="demonstration training dataset", type=str, default=None)
+ap.parser.add_argument("--shaping_policy", help="well trained reward shaping policy", type=str, default=None)
+# others
+ap.parser.add_argument(
+    "--debug_params", help="override some parameters for internal regression tests", type=int, default=0
+)
+
 if __name__ == "__main__":
-    from yw.util.cmd_util import ArgParser
-
-    ap = ArgParser()
-    # logging
-    ap.parser.add_argument("--logdir", help="log directory", type=str, default=os.getenv("TEMPDIR") + "/Train/log")
-    ap.parser.add_argument("--loglevel", help="log level", type=int, default=2)
-    # save results - this will be for both demo and rl
-    ap.parser.add_argument("--save_path", help="policy path", type=str, default=os.getenv("TEMPDIR") + "/Train/policy")
-    ap.parser.add_argument("--save_interval", help="the interval which policy pickles are saved", type=int, default=0)
-    # program - TODO: test if this works for the demonstration training part.
-    ap.parser.add_argument("--seed", help="RNG seed", type=int, default=0)
-    # environment setup
-    ap.parser.add_argument("--env", help="name of the environment", type=str, default="Reach2DFirstOrder")
-    ap.parser.add_argument("--r_scale", help="down scale the reward", type=float, default=1.0)
-    ap.parser.add_argument("--r_shift", help="shift the reward (before shifting)", type=float, default=0.0)
-    ap.parser.add_argument("--eps_length", help="change the maximum episode length", type=int, default=0)
-    ap.parser.add_argument(
-        "--env_arg",
-        action="append",
-        type=lambda kv: [kv.split(":")[0], eval(str(kv.split(":")[1] + '("' + kv.split(":")[2] + '")'))],
-        dest="env_args",
-    )
-    # training
-    ap.parser.add_argument(
-        "--train_rl_epochs", help="the number of training epochs to run for RL", type=int, default=1
-    )
-    # DDPG configuration
-    ap.parser.add_argument("--rl_num_sample", help="number of ddpg heads", type=int, default=1)
-    ap.parser.add_argument("--rl_use_td3", help="whether or not to use td3", type=int, default=1)
-    ap.parser.add_argument("--exploit", help="whether or not to use e-greedy exploration", type=int, default=0)
-    ap.parser.add_argument(
-        "--rl_replay_strategy",
-        help="the replay strategy to be used. 'future' uses HER, 'none' disables HER",
-        type=str,
-        choices=["none", "her"],
-        default="none",
-    )
-    # demo configuration
-    ap.parser.add_argument("--num_demo", help="Number of demonstrations, measured in episodes.", type=int, default=0)
-    ap.parser.add_argument(
-        "--demo_critic",
-        help="use a neural network as critic or a gaussian process. Need to provide or train a demo policy if not set to none",
-        type=str,
-        choices=["nf", "shaping", "none"],
-        default="none",
-    )
-    ap.parser.add_argument(
-        "--demo_actor",
-        help="use a neural network as actor. Need to provide or train a demo policy if not set to none",
-        type=str,
-        choices=["shaping", "none"],
-        default="none",
-    )
-    ap.parser.add_argument("--demo_file", help="demonstration training dataset", type=str, default=None)
-    ap.parser.add_argument("--shaping_policy", help="well trained reward shaping policy", type=str, default=None)
-    # others
-    ap.parser.add_argument(
-        "--debug_params", help="override some parameters for internal regression tests", type=int, default=0
-    )
     ap.parse(sys.argv)
-
-    train(**ap.get_dict())
+    main(**ap.get_dict())

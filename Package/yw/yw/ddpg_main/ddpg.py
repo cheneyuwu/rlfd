@@ -541,7 +541,7 @@ class DDPG(object):
                             tf.float32,
                         )
                     )
-                    
+
                 assert all([ele.shape[1] == 1 for ele in self.demo_critic_shaping_ls])
                 assert all([ele.shape[1] == 1 for ele in self.demo_actor_shaping_ls])
 
@@ -617,36 +617,42 @@ class DDPG(object):
             mask = np.concatenate(
                 (np.zeros(self.batch_size - self.batch_size_demo), np.ones(self.batch_size_demo)), axis=0
             )
-            maskMain = tf.reshape(tf.boolean_mask(self.main.Q_tf > self.main.Q_pi_tf, mask), [-1])
-            # define the cloning loss on the actor's actions only on the samples which adhere to the above masks
-            self.cloning_loss_tf = tf.reduce_sum(
-                tf.square(
-                    tf.boolean_mask(tf.boolean_mask((self.main.pi_tf), mask), maskMain, axis=0)
-                    - tf.boolean_mask(tf.boolean_mask((self.inputs_tf["u"]), mask), maskMain, axis=0)
+            self.pi_loss_tf = []
+            for i in range(self.num_sample):
+                # primary loss scaled by it's respective weight prm_loss_weight
+                pi_loss_tf = -self.prm_loss_weight * tf.reduce_mean(self.main.Q_pi_tf[i])
+                # L2 loss on action values scaled by the same weight prm_loss_weight
+                pi_loss_tf += (
+                    self.prm_loss_weight * self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf[i] / self.max_u))
                 )
-            )
-            # primary loss scaled by it's respective weight prm_loss_weight
-            self.pi_loss_tf = -self.prm_loss_weight * tf.reduce_mean(self.main.Q_pi_tf)
-            # L2 loss on action values scaled by the same weight prm_loss_weight
-            self.pi_loss_tf += (
-                self.prm_loss_weight * self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
-            )
-            # adding the cloning loss to the actor loss as an auxilliary loss scaled by its weight aux_loss_weight
-            self.pi_loss_tf += self.aux_loss_weight * self.cloning_loss_tf
+                # define the cloning loss on the actor's actions only on the samples which adhere to the above masks
+                maskMain = tf.reshape(tf.boolean_mask(self.main.Q_tf[i] > self.main.Q_pi_tf[i], mask), [-1])
+                cloning_loss_tf = tf.reduce_sum(
+                    tf.square(
+                        tf.boolean_mask(tf.boolean_mask((self.main.pi_tf[i]), mask), maskMain, axis=0)
+                        - tf.boolean_mask(tf.boolean_mask((self.inputs_tf["u"]), mask), maskMain, axis=0)
+                    )
+                )
+                # adding the cloning loss to the actor loss as an auxilliary loss scaled by its weight aux_loss_weight
+                pi_loss_tf += self.aux_loss_weight * cloning_loss_tf
+                self.pi_loss_tf.append(pi_loss_tf)
 
         elif self.demo_actor != "none" and not self.q_filter:  # train with demonstrations without q_filter
             # choose only the demo buffer samples
             mask = np.concatenate(
                 (np.zeros(self.batch_size - self.batch_size_demo), np.ones(self.batch_size_demo)), axis=0
             )
-            self.cloning_loss_tf = tf.reduce_sum(
-                tf.square(tf.boolean_mask((self.main.pi_tf), mask) - tf.boolean_mask((self.inputs_tf["u"]), mask))
-            )
-            self.pi_loss_tf = -self.prm_loss_weight * tf.reduce_mean(self.main.Q_pi_tf[0])
-            self.pi_loss_tf += (
-                self.prm_loss_weight * self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
-            )
-            self.pi_loss_tf += self.aux_loss_weight * self.cloning_loss_tf
+            self.pi_loss_tf = []
+            for i in range(self.num_sample):
+                pi_loss_tf = -self.prm_loss_weight * tf.reduce_mean(self.main.Q_pi_tf[i])
+                pi_loss_tf += (
+                    self.prm_loss_weight * self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf[i] / self.max_u))
+                )
+                cloning_loss_tf = tf.reduce_sum(
+                    tf.square(tf.boolean_mask((self.main.pi_tf[i]), mask) - tf.boolean_mask((self.inputs_tf["u"]), mask))
+                )
+                pi_loss_tf += self.aux_loss_weight * cloning_loss_tf
+                self.pi_loss_tf.append(pi_loss_tf)
 
         elif self.demo_critic != "none":
             self.pi_loss_tf = [
@@ -795,9 +801,9 @@ class DDPG(object):
             demo_data = self.demo_buffer.sample_all()
             # select some dimension of the concatenated data (concatenate the data in the same order as in demo_shaping)
             concat_demo_data = demo_data["o"]
-            # if g != None:
-            #     # for multigoal environments, we have goal as another states
-            #     concat_demo_data = np.concatenate([concat_demo_data, demo_data["g"]], axis=1)
+            if self.dimg != 0:
+                # for multigoal environments, we have goal as another states
+                concat_demo_data = np.concatenate([concat_demo_data, demo_data["g"]], axis=1)
             concat_demo_data = np.concatenate([concat_demo_data, demo_data["u"]], axis=1)
 
             x = concat_demo_data[:, dim1 : dim1 + 1]

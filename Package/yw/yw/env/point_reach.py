@@ -223,14 +223,18 @@ class BlockReacher:
             )
 
     def compute_reward(self, achieved_goal, desired_goal, info=0):
-        achieved_goal = achieved_goal.reshape(-1, self.dim)
-        desired_goal = desired_goal.reshape(-1, self.dim)
-        distance = np.sqrt(np.sum(np.square(achieved_goal - desired_goal), axis=1))
+        distance = self._compute_distance(achieved_goal, desired_goal)
         if self.sparse == False:
             return -distance
             # return 0.5 / (0.5 + distance)
         else:  # self.sparse == True
             return (distance < self.threshold).astype(np.int64)
+
+    def _compute_distance(self, achieved_goal, desired_goal):
+        achieved_goal = achieved_goal.reshape(-1, self.dim)
+        desired_goal = desired_goal.reshape(-1, self.dim)
+        distance = np.sqrt(np.sum(np.square(achieved_goal - desired_goal), axis=1))
+        return distance
 
     def render(self):
 
@@ -318,13 +322,21 @@ class BlockReacher:
         g = self.goal
         ag = self.curr_pos
         r = self.compute_reward(ag, g)
+        # is_success or not
         if self.order == 2:
             position_ok = r > -self.threshold if self.sparse == False else r == 1
             speed_ok = np.sqrt(np.sum(np.square(self.speed))) < 0.25
             is_success = position_ok and speed_ok
         else:
             is_success = r > -self.threshold if self.sparse == False else r == 1
-        return ({"observation": obs, "desired_goal": g, "achieved_goal": ag}, r, 0, {"is_success": is_success})
+        # return distance as metric to measure performance
+        distance = self._compute_distance(ag, g)
+        return (
+            {"observation": obs, "desired_goal": g, "achieved_goal": ag},
+            r,
+            0,
+            {"is_success": is_success, "shaping_reward": -distance},
+        )
 
 
 if __name__ == "__main__":
