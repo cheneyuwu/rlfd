@@ -10,7 +10,7 @@ if __name__ == "__main__":
 
     environment = "FetchPickAndPlace-v1"
     train_exp.env = environment
-    train_exp.num_cpu = 4
+    train_exp.num_cpu = 1
     train_exp.update()
 
     demo_data_size = 64
@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     seed = 100
     for i in range(1):
-        seed += i*100
+        seed += i * 100
 
         # We can change the result directory without updating
         exp_dir = os.getenv("EXPERIMENT")
@@ -65,7 +65,7 @@ if __name__ == "__main__":
         #     train_rl_epochs=train_rl_epochs,
         #     demo_critic="shaping",
         #     num_demo=demo_data_size,
-        #     demo_file=train_exp.result_dir+"/DemoData/"+environment+".npz"
+        #     demo_file=os.path.join(train_exp.result_dir, "DemoData", environment+".npz")
         # )
         assert not train_exp.rl_with_shaping(
             r_shift=1.0,
@@ -76,11 +76,14 @@ if __name__ == "__main__":
             train_rl_epochs=train_rl_epochs,
             demo_critic="nf",
             num_demo=demo_data_size,
-            demo_file=train_exp.result_dir+"/DemoData/"+environment+".npz"
+            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment + ".npz"),
+            # shaping_policy=os.path.join(train_exp.result_dir, "RLDemoShaping", "shaping/shaping_latest.ckpt"),
         )
 
     # Plot the training result
     # assert not plot_exp.plot(dir=plot_exp.result_dir, xy=["epoch:test/success_rate", "epoch:test/total_reward", "epoch:test/mean_Q"])
 
     # Display a policy result (calls run_agent).
-    assert not display_exp.display(policy_file=display_exp.result_dir + "/RLDemoShaping/rl/policy_latest.pkl", num_itr=5)
+    assert not display_exp.display(
+        policy_file=os.path.join(display_exp.result_dir, "RLDemoShaping/rl/policy_latest.pkl"), num_itr=5
+    )

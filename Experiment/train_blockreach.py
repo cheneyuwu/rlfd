@@ -10,11 +10,11 @@ if __name__ == "__main__":
 
     environment = "BlockReachFirstOrder"
     train_exp.env = environment
-    train_exp.num_cpu = 1
+    train_exp.num_cpu = 4
     train_exp.update()
 
     demo_data_size = 16
-    train_rl_epochs = 32
+    train_rl_epochs = 64
     seed = 1
     for i in range(1):
         seed += i * 100
@@ -45,7 +45,7 @@ if __name__ == "__main__":
         #     shuffle=0,
         # )
 
-        # # Train the RL with demonstration
+        # Train the RL with demonstration
         assert not train_exp.rl_with_shaping(
             rl_action_l2=0.5,
             rl_scope="rl_with_shaping",
@@ -66,6 +66,6 @@ if __name__ == "__main__":
     # )
 
     # Display a policy result (calls run_agent).
-    # assert not display_exp.display(
-    #     policy_file=os.path.join(display_exp.result_dir + "RL/rl/policy_latest.pkl"), num_itr=3
-    # )
+    assert not display_exp.display(
+        policy_file=os.path.join(display_exp.result_dir + "RLDemoShaping/rl/policy_latest.pkl"), num_itr=3
+    )
