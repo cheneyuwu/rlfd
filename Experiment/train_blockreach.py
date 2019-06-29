@@ -46,44 +46,49 @@ if __name__ == "__main__":
         train_exp.result_dir = result_dir
         demo_exp.result_dir = result_dir
 
-        # Train the RL without demonstration using dense or sparse reward.
-        # train_exp.rl_only(
-        #     seed=seed + 10,
-        # )
+        # Train the RL without demonstration using dense reward.
+        train_exp.rl_only_dense(
+            env=environment + "Dense", # use env with dense reward
+            seed=seed + 0,
+        )
+
+        # Train the RL without demonstration using sparse reward.
+        train_exp.rl_only(
+            seed=seed + 10,
+        )
 
         # Generate demonstration data
-        # demo_exp.generate_demo(
-        #     policy_file=os.path.join(demo_exp.result_dir, "RL/rl/policy_latest.pkl"),
-        #     seed=seed + 20,
-        # )
-
+        demo_exp.generate_demo(
+            policy_file=os.path.join(demo_exp.result_dir, "RLDense/rl/policy_latest.pkl"),
+            seed=seed + 20,
+        )
 
         # Train the RL with demonstration through BC
-        # train_exp.rl_with_bc(
-        #     seed=seed + 40,
-        #     rl_batch_size_demo=128,
-        #     num_demo=demo_data_size,
-        #     demo_file=os.path.join(train_exp.result_dir, "DemoData", environment+".npz"),
-        # )
+        train_exp.rl_with_bc(
+            seed=seed + 40,
+            rl_batch_size_demo=128,
+            num_demo=demo_data_size,
+            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment+".npz"),
+        )
 
         # Train the RL with demonstration through shaping
-        # train_exp.rl_with_shaping(
-        #     seed=seed + 30,
-        #     num_demo=demo_data_size,
-        #     demo_file=os.path.join(train_exp.result_dir, "DemoData", environment+".npz"),
-        #     # shaping_policy=os.path.join(train_exp.result_dir, "RLDemoShaping", "shaping/shaping_latest.ckpt"),
-        # )
+        train_exp.rl_with_shaping(
+            seed=seed + 30,
+            num_demo=demo_data_size,
+            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment+".npz"),
+            # shaping_policy=os.path.join(train_exp.result_dir, "RLDemoShaping", "shaping/shaping_latest.ckpt"),
+        )
 
     # Plot the training result
-    # plot_exp.plot(
-    #     dir=plot_exp.result_dir,
-    #     xy=[
-    #         "epoch:test/success_rate",
-    #         "epoch:test/total_shaping_reward",
-    #         "epoch:test/total_reward",
-    #         "epoch:test/mean_Q",
-    #     ],
-    # )
+    plot_exp.plot(
+        dir=plot_exp.result_dir,
+        xy=[
+            "epoch:test/success_rate",
+            "epoch:test/total_shaping_reward",
+            "epoch:test/total_reward",
+            "epoch:test/mean_Q",
+        ],
+    )
 
     # Display a policy result (calls run_agent).
     display_exp.display(

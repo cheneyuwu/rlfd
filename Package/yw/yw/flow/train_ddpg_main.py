@@ -211,7 +211,7 @@ def main(
     set_global_seeds(rank_seed)
 
     # Get default params from config and update params.
-    params = config.DEFAULT_PARAMS
+    params = config.DEFAULT_PARAMS.copy()
     params["rank_seed"] = rank_seed
     params["env_name"] = env
     params["r_scale"] = r_scale

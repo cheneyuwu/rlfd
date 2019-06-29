@@ -104,6 +104,15 @@ class Train(Experiment):
             rl_num_sample=1,
         )
 
+
+    @Experiment.execute
+    def rl_only_dense(self, **kwargs):
+        command = self.shared_cmd.copy()
+        command["logdir"] = os.path.join(self.result_dir, "RLDense")
+        command["save_path"] = os.path.join(self.result_dir, "RLDense")
+        command["rl_replay_strategy"] = "none"
+        return command
+
     @Experiment.execute
     def rl_her_only(self, **kwargs):
         command = self.shared_cmd.copy()
