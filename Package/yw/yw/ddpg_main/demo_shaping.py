@@ -186,15 +186,19 @@ class MAFDemoShaping(DemoShaping):
             self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
             self.demo_inputs_tf["u"],
         )
-        
+
         # normalizing flow nn
         demo_state_dim = int(demo_state_tf.shape[1])
         self.base_dist = tfd.MultivariateNormalDiag(loc=tf.zeros([demo_state_dim], tf.float64))
         self.nn = MAF(base_dist=self.base_dist, dim=demo_state_dim, num_layers=6)
-        
+
         # loss function that tries to maximize log prob
-        self.entropy_weight = 1.0
-        self.loss = -tf.reduce_mean(self.nn(demo_state_tf))
+        # log probability
+        neg_log_prob = -tf.reduce_mean(self.nn(demo_state_tf))
+        # regularizer
+        neg_entropy = tf.reduce_mean(self.nn.dist.prob(demo_state_tf) * self.nn(demo_state_tf))
+        entropy_weight = 10.0
+        self.loss = neg_log_prob + neg_entropy * entropy_weight
         self.train_op = tf.train.AdamOptimizer(1e-3).minimize(self.loss)
 
         super().__init__(gamma)
