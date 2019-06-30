@@ -114,12 +114,12 @@ def plot_results(allresults, xys, target_dir, smooth=False):
                 ax.fill_between(xs[0], np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25)
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_label)
-                ax.legend(fontsize=4)
-                # fig.ylim(0, 1)
+                ax.legend(fontsize=5)
+        fig.set_size_inches(6, 10)
         fig.suptitle(env_id)
         save_path = os.path.join(target_dir, "fig_{}.png".format(env_id))
         print("Saving image to " + save_path)
-        plt.savefig(save_path)
+        plt.savefig(save_path, dpi=200)
 
 
 def main(dirs, xys, save_path, smooth, **kwargs):

@@ -814,8 +814,8 @@ class DDPG(object):
             ax = pl.subplot(gs[row, 0])
             ax.clear()
             ax.scatter(np_samples[:, 0], np_samples[:, 1], s=10, color="red")
-            ax.set_xlim([-1, 1])
-            ax.set_ylim([-1, 1])
+            # ax.set_xlim([-1, 1])
+            # ax.set_ylim([-1, 1])
             ax.set_xlabel("state")
             ax.set_ylabel("action")
             ax.set_title("Training samples")
@@ -887,8 +887,8 @@ class DDPG(object):
                 idx = np.logical_and(X0[:, dim1] > 0, X0[:, dim2] > 0)
                 ax.scatter(X1[idx, dim1], X1[idx, dim2], s=10, color="black")
 
-                ax.set_xlim([-1, 1])
-                ax.set_ylim([-1, 1])
+                # ax.set_xlim([-1, 1])
+                # ax.set_ylim([-1, 1])
                 ax.set_xlabel("state")
                 ax.set_ylabel("action")
                 ax.set_title(titles[j])
@@ -909,8 +909,8 @@ class DDPG(object):
         if filename != None:
             logger.info("Query: potential -> storing query results to {}".format(filename))
             pl.savefig(filename)
-        pl.show()
-        pl.pause(0.001)
+        # pl.show()
+        # pl.pause(0.001)
 
     def query_uncertainty(self, filename=None):
         """Check the output from demonstration NN when the state is fixed and the action forms a 2d space.
