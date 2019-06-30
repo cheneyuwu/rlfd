@@ -909,8 +909,8 @@ class DDPG(object):
         if filename != None:
             logger.info("Query: potential -> storing query results to {}".format(filename))
             pl.savefig(filename)
-        pl.show()
-        pl.pause(0.001)
+        # pl.show()
+        # pl.pause(0.001)
 
     def query_uncertainty(self, filename=None):
         """Check the output from demonstration NN when the state is fixed and the action forms a 2d space.

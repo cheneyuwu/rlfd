@@ -3,7 +3,7 @@
 import numpy as np
 import matplotlib
 
-matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode
+matplotlib.use("Agg")  #  TkAgg Can change to 'Agg' for non-interactive mode
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
