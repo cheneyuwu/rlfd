@@ -20,17 +20,17 @@ if __name__ == "__main__":
     # Specify the environment and reward type.
     # If you want to use dense reward, add "Dense" to the reward name and make sure the env manager recognizes that.
     # Please follow this convention so that you can plot the same env with different reward types in the same graph.
-    environment = "FetchReach-v1"
-    demo_data_size = 32
+    environment = "FetchPickAndPlaceDense-v1"
+    demo_data_size = 128
     seed = 0 # change seed value inside the for loop
 
     train_exp.set_shared_cmd(
         env=environment,
-        r_shift=1.0,
+        r_shift=0.0, # use dense reward for all now
         n_cycles=10,
         rl_num_sample=1,
         rl_batch_size=256,
-        train_rl_epochs=32,
+        train_rl_epochs=128,
     )
 
     demo_exp.set_shared_cmd(
@@ -48,15 +48,15 @@ if __name__ == "__main__":
 
         # Train the RL without demonstration using dense reward.
         # train_exp.rl_only_dense(
-        #     env="FetchReachDense-v1", # use env with dense reward
+        #     env="FetchPickAndPlaceDense-v1", # use env with dense reward
         #     r_shift=0.0,
         #     seed=seed + 0,
         # )
 
         # Train the RL without demonstration using sparse reward.
-        # train_exp.rl_only(
-        #     seed=seed+10,
-        # )
+        train_exp.rl_only(
+            seed=seed+10,
+        )
         # train_exp.rl_her_only(
         #     seed=seed+10,
         # )
@@ -68,12 +68,12 @@ if __name__ == "__main__":
         # )
 
         # Train the RL with demonstration through BC
-        # train_exp.rl_with_bc(
-        #     seed=seed + 40,
-        #     rl_batch_size_demo=128,
-        #     num_demo=demo_data_size,
-        #     demo_file=os.path.join(train_exp.result_dir, "DemoData", environment+".npz"),
-        # )
+        train_exp.rl_with_bc(
+            seed=seed + 40,
+            rl_batch_size_demo=128,
+            num_demo=demo_data_size,
+            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment+".npz"),
+        )
 
         # Train the RL with demonstration through shaping
         train_exp.rl_with_shaping(
