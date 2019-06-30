@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # If you want to use dense reward, add "Dense" to the reward name and make sure the env manager recognizes that.
     # Please follow this convention so that you can plot the same env with different reward types in the same graph.
     environment = "FetchPickAndPlaceDense-v1"
-    demo_data_size = 128
+    demo_data_size = 64
     seed = 0 # change seed value inside the for loop
 
     train_exp.set_shared_cmd(
@@ -30,7 +30,7 @@ if __name__ == "__main__":
         n_cycles=10,
         rl_num_sample=1,
         rl_batch_size=256,
-        train_rl_epochs=128,
+        train_rl_epochs=512,
     )
 
     demo_exp.set_shared_cmd(
