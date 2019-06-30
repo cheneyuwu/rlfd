@@ -10,3 +10,6 @@
 [submodule "Experiment/ExpData"]
 	path = Experiment/ExpData
 	url = git@github.com:cheneyuwu/ExpData.git
+[submodule "Package/gym"]
+	path = Package/gym
+	url = git@github.com:cheneyuwu/gym.git
