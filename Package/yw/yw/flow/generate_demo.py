@@ -22,12 +22,12 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, shuffle, render, e
     assert policy_file is not None, "Must provide the policy_file!"
 
     # Setup
+    rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
+    set_global_seeds(seed)
+
     # reset default graph every time this function is called.
     tf.reset_default_graph()
     tf.InteractiveSession()
-    
-    rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
-    set_global_seeds(seed)
 
     # Load policy.
     with open(policy_file, "rb") as f:

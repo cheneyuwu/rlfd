@@ -12,4 +12,4 @@
 	url = git@github.com:cheneyuwu/ExpData.git
 [submodule "Package/gym"]
 	path = Package/gym
-	url = git@github.com:openai/gym.git
+	url = git@github.com:cheneyuwu/gym.git
