@@ -43,14 +43,14 @@ class ActorCritic:
 
         # Prepare inputs for actor and critic.
         self.o_tf = inputs_tf["o"]
-        # state = o_stats.normalize(self.o_tf)
-        state = self.o_tf
+        state = o_stats.normalize(self.o_tf)
+        # state = self.o_tf
         self.u_tf = inputs_tf["u"]
         # for multigoal environments, we have goal as another states
         if dimg != 0:
             self.g_tf = inputs_tf["g"]
-            # goal = g_stats.normalize(self.g_tf)
-            goal = self.g_tf
+            goal = g_stats.normalize(self.g_tf)
+            # goal = self.g_tf
             state = tf.concat(axis=1, values=[state, goal])
 
         self.pi_tf = []  # output of actor
