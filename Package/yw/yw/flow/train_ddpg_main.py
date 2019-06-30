@@ -71,7 +71,7 @@ def train_reinforce(
     if policy.demo_critic != "none":
         if shaping_policy == None:
             logger.info("Training the policy for reward shaping.")
-            for epoch in range(500):
+            for epoch in range(1000):
                 loss = policy.train_shaping()
 
                 if rank == 0 and epoch % 100 == 0:
