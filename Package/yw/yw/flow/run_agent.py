@@ -25,14 +25,15 @@ from yw.tool import logger
 
 def main(policy_file, seed, num_itr, render, env_args, **kwargs):
 
-    # Reset default graph every time this function is called.
-    tf.reset_default_graph()
-    tf.InteractiveSession()
 
     rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0    
     
     # Seed everything
     set_global_seeds(seed)
+
+    # Reset default graph every time this function is called.
+    tf.reset_default_graph()
+    tf.InteractiveSession()
 
     # Load policy.
     with open(policy_file, "rb") as f:

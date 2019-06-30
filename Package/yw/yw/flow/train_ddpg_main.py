@@ -187,10 +187,6 @@ def main(
     # Consider rank as pid.
     rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
     num_cpu = MPI.COMM_WORLD.Get_size() if MPI != None else 1
-    
-    # Reset default graph every time this function is called.
-    tf.reset_default_graph()
-    tf.InteractiveSession()
 
     # Configure logging.
     if rank == 0:
@@ -209,6 +205,10 @@ def main(
     # Seed everything.
     rank_seed = seed + 1_000_000 * rank
     set_global_seeds(rank_seed)
+    
+    # Reset default graph every time this function is called. (must be called after setting seed)
+    tf.reset_default_graph()
+    tf.InteractiveSession()
 
     # Get default params from config and update params.
     params = config.DEFAULT_PARAMS.copy()
