@@ -74,7 +74,7 @@ def train_reinforce(
             for epoch in range(1000):
                 loss = policy.train_shaping()
 
-                if rank == 0 and epoch % 100 == 0:
+                if rank == 0 and epoch % 100 == 99:
                     logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
                     # query
                     dim1, dim2 = 0, 1
@@ -91,6 +91,9 @@ def train_reinforce(
                     policy.save_shaping_weights(latest_shaping_path)
                 # if loss < -0.5:  # assume this value is small enough
                 #     break
+            if rank == 0 and save_path:
+                logger.info("Saving latest policy to {}.".format(latest_shaping_path))
+                policy.save_shaping_weights(latest_shaping_path)
         else:
             logger.info("Use the provided policy weights: {}".format(shaping_policy))
             policy.load_shaping_weights(shaping_policy)
