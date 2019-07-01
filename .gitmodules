@@ -13,5 +13,5 @@
 	url = git@github.com:cheneyuwu/ExpData.git
 [submodule "Package/gym"]
 	path = Package/gym
-	branch = shaping-yuchen
+	branch = master
 	url = git@github.com:cheneyuwu/gym.git
