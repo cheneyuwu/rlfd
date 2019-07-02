@@ -1,15 +1,20 @@
 [submodule "Package/surreal"]
 	path = Package/surreal
+	branch = master
 	url = git@github.com:cheneyuwu/surreal.git
 [submodule "Package/robosuite"]
 	path = Package/robosuite
+	branch = master
 	url = git@github.com:cheneyuwu/robosuite.git
 [submodule "Package/spinningup"]
 	path = Package/spinningup
+	branch = master
 	url = git@github.com:cheneyuwu/spinningup.git
 [submodule "Experiment/ExpData"]
 	path = Experiment/ExpData
+	branch = master
 	url = git@github.com:cheneyuwu/ExpData.git
 [submodule "Package/gym"]
 	path = Package/gym
-	url = git@github.com:openai/gym.git
+	branch = shaping-yuchen
+	url = git@github.com:cheneyuwu/gym.git

@@ -37,14 +37,14 @@ if __name__ == "__main__":
         num_demo=demo_data_size,
     )
 
-    for i in range(1):
+    for i in range(3):
         
         # Change seed value in each iteration
         seed += i * 100
 
         # Change the result directory so that different seed goes to different directory
-        train_exp.result_dir = result_dir
-        demo_exp.result_dir = result_dir
+        train_exp.result_dir = os.path.join(result_dir, "BRExp"+ str(i))
+        demo_exp.result_dir = os.path.join(result_dir, "BRExp"+ str(i))
 
         # Train the RL without demonstration using dense reward.
         train_exp.rl_only_dense(
@@ -53,9 +53,9 @@ if __name__ == "__main__":
         )
 
         # Train the RL without demonstration using sparse reward.
-        train_exp.rl_only(
-            seed=seed + 10,
-        )
+        # train_exp.rl_only(
+        #     seed=seed + 10,
+        # )
 
         # Generate demonstration data
         demo_exp.generate_demo(
@@ -64,19 +64,19 @@ if __name__ == "__main__":
         )
 
         # Train the RL with demonstration through BC
-        train_exp.rl_with_bc(
-            seed=seed + 40,
-            rl_batch_size_demo=128,
-            num_demo=demo_data_size,
-            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment+".npz"),
-        )
+        # train_exp.rl_with_bc(
+        #     seed=seed + 40,
+        #     rl_batch_size_demo=128,
+        #     num_demo=demo_data_size,
+        #     demo_file=os.path.join(train_exp.result_dir, "DemoData", environment+".npz"),
+        # )
 
         # Train the RL with demonstration through shaping
         train_exp.rl_with_shaping(
             seed=seed + 30,
             num_demo=demo_data_size,
             demo_file=os.path.join(train_exp.result_dir, "DemoData", environment+".npz"),
-            # shaping_policy=os.path.join(train_exp.result_dir, "RLDemoShaping", "shaping/shaping_latest.ckpt"),
+            shaping_policy=os.path.join(train_exp.result_dir, "RLDemoShaping", "shaping/shaping_latest.ckpt"),
         )
 
     # Plot the training result
@@ -91,6 +91,6 @@ if __name__ == "__main__":
     )
 
     # Display a policy result (calls run_agent).
-    display_exp.display(
-        policy_file=os.path.join(display_exp.result_dir, "RLDemoBC/rl/policy_latest.pkl"), num_itr=3
-    )
+    # display_exp.display(
+    #     policy_file=os.path.join(display_exp.result_dir, "RLDemoShaping/rl/policy_latest.pkl"), num_itr=3
+    # )

@@ -71,10 +71,10 @@ def train_reinforce(
     if policy.demo_critic != "none":
         if shaping_policy == None:
             logger.info("Training the policy for reward shaping.")
-            for epoch in range(1000):
+            for epoch in range(500):
                 loss = policy.train_shaping()
 
-                if rank == 0 and epoch % 100 == 0:
+                if rank == 0 and epoch % 100 == 99:
                     logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
                     # query
                     dim1, dim2 = 0, 1
@@ -91,6 +91,9 @@ def train_reinforce(
                     policy.save_shaping_weights(latest_shaping_path)
                 # if loss < -0.5:  # assume this value is small enough
                 #     break
+            if rank == 0 and save_path:
+                logger.info("Saving latest policy to {}.".format(latest_shaping_path))
+                policy.save_shaping_weights(latest_shaping_path)
         else:
             logger.info("Use the provided policy weights: {}".format(shaping_policy))
             policy.load_shaping_weights(shaping_policy)
@@ -187,10 +190,6 @@ def main(
     # Consider rank as pid.
     rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
     num_cpu = MPI.COMM_WORLD.Get_size() if MPI != None else 1
-    
-    # Reset default graph every time this function is called.
-    tf.reset_default_graph()
-    tf.InteractiveSession()
 
     # Configure logging.
     if rank == 0:
@@ -209,6 +208,10 @@ def main(
     # Seed everything.
     rank_seed = seed + 1_000_000 * rank
     set_global_seeds(rank_seed)
+    
+    # Reset default graph every time this function is called. (must be called after setting seed)
+    tf.reset_default_graph()
+    tf.InteractiveSession()
 
     # Get default params from config and update params.
     params = config.DEFAULT_PARAMS.copy()
