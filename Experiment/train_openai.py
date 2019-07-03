@@ -4,23 +4,23 @@ import sys
 from train import Demo, Train, Display, Plot
 from yw.util.cmd_util import ArgParser
 
-# ap = ArgParser()
-
-# # demo configuration
-# ap.parser.add_argument(
-#     "--target",
-#     help="which script to run",
-#     type=str,
-#     choices=["rlsparse", "rldense", "bc", "shaping"],
-#     action="append",
-#     dest="targets",
-# )
+# A arg parser that takes options for which sub exp to run
+ap = ArgParser()
+ap.parser.add_argument(
+    "--target",
+    help="which script to run",
+    type=str,
+    choices=["rlsparse", "rldense", "bc", "shaping"],
+    action="append",
+    default=None,
+    dest="targets",
+)
+ap.parse(sys.argv)
+target = ap.get_dict()["targets"]
+print("Using target: ", target)
 
 if __name__ == "__main__":
 
-    # ap.parse(sys.argv)
-    # target = ap.get_dict()["targets"]
-    # print("Using target: ", target)
 
     demo_exp = Demo()
     train_exp = Train()
@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     # Common result directory
     exp_dir = os.getenv("EXPERIMENT")
-    result_dir = os.path.join(exp_dir, "Result/OpenAIReacherMultiGoal")
+    result_dir = os.path.join(exp_dir, "Result/Temp")
     train_exp.result_dir = result_dir
     demo_exp.result_dir = result_dir
     display_exp.result_dir = result_dir
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         n_cycles=10,
         rl_num_sample=1,
         rl_batch_size=256,
-        train_rl_epochs=100,
+        train_rl_epochs=20,
     )
 
     demo_exp.set_shared_cmd(

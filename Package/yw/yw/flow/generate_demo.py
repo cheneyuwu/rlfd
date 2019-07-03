@@ -112,6 +112,9 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, shuffle, render, e
 
         np.savez_compressed(file_name, **result)  # save the file
         logger.info("Demo file has been stored into {}.".format(file_name))
+    
+    # Close the default session to prevent memory leaking
+    tf.get_default_session().close()
 
 
 def main(loglevel, **kwargs):

@@ -53,9 +53,10 @@ class Experiment:
                     run.append(str(cmd[key]))
             is_main_thd = not MPI.COMM_WORLD.Get_rank() if MPI != None else True
             if is_main_thd:
-                print("To launch from command line:")
+                print("\n\nTo launch from command line:")
                 print("============================")
                 print("python", inspect.getsourcefile(self.launch_function), " ".join(run))
+                print("============================")
             if is_main_thd or self.use_mpi:
                 self.parser.parse(run)
                 self.launch_function(**self.parser.get_dict())
