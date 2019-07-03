@@ -12,7 +12,7 @@ rewards = []
 
 def main():
     env = gym.make("FetchPickAndPlace-v1")
-    numItr = 100
+    numItr = 1000
     env.reset()
     print("Reset!")
     while len(actions) < numItr:
@@ -96,7 +96,7 @@ def goToGoal(env, lastObs):
         object_oriented_goal[2] += 0.03
 
         for i in range(len(object_oriented_goal)):
-            action[i] = object_oriented_goal[i] * 6 + np.random.normal(scale=0.1)
+            action[i] = object_oriented_goal[i] * 6 + np.random.normal(scale=0.05)
 
         action[len(action) - 1] = 0.05  # open
 
@@ -134,7 +134,7 @@ def goToGoal(env, lastObs):
         # env.render()
         action = [0, 0, 0, 0]
         for i in range(len(goal - objectPos)):
-            action[i] = (goal - objectPos)[i] * 6 + np.random.normal(scale=0.1)
+            action[i] = (goal - objectPos)[i] * 6 + np.random.normal(scale=0.05)
 
         action[len(action) - 1] = -0.01
 

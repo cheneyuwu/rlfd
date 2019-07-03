@@ -175,9 +175,11 @@ class DDPG(object):
         if not self.demo_replay_strategy:
             pass
         elif self.demo_actor != "none" or self.demo_critic != "none":
-            self.demo_buffer = UniformReplayBuffer(
-                buffer_shapes, buffer_size, self.T, **self.demo_replay_strategy["args"]
-            )
+            # This does not matter is using demo_critic, since we call sample all
+            # self.demo_buffer = UniformReplayBuffer(
+            #     buffer_shapes, buffer_size, self.T, **self.demo_replay_strategy["args"]
+            # )
+            self.demo_buffer = HERReplayBuffer(buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"])
 
         # Build computation core.
         with tf.variable_scope(self.scope):
@@ -516,7 +518,7 @@ class DDPG(object):
                                 u=self.inputs_tf["u"],
                                 o_2=self.inputs_tf["o_2"],
                                 g_2=self.inputs_tf["g_2"] if self.dimg != 0 else None,
-                                u_2=self.target.pi_tf[i],
+                                u_2=self.main_shaping.pi_tf[i],
                             ),
                             tf.float32,
                         )

@@ -46,7 +46,7 @@ DEFAULT_PARAMS = {
     "rl_batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
     "rl_demo_critic": "none",  # whether or not to use the behavior cloning loss as an auxilliary loss
     "rl_demo_actor": "none",  # whether or not to use the behavior cloning loss as an auxilliary loss
-    "rl_q_filter": 0,  # whether or not a Q value filter should be used on the Actor outputs
+    "rl_q_filter": 1,  # whether or not a Q value filter should be used on the Actor outputs
     "rl_num_demo": 1000,  # number of expert demo episodes
     "rl_prm_loss_weight": 0.001,  # Weight corresponding to the primary loss
     "rl_aux_loss_weight": 0.0078,  # Weight corresponding to the auxilliary loss also called the cloning loss
