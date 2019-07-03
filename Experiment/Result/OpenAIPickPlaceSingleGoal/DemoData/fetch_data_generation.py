@@ -12,7 +12,7 @@ rewards = []
 
 def main():
     env = gym.make("FetchPickAndPlace-v1")
-    numItr = 1000
+    numItr = 128
     env.reset()
     print("Reset!")
     while len(actions) < numItr:

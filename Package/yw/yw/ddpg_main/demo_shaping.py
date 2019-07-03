@@ -231,7 +231,7 @@ class MAFDemoShaping(DemoShaping):
         potential = tf.reshape(self.nn.log_prob(state_tf), (-1,1))
 
         # scale and clip
-        potential = 10.0 * tf.clip_by_value(potential, -3.0, 1000.0)
+        potential = 1.0 * tf.clip_by_value(potential, 0.0, 100.0)
 
         return potential
 

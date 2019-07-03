@@ -1,8 +1,26 @@
 import os
+import sys
 
 from train import Demo, Train, Display, Plot
+from yw.util.cmd_util import ArgParser
+
+# ap = ArgParser()
+
+# # demo configuration
+# ap.parser.add_argument(
+#     "--target",
+#     help="which script to run",
+#     type=str,
+#     choices=["rlsparse", "rldense", "bc", "shaping"],
+#     action="append",
+#     dest="targets",
+# )
 
 if __name__ == "__main__":
+
+    # ap.parse(sys.argv)
+    # target = ap.get_dict()["targets"]
+    # print("Using target: ", target)
 
     demo_exp = Demo()
     train_exp = Train()
@@ -11,7 +29,7 @@ if __name__ == "__main__":
 
     # Common result directory
     exp_dir = os.getenv("EXPERIMENT")
-    result_dir = os.path.join(exp_dir, "Result/Temp")
+    result_dir = os.path.join(exp_dir, "Result/OpenAIReacherMultiGoal")
     train_exp.result_dir = result_dir
     demo_exp.result_dir = result_dir
     display_exp.result_dir = result_dir
@@ -30,7 +48,7 @@ if __name__ == "__main__":
         n_cycles=10,
         rl_num_sample=1,
         rl_batch_size=256,
-        train_rl_epochs=12,
+        train_rl_epochs=100,
     )
 
     demo_exp.set_shared_cmd(
@@ -53,27 +71,27 @@ if __name__ == "__main__":
             seed=seed + 0,
         )
 
-        # Train the RL without demonstration using sparse reward.
-        # train_exp.rl_only(
-        #     seed=seed+10,
-        # )
-        # train_exp.rl_her_only(
-        #     seed=seed+10,
-        # )
-
         # Generate demonstration data
         demo_exp.generate_demo(
             policy_file=os.path.join(demo_exp.result_dir, "RLDense/rl/policy_latest.pkl"),
             seed=seed + 20,
         )
 
-        # Train the RL with demonstration through BC
-        # train_exp.rl_with_bc(
-        #     seed=seed + 30,
-        #     rl_batch_size_demo=128,
-        #     num_demo=demo_data_size,
-        #     demo_file=os.path.join(train_exp.result_dir, "DemoData", environment+".npz"),
+        # Train the RL without demonstration using sparse reward.
+        train_exp.rl_only(
+            seed=seed+10,
+        )
+        # train_exp.rl_her_only(
+        #     seed=seed+10,
         # )
+
+        # Train the RL with demonstration through BC
+        train_exp.rl_with_bc(
+            seed=seed + 30,
+            rl_batch_size_demo=128,
+            num_demo=demo_data_size,
+            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment+".npz"),
+        )
 
         # Train the RL with demonstration through shaping
         train_exp.rl_with_shaping(
@@ -84,17 +102,17 @@ if __name__ == "__main__":
         )
 
     # Plot the training result
-    plot_exp.plot(
-        dir=plot_exp.result_dir,
-        xy=[
-            "epoch:test/success_rate",
-            "epoch:test/total_shaping_reward",
-            "epoch:test/total_reward",
-            "epoch:test/mean_Q",
-        ],
-    )
+    # plot_exp.plot(
+    #     dir=plot_exp.result_dir,
+    #     xy=[
+    #         "epoch:test/success_rate",
+    #         "epoch:test/total_shaping_reward",
+    #         "epoch:test/total_reward",
+    #         "epoch:test/mean_Q",
+    #     ],
+    # )
 
     # Display a policy result (calls run_agent).
-    display_exp.display(
-        policy_file=os.path.join(display_exp.result_dir, "Exp0/RLDense/rl/policy_latest.pkl"), num_itr=3
-    )
+    # display_exp.display(
+    #     policy_file=os.path.join(display_exp.result_dir, "Exp0/RLDense/rl/policy_latest.pkl"), num_itr=10
+    # )

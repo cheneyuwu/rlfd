@@ -74,7 +74,7 @@ def train_reinforce(
             for epoch in range(500):
                 loss = policy.train_shaping()
 
-                if rank == 0 and epoch % 100 == 99:
+                if rank == 0 and epoch % 50 == 49:
                     logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
                     # query
                     dim1, dim2 = 0, 1
@@ -229,16 +229,13 @@ def main(
     params["rl_num_demo"] = num_demo
     params["rl_demo_critic"] = demo_critic
     params["rl_demo_actor"] = demo_actor
-    params["config"] = "-".join(
-        [
-            "sparse:" + ("false" if "Dense" in env else "true"),
-            "shaping:" + demo_critic,
-            "bc:" + demo_actor,
-            "num_demo:" + str(num_demo),
-            "rl_sample:" + str(rl_num_sample),
-            "replay:" + rl_replay_strategy,
-        ]
-    )
+    config_str = []
+    config_str.append("dense" if "Dense" in env else "sparse")
+    if demo_critic == "nf":
+        config_str.append("maf")
+    if demo_actor == "bc":
+        config_str.append("behavior cloning")
+    params["config"] = "-".join(config_str)
     # make it possible to override any parameter.
     for key, val in unknown_params.items():
         assert key in params.keys(), "Wrong override parameter: {}.".format(key)
