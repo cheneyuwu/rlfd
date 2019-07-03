@@ -4,23 +4,23 @@ import sys
 from train import Demo, Train, Display, Plot
 from yw.util.cmd_util import ArgParser
 
+# A arg parser that takes options for which sub exp to run
 ap = ArgParser()
-
-# demo configuration
 ap.parser.add_argument(
     "--target",
     help="which script to run",
     type=str,
-    choices=["rlsparse", "rldense", "bc", "shaping"],
+    choices=["rlsparse", "rldense", "bc", "shaping", "plot", "display"],
     action="append",
+    default=None,
     dest="targets",
 )
+ap.parse(sys.argv)
+target = ap.get_dict()["targets"]
+print("Using target: ", target)
 
 if __name__ == "__main__":
 
-    ap.parse(sys.argv)
-    target = ap.get_dict()["targets"]
-    print("Using target: ", target)
 
     demo_exp = Demo()
     train_exp = Train()
@@ -100,17 +100,19 @@ if __name__ == "__main__":
             )
 
     # Plot the training result
-    # plot_exp.plot(
-    #     dir=plot_exp.result_dir,
-    #     xy=[
-    #         "epoch:test/success_rate",
-    #         "epoch:test/total_shaping_reward",
-    #         "epoch:test/total_reward",
-    #         "epoch:test/mean_Q",
-    #     ],
-    # )
+    if "plot" in target:
+        plot_exp.plot(
+            dir=plot_exp.result_dir,
+            xy=[
+                "epoch:test/success_rate",
+                "epoch:test/total_shaping_reward",
+                "epoch:test/total_reward",
+                "epoch:test/mean_Q",
+            ],
+        )
 
     # Display a policy result (calls run_agent).
-    # display_exp.display(
-    #     policy_file=os.path.join(display_exp.result_dir, "Exp0/RLDense/rl/policy_latest.pkl"), num_itr=10
-    # )
+    if "display" in target:
+        display_exp.display(
+            policy_file=os.path.join(display_exp.result_dir, "Exp0/RLDense/rl/policy_latest.pkl"), num_itr=10
+        )

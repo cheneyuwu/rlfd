@@ -30,6 +30,8 @@ from yw.ddpg_main import config
 from yw.util.util import set_global_seeds
 from yw.util.mpi_util import mpi_average
 
+from itertools import combinations # for dimension projection
+
 
 def train_reinforce(
     save_path,
@@ -76,15 +78,16 @@ def train_reinforce(
 
                 if rank == 0 and epoch % 50 == 49:
                     logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-                    # query
-                    dim1, dim2 = 0, 1
-                    policy.query_potential(
-                        dim1=dim1,
-                        dim2=dim2,
-                        filename=os.path.join(
-                            query_shaping_save_path, "dim_{}_{}_{:04d}.jpg".format(dim1, dim2, epoch)
-                        ),
-                    )
+                    # # query
+                    # dims = list(range(policy.dimo + policy.dimg))
+                    # for dim1, dim2 in combinations(dims, 2):
+                    #     policy.query_potential(
+                    #         dim1=dim1,
+                    #         dim2=dim2,
+                    #         filename=os.path.join(
+                    #             query_shaping_save_path, "dim_{}_{}_{:04d}.jpg".format(dim1, dim2, epoch)
+                    #         ),
+                    #     )
 
                 if rank == 0 and save_path and epoch % 100 == 0:
                     logger.info("Saving latest policy to {}.".format(latest_shaping_path))
@@ -97,6 +100,16 @@ def train_reinforce(
         else:
             logger.info("Use the provided policy weights: {}".format(shaping_policy))
             policy.load_shaping_weights(shaping_policy)
+            # # query
+            # dims = list(range(policy.dimo + policy.dimg))
+            # for dim1, dim2 in combinations(dims, 2):
+            #     policy.query_potential(
+            #         dim1=dim1,
+            #         dim2=dim2,
+            #         filename=os.path.join(
+            #             query_shaping_save_path, "dim_{}_{}_{:04d}.jpg".format(dim1, dim2, epoch)
+            #         ),
+            #     )
 
     best_success_rate = -1
 
