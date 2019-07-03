@@ -1,8 +1,26 @@
 import os
+import sys
 
 from train import Demo, Train, Display, Plot
+from yw.util.cmd_util import ArgParser
+
+# ap = ArgParser()
+
+# # demo configuration
+# ap.parser.add_argument(
+#     "--target",
+#     help="which script to run",
+#     type=str,
+#     choices=["rlsparse", "rldense", "bc", "shaping"],
+#     action="append",
+#     dest="targets",
+# )
 
 if __name__ == "__main__":
+
+    # ap.parse(sys.argv)
+    # target = ap.get_dict()["targets"]
+    # print("Using target: ", target)
 
     demo_exp = Demo()
     train_exp = Train()
@@ -26,7 +44,7 @@ if __name__ == "__main__":
 
     train_exp.set_shared_cmd(
         env=environment,
-        r_shift=0.0, # use dense reward for all now
+        r_shift=1.0, # use dense reward for all now
         n_cycles=10,
         rl_num_sample=1,
         rl_batch_size=256,
@@ -53,19 +71,19 @@ if __name__ == "__main__":
             seed=seed + 0,
         )
 
-        # Train the RL without demonstration using sparse reward.
-        # train_exp.rl_only(
-        #     seed=seed+10,
-        # )
-        # train_exp.rl_her_only(
-        #     seed=seed+10,
-        # )
-
         # Generate demonstration data
         demo_exp.generate_demo(
             policy_file=os.path.join(demo_exp.result_dir, "RLDense/rl/policy_latest.pkl"),
             seed=seed + 20,
         )
+
+        # Train the RL without demonstration using sparse reward.
+        train_exp.rl_only(
+            seed=seed+10,
+        )
+        # train_exp.rl_her_only(
+        #     seed=seed+10,
+        # )
 
         # Train the RL with demonstration through BC
         train_exp.rl_with_bc(
@@ -84,15 +102,15 @@ if __name__ == "__main__":
         )
 
     # Plot the training result
-    plot_exp.plot(
-        dir=plot_exp.result_dir,
-        xy=[
-            "epoch:test/success_rate",
-            "epoch:test/total_shaping_reward",
-            "epoch:test/total_reward",
-            "epoch:test/mean_Q",
-        ],
-    )
+    # plot_exp.plot(
+    #     dir=plot_exp.result_dir,
+    #     xy=[
+    #         "epoch:test/success_rate",
+    #         "epoch:test/total_shaping_reward",
+    #         "epoch:test/total_reward",
+    #         "epoch:test/mean_Q",
+    #     ],
+    # )
 
     # Display a policy result (calls run_agent).
     # display_exp.display(
