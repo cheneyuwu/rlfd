@@ -151,7 +151,7 @@ class Train(Experiment):
     def rl_her_with_bc(self, **kwargs):
         command = self.shared_cmd.copy()
         command["logdir"] = os.path.join(self.result_dir, "RLHERDemoBC")
-        command["save_path"] = os.path.join(self.result_dir, "RLDemoBC")
+        command["save_path"] = os.path.join(self.result_dir, "RLHERDemoBC")
         command["rl_replay_strategy"] = "her"
         command["demo_actor"] = "bc"
         return command
