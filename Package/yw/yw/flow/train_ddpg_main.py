@@ -277,6 +277,9 @@ def main(
         demo_file=demo_file,
         shaping_policy=shaping_policy,
     )
+    
+    # Close the default session to prevent memory leaking
+    tf.get_default_session().close()
 
 
 ap = ArgParser()

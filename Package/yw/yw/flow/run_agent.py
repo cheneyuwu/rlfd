@@ -62,6 +62,9 @@ def main(policy_file, seed, num_itr, render, env_args, **kwargs):
         logger.record_tabular(key, np.mean(val))
     if rank == 0:
         logger.dump_tabular()
+    
+    # Close the default session to prevent memory leaking
+    tf.get_default_session().close()
 
 
 import sys
