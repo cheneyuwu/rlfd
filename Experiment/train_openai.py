@@ -10,7 +10,7 @@ ap.parser.add_argument(
     "--target",
     help="which script to run",
     type=str,
-    choices=["rlsparse", "rldense", "bc", "shaping"],
+    choices=["rlsparse", "rldense", "bc", "shaping", "plot", "display"],
     action="append",
     default=None,
     dest="targets",
