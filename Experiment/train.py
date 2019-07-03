@@ -20,7 +20,7 @@ class Experiment:
         # Environment variables
         self.root_dir = os.getenv("PROJECT")
         self.exp_dir = os.getenv("EXPERIMENT")
-        self.result_dir = os.path.join(self.exp_dir, "Result")  # Cannot change this directly!
+        self.result_dir = os.path.join(self.exp_dir, "TempResult")  # Cannot change this directly!
         # Overwrite the following variables
         self.use_mpi = False  # whether or not to run with multiple threads
         self.shared_cmd = {}

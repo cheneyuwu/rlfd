@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     # Common result directory
     exp_dir = os.getenv("EXPERIMENT")
-    result_dir = os.path.join(exp_dir, "Result/OpenAIPickPlaceSingleGoal")
+    result_dir = os.path.join(exp_dir, "TempResult/OpenAIPickPlaceSingleGoal")
     train_exp.result_dir = result_dir
     demo_exp.result_dir = result_dir
     display_exp.result_dir = result_dir
@@ -114,5 +114,5 @@ if __name__ == "__main__":
     # Display a policy result (calls run_agent).
     if "display" in target:
         display_exp.display(
-            policy_file=os.path.join(display_exp.result_dir, "Exp0/RLDense/rl/policy_latest.pkl"), num_itr=10
+            policy_file=os.path.join(display_exp.result_dir, "Exp0/RLDemoBC/rl/policy_latest.pkl"), num_itr=10
         )
