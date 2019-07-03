@@ -231,8 +231,8 @@ def main(
     params["rl_demo_actor"] = demo_actor
     config_str = []
     config_str.append("dense" if "Dense" in env else "sparse")
-    if demo_critic == "shaping":
-        config_str.append("shaping")
+    if demo_critic == "nf":
+        config_str.append("maf")
     if demo_actor == "bc":
         config_str.append("behavior cloning")
     params["config"] = "-".join(config_str)
