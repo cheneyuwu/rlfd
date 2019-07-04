@@ -3,7 +3,7 @@
 import numpy as np
 import matplotlib
 
-matplotlib.use("Agg")  #  TkAgg Can change to 'Agg' for non-interactive mode
+matplotlib.use("TkAgg")  #  TkAgg Can change to 'Agg' for non-interactive mode
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
@@ -27,14 +27,15 @@ class Reacher:
         self.order = order
         self.sparse = sparse
         self.dim = dim
-        self.interval = 0.04
+        self.interval = 0.1 # use 0.04 for block reach
         self.mass = 1
         self.boundary = 1.0
         self.threshold = self.boundary / 12
         self._max_episode_steps = 42 if self.order == 2 else 16
         self.max_u = 2
         self.action_space = self.ActionSpace(self.dim)
-        self.workspace = self.Block((-self.boundary, -self.boundary), 2 * self.boundary, 2 * self.boundary)
+        if self.dim == 2: # create a workspace boundary only when dim is 2
+            self.workspace = self.Block((-self.boundary, -self.boundary), 2 * self.boundary, 2 * self.boundary)
         self.blocks = []
         if block == True:
             assert self.dim == 2, "cannot have block for dimensions other than 2!"
@@ -144,10 +145,10 @@ class Reacher:
         # The initial state and final goal is fixed
         if self.order == 2:
             self.speed = np.zeros(self.dim)
-            self.goal = 0.8 * np.ones(self.dim) * self.boundary
+            self.goal = 0.0 * np.ones(self.dim) * self.boundary
             self.curr_pos = -0.8 * np.ones(self.dim) * self.boundary
         else:  # 1
-            self.goal = 0.8 * np.ones(self.dim) * self.boundary
+            self.goal = 0.0 * np.ones(self.dim) * self.boundary
             self.curr_pos = -0.8 * np.ones(self.dim) * self.boundary
 
         self.T = 0
@@ -164,14 +165,18 @@ class Reacher:
             acc = action / self.mass
             new_curr_pos = self.curr_pos + self.speed * self.interval + self.interval * self.interval * acc * 0.5
             new_speed = self.speed + acc * self.interval
-            if all([block.outside(new_curr_pos) for block in self.blocks]) and self.workspace.inside(new_curr_pos):
+            if self.dim != 2 or (
+                all([block.outside(new_curr_pos) for block in self.blocks]) and self.workspace.inside(new_curr_pos)
+            ):
                 self.curr_pos = new_curr_pos
                 self.speed = new_speed
             else:
                 self.speed = 0.0 * self.speed
         else:  # 1
             new_curr_pos = self.curr_pos + action * self.interval
-            if all([block.outside(new_curr_pos) for block in self.blocks]) and self.workspace.inside(new_curr_pos):
+            if self.dim != 2 or (
+                all([block.outside(new_curr_pos) for block in self.blocks]) and self.workspace.inside(new_curr_pos)
+            ):
                 self.curr_pos = new_curr_pos
 
         self.T = self.T + 1
