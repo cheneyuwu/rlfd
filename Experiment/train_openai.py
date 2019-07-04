@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     # Common result directory
     exp_dir = os.getenv("EXPERIMENT")
-    result_dir = os.path.join(exp_dir, "Result/Temp")
+    result_dir = os.path.join(exp_dir, "TempResult/OpenAIReacherMultiGoal")
     train_exp.result_dir = result_dir
     demo_exp.result_dir = result_dir
     display_exp.result_dir = result_dir
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         n_cycles=10,
         rl_num_sample=1,
         rl_batch_size=256,
-        train_rl_epochs=20,
+        train_rl_epochs=500,
     )
 
     demo_exp.set_shared_cmd(
