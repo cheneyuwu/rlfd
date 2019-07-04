@@ -36,7 +36,7 @@ def visualize_potential_surface(ax, res):
 def visualize_action(ax, res, plot_opts={}):
     for i in range(res["o"].shape[0]):
         ax.arrow(*res["o"][i], *(res["u"][i] * 0.05), head_width=0.01, **plot_opts)
-    ax.axis([-1, 1, -1, 1])
+    ax.axis([-1, 0, -1, 0])
     ax.set_xlabel("x")
     ax.set_ylabel("y")
 
@@ -78,18 +78,27 @@ def create_plot(load_dirs):
         data = queries["query_action"]
         # create a new figure
         plt.figure(0)
-        gs = gridspec.GridSpec(1, 1)
-        # create a new axes for action
-        ax = plt.subplot(gs[0, 0])
-        ax.clear()
-        # plot
+        
+        # merge plots
+        # gs = gridspec.GridSpec(1, 1)
+        # ax = plt.subplot(gs[0, 0])
+        # ax.clear()
+        # col = cm.jet(np.linspace(0, 1, len(data.keys())))
+        # col_patch = []
+        # for c, k in enumerate(data.keys()):
+        #     visualize_action(ax, data[k], plot_opts={"color": col[c]})
+        #     col_patch.append(mpatches.Patch(color=col[c], label=k))
+        # ax.legend(handles=col_patch, loc="lower left")
+        # ax.set_title("action")
+        
+        # do not merge plots
+        gs = gridspec.GridSpec(1, len(data.keys()))
         col = cm.jet(np.linspace(0, 1, len(data.keys())))
-        col_patch = []
         for c, k in enumerate(data.keys()):
+            ax = plt.subplot(gs[0, c])
+            ax.clear()
             visualize_action(ax, data[k], plot_opts={"color": col[c]})
-            col_patch.append(mpatches.Patch(color=col[c], label=k))
-        ax.legend(handles=col_patch)
-        ax.set_title("action")
+            ax.legend(handles=[mpatches.Patch(color=col[c], label=k)], loc="lower left")
 
     if queries["query_potential_surface"] != None:
         # get data
