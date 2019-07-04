@@ -208,7 +208,6 @@ exp_parser.parser.add_argument(
     "--target",
     help="which script to run",
     type=str,
-    choices=["rlsparse", "rldense", "bc", "shaping", "demo", "plot", "display"],
     action="append",
     default=None,
     dest="targets",

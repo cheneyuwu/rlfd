@@ -1,24 +1,13 @@
 import os
 import sys
 
-from train import Demo, Train, Display
-from yw.util.cmd_util import ArgParser
+from train import Demo, Train, Display, Plot
+from train import exp_parser
 
-# A arg parser that takes options for which sub exp to run
-ap = ArgParser()
-ap.parser.add_argument(
-    "--target",
-    help="which script to run",
-    type=str,
-    choices=["rlsparse", "rldense", "bc", "shaping", "plot", "display"],
-    action="append",
-    default=None,
-    dest="targets",
-)
-ap.parse(sys.argv)
-target = ap.get_dict()["targets"]
+# take cmd line args passed with --target
+exp_parser.parse(sys.argv)
+target = exp_parser.get_dict()["targets"]
 print("Using target: ", target)
-
 
 demo_exp = Demo()
 train_exp = Train()
@@ -26,8 +15,7 @@ display_exp = Display()
 plot_exp = Plot()
 
 # Common result directory
-exp_dir = os.getenv("EXPERIMENT")
-result_dir = os.path.join(exp_dir, "TempResult/OpenAIReacherMultiGoal")
+result_dir = os.path.join(os.getenv("EXPERIMENT"), "TempResult/OpenAIReacherMultiGoal")
 train_exp.result_dir = result_dir
 demo_exp.result_dir = result_dir
 display_exp.result_dir = result_dir
@@ -46,7 +34,7 @@ train_exp.set_shared_cmd(
     n_cycles=10,
     rl_num_sample=1,
     rl_batch_size=256,
-    train_rl_epochs=500,
+    train_rl_epochs=20,
 )
 
 demo_exp.set_shared_cmd(
@@ -100,17 +88,17 @@ for i in range(4):
     )
 
 # Plot the training result
-# plot_exp.plot(
-#     dir=plot_exp.result_dir,
-#     xy=[
-#         "epoch:test/success_rate",
-#         "epoch:test/total_shaping_reward",
-#         "epoch:test/total_reward",
-#         "epoch:test/mean_Q",
-#     ],
-# )
+plot_exp.plot(
+    dir=plot_exp.result_dir,
+    xy=[
+        "epoch:test/success_rate",
+        "epoch:test/total_shaping_reward",
+        "epoch:test/total_reward",
+        "epoch:test/mean_Q",
+    ],
+)
 
 # Display a policy result (calls run_agent).
-# display_exp.display(
-#     policy_file=os.path.join(display_exp.result_dir, "Exp0/RLDense/rl/policy_latest.pkl"), num_itr=10
-# )
+display_exp.display(
+    policy_file=os.path.join(display_exp.result_dir, "Exp0/RLDense/rl/policy_latest.pkl"), num_itr=10
+)
