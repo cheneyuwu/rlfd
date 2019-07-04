@@ -30,7 +30,7 @@ from yw.ddpg_main import config
 from yw.util.util import set_global_seeds
 from yw.util.mpi_util import mpi_average
 
-from itertools import combinations # for dimension projection
+from itertools import combinations  # for dimension projection
 
 
 def train_reinforce(
@@ -221,7 +221,7 @@ def main(
     # Seed everything.
     rank_seed = seed + 1_000_000 * rank
     set_global_seeds(rank_seed)
-    
+
     # Reset default graph every time this function is called. (must be called after setting seed)
     tf.reset_default_graph()
     tf.InteractiveSession()
@@ -244,10 +244,10 @@ def main(
     params["rl_demo_actor"] = demo_actor
     config_str = []
     config_str.append("dense" if "Dense" in env else "sparse")
-    if demo_critic == "nf":
-        config_str.append("maf")
-    if demo_actor == "bc":
-        config_str.append("behavior cloning")
+    if demo_critic != "none":
+        config_str.append(demo_critic)
+    if demo_actor != "none":
+        config_str.append(demo_actor)
     params["config"] = "-".join(config_str)
     # make it possible to override any parameter.
     for key, val in unknown_params.items():
@@ -290,7 +290,7 @@ def main(
         demo_file=demo_file,
         shaping_policy=shaping_policy,
     )
-    
+
     # Close the default session to prevent memory leaking
     tf.get_default_session().close()
 
@@ -334,7 +334,7 @@ ap.parser.add_argument(
     "--demo_critic",
     help="use a neural network as critic or a gaussian process. Need to provide or train a demo policy if not set to none",
     type=str,
-    choices=["nf", "shaping", "none"],
+    choices=["maf", "norm", "manual", "none"],
     default="none",
 )
 ap.parser.add_argument(

@@ -135,7 +135,7 @@ class Train(Experiment):
         command["logdir"] = os.path.join(self.result_dir, "RLHERDemoShaping")
         command["save_path"] = os.path.join(self.result_dir, "RLDemoShaping")
         command["rl_replay_strategy"] = "her"
-        command["demo_critic"] = "nf"
+        command["demo_critic"] = "maf"
         return command
 
     @Experiment.execute
@@ -144,7 +144,7 @@ class Train(Experiment):
         command["logdir"] = os.path.join(self.result_dir, "RLDemoShaping")
         command["save_path"] = os.path.join(self.result_dir, "RLDemoShaping")
         command["rl_replay_strategy"] = "none"
-        command["demo_critic"] = "nf"
+        command["demo_critic"] = "maf"
         return command
 
     @Experiment.execute

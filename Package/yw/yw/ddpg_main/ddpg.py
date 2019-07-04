@@ -298,7 +298,7 @@ class DDPG(object):
     def train_shaping(self):
         # train normalizing flow
         loss = 0
-        if self.demo_critic == "nf":
+        if self.demo_critic == "maf":
             self.sess.run(self.demo_iter_tf.initializer)
             losses = np.empty(0)
             while True:
@@ -322,7 +322,7 @@ class DDPG(object):
         batch = self.sample_batch()
         feed = {self.inputs_tf[k]: batch[k] for k in self.inputs_tf.keys()}
         # feed demonstration data
-        if self.demo_critic == "shaping":
+        if self.demo_critic == "norm":
             demo_data = self.demo_buffer.sample_all()
             demo_data["o"] = self._preprocess_state(demo_data["o"])
             if self.dimg != 0:
@@ -353,7 +353,7 @@ class DDPG(object):
         pass
         # feed = {self.inputs_tf[k]: self.current_batch[k] for k in self.inputs_tf.keys()}
         # # feed demonstration data
-        # if self.demo_critic == "shaping":
+        # if self.demo_critic == "norm":
         #     demo_data = self.demo_buffer.sample_all()
         #     demo_data["o"] = self._preprocess_state(demo_data["o"])
         #     if self.dimg != 0:
@@ -503,10 +503,11 @@ class DDPG(object):
             self.demo_inputs_tf = self.demo_iter_tf.get_next()
 
             with tf.variable_scope("shaping") as vs:
-                if self.demo_critic == "shaping":
-                    # self.demo_shaping = ManualDemoShaping(gamma=self.gamma)
+                if self.demo_critic == "manual":
+                    self.demo_shaping = ManualDemoShaping(gamma=self.gamma)
+                elif self.demo_critic == "norm":
                     self.demo_shaping = GaussianDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
-                elif self.demo_critic == "nf":
+                elif self.demo_critic == "maf":
                     # self.demo_shaping = NormalizingFlowDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
                     self.demo_shaping = MAFDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
                 for i in range(self.num_sample):
