@@ -37,6 +37,26 @@ class DemoShaping:
     def load_weights(self, sess, path):
         self.saver.restore(sess, path)
 
+    def _concat_inputs(self, o, g, u):
+        # Concat demonstration inputs
+        state_tf = o
+        if g != None:
+            # for multigoal environments, we have goal as another states
+            state_tf = tf.concat(axis=1, values=[state_tf, g])
+        state_tf = tf.concat(axis=1, values=[state_tf, u])
+        # note: shape of state_tf is (num_demo, k), where k is sum of dim o g u
+        return state_tf
+
+    def _cast_concat_inputs(self, o, g, u):
+        # Concat demonstration inputs
+        state_tf = tf.cast(o, tf.float64)
+        if g != None:
+            # for multigoal environments, we have goal as another states
+            state_tf = tf.concat(axis=1, values=[state_tf, tf.cast(g, tf.float64)])
+        state_tf = tf.concat(axis=1, values=[state_tf, tf.cast(u, tf.float64)])
+        # note: shape of state_tf is (num_demo, k), where k is sum of dim o g u
+        return state_tf
+
 
 class ManualDemoShaping(DemoShaping):
     def __init__(self, gamma):
@@ -106,16 +126,6 @@ class GaussianDemoShaping(DemoShaping):
 
         return potential
 
-    def _concat_inputs(self, o, g, u):
-        # Concat demonstration inputs
-        state_tf = o
-        if g != None:
-            # for multigoal environments, we have goal as another states
-            state_tf = tf.concat(axis=1, values=[state_tf, g])
-        state_tf = tf.concat(axis=1, values=[state_tf, u])
-        # note: shape of state_tf is (num_demo, k), where k is sum of dim o g u
-        return state_tf
-
 
 class NormalizingFlowDemoShaping(DemoShaping):
     def __init__(self, gamma, demo_inputs_tf):
@@ -154,16 +164,6 @@ class NormalizingFlowDemoShaping(DemoShaping):
         state_tf = self._concat_inputs(o, g, u)
 
         return self.nn(state_tf)
-
-    def _concat_inputs(self, o, g, u):
-        # Concat demonstration inputs
-        state_tf = o
-        # if g != None:
-        #     # for multigoal environments, we have goal as another states
-        #     state_tf = tf.concat(axis=1, values=[state_tf, g])
-        state_tf = tf.concat(axis=1, values=[state_tf, u])
-        # note: shape of state_tf is (num_demo, k), where k is sum of dim o g u
-        return state_tf
 
 
 class MAFDemoShaping(DemoShaping):
