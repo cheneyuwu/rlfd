@@ -21,21 +21,27 @@ class DemoShaping:
         """
         self.gamma = gamma
         self.scope = tf.get_variable_scope()
-        self.saver = tf.train.Saver(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name))
+        if tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name):
+            self.saver = tf.train.Saver(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name))
+        else:
+            self.saver = None
 
     def reward(self, o, g, u, o_2, g_2, u_2):
         potential = self.potential(o, g, u)
         next_potential = self.potential(o_2, g_2, u_2)
+        assert potential.shape[1] == next_potential.shape[1] == 1
         return self.gamma * next_potential - potential
 
     def potential(self, o, g, u):
         raise NotImplementedError
 
     def save_weights(self, sess, path):
-        self.saver.save(sess, path)
+        if self.saver:
+            self.saver.save(sess, path)
 
     def load_weights(self, sess, path):
-        self.saver.restore(sess, path)
+        if self.saver:
+            self.saver.restore(sess, path)
 
     def _concat_inputs(self, o, g, u):
         # Concat demonstration inputs
@@ -76,8 +82,10 @@ class ManualDemoShaping(DemoShaping):
         """
         Just return negative value of distance between current state and goal state
         """
-        # ret = -tf.abs(o - g) * 10
-        ret = -(tf.clip_by_value((g - o) * 10, -2, 2) - u) ** 2
+        # state based, for reacher 1d, and 2d
+        ret = -tf.norm(tf.abs(o - g), ord=2, axis=1, keepdims=True) * 10
+        # state action based for reacher 1d
+        # ret = -(tf.clip_by_value((g - o) * 10, -2, 2) - u) ** 2
         return ret
 
 
@@ -95,26 +103,26 @@ class GaussianDemoShaping(DemoShaping):
             demo_inputs_tf - demo_inputs that contains all the transitons from demonstration
         """
         self.demo_inputs_tf = demo_inputs_tf
-        self.sigma = 1  # a hyperparam to be tuned
-        self.scale = 10  # another hyperparam to be tuned
+        self.demo_state_tf = self._concat_inputs(
+            self.demo_inputs_tf["o"],
+            self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
+            self.demo_inputs_tf["u"],
+        )
+        self.sigma = 1.0  # a hyperparam to be tuned
+        self.scale = 10.0  # another hyperparam to be tuned
         super().__init__(gamma)
 
     def potential(self, o, g, u):
         """
         Just return negative value of distance between current state and goal state
         """
-        # Concat demonstration inputs
-        demo_state_tf = self._concat_inputs(
-            self.demo_inputs_tf["o"],
-            self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
-            self.demo_inputs_tf["u"],
-        )
+
         state_tf = self._concat_inputs(o, g, u)
 
         # Calculate the potential
         # expand dimension of demo_state and state so that they have the same shape: (batch_size, num_demo, k)
-        expanded_demo_state_tf = tf.tile(tf.expand_dims(demo_state_tf, 0), [tf.shape(state_tf)[0], 1, 1])
-        expanded_state_tf = tf.tile(tf.expand_dims(state_tf, 1), [1, tf.shape(demo_state_tf)[0], 1])
+        expanded_demo_state_tf = tf.tile(tf.expand_dims(self.demo_state_tf, 0), [tf.shape(state_tf)[0], 1, 1])
+        expanded_state_tf = tf.tile(tf.expand_dims(state_tf, 1), [1, tf.shape(self.demo_state_tf)[0], 1])
         # calculate distance, result shape is (batch_size, num_demo, k)
         distance_tf = expanded_state_tf - expanded_demo_state_tf
         # calculate L2 Norm square, result shape is (batch_size, num_demo)
@@ -227,23 +235,15 @@ class MAFDemoShaping(DemoShaping):
         #     state_with_noise_tf = state_tf + tf.cast(noise_tf, tf.float64)
         #     potential.append(tf.reshape(self.nn.log_prob(state_with_noise_tf), (-1, 1)))
         # potential = tf.reduce_mean(potential, axis=0)
-        # method 2 no noise
-        potential = tf.reshape(self.nn.log_prob(state_tf), (-1,1))
 
-        # scale and clip
-        potential = 1.0 * tf.clip_by_value(potential, 0.0, 100.0)
+        # method 2 no noise
+        potential = tf.reshape(self.nn.log_prob(state_tf), (-1, 1))
+        potential = 1.0 * tf.clip_by_value(potential, -1000.0, 100.0)
+
+        # method 3 a numerical trick
+        # potential = tf.reshape(tf.log(1 + self.nn.prob(state_tf)), (-1, 1))
 
         return potential
-
-    def _cast_concat_inputs(self, o, g, u):
-        # Concat demonstration inputs
-        state_tf = tf.cast(o, tf.float64)
-        if g != None:
-            # for multigoal environments, we have goal as another states
-            state_tf = tf.concat(axis=1, values=[state_tf, tf.cast(g, tf.float64)])
-        state_tf = tf.concat(axis=1, values=[state_tf, tf.cast(u, tf.float64)])
-        # note: shape of state_tf is (num_demo, k), where k is sum of dim o g u
-        return state_tf
 
 
 # Testing

@@ -65,35 +65,31 @@ def train_reinforce(
         os.makedirs(query_uncertainty_save_path, exist_ok=True)
         query_shaping_save_path = save_path + "/query_shaping/"
         os.makedirs(query_shaping_save_path, exist_ok=True)
+        query_potential_surface_save_path = save_path + "/query_potential_surface/"
+        os.makedirs(query_potential_surface_save_path, exist_ok=True)
+        query_action_save_path = save_path + "/query_action/"
+        os.makedirs(query_action_save_path, exist_ok=True)
 
     if policy.demo_actor != "none" or policy.demo_critic != "none":
         policy.init_demo_buffer(demo_file, update_stats=policy.demo_actor != "none")
 
     # Pre-Training a potential function
-    if policy.demo_critic != "none":
+    if policy.demo_critic == "maf":
         if shaping_policy == None:
             logger.info("Training the policy for reward shaping.")
-            for epoch in range(500):
+            num_epoch = 100
+            for epoch in range(num_epoch):
                 loss = policy.train_shaping()
 
-                if rank == 0 and epoch % 50 == 49:
+                if rank == 0 and epoch % (num_epoch / 10) == (num_epoch / 10 - 1):
                     logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-                    # # query
-                    # dims = list(range(policy.dimo + policy.dimg))
-                    # for dim1, dim2 in combinations(dims, 2):
-                    #     policy.query_potential(
-                    #         dim1=dim1,
-                    #         dim2=dim2,
-                    #         filename=os.path.join(
-                    #             query_shaping_save_path, "dim_{}_{}_{:04d}.jpg".format(dim1, dim2, epoch)
-                    #         ),
-                    #     )
+                    # query
+                    policy.query_potential_surface(fid=0)
 
                 if rank == 0 and save_path and epoch % 100 == 0:
                     logger.info("Saving latest policy to {}.".format(latest_shaping_path))
                     policy.save_shaping_weights(latest_shaping_path)
-                # if loss < -0.5:  # assume this value is small enough
-                #     break
+
             if rank == 0 and save_path:
                 logger.info("Saving latest policy to {}.".format(latest_shaping_path))
                 policy.save_shaping_weights(latest_shaping_path)
@@ -118,6 +114,14 @@ def train_reinforce(
 
         # Store anything we need into a numpyz file.
         # policy.query_uncertainty(os.path.join(query_uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
+        policy.query_potential_surface(
+            filename=os.path.join(query_potential_surface_save_path, "query_{:03d}.npz".format(epoch)),  # comment
+            fid=0,
+        )
+        policy.query_action(
+            filename=os.path.join(query_action_save_path, "query_{:03d}.npz".format(epoch)),  # comment to show plot
+            fid=1,
+        )
 
         # Train
         rollout_worker.clear_history()
