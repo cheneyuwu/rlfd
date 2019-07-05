@@ -340,8 +340,12 @@ class DDPG(object):
         # update Q every time
         self.Q_adam.update(Q_grad, self.Q_lr)
         # update Pi every other time
-        if self.training_step % 2 == 0:
+        if self.use_td3:
+            if self.training_step % 2 == 0:
+                self.pi_adam.update(pi_grad, self.pi_lr)
+        else:
             self.pi_adam.update(pi_grad, self.pi_lr)
+            
         self.training_step += 1
 
         # for debugging
