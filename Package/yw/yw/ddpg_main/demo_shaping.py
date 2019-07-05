@@ -109,7 +109,7 @@ class GaussianDemoShaping(DemoShaping):
             self.demo_inputs_tf["u"],
         )
         self.sigma = 1.0  # a hyperparam to be tuned
-        self.scale = 10.0  # another hyperparam to be tuned
+        self.scale = 1.0  # another hyperparam to be tuned
         super().__init__(gamma)
 
     def potential(self, o, g, u):

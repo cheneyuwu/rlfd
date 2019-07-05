@@ -21,7 +21,7 @@ class Query(Experiment):
         command = self.shared_cmd.copy()
         command["save"] = 0
         command["load_dir"] = [
-            os.path.join(self.result_dir, "RLDense"),
+            # os.path.join(self.result_dir, "RLDense"),
             # os.path.join(self.result_dir, "RLDemoNegDistance"),
             # os.path.join(self.result_dir, "RLDemoL2DistanceToAllDemo"),
             # os.path.join(self.result_dir, "RLDemoL2DistanceToClosestDemo"),
@@ -55,7 +55,7 @@ query_exp.result_dir = result_dir
 # Specify the environment and reward type.
 # If you want to use dense reward, add "Dense" to the reward name and make sure the env manager recognizes that.
 # Please follow this convention so that you can plot the same env with different reward types in the same graph.
-environment = "Reach2DF"
+environment = "Reach2DFDense"
 demo_data_size = 32
 seed = 2
 
@@ -102,7 +102,7 @@ for i in range(1):
             seed=seed + 30,
             rl_batch_size_demo=128,
             num_demo=demo_data_size,
-            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment + ".npz"),
+            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment.replace("Dense", "") + ".npz"),
         )
 
     # Train the RL with demonstration through shaping
@@ -112,7 +112,7 @@ for i in range(1):
             save_path=os.path.join(train_exp.result_dir, "RLDemoNorm"),
             seed=seed + 40,
             num_demo=demo_data_size,
-            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment + ".npz"),
+            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment.replace("Dense", "") + ".npz"),
             demo_critic="norm",
             # shaping_policy=os.path.join(train_exp.result_dir, "RLDemoShaping", "shaping/shaping_latest.ckpt"),
         )
@@ -124,7 +124,7 @@ for i in range(1):
             save_path=os.path.join(train_exp.result_dir, "RLDemoMAF"),
             seed=seed + 40,
             num_demo=demo_data_size,
-            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment + ".npz"),
+            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment.replace("Dense", "") + ".npz"),
             demo_critic="maf",
             # shaping_policy=os.path.join(train_exp.result_dir, "RLDemoShaping", "shaping/shaping_latest.ckpt"),
         )
@@ -136,7 +136,7 @@ for i in range(1):
             save_path=os.path.join(train_exp.result_dir, "RLDemoManual"),
             seed=seed + 40,
             num_demo=demo_data_size,
-            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment + ".npz"),
+            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment.replace("Dense", "") + ".npz"),
             demo_critic="manual",
             # shaping_policy=os.path.join(train_exp.result_dir, "RLDemoShaping", "shaping/shaping_latest.ckpt"),
         )
