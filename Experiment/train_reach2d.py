@@ -19,14 +19,17 @@ class Query(Experiment):
     @Experiment.execute
     def query(self, **override):
         command = self.shared_cmd.copy()
+        command["save"] = 0
         command["load_dir"] = [
             os.path.join(self.result_dir, "RLDense"),
-            os.path.join(self.result_dir, "RLDemoNegDistance"),
-            os.path.join(self.result_dir, "RLDemoL2DistanceToAllDemo"),
-            os.path.join(self.result_dir, "RLDemoL2DistanceToClosestDemo"),
-            os.path.join(self.result_dir, "RLDemoMAFPlus1Trick"),
-            os.path.join(self.result_dir, "RLDemoMAFClip1000"),
-            os.path.join(self.result_dir, "RL"),
+            # os.path.join(self.result_dir, "RLDemoNegDistance"),
+            # os.path.join(self.result_dir, "RLDemoL2DistanceToAllDemo"),
+            # os.path.join(self.result_dir, "RLDemoL2DistanceToClosestDemo"),
+            # os.path.join(self.result_dir, "RLDemoMAFPlus1Trick"),
+            # os.path.join(self.result_dir, "RLDemoMAFClip1000"),
+            # os.path.join(self.result_dir, "RL"),
+            # temp
+            os.path.join(self.result_dir, "*"),
         ]
         return command
 
@@ -34,7 +37,6 @@ class Query(Experiment):
 # take cmd line args passed with --target
 exp_parser.parse(sys.argv)
 target = exp_parser.get_dict()["targets"]
-print("Using target: ", target)
 
 demo_exp = Demo()
 train_exp = Train()
@@ -43,7 +45,7 @@ plot_exp = Plot()
 query_exp = Query()
 
 # Common result directory
-result_dir = os.path.join(os.getenv("EXPERIMENT"), "TempResult/Reacher2D")
+result_dir = os.path.join(os.getenv("EXPERIMENT"), "TempResult/Temp")
 train_exp.result_dir = result_dir
 demo_exp.result_dir = result_dir
 display_exp.result_dir = result_dir
@@ -54,15 +56,15 @@ query_exp.result_dir = result_dir
 # If you want to use dense reward, add "Dense" to the reward name and make sure the env manager recognizes that.
 # Please follow this convention so that you can plot the same env with different reward types in the same graph.
 environment = "Reach2DF"
-demo_data_size = 16
+demo_data_size = 32
 seed = 2
 
 train_exp.set_shared_cmd(
-    env=environment,  # override
+    env=environment,
     n_cycles=10,
-    rl_num_sample=1,  # override
+    rl_num_sample=1,
     rl_batch_size=256,
-    train_rl_epochs=20,  # override
+    train_rl_epochs=100,
 )
 
 demo_exp.set_shared_cmd(num_demo=demo_data_size)

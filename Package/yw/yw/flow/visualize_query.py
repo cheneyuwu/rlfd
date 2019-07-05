@@ -56,7 +56,7 @@ def create_animate(frame, data):
     visualize_action(ax, res)
 
 
-def create_plot(load_dirs):
+def create_plot(load_dirs, save):
 
     # Load data
     queries = {"query_action": None, "query_potential_surface": None}
@@ -77,8 +77,9 @@ def create_plot(load_dirs):
         # get data
         data = queries["query_action"]
         # create a new figure
-        plt.figure(0)
-        
+        fig = plt.figure(0)
+        fig.set_size_inches(4 * len(data.keys()), 4)
+
         # merge plots
         # gs = gridspec.GridSpec(1, 1)
         # ax = plt.subplot(gs[0, 0])
@@ -90,7 +91,7 @@ def create_plot(load_dirs):
         #     col_patch.append(mpatches.Patch(color=col[c], label=k))
         # ax.legend(handles=col_patch, loc="lower left")
         # ax.set_title("action")
-        
+
         # do not merge plots
         gs = gridspec.GridSpec(1, len(data.keys()))
         col = cm.jet(np.linspace(0, 1, len(data.keys())))
@@ -100,11 +101,17 @@ def create_plot(load_dirs):
             visualize_action(ax, data[k], plot_opts={"color": col[c]})
             ax.legend(handles=[mpatches.Patch(color=col[c], label=k)], loc="lower left")
 
+        if save:
+            res_store_dir = os.path.join(load_dirs[0], "../action.png")
+            print("Storing action result to {}".format(res_store_dir))
+            plt.savefig(res_store_dir, dpi=200)
+
     if queries["query_potential_surface"] != None:
         # get data
         data = queries["query_potential_surface"]
         # create a new figure
-        plt.figure(1)
+        fig = plt.figure(1)
+        fig.set_size_inches(4 * len(data.keys()), 4)
         gs = gridspec.GridSpec(1, len(data.keys()))
         # create a new axes for action
         for c, k in enumerate(data.keys()):
@@ -114,19 +121,31 @@ def create_plot(load_dirs):
             visualize_potential_surface(ax, data[k])
             ax.set_title(k)
 
+        if save:
+            res_store_dir = os.path.join(load_dirs[0], "../potential.png")
+            print("Storing action result to {}".format(res_store_dir))
+            plt.savefig(res_store_dir, dpi=200)
+
+
+    if not save:
+        plt.show()  # close the figure and then continue
+
 
 def main(mode, load_dirs, save, **kwargs):
 
+    for load_dir in load_dirs:
+        if load_dir.split("/")[-1] == "*":
+            root_dir = load_dir[:-2]
+            load_dirs = []
+            for d in os.listdir(root_dir):
+                path = os.path.join(root_dir, d)
+                if os.path.isdir(path):
+                    load_dirs.append(path)
+            break
+
     if mode == "plot":
 
-        create_plot(load_dirs)
-
-        if save:
-            res_store_dir = os.path.join(load_dir, "../uncertainty.mp4")
-            print("Storing animation result to {}".format(res_store_dir))
-            res.save(res_store_dir, dpi=200)
-        else:
-            plt.show()  # close the figure and then continue
+        create_plot(load_dirs, save)
 
     else:
         # Plot animation

@@ -143,13 +143,11 @@ class Reacher:
     def reset(self):
 
         # The initial state and final goal is fixed
+        self.goal = self.random.uniform(-0.0, 0.0) * np.ones(self.dim) * self.boundary
+        self.curr_pos = -0.8 * np.ones(self.dim) * self.boundary
+        # self.curr_pos = self.random.uniform(-0.8, 0.0, self.dim) * self.boundary
         if self.order == 2:
             self.speed = np.zeros(self.dim)
-            self.goal = 0.0 * np.ones(self.dim) * self.boundary
-            self.curr_pos = -0.8 * np.ones(self.dim) * self.boundary
-        else:  # 1
-            self.goal = 0.0 * np.ones(self.dim) * self.boundary
-            self.curr_pos = -0.8 * np.ones(self.dim) * self.boundary
 
         self.T = 0
         self.history = {"position": [], "goal": [], "t": [], "r": [], "v": []}

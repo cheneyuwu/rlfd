@@ -190,16 +190,12 @@ def main(
     env_args,
     seed,
     train_rl_epochs,
-    rl_num_sample,
-    rl_use_td3,
-    exploit,
     rl_replay_strategy,
     num_demo,
     demo_critic,
     demo_actor,
     demo_file,
     shaping_policy,
-    debug_params,
     unknown_params,
     **kwargs,
 ):
@@ -239,9 +235,6 @@ def main(
     params["eps_length"] = eps_length
     params["env_args"] = dict(env_args) if env_args else {}
     params["train_rl_epochs"] = train_rl_epochs
-    params["rl_use_td3"] = rl_use_td3
-    params["rl_num_sample"] = rl_num_sample
-    params["exploit"] = exploit
     params["rl_replay_strategy"] = rl_replay_strategy  # For HER: future or none
     params["rl_num_demo"] = num_demo
     params["rl_demo_critic"] = demo_critic
@@ -257,10 +250,6 @@ def main(
     for key, val in unknown_params.items():
         assert key in params.keys(), "Wrong override parameter: {}.".format(key)
         params.update({key: type(params[key])(val)})
-    # for debugging only
-    if debug_params:
-        # put any parameter in the debug_param global dictionary.
-        params.update(**config.DEBUG_PARAMS)
 
     # Record params in a json file for later use.
     # This should be done before preparing_params because that function will add function variables that cannot be
@@ -306,7 +295,7 @@ ap.parser.add_argument("--loglevel", help="log level", type=int, default=2)
 # save results - this will be for both demo and rl
 ap.parser.add_argument("--save_path", help="policy path", type=str, default=os.getenv("TEMPDIR") + "/Train/policy")
 ap.parser.add_argument("--save_interval", help="the interval which policy pickles are saved", type=int, default=0)
-# program - TODO: test if this works for the demonstration training part.
+# seed
 ap.parser.add_argument("--seed", help="RNG seed", type=int, default=0)
 # environment setup
 ap.parser.add_argument("--env", help="name of the environment", type=str, default="Reach2DFirstOrder")
@@ -322,9 +311,6 @@ ap.parser.add_argument(
 # training
 ap.parser.add_argument("--train_rl_epochs", help="the number of training epochs to run for RL", type=int, default=1)
 # DDPG configuration
-ap.parser.add_argument("--rl_num_sample", help="number of ddpg heads", type=int, default=1)
-ap.parser.add_argument("--rl_use_td3", help="whether or not to use td3", type=int, default=1)
-ap.parser.add_argument("--exploit", help="whether or not to use e-greedy exploration", type=int, default=0)
 ap.parser.add_argument(
     "--rl_replay_strategy",
     help="the replay strategy to be used. 'future' uses HER, 'none' disables HER",
@@ -350,10 +336,6 @@ ap.parser.add_argument(
 )
 ap.parser.add_argument("--demo_file", help="demonstration training dataset", type=str, default=None)
 ap.parser.add_argument("--shaping_policy", help="well trained reward shaping policy", type=str, default=None)
-# others
-ap.parser.add_argument(
-    "--debug_params", help="override some parameters for internal regression tests", type=int, default=0
-)
 
 if __name__ == "__main__":
     ap.parse(sys.argv)
