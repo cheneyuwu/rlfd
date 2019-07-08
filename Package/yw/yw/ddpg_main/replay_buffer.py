@@ -3,7 +3,6 @@ import threading
 import numpy as np
 
 from yw.tool import logger
-from yw.ddpg_main.segment_tree import *
 
 
 class ReplayBuffer:
