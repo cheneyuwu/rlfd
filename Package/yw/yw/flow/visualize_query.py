@@ -36,7 +36,7 @@ def visualize_potential_surface(ax, res):
 def visualize_action(ax, res, plot_opts={}):
     for i in range(res["o"].shape[0]):
         ax.arrow(*res["o"][i], *(res["u"][i] * 0.05), head_width=0.01, **plot_opts)
-    ax.axis([-1, 0, -1, 0])
+    ax.axis([-1, 1, -1, 1])
     ax.set_xlabel("x")
     ax.set_ylabel("y")
 
@@ -59,7 +59,7 @@ def create_animate(frame, data):
 def create_plot(load_dirs, save):
 
     # Load data
-    queries = {"query_action": None, "query_potential_surface": None}
+    queries = {"query_action": None, "query_potential_surface": None, "query_potential_based_policy": None}
     for q_k in queries.keys():
         data = {}
         for load_dir in load_dirs:
@@ -72,13 +72,54 @@ def create_plot(load_dirs, save):
                     data[exp_name] = {**np.load(os.path.join(q, result_files[-1]))}
         queries[q_k] = data
 
+    # Initialization
+    fid = 0
+
+    # Plot query potential based policies
+    if queries["query_potential_based_policy"] != None:
+        # get data
+        data = queries["query_potential_based_policy"]
+        # create a new figure
+        fig = plt.figure(fid)
+        fid += 1
+        fig.set_size_inches(4 * len(data.keys()), 4)
+        fig.suptitle("Optimized Policy under Current Potential")
+
+        # merge plots
+        # gs = gridspec.GridSpec(1, 1)
+        # ax = plt.subplot(gs[0, 0])
+        # ax.clear()
+        # col = cm.jet(np.linspace(0, 1, len(data.keys())))
+        # col_patch = []
+        # for c, k in enumerate(data.keys()):
+        #     visualize_action(ax, data[k], plot_opts={"color": col[c]})
+        #     col_patch.append(mpatches.Patch(color=col[c], label=k))
+        # ax.legend(handles=col_patch, loc="lower left")
+        # ax.set_title("action")
+
+        # do not merge plots
+        gs = gridspec.GridSpec(1, len(data.keys()))
+        col = cm.jet(np.linspace(0, 1, len(data.keys())))
+        for c, k in enumerate(data.keys()):
+            ax = plt.subplot(gs[0, c])
+            ax.clear()
+            visualize_action(ax, data[k], plot_opts={"color": col[c]})
+            ax.legend(handles=[mpatches.Patch(color=col[c], label=k)], loc="lower left")
+
+        if save:
+            res_store_dir = os.path.join(load_dirs[0], "../action.png")
+            print("Storing action result to {}".format(res_store_dir))
+            plt.savefig(res_store_dir, dpi=200)
+
     # Plot query actions
     if queries["query_action"] != None:
         # get data
         data = queries["query_action"]
         # create a new figure
-        fig = plt.figure(0)
+        fig = plt.figure(fid)
+        fid += 1
         fig.set_size_inches(4 * len(data.keys()), 4)
+        fig.suptitle("Optimized Policy")
 
         # merge plots
         # gs = gridspec.GridSpec(1, 1)
@@ -110,8 +151,11 @@ def create_plot(load_dirs, save):
         # get data
         data = queries["query_potential_surface"]
         # create a new figure
-        fig = plt.figure(1)
+        fig = plt.figure(fid)
+        fid += 1
         fig.set_size_inches(4 * len(data.keys()), 4)
+        fig.suptitle("Potential Surface")
+
         gs = gridspec.GridSpec(1, len(data.keys()))
         # create a new axes for action
         for c, k in enumerate(data.keys()):
@@ -125,7 +169,6 @@ def create_plot(load_dirs, save):
             res_store_dir = os.path.join(load_dirs[0], "../potential.png")
             print("Storing action result to {}".format(res_store_dir))
             plt.savefig(res_store_dir, dpi=200)
-
 
     if not save:
         plt.show()  # close the figure and then continue

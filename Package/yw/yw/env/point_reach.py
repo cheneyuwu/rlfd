@@ -31,7 +31,7 @@ class Reacher:
         self.mass = 1
         self.boundary = 1.0
         self.threshold = self.boundary / 12
-        self._max_episode_steps = 42 if self.order == 2 else 16
+        self._max_episode_steps = 42 if self.order == 2 else 20
         self.max_u = 2
         self.action_space = self.ActionSpace(self.dim)
         if self.dim == 2: # create a workspace boundary only when dim is 2

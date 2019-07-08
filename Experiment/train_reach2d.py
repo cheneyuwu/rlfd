@@ -57,16 +57,14 @@ query_exp.result_dir = result_dir
 # Please follow this convention so that you can plot the same env with different reward types in the same graph.
 environment = "Reach2DFDense"
 demo_data_size = 32
-seed = 2
+seed = 0
 
 train_exp.set_shared_cmd(
     env=environment,
     n_cycles=10,
-    rl_num_sample=1,
-    rl_batch_size=256,
-    train_rl_epochs=100,
+    train_rl_epochs=60,
+    rl_action_l2=0.5,
 )
-
 demo_exp.set_shared_cmd(num_demo=demo_data_size)
 
 for i in range(1):
@@ -82,8 +80,8 @@ for i in range(1):
     if "rldense" in target:
         train_exp.rl_only_dense(
             env="Reach2DFDense", 
-            r_shift=0.0, 
-            seed=seed + 0
+            r_shift=0.0,
+            seed=seed + 0,
         )
 
     # Generate demonstration data
