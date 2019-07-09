@@ -19,6 +19,7 @@ class Query(Experiment):
     @Experiment.execute
     def query(self, **override):
         command = self.shared_cmd.copy()
+        command["mode"] = "plot"
         command["save"] = 0
         command["load_dir"] = [
             # os.path.join(self.result_dir, "RLDense"),
@@ -62,7 +63,7 @@ seed = 0
 train_exp.set_shared_cmd(
     env=environment,
     n_cycles=10,
-    train_rl_epochs=60,
+    train_rl_epochs=500,
     rl_action_l2=0.5,
 )
 demo_exp.set_shared_cmd(num_demo=demo_data_size)
