@@ -226,8 +226,6 @@ def main(
     logger.info("Launching the training process with {} cpu core(s).".format(num_cpu))
     logger.info("Setting log level to {}.".format(loglevel))
     logger.set_level(loglevel)
-    logger.debug("train_ddpg_main.launch -> Using debug mode. Avoid training with too many epochs.")
-
 
     # Reset default graph every time this function is called. (must be called after setting seed)
     tf.reset_default_graph()
