@@ -3,10 +3,7 @@ import numpy as np
 
 from yw.tool import logger
 
-if tf.__version__.startswith("1"):
-    from yw.ddpg_main.ddpg import DDPG
-else:
-    from yw.ddpg_tf2.ddpg import DDPG
+from yw.ddpg_main.ddpg import DDPG
 from yw.ddpg_main.rollout import RolloutWorker
 
 from yw.env.env_manager import EnvManager
@@ -24,7 +21,7 @@ DEFAULT_PARAMS = {
     "max_u": 1.0,  # max absolute value of actions on different coordinates
     # DDPG Config
     "rl_buffer_size": int(1e6),
-    "rl_scope": "ddpg",  
+    "rl_scope": "ddpg",
     "rl_use_td3": 1,  # whether or not to use td3
     "rl_num_sample": 1,  # number of ensemble of actor_critics
     "rl_layers": 3,  # number of layers in the critic/actor networks
