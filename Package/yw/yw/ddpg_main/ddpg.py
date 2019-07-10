@@ -6,14 +6,13 @@ from yw.tool import logger
 from yw.ddpg_main.mpi_adam import MpiAdam
 from yw.ddpg_main.normalizer import Normalizer
 from yw.ddpg_main.actor_critic import ActorCritic
-from yw.ddpg_main.replay_buffer import *
+from yw.ddpg_main.replay_buffer import HERReplayBuffer, UniformReplayBuffer
 from yw.ddpg_main.demo_shaping import (
     ManualDemoShaping,
     GaussianDemoShaping,
     NormalizingFlowDemoShaping,
     MAFDemoShaping,
 )
-from yw.util.util import store_args, import_function
 from yw.util.tf_util import flatten_grads
 
 # for query
@@ -145,7 +144,8 @@ class DDPG(object):
         self.dimg = self.input_dims["g"]
         self.dimu = self.input_dims["u"]
 
-        logger.info("Configuring the replay buffer.")
+        # Configure the replay buffer
+        # buffer shape
         buffer_shapes = {}
         buffer_shapes["o"] = (self.T + 1, self.dimo)
         buffer_shapes["u"] = (self.T, self.dimu)
@@ -153,16 +153,15 @@ class DDPG(object):
         if self.dimg != 0:  # for multigoal environment - or states that do not change over episodes.
             buffer_shapes["ag"] = (self.T + 1, self.dimg)
             buffer_shapes["g"] = (self.T, self.dimg)
-        # for bootstrapped ensemble of actor critics
-        buffer_shapes["mask"] = (self.T, self.num_sample)  # mask for training each head with different dataset
+        # for bootstrapped ensemble of actor critics, mask for training each head with different dataset
+        buffer_shapes["mask"] = (self.T, self.num_sample)
         # add extra information
         for key, val in input_dims.items():
             if key.startswith("info"):
                 buffer_shapes[key] = (self.T, *(tuple([val]) if val > 0 else tuple()))
-        logger.debug("DDPG.__init__ -> The buffer shapes are: {}".format(buffer_shapes))
-
+        # buffer size
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
-
+        # initialize primary buffer
         if not self.replay_strategy:
             pass
         elif self.replay_strategy["strategy"] == "her":
@@ -171,8 +170,7 @@ class DDPG(object):
             self.replay_buffer = UniformReplayBuffer(
                 buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"]
             )
-
-        # Initialize the demo buffer; in the same way as the primary data buffer
+        # initialize the demo buffer
         if not self.demo_replay_strategy:
             pass
         elif self.demo_actor != "none" or self.demo_critic != "none":
@@ -182,9 +180,8 @@ class DDPG(object):
             # This does not matter is using demo_critic, since we call sample all
             # self.demo_buffer = HERReplayBuffer(buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"])
 
-        # Build computation core.
+        # Create the DDPG agent
         with tf.variable_scope(self.scope):
-            logger.info("Creating a DDPG agent with action space %d x %s." % (self.dimu, self.max_u))
             self._create_network()
 
     def get_actions(self, o, ag, g, noise_eps=0.0, random_eps=0.0, use_target_net=False, compute_Q=False):
@@ -210,15 +207,6 @@ class DDPG(object):
             u = ret[0][np.random.randint(self.num_sample)]
 
         # debug only
-        logger.debug("DDPG.get_actions -> Dumping out action input and output for debugging.")
-        logger.debug("DDPG.get_actions -> The observation shape is: {}".format(o.shape))
-        logger.debug("DDPG.get_actions -> The goal shape is: {}".format(g.shape))
-        logger.debug("DDPG.get_actions -> The estimated q value shape is: {}".format(ret[1].shape))
-        logger.debug("DDPG.get_actions -> The action array shape is: {} x {}".format(len(ret[0]), ret[0][0].shape))
-        logger.debug("DDPG.get_actions -> The selected action shape is: {}".format(u.shape))
-        # value debug: check the q from rl.
-        # logger.info("DDPG.get_actions -> The estimated q value is: {}".format(ret[1]))
-        # logger.info("DDPG.get_actions -> The selected action value is: {}".format(u))
 
         noise = noise_eps * self.max_u * np.random.randn(*u.shape)  # gaussian noise
         u += noise
@@ -237,9 +225,9 @@ class DDPG(object):
             return ret[0]
 
     def init_demo_buffer(self, demo_file, update_stats=True):
-        """ Initialize the demonstration buffer. Used for getting demonstration from our own environments only.
+        """ Initialize the demonstration buffer.
         """
-        logger.info("Initialized demonstration buffer with {} episodes.".format(self.num_demo))
+        logger.info("Initializing demonstration buffer with {} episodes.".format(self.num_demo))
 
         demo_data = np.load(demo_file)  # load the demonstration data from data file
 
