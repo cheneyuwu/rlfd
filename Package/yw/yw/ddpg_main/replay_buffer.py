@@ -1,20 +1,14 @@
-import threading
-
 import numpy as np
-
-from yw.tool import logger
-
 
 class ReplayBuffer:
     def __init__(self, buffer_shapes, size_in_transitions, T):
         """Creates a replay buffer.
 
         Args:
-            buffer_shapes (dict of ints): the shape for all buffers that are used in the replay
-                buffer
-            size_in_transitions (int): the size of the buffer, measured in transitions
-            T (int): the time horizon for episodes
-            sample_transitions (function): a function that samples from the replay buffer
+            buffer_shapes       (dict of int) - the shape for all buffers that are used in the replay buffer
+            size_in_transitions (int)         - the size of the buffer, measured in transitions
+            T                   (int)         - the time horizon for episodes
+            sample_transitions  (function)    - a function that samples from the replay buffer
         """
         self.buffer_shapes = buffer_shapes
         self.size = size_in_transitions // T
@@ -27,22 +21,18 @@ class ReplayBuffer:
         self.current_size = 0
         self.n_transitions_stored = 0
 
-        self.lock = threading.Lock()
-
     @property
     def full(self):
-        with self.lock:
-            return self.current_size == self.size
+        return self.current_size == self.size
 
     def sample_all(self):
         """Returns all the transitions currently stored in the replay buffer.
         """
         buffers = {}
-
-        with self.lock:
-            assert self.current_size > 0
-            for key in self.buffers.keys():
-                buffers[key] = self.buffers[key][: self.current_size]
+        
+        assert self.current_size > 0
+        for key in self.buffers.keys():
+            buffers[key] = self.buffers[key][: self.current_size]
 
         # Split obs and goal (i.e. for (s, a, s'), put s and s' to two entries)
         buffers["o_2"] = buffers["o"][:, 1:, :]
@@ -65,10 +55,9 @@ class ReplayBuffer:
         """
         buffers = {}
 
-        with self.lock:
-            assert self.current_size > 0
-            for key in self.buffers.keys():
-                buffers[key] = self.buffers[key][: self.current_size]
+        assert self.current_size > 0
+        for key in self.buffers.keys():
+            buffers[key] = self.buffers[key][: self.current_size]
 
         buffers["o_2"] = buffers["o"][:, 1:, :]
         if "ag" in buffers.keys():
@@ -89,16 +78,15 @@ class ReplayBuffer:
         assert np.all(np.array(batch_sizes) == batch_sizes[0])
         batch_size = batch_sizes[0]
 
-        with self.lock:
-            idxs = self._get_storage_idx(batch_size)
+        idxs = self._get_storage_idx(batch_size)
 
-            # load inputs into buffers
-            for key in self.buffers.keys():
-                self.buffers[key][idxs] = episode_batch[key]
+        # load inputs into buffers
+        for key in self.buffers.keys():
+            self.buffers[key][idxs] = episode_batch[key]
 
-            self.insert_transitions(idxs)
+        self.insert_transitions(idxs)
 
-            self.n_transitions_stored += batch_size * self.T
+        self.n_transitions_stored += batch_size * self.T
 
     def sample_transitions(self, buffers, batch_size):
         raise NotImplementedError
@@ -107,20 +95,16 @@ class ReplayBuffer:
         pass
 
     def get_current_episode_size(self):
-        with self.lock:
-            return self.current_size
+        return self.current_size
 
     def get_current_size(self):
-        with self.lock:
-            return self.current_size * self.T
+        return self.current_size * self.T
 
     def get_transitions_stored(self):
-        with self.lock:
-            return self.n_transitions_stored
+        return self.n_transitions_stored
 
     def clear_buffer(self):
-        with self.lock:
-            self.current_size = 0
+        self.current_size = 0
 
     def _get_storage_idx(self, inc=None):
         inc = inc or 1  # size increment
@@ -146,15 +130,6 @@ class ReplayBuffer:
 
 class UniformReplayBuffer(ReplayBuffer):
     def __init__(self, buffer_shapes, size_in_transitions, T):
-        """Creates a replay buffer.
-
-        Args:
-            buffer_shapes (dict of ints): the shape for all buffers that are used in the replay
-                buffer
-            size_in_transitions (int): the size of the buffer, measured in transitions
-            T (int): the time horizon for episodes
-            sample_transitions (function): a function that samples from the replay buffer
-        """
         super().__init__(buffer_shapes, size_in_transitions, T)
 
     def sample_transitions(self, buffers, batch_size):
@@ -182,21 +157,12 @@ class UniformReplayBuffer(ReplayBuffer):
 
 class HERReplayBuffer(ReplayBuffer):
     def __init__(self, buffer_shapes, size_in_transitions, T, k, reward_fun):
-        """Creates a replay buffer.
+
+        """Creates a HER experience replay replay buffer.
 
         Args:
-            buffer_shapes (dict of ints): the shape for all buffers that are used in the replay
-                buffer
-            size_in_transitions (int): the size of the buffer, measured in transitions
-            T (int): the time horizon for episodes
-            sample_transitions (function): a function that samples from the replay buffer
-        """
-        """Creates a sample function that can be used for HER experience replay.
-
-        Args:
-            strategy (str) - set to "future" to use the HER replay strategy; if set to 'none', regular DDPG experience replay is used
-            k        (int) - the ratio between HER replays and regular replays (e.g. k = 4 -> 4 times as many HER replays as regular replays are used)
-            reward_fun (function): function to re-compute the reward with substituted goals
+            k          (int)  - the ratio between HER replays and regular replays (e.g. k = 4 -> 4 times as many HER replays as regular replays are used)
+            reward_fun (func) - function to re-compute the reward with substituted goals
         """
         super().__init__(buffer_shapes, size_in_transitions, T)
         self.future_p = 1 - (1.0 / (1 + k))

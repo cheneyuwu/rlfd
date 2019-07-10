@@ -228,7 +228,7 @@ class MAFDemoShaping(DemoShaping):
         # method 2 a numerical trick
         # potential = tf.reshape(tf.log(1 + self.nn.prob(state_tf)), (-1, 1))
 
-        return potential
+        return tf.cast(potential, tf.float32)
 
 
 # Testing

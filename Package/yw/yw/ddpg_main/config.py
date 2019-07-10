@@ -23,7 +23,6 @@ DEFAULT_PARAMS = {
     "rl_buffer_size": int(1e6),
     "rl_scope": "ddpg",
     "rl_use_td3": 1,  # whether or not to use td3
-    "rl_num_sample": 1,  # number of ensemble of actor_critics
     "rl_layers": 3,  # number of layers in the critic/actor networks
     "rl_hidden": 256,  # number of neurons in each hidden layers
     "rl_Q_lr": 0.001,  # critic learning rate

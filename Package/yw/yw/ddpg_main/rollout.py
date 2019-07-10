@@ -113,7 +113,6 @@ class RolloutWorker:
             logger.debug("RolloutWorker.generate_rollouts -> step {}".format(t))
             policy_output = self.policy.get_actions(
                 o,
-                ag,
                 self.g,
                 compute_Q=self.compute_Q,
                 noise_eps=self.noise_eps if not self.explore else 0.0,
