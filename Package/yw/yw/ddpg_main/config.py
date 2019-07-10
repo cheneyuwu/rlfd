@@ -19,7 +19,6 @@ DEFAULT_PARAMS = {
     "r_shift": 0.0,  # re-scale the reward. Only use this for dense rewards.
     "eps_length": 0,  # change the length of the episode.
     "env_args": {},  # extra arguments passed to the environment.
-    "max_u": 1.0,  # max absolute value of actions on different coordinates
     # DDPG Config
     "rl_buffer_size": int(1e6),
     "rl_scope": "ddpg",
