@@ -53,17 +53,22 @@ DEFAULT_PARAMS = {
     # HER Config
     "her": {"k": 4},  # number of additional goals used for replay
     # Rollouts Config
-    "explore": 1,  # whether or not to use e-greedy and add noise to output
-    "random_eps": 0.3,  # percentage of time a random action is taken
-    "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
+    "rollout": {
+        "rollout_batch_size": 4,  # per mpi thread
+        "random_eps": 0.3,  # percentage of time a random action is taken
+        "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
+    },
+    "evaluator": {
+        "rollout_batch_size": 20,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
+        "random_eps": 0.0,
+        "noise_eps": 0.01,
+        "use_target_net": False,  # run test episodes with the target network
+        "compute_Q": True,
+    },
     # Training Config
     "train_rl_epochs": 1,
     "n_cycles": 10,  # per epoch
     "n_batches": 40,  # training batches per cycle
-    "rollout_batch_size": 4,  # per mpi thread
-    "n_test_rollouts": 20,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
-    # Testing Config
-    "test_with_polyak": False,  # run test episodes with the target network
 }
 
 
@@ -175,7 +180,6 @@ def configure_ddpg(params):
             "input_dims": params["dims"].copy(),  # agent takes an input observations
             "T": params["T"],
             "clip_return": (1.0 / (1.0 - params["gamma"])) if params["ddpg"]["clip_return"] else np.inf,
-            "rollout_batch_size": params["rollout_batch_size"],
             "gamma": params["gamma"],
         }
     )
@@ -196,37 +200,24 @@ def configure_ddpg(params):
 
 
 def config_rollout(params, policy):
-    rollout_params = {
-        "explore": True,
-        "use_target_net": False,
-        "use_demo_states": True,
-        "compute_Q": False,
-        "T": params["T"],
-        "random_eps": params["random_eps"],
-        "noise_eps": params["noise_eps"],
-        "rollout_batch_size": params["rollout_batch_size"],
-        "dims": params["dims"],
-    }
+    rollout_params = params["rollout"]
+    rollout_params.update({"dims": params["dims"], "T": params["T"]})
+
     logger.info("\n*** rollout_params ***")
     log_params(rollout_params)
     logger.info("*** rollout_params ***")
+
     rollout_worker = RolloutWorker(params["make_env"], policy, **rollout_params)
     rollout_worker.seed(params["seed"])
+
     return rollout_worker
 
 
 def config_evaluator(params, policy):
-    eval_params = {
-        "explore": True,
-        "use_target_net": params["test_with_polyak"],
-        "use_demo_states": False,
-        "compute_Q": True,
-        "T": params["T"],
-        "random_eps": 0.0,
-        "noise_eps": 0.01,
-        "rollout_batch_size": params["n_test_rollouts"],
-        "dims": params["dims"],
-    }
+
+    eval_params = params["evaluator"]
+
+    eval_params.update({"dims": params["dims"], "T": params["T"]})
 
     logger.info("*** eval_params ***")
     log_params(eval_params)
@@ -240,9 +231,6 @@ def config_evaluator(params, policy):
 
 def config_demo(params, policy):
     demo_params = {
-        "explore": True,
-        "use_target_net": False,
-        "use_demo_states": False,
         "compute_Q": True,
         "random_eps": 0.0,
         "noise_eps": 0.01,

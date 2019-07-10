@@ -41,7 +41,6 @@ class DDPG(object):
         clip_obs,
         scope,
         T,
-        rollout_batch_size,
         clip_pos_returns,
         clip_return,
         demo_critic,
@@ -71,8 +70,6 @@ class DDPG(object):
             # Normalizer
             norm_eps           (float)        - a small value used in the normalizer to avoid numerical instabilities
             norm_clip          (float)        - normalized inputs are clipped to be in [-norm_clip, norm_clip]
-            # Rollout Worker
-            rollout_batch_size (int)          - number of parallel rollouts per DDPG agent
             # NN Configuration
             scope              (str)          - the scope used for the TensorFlow graph
             input_dims         (dict of ints) - dimensions for the observation (o), the goal (g), and the actions (u)
@@ -122,7 +119,6 @@ class DDPG(object):
         self.clip_obs = clip_obs
         self.scope = scope
         self.T = T
-        self.rollout_batch_size = rollout_batch_size
         self.clip_pos_returns = clip_pos_returns
         self.clip_return = clip_return
         self.demo_critic = demo_critic
@@ -155,26 +151,24 @@ class DDPG(object):
         for key, val in input_dims.items():
             if key.startswith("info"):
                 buffer_shapes[key] = (self.T, *(tuple([val]) if val > 0 else tuple()))
-        # buffer size
-        buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         # initialize primary buffer
         if not self.replay_strategy:
             pass
         elif self.replay_strategy["strategy"] == "her":
-            self.replay_buffer = HERReplayBuffer(buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"])
+            self.replay_buffer = HERReplayBuffer(buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"])
         else:
             self.replay_buffer = UniformReplayBuffer(
-                buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"]
+                buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
             )
         # initialize the demo buffer
         if not self.demo_replay_strategy:
             pass
         elif self.demo_actor != "none" or self.demo_critic != "none":
             self.demo_buffer = UniformReplayBuffer(
-                buffer_shapes, buffer_size, self.T, **self.demo_replay_strategy["args"]
+                buffer_shapes, self.buffer_size, self.T, **self.demo_replay_strategy["args"]
             )
             # This does not matter is using demo_critic, since we call sample all
-            # self.demo_buffer = HERReplayBuffer(buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"])
+            # self.demo_buffer = HERReplayBuffer(buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"])
 
         # Create the DDPG agent
         with tf.variable_scope(self.scope):
@@ -246,8 +240,6 @@ class DDPG(object):
         episode_batch: array of batch_size x (T or T+1) x dim_key
                        'o' is of size T+1, others are of size T
         """
-        for key in episode_batch.keys():
-            assert episode_batch[key].shape[0] == self.rollout_batch_size
 
         self.replay_buffer.store_episode(episode_batch)
 
