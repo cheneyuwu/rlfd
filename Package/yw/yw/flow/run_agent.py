@@ -45,7 +45,7 @@ def main(policy_file, seed, num_itr, render, env_args, **kwargs):
     params["r_shift"] = policy.info["r_shift"]
     params["eps_length"] = policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T
     params["env_args"] = dict(env_args) if env_args != None else policy.info["env_args"]
-    params["rank_seed"] = seed
+    params["seed"] = seed
     params["render"] = render
     params["rollout_batch_size"] = 1
     params = config.add_env_params(params=params)

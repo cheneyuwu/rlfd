@@ -49,7 +49,7 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, shuffle, render, e
     params["eps_length"] = T
     params["env_args"] = policy.info["env_args"]
     params["rollout_batch_size"] = np.minimum(num_eps, max_concurrency)
-    params["rank_seed"] = seed
+    params["seed"] = seed
     params["render"] = render
     params = config.add_env_params(params=params)
     demo = config.config_demo(params=params, policy=policy)

@@ -13,17 +13,17 @@ class ActorCritic:
         """The actor-critic network and related training code.
 
         Args:
-            inputs_tf (dict of tensor) - all necessary inputs for the network: theobservation (o), the goal (g), and the action (u)
-            dimo      (int)            - the dimension of the observations
-            dimg      (int)            - the dimension of the goals
-            dimu      (int)            - the dimension of the actions
-            max_u     (float)          - the maximum magnitude of actions; action outputs will be scaled accordingly
-            o_stats   (Normalizer)     - normalizer for observations
-            g_stats   (Normalizer)     - normalizer for goals
-            use_td3   (int)            - number of critic for each actor, refer to td3 algorithm
-            hidden    (int)            - number of hidden units that should be used in hidden layers
-            layers    (int)            - number of hidden layers
-            net_type  (str)
+            inputs_tf    (dict of tensor) - all necessary inputs for the network: theobservation (o), the goal (g), and the action (u)
+            dimo         (int)            - the dimension of the observations
+            dimg         (int)            - the dimension of the goals
+            dimu         (int)            - the dimension of the actions
+            max_u        (float)          - the maximum magnitude of actions; action outputs will be scaled accordingly
+            o_stats      (Normalizer)     - normalizer for observations
+            g_stats      (Normalizer)     - normalizer for goals
+            use_td3      (int)            - number of critic for each actor, refer to td3 algorithm
+            hidden       (int)            - number of hidden units that should be used in hidden layers
+            add_pi_noise (bool)
+            layers       (int)            - number of hidden layers
         """
 
         # Prepare inputs for actor and critic.
