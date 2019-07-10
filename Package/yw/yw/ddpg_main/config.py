@@ -12,6 +12,7 @@ from yw.env.env_manager import EnvManager
 DEFAULT_PARAMS = {
     # Config Summary
     "config": "default",
+    "seed": 0,
     # Environment Config
     "env_name": "FetchPickAndPlace-v1",
     "r_scale": 1.0,  # re-scale the reward. Only use this for dense rewards.
@@ -205,7 +206,7 @@ def config_rollout(params, policy):
     log_params(rollout_params)
     logger.info("*** rollout_params ***")
     rollout_worker = RolloutWorker(params["make_env"], policy, **rollout_params)
-    rollout_worker.seed(params["rank_seed"])
+    rollout_worker.seed(params["seed"])
     return rollout_worker
 
 
@@ -225,7 +226,7 @@ def config_evaluator(params, policy):
     log_params(eval_params)
     logger.info("*** eval_params ***")
     evaluator = RolloutWorker(params["make_env"], policy, **eval_params)
-    evaluator.seed(params["rank_seed"])
+    evaluator.seed(params["seed"])
     return evaluator
 
 
@@ -246,5 +247,5 @@ def config_demo(params, policy):
     log_params(demo_params)
     logger.info("*** demo_params ***")
     demo = RolloutWorker(params["make_env"], policy, **demo_params)
-    demo.seed(params["rank_seed"])
+    demo.seed(params["seed"])
     return demo
