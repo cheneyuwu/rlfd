@@ -30,7 +30,7 @@ from yw.ddpg_main import config
 from yw.util.util import set_global_seeds
 from yw.util.mpi_util import mpi_average
 
-from itertools import combinations # for dimension projection
+from itertools import combinations  # for dimension projection
 
 
 def train_reinforce(
@@ -65,42 +65,40 @@ def train_reinforce(
         os.makedirs(query_uncertainty_save_path, exist_ok=True)
         query_shaping_save_path = save_path + "/query_shaping/"
         os.makedirs(query_shaping_save_path, exist_ok=True)
+        query_potential_surface_save_path = save_path + "/query_potential_surface/"
+        os.makedirs(query_potential_surface_save_path, exist_ok=True)
+        query_potential_based_policy_save_path = save_path + "/query_potential_based_policy/"
+        os.makedirs(query_potential_based_policy_save_path, exist_ok=True)
+        query_action_save_path = save_path + "/query_action/"
+        os.makedirs(query_action_save_path, exist_ok=True)
 
     if policy.demo_actor != "none" or policy.demo_critic != "none":
         policy.init_demo_buffer(demo_file, update_stats=policy.demo_actor != "none")
 
     # Pre-Training a potential function
-    if policy.demo_critic != "none":
+    if policy.demo_critic == "maf":
         if shaping_policy == None:
             logger.info("Training the policy for reward shaping.")
-            for epoch in range(500):
+            num_epoch = 100
+            for epoch in range(num_epoch):
                 loss = policy.train_shaping()
 
-                if rank == 0 and epoch % 50 == 49:
+                if rank == 0 and epoch % (num_epoch / 10) == (num_epoch / 10 - 1):
                     logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-                    # # query
-                    # dims = list(range(policy.dimo + policy.dimg))
-                    # for dim1, dim2 in combinations(dims, 2):
-                    #     policy.query_potential(
-                    #         dim1=dim1,
-                    #         dim2=dim2,
-                    #         filename=os.path.join(
-                    #             query_shaping_save_path, "dim_{}_{}_{:04d}.jpg".format(dim1, dim2, epoch)
-                    #         ),
-                    #     )
+                    # query
+                    policy.query_potential_surface(filename=None, fid=0)
 
                 if rank == 0 and save_path and epoch % 100 == 0:
                     logger.info("Saving latest policy to {}.".format(latest_shaping_path))
                     policy.save_shaping_weights(latest_shaping_path)
-                # if loss < -0.5:  # assume this value is small enough
-                #     break
+
             if rank == 0 and save_path:
                 logger.info("Saving latest policy to {}.".format(latest_shaping_path))
                 policy.save_shaping_weights(latest_shaping_path)
         else:
             logger.info("Use the provided policy weights: {}".format(shaping_policy))
             policy.load_shaping_weights(shaping_policy)
-            # # query
+            # query
             # dims = list(range(policy.dimo + policy.dimg))
             # for dim1, dim2 in combinations(dims, 2):
             #     policy.query_potential(
@@ -111,12 +109,28 @@ def train_reinforce(
             #         ),
             #     )
 
+    if policy.demo_critic in ["maf", "norm"]:
+        # query
+        policy.query_potential_based_policy(
+            filename=os.path.join(query_potential_based_policy_save_path, "query_000.npz"),  # comment
+            fid=1
+        )
+        pass
+
     best_success_rate = -1
 
     for epoch in range(n_epochs):
         logger.debug("train_ddpg_main.train_reinforce -> epoch: {}".format(epoch))
 
         # Store anything we need into a numpyz file.
+        policy.query_potential_surface(
+            filename=os.path.join(query_potential_surface_save_path, "query_{:03d}.npz".format(epoch)),  # comment
+            fid=2,
+        )
+        policy.query_action(
+            filename=os.path.join(query_action_save_path, "query_{:03d}.npz".format(epoch)),  # comment to show plot
+            fid=3,
+        )
         # policy.query_uncertainty(os.path.join(query_uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
 
         # Train
@@ -186,16 +200,12 @@ def main(
     env_args,
     seed,
     train_rl_epochs,
-    rl_num_sample,
-    rl_use_td3,
-    exploit,
     rl_replay_strategy,
     num_demo,
     demo_critic,
     demo_actor,
     demo_file,
     shaping_policy,
-    debug_params,
     unknown_params,
     **kwargs,
 ):
@@ -218,12 +228,15 @@ def main(
     logger.set_level(loglevel)
     logger.debug("train_ddpg_main.launch -> Using debug mode. Avoid training with too many epochs.")
 
+
+    # Reset default graph every time this function is called. (must be called after setting seed)
+    tf.reset_default_graph()
+    
     # Seed everything.
     rank_seed = seed + 1_000_000 * rank
     set_global_seeds(rank_seed)
     
-    # Reset default graph every time this function is called. (must be called after setting seed)
-    tf.reset_default_graph()
+    # get a new default session for the current default graph
     tf.InteractiveSession()
 
     # Get default params from config and update params.
@@ -235,28 +248,21 @@ def main(
     params["eps_length"] = eps_length
     params["env_args"] = dict(env_args) if env_args else {}
     params["train_rl_epochs"] = train_rl_epochs
-    params["rl_use_td3"] = rl_use_td3
-    params["rl_num_sample"] = rl_num_sample
-    params["exploit"] = exploit
     params["rl_replay_strategy"] = rl_replay_strategy  # For HER: future or none
     params["rl_num_demo"] = num_demo
     params["rl_demo_critic"] = demo_critic
     params["rl_demo_actor"] = demo_actor
     config_str = []
     config_str.append("dense" if "Dense" in env else "sparse")
-    if demo_critic == "nf":
-        config_str.append("maf")
-    if demo_actor == "bc":
-        config_str.append("behavior cloning")
+    if demo_critic != "none":
+        config_str.append(demo_critic)
+    if demo_actor != "none":
+        config_str.append(demo_actor)
     params["config"] = "-".join(config_str)
     # make it possible to override any parameter.
     for key, val in unknown_params.items():
         assert key in params.keys(), "Wrong override parameter: {}.".format(key)
         params.update({key: type(params[key])(val)})
-    # for debugging only
-    if debug_params:
-        # put any parameter in the debug_param global dictionary.
-        params.update(**config.DEBUG_PARAMS)
 
     # Record params in a json file for later use.
     # This should be done before preparing_params because that function will add function variables that cannot be
@@ -290,7 +296,7 @@ def main(
         demo_file=demo_file,
         shaping_policy=shaping_policy,
     )
-    
+
     # Close the default session to prevent memory leaking
     tf.get_default_session().close()
 
@@ -302,7 +308,7 @@ ap.parser.add_argument("--loglevel", help="log level", type=int, default=2)
 # save results - this will be for both demo and rl
 ap.parser.add_argument("--save_path", help="policy path", type=str, default=os.getenv("TEMPDIR") + "/Train/policy")
 ap.parser.add_argument("--save_interval", help="the interval which policy pickles are saved", type=int, default=0)
-# program - TODO: test if this works for the demonstration training part.
+# seed
 ap.parser.add_argument("--seed", help="RNG seed", type=int, default=0)
 # environment setup
 ap.parser.add_argument("--env", help="name of the environment", type=str, default="Reach2DFirstOrder")
@@ -318,9 +324,6 @@ ap.parser.add_argument(
 # training
 ap.parser.add_argument("--train_rl_epochs", help="the number of training epochs to run for RL", type=int, default=1)
 # DDPG configuration
-ap.parser.add_argument("--rl_num_sample", help="number of ddpg heads", type=int, default=1)
-ap.parser.add_argument("--rl_use_td3", help="whether or not to use td3", type=int, default=1)
-ap.parser.add_argument("--exploit", help="whether or not to use e-greedy exploration", type=int, default=0)
 ap.parser.add_argument(
     "--rl_replay_strategy",
     help="the replay strategy to be used. 'future' uses HER, 'none' disables HER",
@@ -334,7 +337,7 @@ ap.parser.add_argument(
     "--demo_critic",
     help="use a neural network as critic or a gaussian process. Need to provide or train a demo policy if not set to none",
     type=str,
-    choices=["nf", "shaping", "none"],
+    choices=["maf", "norm", "manual", "none"],
     default="none",
 )
 ap.parser.add_argument(
@@ -346,10 +349,6 @@ ap.parser.add_argument(
 )
 ap.parser.add_argument("--demo_file", help="demonstration training dataset", type=str, default=None)
 ap.parser.add_argument("--shaping_policy", help="well trained reward shaping policy", type=str, default=None)
-# others
-ap.parser.add_argument(
-    "--debug_params", help="override some parameters for internal regression tests", type=int, default=0
-)
 
 if __name__ == "__main__":
     ap.parse(sys.argv)

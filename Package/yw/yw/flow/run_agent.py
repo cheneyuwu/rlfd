@@ -27,12 +27,11 @@ def main(policy_file, seed, num_itr, render, env_args, **kwargs):
 
 
     rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0    
-    
-    # Seed everything
-    set_global_seeds(seed)
 
     # Reset default graph every time this function is called.
     tf.reset_default_graph()
+    # Seed everything
+    set_global_seeds(seed)
     tf.InteractiveSession()
 
     # Load policy.

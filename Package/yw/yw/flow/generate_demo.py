@@ -23,10 +23,12 @@ def generate_demo_data(policy_file, store_dir, seed, num_itr, shuffle, render, e
 
     # Setup
     rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
-    set_global_seeds(seed)
 
     # reset default graph every time this function is called.
     tf.reset_default_graph()
+    # Set random seed for the current graph
+    set_global_seeds(seed)
+    # get a default session for the current graph
     tf.InteractiveSession()
 
     # Load policy.

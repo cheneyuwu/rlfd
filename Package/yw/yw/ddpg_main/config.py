@@ -12,30 +12,20 @@ from yw.ddpg_main.rollout import RolloutWorker
 from yw.env.env_manager import EnvManager
 
 
-DEBUG_PARAMS = {
-    "rl_layers": 2,  # number of layers in the critic/actor networks
-    "rl_hidden": 4,  # number of neurons in each hidden layers
-    "n_cycles": 2,  # per epoch
-    "n_batches": 2,  # training batches per cycle
-    "rl_batch_size": 4,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
-    "rollout_batch_size": 2,  # per mpi thread
-    "n_test_rollouts": 2,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
-}
-
 DEFAULT_PARAMS = {
-    # config name
+    # Config Summary
     "config": "default",
-    # env
+    # Environment Config
     "env_name": "FetchPickAndPlace-v1",
     "r_scale": 1.0,  # re-scale the reward. Only use this for dense rewards.
     "r_shift": 0.0,  # re-scale the reward. Only use this for dense rewards.
     "eps_length": 0,  # change the length of the episode.
     "env_args": {},  # extra arguments passed to the environment.
     "max_u": 1.0,  # max absolute value of actions on different coordinates
-    # general ddpg config
-    "buffer_size": int(1e6),  # for experience replay
-    "rl_scope": "ddpg",  # can be tweaked for testing
-    "rl_use_td3": 0,  # whether or not to use td3
+    # DDPG Config
+    "rl_buffer_size": int(1e6),
+    "rl_scope": "ddpg",  
+    "rl_use_td3": 1,  # whether or not to use td3
     "rl_num_sample": 1,  # number of ensemble of actor_critics
     "rl_layers": 3,  # number of layers in the critic/actor networks
     "rl_hidden": 256,  # number of neurons in each hidden layers
@@ -44,37 +34,37 @@ DEFAULT_PARAMS = {
     "rl_action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)
     "rl_batch_size": 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
     "rl_batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
-    "rl_demo_critic": "none",  # whether or not to use the behavior cloning loss as an auxilliary loss
-    "rl_demo_actor": "none",  # whether or not to use the behavior cloning loss as an auxilliary loss
-    "rl_q_filter": 1,  # whether or not a Q value filter should be used on the Actor outputs
+    "rl_demo_critic": "none",  # whether or not to use shaping
+    "rl_demo_actor": "none",  # whether or not to use bc
+    "rl_q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
     "rl_num_demo": 1000,  # number of expert demo episodes
-    "rl_prm_loss_weight": 0.001,  # Weight corresponding to the primary loss
-    "rl_aux_loss_weight": 0.0078,  # Weight corresponding to the auxilliary loss also called the cloning loss
-    # Double Q Learning
-    "rl_polyak": 0.95,  # polyak averaging coefficient
-    # Normalization - not used for now due to usage of demonstration
+    "rl_prm_loss_weight": 0.001,  # weight corresponding to the primary loss
+    "rl_aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss also called the cloning loss
+    # double q learning
+    "rl_polyak": 0.95,  # polyak averaging coefficient for double q learning
+    # normalization
     "rl_norm_eps": 0.01,  # epsilon used for observation normalization
     "rl_norm_clip": 5,  # normalized observations are cropped to this values
-    # Process I/Os
-    "clip_obs": 200.0,
+    # i/o clippings
+    "rl_clip_obs": 200.0,
+    "rl_clip_pos_returns": False,  # Whether or not this environment has positive return or not.
     "clip_return": False,
-    "no_pos_return": False,  # Whether or not this environment has positive return or not.
-    # Exploration - for rollouts
-    "exploit": False,  # whether or not to use e-greedy and add noise to output
-    "random_eps": 0.3,  # percentage of time a random action is taken
-    "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
-    # Replay strategy to be used
+    # replay strategy to be used
     "rl_replay_strategy": "none",  # supported modes: future, none for uniform
     "rl_demo_replay_strategy": "none",  # supported modes: future, none for uniform
-    # HER
+    # HER Config
     "her_k": 4,  # number of additional goals used for replay, only used if off_policy_data=future
-    # DDPG Training
+    # Rollouts Config
+    "explore": 1,  # whether or not to use e-greedy and add noise to output
+    "random_eps": 0.3,  # percentage of time a random action is taken
+    "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
+    # Training Config
     "train_rl_epochs": 1,
     "n_cycles": 10,  # per epoch
     "n_batches": 40,  # training batches per cycle
     "rollout_batch_size": 4,  # per mpi thread
     "n_test_rollouts": 20,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
-    # Testing
+    # Testing Config
     "test_with_polyak": False,  # run test episodes with the target network
 }
 
@@ -170,10 +160,6 @@ def configure_her(params):
 def configure_ddpg(params):
     # Extract relevant parameters.
     ddpg_params = extract_params(params, "rl_")
-    for name in ["max_u", "buffer_size", "clip_obs"]:
-        ddpg_params[name] = params[name]
-        params["_ddpg_" + name] = params[name]
-        del params[name]
 
     rl_sample_params = {}
     if ddpg_params["replay_strategy"] == "her":
@@ -185,9 +171,9 @@ def configure_ddpg(params):
     # Update parameters
     ddpg_params.update(
         {
+            "max_u": params["max_u"],
             "input_dims": params["dims"].copy(),  # agent takes an input observations
             "T": params["T"],
-            "clip_pos_returns": params["no_pos_return"],  # clip positive returns
             "clip_return": (1.0 / (1.0 - params["gamma"])) if params["clip_return"] else np.inf,  # max abs of return
             "rollout_batch_size": params["rollout_batch_size"],
             "gamma": params["gamma"],
@@ -209,15 +195,16 @@ def configure_ddpg(params):
 
 def config_rollout(params, policy):
     rollout_params = {
-        "exploit": params["exploit"],
+        "explore": True,
         "use_target_net": False,
         "use_demo_states": True,
         "compute_Q": False,
         "T": params["T"],
+        "random_eps": params["random_eps"],
+        "noise_eps": params["noise_eps"],
+        "rollout_batch_size": params["rollout_batch_size"],
+        "dims": params["dims"],
     }
-    for name in ["rollout_batch_size", "dims", "noise_eps", "random_eps"]:
-        rollout_params[name] = params[name]
-
     logger.info("\n*** rollout_params ***")
     log_params(rollout_params)
     logger.info("*** rollout_params ***")
@@ -228,13 +215,13 @@ def config_rollout(params, policy):
 
 def config_evaluator(params, policy):
     eval_params = {
-        "exploit": False,
+        "explore": True,
         "use_target_net": params["test_with_polyak"],
         "use_demo_states": False,
         "compute_Q": True,
         "T": params["T"],
         "random_eps": 0.0,
-        "noise_eps": 0.05,
+        "noise_eps": 0.01,
         "rollout_batch_size": params["n_test_rollouts"],
         "dims": params["dims"],
     }
@@ -248,13 +235,12 @@ def config_evaluator(params, policy):
 
 def config_demo(params, policy):
     demo_params = {
-        "exploit": False,
+        "explore": True,
         "use_target_net": False,
         "use_demo_states": False,
         "compute_Q": True,
-        "compute_r": True,
         "random_eps": 0.0,
-        "noise_eps": 0.0,
+        "noise_eps": 0.01,
         "render": params["render"],
         "T": params["eps_length"],
         "rollout_batch_size": params["rollout_batch_size"],

@@ -20,7 +20,7 @@ class Experiment:
         # Environment variables
         self.root_dir = os.getenv("PROJECT")
         self.exp_dir = os.getenv("EXPERIMENT")
-        self.result_dir = os.path.join(self.exp_dir, "Result")  # Cannot change this directly!
+        self.result_dir = os.path.join(self.exp_dir, "TempResult")  # Cannot change this directly!
         # Overwrite the following variables
         self.use_mpi = False  # whether or not to run with multiple threads
         self.shared_cmd = {}
@@ -105,7 +105,6 @@ class Train(Experiment):
             rl_num_sample=1,
         )
 
-
     @Experiment.execute
     def rl_only_dense(self, **kwargs):
         command = self.shared_cmd.copy()
@@ -136,7 +135,7 @@ class Train(Experiment):
         command["logdir"] = os.path.join(self.result_dir, "RLHERDemoShaping")
         command["save_path"] = os.path.join(self.result_dir, "RLDemoShaping")
         command["rl_replay_strategy"] = "her"
-        command["demo_critic"] = "nf"
+        command["demo_critic"] = "maf"
         return command
 
     @Experiment.execute
@@ -145,7 +144,7 @@ class Train(Experiment):
         command["logdir"] = os.path.join(self.result_dir, "RLDemoShaping")
         command["save_path"] = os.path.join(self.result_dir, "RLDemoShaping")
         command["rl_replay_strategy"] = "none"
-        command["demo_critic"] = "nf"
+        command["demo_critic"] = "maf"
         return command
 
     @Experiment.execute
@@ -201,20 +200,31 @@ class Plot(Experiment):
         return command
 
 
-if __name__ == "__main__":
+# A arg parser that takes options for which sub exp to run
+from yw.util.cmd_util import ArgParser
+
+exp_parser = ArgParser()
+exp_parser.parser.add_argument(
+    "--target",
+    help="which script to run",
+    type=str,
+    action="append",
+    default=None,
+    dest="targets",
+)
+
+
+if __name__ == "__main__":  # example use model
     demo_exp = Demo()
     train_exp = Train()
     display_exp = Display()
     plot_exp = Plot()
-
-    # Quick checks
-    ###################################################################################################################
-
-    # exp_dir = os.getenv("EXPERIMENT")
-    # result_dir = os.path.join(exp_dir, "Result/Temp/")
-
-    # display_exp.display(policy_file=result_dir + "/RLDemoCriticPolicy/rl/policy_latest.pkl")
-    # assert not uncertainty.check()
-    # assert not animation.plot_animation(load_dir=os.path.join(result_dir, "../Ap28Reach2DFO/Demo256/RLNoDemo/ac_output"))
-
-    # exit()
+    plot_exp.plot(
+        dir=plot_exp.result_dir,
+        xy=[
+            "epoch:test/success_rate",
+            "epoch:test/total_shaping_reward",
+            "epoch:test/total_reward",
+            "epoch:test/mean_Q",
+        ],
+    )

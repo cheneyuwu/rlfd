@@ -11,12 +11,12 @@ class EnvManager:
             env_args["dim"] = 2
             env_args["sparse"] = True
             self.make_env = lambda: point_reach.make("Reacher", **env_args)
-        elif env_name == "Reach2DFirstOrder":
+        elif env_name == "Reach2DF":
             env_args["dim"] = 2
             env_args["order"] = 1
             env_args["sparse"] = True
             self.make_env = lambda: point_reach.make("Reacher", **env_args)
-        elif env_name == "Reach2DFirstOrderDense":
+        elif env_name == "Reach2DFDense":
             env_args["dim"] = 2
             env_args["order"] = 1
             env_args["sparse"] = False
@@ -25,28 +25,30 @@ class EnvManager:
             env_args["dim"] = 1
             env_args["sparse"] = True
             self.make_env = lambda: point_reach.make("Reacher", **env_args)
+        elif env_name == "Reach1DF":
+            env_args["dim"] = 1
+            env_args["order"] = 1
+            env_args["sparse"] = True
+            self.make_env = lambda: point_reach.make("Reacher", **env_args)
         elif env_name == "Reach1DDense":
             env_args["dim"] = 1
             env_args["sparse"] = False
             self.make_env = lambda: point_reach.make("Reacher", **env_args)
-        elif env_name == "Reach1DFirstOrder":
-            env_args["dim"] = 1
-            env_args["order"] = 1
-            env_args["sparse"] = True
-            self.make_env = lambda: point_reach.make("Reacher", **env_args)
-        elif env_name == "Reach1DFirstOrderDense":
+        elif env_name == "Reach1DFDense":
             env_args["dim"] = 1
             env_args["order"] = 1
             env_args["sparse"] = False
             self.make_env = lambda: point_reach.make("Reacher", **env_args)
-        elif env_name == "BlockReachFirstOrder":
+        elif env_name == "BlockReachF":
             env_args["sparse"] = True
             env_args["order"] = 1
-            self.make_env = lambda: point_reach.make("BlockReacher", **env_args)
-        elif env_name == "BlockReachFirstOrderDense":
+            env_args["block"] = True
+            self.make_env = lambda: point_reach.make("Reacher", **env_args)
+        elif env_name == "BlockReachFDense":
             env_args["sparse"] = False
             env_args["order"] = 1
-            self.make_env = lambda: point_reach.make("BlockReacher", **env_args)
+            env_args["block"] = True
+            self.make_env = lambda: point_reach.make("Reacher", **env_args)
 
         # Search from openai gym
         if self.make_env == None:

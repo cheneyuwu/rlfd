@@ -104,13 +104,14 @@ def plot_results(allresults, xys, target_dir, smooth=False):
         fig.clf()
         colors = ["r", "g", "b", "c", "m", "y", "k"]
         for i, xy in enumerate(data[env_id].keys(), 1):
-            ax = fig.add_subplot(len(xys), 1, i)
+            ax = fig.add_subplot(1, len(xys), i)
             x_label = xy.split(":")[0]
             y_label = xy.split(":")[1]
             for j, config in enumerate(sorted(data[env_id][xy].keys())):
                 xs, ys = zip(*data[env_id][xy][config])
                 xs, ys = pad(xs), pad(ys)
                 assert xs.shape == ys.shape
+                
                 # from openai spinning up
                 # ax.plot(xs[0], np.nanmedian(ys, axis=0), label=config)
                 # ax.fill_between(xs[0], np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25)
@@ -120,14 +121,16 @@ def plot_results(allresults, xys, target_dir, smooth=False):
                 ax.plot(xs[0], mean_y, label=config, color=colors[j % len(colors)])
                 ax.fill_between(xs[0], mean_y - var_y, mean_y + var_y, alpha=0.5, color=colors[j % len(colors)])
                 ax.fill_between(xs[0], mean_y - 3 * var_y, mean_y + 3 * var_y, alpha=0.25, color=colors[j % len(colors)])
+                
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_label)
                 ax.legend(fontsize=5)
-        fig.set_size_inches(6, 10)
+        fig.set_size_inches(4 * len(xys), 4)
         fig.suptitle(env_id)
         save_path = os.path.join(target_dir, "fig_{}.png".format(env_id))
         print("Saving image to " + save_path)
         plt.savefig(save_path, dpi=200)
+    plt.show()
 
 
 def main(dirs, xys, save_path, smooth, **kwargs):
