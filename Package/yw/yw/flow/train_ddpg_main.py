@@ -108,14 +108,6 @@ def train_reinforce(
             #         ),
             #     )
 
-    if policy.demo_critic in ["maf", "norm"]:
-        # query
-        policy.query_potential_based_policy(
-            filename=os.path.join(query_potential_based_policy_save_path, "query_000.npz"),  # comment
-            fid=1
-        )
-        pass
-
     best_success_rate = -1
 
     for epoch in range(n_epochs):
@@ -274,7 +266,7 @@ def main(
     evaluator = config.config_evaluator(params=params, policy=policy)
 
     logger.info(
-        "Training the RL agent with n_epochs: {}, n_cycles: {}, n_batches: {}.".format(
+        "Training the RL agent with n_epochs: {:d}, n_cycles: {:d}, n_batches: {:d}.".format(
             params["train_rl_epochs"], params["n_cycles"], params["n_batches"]
         )
     )
