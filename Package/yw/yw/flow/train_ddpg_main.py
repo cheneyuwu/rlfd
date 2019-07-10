@@ -237,10 +237,10 @@ def main(
     params["seed"] = rank_seed
     params["env_name"] = env
     params["train_rl_epochs"] = train_rl_epochs
-    params["rl_replay_strategy"] = rl_replay_strategy  # For HER: future or none
-    params["rl_num_demo"] = num_demo
-    params["rl_demo_critic"] = demo_critic
-    params["rl_demo_actor"] = demo_actor
+    params["ddpg"]["replay_strategy"] = rl_replay_strategy  # For HER: future or none
+    params["ddpg"]["num_demo"] = num_demo
+    params["ddpg"]["demo_critic"] = demo_critic
+    params["ddpg"]["demo_actor"] = demo_actor
     config_str = []
     config_str.append("dense" if "Dense" in env else "sparse")
     if demo_critic != "none":
@@ -250,8 +250,13 @@ def main(
     params["config"] = "-".join(config_str)
     # make it possible to override any parameter.
     for key, val in unknown_params.items():
-        assert key in params.keys(), "Wrong override parameter: {}.".format(key)
-        params.update({key: type(params[key])(val)})
+        ks = key.split("__")
+        ps = params
+        while len(ks) > 1:
+            assert ks[0] in ps.keys(), "Wrong override parameter: {}.".format(key)
+            ps = ps[ks.pop(0)]
+        assert ks[0] in ps.keys(), "Wrong override parameter: {}.".format(key)
+        ps.update({ks[0]: type(ps[ks[0]])(val)})
 
     # Record params in a json file for later use.
     # This should be done before preparing_params because that function will add function variables that cannot be
