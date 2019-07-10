@@ -20,12 +20,11 @@ class RolloutWorker:
         policy,
         dims,
         T,
+        noise_eps=0.0,
+        random_eps=0.0,
         rollout_batch_size=1,
-        explore=False,
         use_target_net=False,
         compute_Q=False,
-        noise_eps=0,
-        random_eps=0,
         history_len=100,
         render=False,
         **kwargs
@@ -38,7 +37,6 @@ class RolloutWorker:
             policy             (object)      - the policy that is used to act
             dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
             rollout_batch_size (int)         - the number of parallel rollouts that should be used
-            explore            (bool)        - whether or not to explore, i.e. to act optimally according to the current policy without any exploration
             use_target_net     (bool)        - whether or not to use the target net for rollouts
             compute_Q          (bool)        - whether or not to compute the Q values alongside the actions
             noise_eps          (float)       - scale of the additive Gaussian noise
@@ -51,7 +49,6 @@ class RolloutWorker:
         self.dims = dims
         self.T = T
         self.rollout_batch_size = rollout_batch_size
-        self.explore = explore
         self.use_target_net = use_target_net
         self.compute_Q = compute_Q
         self.noise_eps = noise_eps
@@ -113,11 +110,10 @@ class RolloutWorker:
             logger.debug("RolloutWorker.generate_rollouts -> step {}".format(t))
             policy_output = self.policy.get_actions(
                 o,
-                ag,
                 self.g,
                 compute_Q=self.compute_Q,
-                noise_eps=self.noise_eps if not self.explore else 0.0,
-                random_eps=self.random_eps if not self.explore else 0.0,
+                noise_eps=self.noise_eps,
+                random_eps=self.random_eps,
                 use_target_net=self.use_target_net,
             )
             if self.compute_Q:

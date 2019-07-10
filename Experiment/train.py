@@ -98,11 +98,6 @@ class Train(Experiment):
             loglevel=2,
             save_interval=2,
             env="Reach2D",
-            r_scale=1.0,
-            r_shift=0.0,
-            seed=0,
-            train_rl_epochs=20,
-            rl_num_sample=1,
         )
 
     @Experiment.execute

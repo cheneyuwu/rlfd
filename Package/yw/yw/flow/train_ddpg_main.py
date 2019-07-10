@@ -49,6 +49,7 @@ def train_reinforce(
     rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
 
     if save_path:
+        # rl
         policy_save_path = save_path + "/rl/"
         os.makedirs(policy_save_path, exist_ok=True)
         latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
@@ -58,8 +59,6 @@ def train_reinforce(
         shaping_save_path = save_path + "/shaping/"
         os.makedirs(shaping_save_path, exist_ok=True)
         latest_shaping_path = os.path.join(shaping_save_path, "shaping_latest.ckpt")
-        # best_shaping_path = os.path.join(shaping_save_path, "shaping_best.ckpt")
-        # periodic_shaping_path = os.path.join(shaping_save_path, "policy_{}.ckpt")
         # queries
         query_uncertainty_save_path = save_path + "/uncertainty/"
         os.makedirs(query_uncertainty_save_path, exist_ok=True)
@@ -96,7 +95,7 @@ def train_reinforce(
                 logger.info("Saving latest policy to {}.".format(latest_shaping_path))
                 policy.save_shaping_weights(latest_shaping_path)
         else:
-            logger.info("Use the provided policy weights: {}".format(shaping_policy))
+            logger.info("Using the provided policy weights: {}".format(shaping_policy))
             policy.load_shaping_weights(shaping_policy)
             # query
             # dims = list(range(policy.dimo + policy.dimg))
@@ -194,10 +193,6 @@ def main(
     save_path,
     save_interval,
     env,
-    r_scale,
-    r_shift,
-    eps_length,
-    env_args,
     seed,
     train_rl_epochs,
     rl_replay_strategy,
@@ -226,8 +221,6 @@ def main(
     logger.info("Launching the training process with {} cpu core(s).".format(num_cpu))
     logger.info("Setting log level to {}.".format(loglevel))
     logger.set_level(loglevel)
-    logger.debug("train_ddpg_main.launch -> Using debug mode. Avoid training with too many epochs.")
-
 
     # Reset default graph every time this function is called. (must be called after setting seed)
     tf.reset_default_graph()
@@ -241,17 +234,13 @@ def main(
 
     # Get default params from config and update params.
     params = config.DEFAULT_PARAMS.copy()
-    params["rank_seed"] = rank_seed
+    params["seed"] = rank_seed
     params["env_name"] = env
-    params["r_scale"] = r_scale
-    params["r_shift"] = r_shift
-    params["eps_length"] = eps_length
-    params["env_args"] = dict(env_args) if env_args else {}
     params["train_rl_epochs"] = train_rl_epochs
-    params["rl_replay_strategy"] = rl_replay_strategy  # For HER: future or none
-    params["rl_num_demo"] = num_demo
-    params["rl_demo_critic"] = demo_critic
-    params["rl_demo_actor"] = demo_actor
+    params["ddpg"]["replay_strategy"] = rl_replay_strategy  # For HER: future or none
+    params["ddpg"]["num_demo"] = num_demo
+    params["ddpg"]["demo_critic"] = demo_critic
+    params["ddpg"]["demo_actor"] = demo_actor
     config_str = []
     config_str.append("dense" if "Dense" in env else "sparse")
     if demo_critic != "none":
@@ -261,8 +250,13 @@ def main(
     params["config"] = "-".join(config_str)
     # make it possible to override any parameter.
     for key, val in unknown_params.items():
-        assert key in params.keys(), "Wrong override parameter: {}.".format(key)
-        params.update({key: type(params[key])(val)})
+        ks = key.split("__")
+        ps = params
+        while len(ks) > 1:
+            assert ks[0] in ps.keys(), "Wrong override parameter: {}.".format(key)
+            ps = ps[ks.pop(0)]
+        assert ks[0] in ps.keys(), "Wrong override parameter: {}.".format(key)
+        ps.update({ks[0]: type(ps[ks[0]])(val)})
 
     # Record params in a json file for later use.
     # This should be done before preparing_params because that function will add function variables that cannot be
@@ -312,15 +306,6 @@ ap.parser.add_argument("--save_interval", help="the interval which policy pickle
 ap.parser.add_argument("--seed", help="RNG seed", type=int, default=0)
 # environment setup
 ap.parser.add_argument("--env", help="name of the environment", type=str, default="Reach2DFirstOrder")
-ap.parser.add_argument("--r_scale", help="down scale the reward", type=float, default=1.0)
-ap.parser.add_argument("--r_shift", help="shift the reward (before shifting)", type=float, default=0.0)
-ap.parser.add_argument("--eps_length", help="change the maximum episode length", type=int, default=0)
-ap.parser.add_argument(
-    "--env_arg",
-    action="append",
-    type=lambda kv: [kv.split(":")[0], eval(str(kv.split(":")[1] + '("' + kv.split(":")[2] + '")'))],
-    dest="env_args",
-)
 # training
 ap.parser.add_argument("--train_rl_epochs", help="the number of training epochs to run for RL", type=int, default=1)
 # DDPG configuration

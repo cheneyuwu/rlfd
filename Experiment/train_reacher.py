@@ -64,7 +64,7 @@ train_exp.set_shared_cmd(
     env=environment,
     n_cycles=10,
     train_rl_epochs=500,
-    rl_action_l2=0.5,
+    ddpg__action_l2=0.5,
 )
 demo_exp.set_shared_cmd(num_demo=demo_data_size)
 
@@ -81,7 +81,6 @@ for i in range(1):
     if "rldense" in target:
         train_exp.rl_only_dense(
             env="Reach2DFDense", 
-            r_shift=0.0,
             seed=seed + 0,
         )
 

@@ -4,6 +4,7 @@ import functools
 import numpy as np
 import random
 
+
 def import_function(spec):
     """Import a function identified by a string like "pkg.module:fn_name".
     """
@@ -11,6 +12,7 @@ def import_function(spec):
     module = importlib.import_module(mod_name)
     fn = getattr(module, fn_name)
     return fn
+
 
 def store_args(method):
     """Stores provided method args as instance attributes.
@@ -37,6 +39,7 @@ def store_args(method):
 
     return wrapper
 
+
 def set_global_seeds(i):
     try:
         import MPI
@@ -49,10 +52,7 @@ def set_global_seeds(i):
     try:
         import tensorflow as tf
 
-        if tf.__version__.startswith("1"):
-            tf.set_random_seed(myseed)
-        else:
-            tf.random.set_seed(myseed)
+        tf.set_random_seed(myseed)
     except ImportError:
         pass
     np.random.seed(myseed)

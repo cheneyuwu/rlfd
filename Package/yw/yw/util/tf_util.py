@@ -42,8 +42,7 @@ def make_session(config=None, num_cpu=None, make_default=False, graph=None):
         config = tf.ConfigProto(
             allow_soft_placement=True, inter_op_parallelism_threads=num_cpu, intra_op_parallelism_threads=num_cpu
         )
-        # Yuchen: re-enable when GPU allowed
-        # config.gpu_options.allow_growth = True
+        config.gpu_options.allow_growth = True
 
     if make_default:
         return tf.InteractiveSession(config=config, graph=graph)

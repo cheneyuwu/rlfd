@@ -26,7 +26,6 @@ class DDPG(object):
     def __init__(
         self,
         input_dims,
-        num_sample,
         use_td3,
         hidden,
         layers,
@@ -42,7 +41,6 @@ class DDPG(object):
         clip_obs,
         scope,
         T,
-        rollout_batch_size,
         clip_pos_returns,
         clip_return,
         demo_critic,
@@ -72,8 +70,6 @@ class DDPG(object):
             # Normalizer
             norm_eps           (float)        - a small value used in the normalizer to avoid numerical instabilities
             norm_clip          (float)        - normalized inputs are clipped to be in [-norm_clip, norm_clip]
-            # Rollout Worker
-            rollout_batch_size (int)          - number of parallel rollouts per DDPG agent
             # NN Configuration
             scope              (str)          - the scope used for the TensorFlow graph
             input_dims         (dict of ints) - dimensions for the observation (o), the goal (g), and the actions (u)
@@ -108,7 +104,6 @@ class DDPG(object):
 
         # Parameters
         self.input_dims = input_dims
-        self.num_sample = num_sample
         self.use_td3 = use_td3
         self.hidden = hidden
         self.layers = layers
@@ -124,7 +119,6 @@ class DDPG(object):
         self.clip_obs = clip_obs
         self.scope = scope
         self.T = T
-        self.rollout_batch_size = rollout_batch_size
         self.clip_pos_returns = clip_pos_returns
         self.clip_return = clip_return
         self.demo_critic = demo_critic
@@ -153,63 +147,52 @@ class DDPG(object):
         if self.dimg != 0:  # for multigoal environment - or states that do not change over episodes.
             buffer_shapes["ag"] = (self.T + 1, self.dimg)
             buffer_shapes["g"] = (self.T, self.dimg)
-        # for bootstrapped ensemble of actor critics, mask for training each head with different dataset
-        buffer_shapes["mask"] = (self.T, self.num_sample)
         # add extra information
         for key, val in input_dims.items():
             if key.startswith("info"):
                 buffer_shapes[key] = (self.T, *(tuple([val]) if val > 0 else tuple()))
-        # buffer size
-        buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         # initialize primary buffer
         if not self.replay_strategy:
             pass
         elif self.replay_strategy["strategy"] == "her":
-            self.replay_buffer = HERReplayBuffer(buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"])
+            self.replay_buffer = HERReplayBuffer(buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"])
         else:
             self.replay_buffer = UniformReplayBuffer(
-                buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"]
+                buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
             )
         # initialize the demo buffer
         if not self.demo_replay_strategy:
             pass
         elif self.demo_actor != "none" or self.demo_critic != "none":
             self.demo_buffer = UniformReplayBuffer(
-                buffer_shapes, buffer_size, self.T, **self.demo_replay_strategy["args"]
+                buffer_shapes, self.buffer_size, self.T, **self.demo_replay_strategy["args"]
             )
             # This does not matter is using demo_critic, since we call sample all
-            # self.demo_buffer = HERReplayBuffer(buffer_shapes, buffer_size, self.T, **self.replay_strategy["args"])
+            # self.demo_buffer = HERReplayBuffer(buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"])
 
         # Create the DDPG agent
         with tf.variable_scope(self.scope):
             self._create_network()
 
-    def get_actions(self, o, ag, g, noise_eps=0.0, random_eps=0.0, use_target_net=False, compute_Q=False):
+    def get_actions(self, o, g, noise_eps=0.0, random_eps=0.0, use_target_net=False, compute_Q=False):
+
         policy = self.target if use_target_net else self.main
         # values to compute
-        vals = [policy.pi_tf, policy.Q_pi_mean_tf]
+        vals = [policy.pi_tf, policy.Q_pi_tf]
         # feed
+        feed = {}
         o = self._preprocess_state(o)
-        feed = {
-            policy.o_tf: o.reshape(-1, self.dimo),
-            policy.u_tf: np.zeros((o.size // self.dimo, self.dimu), dtype=np.float32),
-        }
+        feed[policy.o_tf] = o.reshape(-1, self.dimo)
         if self.dimg != 0:
             g = self._preprocess_state(g)
             feed[policy.g_tf] = g.reshape(-1, self.dimg)
+        feed[policy.u_tf] = np.zeros((o.size // self.dimo, self.dimu), dtype=np.float32)
+        # compute
         ret = self.sess.run(vals, feed_dict=feed)
 
-        # action postprocessing
-        if use_target_net:  # base on the assumption that target net is only used when testing
-            # randomly select the output action of one policy.
-            u = np.mean(ret[0], axis=0)
-        else:
-            u = ret[0][np.random.randint(self.num_sample)]
-
-        # debug only
-
-        noise = noise_eps * self.max_u * np.random.randn(*u.shape)  # gaussian noise
-        u += noise
+        # action post-processing
+        u = ret[0]
+        u += noise_eps * self.max_u * np.random.randn(*u.shape)  # gaussian noise
         u = np.clip(u, -self.max_u, self.max_u)
         u += np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (
             self._random_action(u.shape[0]) - u
@@ -230,20 +213,16 @@ class DDPG(object):
         logger.info("Initializing demonstration buffer with {} episodes.".format(self.num_demo))
 
         demo_data = np.load(demo_file)  # load the demonstration data from data file
-
         assert self.num_demo <= demo_data["u"].shape[0], "No enough demonstration data!"
+
         episode_batch = {**demo_data}
         for key in episode_batch.keys():
             episode_batch[key] = episode_batch[key][: self.num_demo]
         # the demo buffer should already have: o, u, r, ag, g and necessary infos.
-        # for boot strapped ensemble of actor critics
-        episode_batch["mask"] = np.random.binomial(1, 1, (self.num_demo, self.T, self.num_sample))
-
         self.demo_buffer.store_episode(episode_batch)
 
         # feed demonstration data for norm shaping
         if self.demo_critic == "norm":
-            logger.info("DDPG:init_demo_buffer -> Assign demo data to variables.")
             demo_data = self.demo_buffer.sample_all()
             demo_data["o"] = self._preprocess_state(demo_data["o"])
             if self.dimg != 0:
@@ -253,7 +232,7 @@ class DDPG(object):
 
         # currently we do not update status if using demo_actor==none
         if update_stats:
-            logger.info("DDPG:init_demo_buffer -> Updating stats.")
+            logger.info("Updating stats using data from demostration buffer.")
             self._update_stats(episode_batch)
 
     def store_episode(self, episode_batch, update_stats=True):
@@ -261,13 +240,6 @@ class DDPG(object):
         episode_batch: array of batch_size x (T or T+1) x dim_key
                        'o' is of size T+1, others are of size T
         """
-        for key in episode_batch.keys():
-            assert episode_batch[key].shape[0] == self.rollout_batch_size
-        # mask transitions for each bootstrapped head
-        # select a distribution!
-        episode_batch["mask"] = np.float32(
-            np.random.binomial(1, 1, (self.rollout_batch_size, self.T, self.num_sample))
-        )
 
         self.replay_buffer.store_episode(episode_batch)
 
@@ -337,7 +309,6 @@ class DDPG(object):
         self.training_step += 1
 
         # for debugging
-        logger.debug("DDPG.train -> critic_loss:{}, actor_loss:{}".format(critic_loss, actor_loss))
         self.current_batch = batch
 
         return critic_loss, actor_loss
@@ -346,23 +317,11 @@ class DDPG(object):
         """ For debugging only
         """
         pass
-        # feed = {self.inputs_tf[k]: self.current_batch[k] for k in self.inputs_tf.keys()}
-        # # feed demonstration data
-        # if self.demo_critic == "norm":
-        #     demo_data = self.demo_buffer.sample_all()
-        #     demo_data["o"] = self._preprocess_state(demo_data["o"])
-        #     if self.dimg != 0:
-        #         demo_data["g"] = self._preprocess_state(demo_data["g"])
-        #     for k in self.demo_inputs_tf.keys():
-        #         feed[self.demo_inputs_tf[k]] = demo_data[k]
-        # potential, reward = self.sess.run([self.demo_critic_shaping_ls[0].potential, self.demo_critic_shaping_ls[0].reward], feed_dict=feed)
-        # print(np.stack((potential, reward), axis=1))
 
     def init_target_net(self):
         self.sess.run(self.init_target_net_op)
 
     def update_target_net(self):
-        logger.debug("DDPG.update_target_net -> updating target net.")
         self.sess.run(self.update_target_net_op)
 
     def get_current_buffer_size(self):
@@ -397,8 +356,6 @@ class DDPG(object):
         if self.dimg != 0:
             self.inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
             self.inputs_tf["g_2"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
-        # boot strapped ensemble of actor critics
-        self.inputs_tf["mask"] = tf.placeholder(tf.int32, shape=(None, self.num_sample))
 
         self.target_inputs_tf = self.inputs_tf.copy()
         # The input to the target network has to be the resultant observation and goal!
@@ -422,7 +379,6 @@ class DDPG(object):
                 max_u=self.max_u,
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
-                num_sample=self.num_sample,
                 use_td3=self.use_td3,
                 hidden=self.hidden,
                 layers=self.layers,
@@ -436,7 +392,6 @@ class DDPG(object):
                 max_u=self.max_u,
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
-                num_sample=self.num_sample,
                 use_td3=self.use_td3,
                 hidden=self.hidden,
                 layers=self.layers,
@@ -451,7 +406,6 @@ class DDPG(object):
                 max_u=self.max_u,
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
-                num_sample=self.num_sample,
                 use_td3=self.use_td3,
                 hidden=self.hidden,
                 layers=self.layers,
@@ -461,11 +415,6 @@ class DDPG(object):
 
         # Add shaping reward
         if self.demo_critic != "none":
-            self.demo_critic_shaping_ls = []
-            self.demo_actor_shaping_ls = []
-            # for debugging
-            self.demo_shaping_check_ls = []
-
             with tf.variable_scope("shaping") as vs:
                 if self.demo_critic == "manual":
                     self.demo_shaping = ManualDemoShaping(gamma=self.gamma)
@@ -523,170 +472,91 @@ class DDPG(object):
 
                     # self.demo_shaping = NormalizingFlowDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
                     self.demo_shaping = MAFDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
+                else:
+                    assert 0, "unknown shaping method"
 
-                for i in range(self.num_sample):
-                    self.demo_critic_shaping_ls.append(
-                        tf.cast(
-                            self.demo_shaping.reward(
-                                o=self.inputs_tf["o"],
-                                g=self.inputs_tf["g"] if self.dimg != 0 else None,
-                                u=self.inputs_tf["u"],
-                                o_2=self.inputs_tf["o_2"],
-                                g_2=self.inputs_tf["g_2"] if self.dimg != 0 else None,
-                                u_2=self.main_shaping.pi_tf[i],
-                            ),
-                            tf.float32,
-                        )
-                    )
-                    self.demo_shaping_check_ls.append(
-                        tf.cast(
-                            self.demo_shaping.potential(
-                                o=self.inputs_tf["o"],
-                                g=self.inputs_tf["g"] if self.dimg != 0 else None,
-                                u=self.inputs_tf["u"],
-                            ),
-                            tf.float32,
-                        )
-                    )
-                    self.demo_actor_shaping_ls.append(
-                        tf.cast(
-                            self.demo_shaping.potential(
-                                o=self.inputs_tf["o"],
-                                g=self.inputs_tf["g"] if self.dimg != 0 else None,
-                                u=self.main.pi_tf[i],
-                            ),
-                            tf.float32,
-                        )
-                    )
+                self.demo_critic_shaping = self.demo_shaping.reward(
+                    o=self.inputs_tf["o"],
+                    g=self.inputs_tf["g"] if self.dimg != 0 else None,
+                    u=self.inputs_tf["u"],
+                    o_2=self.inputs_tf["o_2"],
+                    g_2=self.inputs_tf["g_2"] if self.dimg != 0 else None,
+                    u_2=self.main_shaping.pi_tf[i],
+                )
 
-                assert all([ele.shape[1] == 1 for ele in self.demo_critic_shaping_ls])
-                assert all([ele.shape[1] == 1 for ele in self.demo_actor_shaping_ls])
+                self.demo_shaping_check = self.demo_shaping.potential(
+                    o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.inputs_tf["u"]
+                )
+
+                self.demo_actor_shaping = self.demo_shaping.potential(
+                    o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.main.pi_tf[i]
+                )
 
         # Critic loss
-        # clip bellman target return
-        clip_range = (-self.clip_return, 0.0 if self.clip_pos_returns else self.clip_return)
-        self.Q_loss_tf = []
+        target_tf = self.inputs_tf["r"]
+        # demo shaping
         if self.demo_critic != "none":
-            for i in range(self.num_sample):
-                if self.use_td3:
-                    # calculate bellman target (with shaping reward added)
-                    target_tf = tf.clip_by_value(
-                        self.inputs_tf["r"]
-                        + tf.stop_gradient(self.demo_critic_shaping_ls[i])
-                        + self.gamma * tf.minimum(self.target.Q_pi_tf[i], self.target.Q2_pi_tf[i]),
-                        *clip_range
-                    )
-                    assert target_tf.shape[1] == 1
-                    rl_bellman_1_tf = tf.boolean_mask(
-                        tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
-                    )
-                    rl_bellman_2_tf = tf.boolean_mask(
-                        tf.square(tf.stop_gradient(target_tf) - self.main.Q2_tf[i]), self.inputs_tf["mask"][:, i]
-                    )
-                    rl_loss_tf = (tf.reduce_mean(rl_bellman_1_tf) + tf.reduce_mean(rl_bellman_2_tf)) / 2.0
-
-                else:
-                    # calculate bellman target (with shaping reward added)
-                    target_tf = tf.clip_by_value(
-                        self.inputs_tf["r"]
-                        + tf.stop_gradient(self.demo_critic_shaping_ls[i])
-                        + self.gamma * self.target.Q_pi_tf[i],
-                        *clip_range
-                    )
-                    assert target_tf.shape[1] == 1
-                    rl_bellman_tf = tf.boolean_mask(
-                        tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
-                    )
-                    rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
-                self.Q_loss_tf.append(rl_loss_tf)
+            target_tf += self.demo_critic_shaping
+        # td3 target
+        if self.use_td3:
+            target_tf += self.gamma * tf.minimum(self.target.Q_pi_tf, self.target.Q2_pi_tf)
         else:
-            for i in range(self.num_sample):
-                if self.use_td3:
-                    # calculate bellman target (with shaping reward added)
-                    target_tf = tf.clip_by_value(
-                        self.inputs_tf["r"] + self.gamma * tf.minimum(self.target.Q_pi_tf[i], self.target.Q2_pi_tf[i]),
-                        *clip_range
-                    )
-                    assert target_tf.shape[1] == 1
-                    rl_bellman_1_tf = tf.boolean_mask(
-                        tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
-                    )
-                    rl_bellman_2_tf = tf.boolean_mask(
-                        tf.square(tf.stop_gradient(target_tf) - self.main.Q2_tf[i]), self.inputs_tf["mask"][:, i]
-                    )
-                    rl_loss_tf = (tf.reduce_mean(rl_bellman_1_tf) + tf.reduce_mean(rl_bellman_2_tf)) / 2.0
-                else:
-                    # calculate bellman target (with shaping reward added)
-                    target_tf = tf.clip_by_value(
-                        self.inputs_tf["r"] + self.gamma * self.target.Q_pi_tf[i], *clip_range
-                    )
-                    assert target_tf.shape[1] == 1
-                    rl_bellman_tf = tf.boolean_mask(
-                        tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf[i]), self.inputs_tf["mask"][:, i]
-                    )
-                    rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
-                self.Q_loss_tf.append(rl_loss_tf)
+            target_tf += self.gamma * self.target.Q_pi_tf
+        # clipping
+        clip_range = (-self.clip_return, 0.0 if self.clip_pos_returns else self.clip_return)
+        target_tf = tf.clip_by_value(target_tf, *clip_range)
+
+        assert target_tf.shape[1] == 1
+
+        # td3 loss
+        if self.use_td3:
+            rl_bellman_1_tf = tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf)
+            rl_bellman_2_tf = tf.square(tf.stop_gradient(target_tf) - self.main.Q2_tf)
+            rl_loss_tf = (tf.reduce_mean(rl_bellman_1_tf) + tf.reduce_mean(rl_bellman_2_tf)) / 2.0
+        else:
+            rl_bellman_tf = tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf)
+            rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
+        self.Q_loss_tf = rl_loss_tf
 
         # Actor Loss
-        if self.demo_actor != "none" and self.q_filter == 1:
+        if self.demo_actor != "none":
             # train with demonstrations and use demo and q_filter both
             # where is the demonstrator action better than actor action according to the critic? choose those sample only
+            # primary loss scaled by it's respective weight prm_loss_weight
+            pi_loss_tf = -self.prm_loss_weight * tf.reduce_mean(self.main.Q_pi_tf)
+            # L2 loss on action values scaled by the same weight prm_loss_weight
+            pi_loss_tf += (
+                self.prm_loss_weight * self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
+            )
+            # define the cloning loss on the actor's actions only on the samples which adhere to the above masks
             mask = np.concatenate(
                 (np.zeros(self.batch_size - self.batch_size_demo), np.ones(self.batch_size_demo)), axis=0
             )
-            self.pi_loss_tf = []
-            for i in range(self.num_sample):
-                # primary loss scaled by it's respective weight prm_loss_weight
-                pi_loss_tf = -self.prm_loss_weight * tf.reduce_mean(self.main.Q_pi_tf[i])
-                # L2 loss on action values scaled by the same weight prm_loss_weight
-                pi_loss_tf += (
-                    self.prm_loss_weight * self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf[i] / self.max_u))
-                )
-                # define the cloning loss on the actor's actions only on the samples which adhere to the above masks
-                maskMain = tf.reshape(tf.boolean_mask(self.main.Q_tf[i] > self.main.Q_pi_tf[i], mask), [-1])
+            actor_pi_tf = tf.boolean_mask((self.main.pi_tf), mask)
+            demo_pi_tf = tf.boolean_mask((self.inputs_tf["u"]), mask)
+            if self.q_filter:
+                q_filter_mask = tf.reshape(tf.boolean_mask(self.main.Q_tf > self.main.Q_pi_tf, mask), [-1])
                 cloning_loss_tf = tf.reduce_sum(
                     tf.square(
-                        tf.boolean_mask(tf.boolean_mask((self.main.pi_tf[i]), mask), maskMain, axis=0)
-                        - tf.boolean_mask(tf.boolean_mask((self.inputs_tf["u"]), mask), maskMain, axis=0)
+                        tf.boolean_mask(actor_pi_tf, q_filter_mask, axis=0)
+                        - tf.boolean_mask(demo_pi_tf, q_filter_mask, axis=0)
                     )
                 )
-                # adding the cloning loss to the actor loss as an auxilliary loss scaled by its weight aux_loss_weight
-                pi_loss_tf += self.aux_loss_weight * cloning_loss_tf
-                self.pi_loss_tf.append(pi_loss_tf)
-
-        elif self.demo_actor != "none" and not self.q_filter:  # train with demonstrations without q_filter
-            # choose only the demo buffer samples
-            mask = np.concatenate(
-                (np.zeros(self.batch_size - self.batch_size_demo), np.ones(self.batch_size_demo)), axis=0
-            )
-            self.pi_loss_tf = []
-            for i in range(self.num_sample):
-                pi_loss_tf = -self.prm_loss_weight * tf.reduce_mean(self.main.Q_pi_tf[i])
-                pi_loss_tf += (
-                    self.prm_loss_weight * self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf[i] / self.max_u))
-                )
-                cloning_loss_tf = tf.reduce_sum(
-                    tf.square(
-                        tf.boolean_mask((self.main.pi_tf[i]), mask) - tf.boolean_mask((self.inputs_tf["u"]), mask)
-                    )
-                )
-                pi_loss_tf += self.aux_loss_weight * cloning_loss_tf
-                self.pi_loss_tf.append(pi_loss_tf)
+            else:
+                cloning_loss_tf = tf.reduce_sum(tf.square(actor_pi_tf - demo_pi_tf))
+            # adding the cloning loss to the actor loss as an auxilliary loss scaled by its weight aux_loss_weight
+            pi_loss_tf += self.aux_loss_weight * cloning_loss_tf
 
         elif self.demo_critic != "none":
-            self.pi_loss_tf = [
-                -tf.reduce_mean(self.main.Q_pi_tf[i])
-                - tf.reduce_mean(self.demo_actor_shaping_ls[i])
-                + self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf[i] / self.max_u))
-                for i in range(self.num_sample)
-            ]
+            pi_loss_tf = -tf.reduce_mean(self.main.Q_pi_tf)
+            pi_loss_tf += -tf.reduce_mean(self.demo_actor_shaping)
+            pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
 
         else:  # If not training with demonstrations
-            self.pi_loss_tf = [
-                -tf.reduce_mean(self.main.Q_pi_tf[i])
-                + self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf[i] / self.max_u))
-                for i in range(self.num_sample)
-            ]
+            pi_loss_tf = -tf.reduce_mean(self.main.Q_pi_tf)
+            pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
+
+        self.pi_loss_tf = pi_loss_tf
 
         # Gradients
         # gradients of Q
@@ -714,10 +584,6 @@ class DDPG(object):
                 zip(self.target_vars, self.main_vars),
             )
         )
-
-        # Debug info
-        logger.debug("Demo.__init__ -> Global variables are: {}".format(self._global_vars()))
-        logger.debug("Demo.__init__ -> Trainable variables are: {}".format(self._vars()))
 
         # Initialize all variables
         # tf.variables_initializer(self._global_vars("")).run()
@@ -790,22 +656,6 @@ class DDPG(object):
     ###########################################
 
     # Store the result you want to query in a npz file.
-
-    # Currently you can query the value of:
-    #     staging_tf          -> staged values
-    #     buffer_ph_tf        -> placeholders
-    #     demo_q_mean_tf      ->
-    #     demo_q_var_tf       ->
-    #     demo_q_sample_tf    ->
-    #     max_q_tf            ->
-    #     Q_loss_tf           -> a list of losses for each critic sample
-    #     pi_loss_tf          -> a list of losses for each pi sample
-    #     policy.pi_tf        -> list of output from actor
-    #     policy.Q_tf         ->
-    #     policy.Q_pi_tf      ->
-    #     policy.Q_pi_mean_tf ->
-    #     policy.Q_pi_var_tf  ->
-    #     policy._input_Q     ->
 
     def query_potential(self, dim1=0, dim2=1, filename=None):
         """Check the output from demo shaping potential function
@@ -988,8 +838,8 @@ class DDPG(object):
             visualize_query.visualize_action(ax, res)
             pl.show()
             pl.pause(10)
-    
-        exit() # this function adds extra nodes to the graph
+
+        exit()  # this function adds extra nodes to the graph
 
     def query_action(self, filename=None, fid=0):
 
@@ -1002,7 +852,7 @@ class DDPG(object):
         o_r = np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1)
         g_r = 0.0 * np.ones((num_point ** 2, 2))
 
-        ret = self.get_actions(o=o_r, ag=None, g=g_r)
+        ret = self.get_actions(o=o_r, g=g_r)
 
         res = {"o": o_r, "u": ret}
 
