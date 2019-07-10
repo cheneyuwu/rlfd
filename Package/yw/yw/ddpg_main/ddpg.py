@@ -483,13 +483,11 @@ class DDPG(object):
                     g_2=self.inputs_tf["g_2"] if self.dimg != 0 else None,
                     u_2=self.main_shaping.pi_tf[i],
                 )
-
-                self.demo_shaping_check = self.demo_shaping.potential(
-                    o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.inputs_tf["u"]
-                )
-
                 self.demo_actor_shaping = self.demo_shaping.potential(
                     o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.main.pi_tf[i]
+                )
+                self.demo_shaping_check = self.demo_shaping.potential(
+                    o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.inputs_tf["u"]
                 )
 
         # Critic loss
@@ -752,7 +750,7 @@ class DDPG(object):
         if not "Reach" in self.info["env_name"] or self.demo_critic == "none":
             return
 
-        potential = self.demo_shaping_check_ls[0]
+        potential = self.demo_shaping_check
 
         num_point = 24
         ls = np.linspace(-1.0, 1.0, num_point)

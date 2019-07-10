@@ -108,8 +108,9 @@ def add_env_params(params):
         eps_length=params["eps_length"],
     )
     logger.info(
-        "Using environment %s with r scale down by %f shift by %f and max episode %f"
-        % (params["env_name"], params["r_scale"], params["r_shift"], params["eps_length"])
+        "Using environment {} with r scale down by {} shift by {} and max episode {}".format(
+            params["env_name"], params["r_scale"], params["r_shift"], params["eps_length"]
+        )
     )
     params["make_env"] = env_manager.get_env
     tmp_env = EnvCache.get_env(params["make_env"])

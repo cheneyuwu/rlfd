@@ -274,7 +274,7 @@ def main(
     evaluator = config.config_evaluator(params=params, policy=policy)
 
     logger.info(
-        "Training the RL agent with n_epochs: {}, n_cycles: {}, n_batches: {}.".format(
+        "Training the RL agent with n_epochs: {:d}, n_cycles: {:d}, n_batches: {:d}.".format(
             params["train_rl_epochs"], params["n_cycles"], params["n_batches"]
         )
     )
