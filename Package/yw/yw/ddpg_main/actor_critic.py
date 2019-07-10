@@ -1,12 +1,13 @@
 import tensorflow as tf
+import tensorflow_probability as tfp
+
+tfd = tfp.distributions
 
 from yw.tool import logger
-from yw.util.util import store_args
 from yw.util.tf_util import nn
 
 
 class ActorCritic:
-    @store_args
     def __init__(
         self,
         inputs_tf,
@@ -17,10 +18,10 @@ class ActorCritic:
         o_stats,
         g_stats,
         num_sample,
-        ca_ratio,
+        use_td3,
+        add_pi_noise,
         hidden,
         layers,
-        net_type="",
         **kwargs
     ):
         """The actor-critic network and related training code.
@@ -34,52 +35,64 @@ class ActorCritic:
             o_stats    (Normalizer)     - normalizer for observations
             g_stats    (Normalizer)     - normalizer for goals
             num_sample (int)            - number of ensemble actor critic pairs
-            ca_ratio   (int)            - number of critic for each actor, refer to td3 algorithm
+            use_td3   (int)            - number of critic for each actor, refer to td3 algorithm
             hidden     (int)            - number of hidden units that should be used in hidden layers
             layers     (int)            - number of hidden layers
             net_type   (str)
         """
+
         # Prepare inputs for actor and critic.
         self.o_tf = inputs_tf["o"]
-        self.g_tf = inputs_tf["g"]
+        state = o_stats.normalize(self.o_tf)
+        # state = self.o_tf
         self.u_tf = inputs_tf["u"]
+        # for multigoal environments, we have goal as another states
+        if dimg != 0:
+            self.g_tf = inputs_tf["g"]
+            goal = g_stats.normalize(self.g_tf)
+            # goal = self.g_tf
+            state = tf.concat(axis=1, values=[state, goal])
 
-        # Networks
-        # use the normalizer
-        o = self.o_stats.normalize(self.o_tf)
-        g = self.g_stats.normalize(self.g_tf)
-        # or not
-        # o = self.o_tf
-        # g = self.g_tf
-
-        input_pi = tf.concat(axis=1, values=[o, g])  # input for actor
         self.pi_tf = []  # output of actor
         with tf.variable_scope("pi"):
-            for i in range(self.num_sample):
+            for i in range(num_sample):
                 with tf.variable_scope("pi" + str(i)):
-                    self.pi_tf.append(self.max_u * tf.tanh(nn(input_pi, [self.hidden] * self.layers + [self.dimu])))
+                    nn_pi_tf = tf.tanh(nn(state, [hidden] * layers + [dimu]))
+                    if use_td3 and add_pi_noise: # for td3, add noise!
+                        nn_pi_tf += tfd.Normal(loc=[0.0] * dimu, scale=1.0).sample(
+                            [tf.shape(self.o_tf)[0]]
+                        )
+                        nn_pi_tf = tf.clip_by_value(nn_pi_tf, -1.0, 1.0)
+                    pi_tf = max_u * nn_pi_tf
+                    self.pi_tf.append(pi_tf)
         with tf.variable_scope("Q"):
             self._input_Q = []
             self.Q_pi_tf = []
             self.Q_tf = []
-            for i in range(self.num_sample):
-                with tf.variable_scope("Q" + str(i)):
+            for i in range(num_sample):
+                with tf.variable_scope("Q1" + str(i)):
                     # for policy training
-                    input_Q = tf.concat(axis=1, values=[o, g, self.pi_tf[i] / self.max_u])
-                    self.Q_pi_tf.append(nn(input_Q, [self.hidden] * self.layers + [1]))
+                    input_Q = tf.concat(axis=1, values=[state, self.pi_tf[i] / max_u])
+                    self.Q_pi_tf.append(nn(input_Q, [hidden] * layers + [1]))
                     # for critic training
-                    input_Q = tf.concat(axis=1, values=[o, g, self.u_tf / self.max_u])
+                    input_Q = tf.concat(axis=1, values=[state, self.u_tf / max_u])
                     self._input_Q.append(input_Q)  # exposed for tests
-                    self.Q_tf.append(nn(input_Q, [self.hidden] * self.layers + [1], reuse=True))
+                    self.Q_tf.append(nn(input_Q, [hidden] * layers + [1], reuse=True))
             self.Q_sample_tf = tf.concat(values=self.Q_tf, axis=1)
             self.Q_mean_tf, self.Q_var_tf = tf.nn.moments(self.Q_sample_tf, 1)
             self.Q_pi_sample_tf = tf.concat(values=self.Q_pi_tf, axis=1)
             self.Q_pi_mean_tf, self.Q_pi_var_tf = tf.nn.moments(self.Q_pi_sample_tf, 1)
 
-        # Dump out debug info
-        logger.debug(
-            "ActorCritic.__init__ -> Creating ActorCritic with {} replications of type {}.".format(
-                self.num_sample, self.net_type
-            )
-        )
-
+            if use_td3:
+                self._input_Q2 = []
+                self.Q2_pi_tf = []
+                self.Q2_tf = []
+                for i in range(num_sample):
+                    with tf.variable_scope("Q2"):
+                        # for policy training
+                        input_Q = tf.concat(axis=1, values=[state, self.pi_tf[i] / max_u])
+                        self.Q2_pi_tf.append(nn(input_Q, [hidden] * layers + [1]))
+                        # for critic training
+                        input_Q = tf.concat(axis=1, values=[state, self.u_tf / max_u])
+                        self._input_Q2.append(input_Q)  # exposed for tests
+                        self.Q2_tf.append(nn(input_Q, [hidden] * layers + [1], reuse=True))

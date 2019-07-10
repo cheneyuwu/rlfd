@@ -1,23 +1,46 @@
-# Undergrad Research Project Key Notes
+# RL + IL Research Project
 
-## Main Project Idea/Definition/Goal
-
-### Problem: Non-determinism under reinforcement learning
-- Policy
+## Problem: Consider non-determinism under reinforcement learning
+- Non-Determinism in RL Policy
     - can be avoid using DDPG
-- Reward
-    - deterministic in robot control environments
-    - However, it can vary between tasks in multi-goal RL
+- Non-Determinism in Reward
+    - The reward is usually deterministic in robot control environments
+    - However, it can vary between tasks in multi-goal RL -> but the goal can also be considered as state.
 - State transitions
-    - system dynamics can be non-deterministic - VIME tried     to minimize this
+    - System dynamics can be non-deterministic - The VIME paper tried to minimize this non-determinism
 
-### Goal: Active Selection in DDPG
-- In DDPG, we learn the Q function through Bellman Equation. This is done by minimizing the mean square Bellman error on tuples of
-    - $\underset{(s,a,r,s',d) \sim {\mathcal D}}{{\mathrm E}}\left[
-          \Bigg( Q_{\phi}(s,a) - \left(r + \gamma (1 - d) \max_{a'} Q_{\phi}(s',a') \right) \Bigg)^2
-          \right]$
+## Goal: Active Selection in DDPG
+- In DDPG, we learn the Q function through Bellman Equation, which is done by minimizing the mean square Bellman error on tuples of<br>
+  $\underset{(s,a,r,s',d) \sim {\mathcal D}}{{\mathrm E}}\left[\Bigg( Q_{\phi}(s,a) - \left(r + \gamma (1 - d) \max_{a'} Q_{\phi}(s',a') \right) \Bigg)^2\right]$
 
-### Idea 1: Add demonstration to RL + Uncertainty
+## Idea 1: Combine IL and RL by training DDPG critic using demonstration data.
+- Generate some demonstration trajectories $(s_1, a_1, r_1, s_2, a_2, r_2, ...)$.
+- Since you have the entire trajectory, you can calculate the expected cumulative reward for each transition tuple $(s_t, a_t)$ along the trajectory.
+- Add these transition tuples with the corresponding cumulative reward ($q_t$) to a demonstration buffer. (The demonstration buffer should contain tuples of $(s_t, a_t, q_t, s_{t+1})$.)
+- Update the loss function for training the DDPG critic to be:<br>
+  $\sum_{(s,a,r,s')}(Q_{rl} - Y)^2 + \lambda*\sum_{(s,a,q,s')}(Q_{rl} - \hat{Q})^2$<br>
+  The first term is the bellman error, while the second term is a MSE loss w.r.t. demonstration data. $\hat{Q}$ is the expected cumulative reward calculated based on the demonstration trajectory.
+- With the above change to DDPG, we can explore the following ideas:
+    1. Actively select the value of $\lambda$ based on some critics so that we can choose to learn more or less from demonstration.
+    2. Consider the problem where the demonstrations can be noisy for some states.
+
+## Idea 2: Replay buffer, sample with priority (lots of papers on this idea)
+- Overview
+    - The general idea is that, we can use {TD error, KL divergence or some technique} to determine which states are relatively unexplored, and perform more extensive training on those states.
+        - For KL divergence: we can calculate the information gain for the Q function in DDPG through transition tuples $(s_t,a_t,s_{t+1},r)$.
+    - Usually, we should create a prioritized replay buffer that prioritizes tuples with high information gain. If we use ensemble of Q functions, we should probably use the epistemic uncertainty from the output of critics.
+- Resources:
+    - Prioritized Experience Replay
+        - Priority based on TD error + some tricks
+    - D4PG
+        - Distributional DDPG, similar idea as C51
+        - Similar idea. It also prioritizes tuples with high TD errors.
+- Implementation:
+    1. BNN solution - not going towards this because the formula is hard to derive.
+    2. Ensemble of Q functions
+        - Implement bootstrapped DDPG and try to create a replay buffer that prioritizes tuples with high uncertainty in the Q value output from each critic.
+
+## Idea 3: Train the DDPG critic using demonstraion data weighting on its uncertainty (Did not work well so lower its priority.)
 - Get a distribution for Q estimation in RL through BNN or Bootstrapped ActorCritic, say $Q_E$.
 - Get a distribution for Q estimation in demonstration through supervised learning using BNN or Ensemble of Q functions, say $Q_D$.
 - We can probably use demonstration to help for training
@@ -77,46 +100,15 @@
             3. How can we combine this with active learning? should we ask for demonstration when the uncertainty of rl actor is high or when the uncertainty of the demo actor is high? or both?
     - Extra note: there is a paper developed ARfD, which actively request for demonstration based on the uncertainty of the Q value from bootstrapped Q learning. This is the same idea as what we had a few months ago. Refer to LearningFromDemo.md and Exploration.md for more information.
 
-#### Idea 2: Replay Buffer, sample with priority
-- Overview
-    - The general idea is that, we can use {TD error, KL divergence or some technique} to determine which states are relatively unexplored, and perform more extensive training on those goals.
-    - KL divergence: We can calculate the information gain for the Q function in DDPG through transition tuples $(s_t,a_t,s_{t+1},r)$.
-    - Usually, we should create a prioritized replay buffer that  prioritizes tuples with high information gain. If we use ensemble of Q functions, we should probably use the epistemic uncertainty from the Q output of critics.
-- Resources:
-    - Prioritized Experience Replay
-        - Priority based on TD error + some tricks
-    - D4PG
-        - Distributional DDPG, similar idea as C51
-        - Similar idea. It also prioritizes tuples with high TD errors.
-- Implementation:
-    1. BNN solution
-        - Note that you cannot use the same updating rule as in VIME, because this is not VAE. The idea seems different. -> try to derive this!
-        - We are not going towards this solution because
-    2. Ensemble of Q functions
-        - Implement bootstrapped DDPG and try to create a replay buffer that prioritizes tuples with high uncertainty in the Q value output from each critic.
+## Idea 4 Sequence of tasks
+- Suppose that a task can be splitted to sub tasks ABCD, then the variance should increase when going from A to D. Can we do something with the variance information in this case?
 
-#### Idea 3: Improvement on current TD3 algorithm
-- Overview
-    - Add some demonstration data and train on those data. The demonstration data should contain $(s_t,a_t, s_{t+1},Q_D)$. When training on the demonstration data we should generate $Q_{E1}$ and $Q_{E2}$ for each tuple, then choose $max(Q_D, min(Q_{E1},Q_{E2}))$.
-- Resources
-    - Hindsight experience replay
-        - The way that Hindsight replay uses demonstration data. The advantage is that it trains the actor to mimic expert behavior.
-- Implementation
-    - We can either making the time horizon to be finite. Stop as soon as it hits the goal. We can also provide a lowerbound on the Q value, given that the estimation can be imperfect.
-
-- Note:
-    - All of the above solutions require compare 3 different distributions, which require some research. You can try it on td3 algorithm first and see if it helps, then try using demonstration data.
-
-## Resources
+## Resources (To be moved to another directory)
 - Pilco, Gaussian Processes in RL,
-    - Model based methods, Model the systems usign GP
-- Nonparametric return distribution approximation for RL
+    - Model based methods, Model the systems using GP
+- Non-parametric return distribution approximation for RL
 - Distributional advantage actor-critic
     - Similar idea as C51
-
-## Other Consideration
-- Sequence of tasks
-    - Suppose that a task can be splitted to sub tasks ABCD, then the variance should increase when going from A to D. Can we do something with the variance information in this case?
 
 ## Simulators and Environments
 - Robotics environments of OpenAi

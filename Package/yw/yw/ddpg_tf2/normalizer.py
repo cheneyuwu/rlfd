@@ -1,16 +1,12 @@
 import threading
 
-try:
-    from mpi4py import MPI
-except ImportError:
-    MPI = None
-
 import numpy as np
+from mpi4py import MPI
 import tensorflow as tf
 
 
-class Normalizer:
-    def __init__(self, size, eps=1e-2, default_clip_range=np.inf, sess=None):
+class Normalizer(tf.Module):
+    def __init__(self, size, eps=1e-2, default_clip_range=np.inf, name=None):
         """A normalizer that ensures that observations are approximately distributed according to
         a standard Normal distribution (i.e. have mean zero and variance one).
 
@@ -20,62 +16,46 @@ class Normalizer:
             default_clip_range (float)  - normalized observations are clipped to be in [-default_clip_range, default_clip_range]
             sess               (object) - the TensorFlow session to be used
         """
+        super(Normalizer, self).__init__(name=name)
         self.size = size
-        self.eps = eps
-        self.default_clip_range = default_clip_range
-        self.sess = sess if sess is not None else tf.get_default_session()
+        self.eps = np.float32(eps)
+        self.default_clip_range = np.float32(default_clip_range)
 
         self.local_sum = np.zeros(self.size, np.float32)
         self.local_sumsq = np.zeros(self.size, np.float32)
         self.local_count = np.zeros(1, np.float32)
 
-        self.sum_tf = tf.get_variable(
-            initializer=tf.zeros_initializer(),
-            shape=self.local_sum.shape,
-            name="sum",
-            trainable=False,
-            dtype=tf.float32,
+        self.sum_tf = tf.Variable(
+            initial_value=np.zeros_like(self.local_sum), name="sum", trainable=False, dtype=tf.float32
         )
-        self.sumsq_tf = tf.get_variable(
-            initializer=tf.zeros_initializer(),
-            shape=self.local_sumsq.shape,
-            name="sumsq",
-            trainable=False,
-            dtype=tf.float32,
+        self.sumsq_tf = tf.Variable(
+            initial_value=np.zeros_like(self.local_sumsq), name="sumsq", trainable=False, dtype=tf.float32
         )
-        self.count_tf = tf.get_variable(
-            initializer=tf.ones_initializer(),
-            shape=self.local_count.shape,
-            name="count",
-            trainable=False,
-            dtype=tf.float32,
+        self.count_tf = tf.Variable(
+            initial_value=np.ones_like(self.local_count), name="count", trainable=False, dtype=tf.float32
         )
-        self.mean = tf.get_variable(
-            initializer=tf.zeros_initializer(), shape=(self.size,), name="mean", trainable=False, dtype=tf.float32
-        )
-        self.std = tf.get_variable(
-            initializer=tf.ones_initializer(), shape=(self.size,), name="std", trainable=False, dtype=tf.float32
-        )
-        self.count_pl = tf.placeholder(name="count_pl", shape=(1,), dtype=tf.float32)
-        self.sum_pl = tf.placeholder(name="sum_pl", shape=(self.size,), dtype=tf.float32)
-        self.sumsq_pl = tf.placeholder(name="sumsq_pl", shape=(self.size,), dtype=tf.float32)
+        self.mean = tf.Variable(initial_value=np.zeros((self.size,)), name="mean", trainable=False, dtype=tf.float32)
+        self.std = tf.Variable(initial_value=np.ones((self.size,)), name="std", trainable=False, dtype=tf.float32)
 
-        self.update_op = tf.group(
-            self.count_tf.assign_add(self.count_pl),
-            self.sum_tf.assign_add(self.sum_pl),
-            self.sumsq_tf.assign_add(self.sumsq_pl),
-        )
-        self.recompute_op = tf.group(
-            tf.assign(self.mean, self.sum_tf / self.count_tf),
-            tf.assign(
-                self.std,
+        def update_op(synced_count, synced_sum, synced_sumsq):
+            self.count_tf.assign_add(synced_count)
+            self.sum_tf.assign_add(synced_sum)
+            self.sumsq_tf.assign_add(synced_sumsq)
+
+        self.update_op = update_op
+
+        def recompute_op():
+            self.mean.assign(self.sum_tf / self.count_tf)
+            self.std.assign(
                 tf.sqrt(
                     tf.maximum(
                         tf.square(self.eps), self.sumsq_tf / self.count_tf - tf.square(self.sum_tf / self.count_tf)
                     )
-                ),
-            ),
-        )
+                )
+            )
+
+        self.recompute_op = recompute_op
+
         self.lock = threading.Lock()
 
     def update(self, v):
@@ -89,13 +69,13 @@ class Normalizer:
     def normalize(self, v, clip_range=None):
         if clip_range is None:
             clip_range = self.default_clip_range
-        mean = Normalizer.reshape_for_broadcasting(self.mean, v)
-        std = Normalizer.reshape_for_broadcasting(self.std, v)
+        mean = Normalizer._reshape(self.mean, v)
+        std = Normalizer._reshape(self.std, v)
         return tf.clip_by_value((v - mean) / std, -clip_range, clip_range)
 
     def denormalize(self, v):
-        mean = Normalizer.reshape_for_broadcasting(self.mean, v)
-        std = Normalizer.reshape_for_broadcasting(self.std, v)
+        mean = Normalizer._reshape(self.mean, v)
+        std = Normalizer._reshape(self.std, v)
         return mean + v * std
 
     def synchronize(self, local_sum, local_sumsq, local_count, root=None):
@@ -122,25 +102,28 @@ class Normalizer:
             local_sum=local_sum, local_sumsq=local_sumsq, local_count=local_count
         )
 
-        self.sess.run(
-            self.update_op,
-            feed_dict={self.count_pl: synced_count, self.sum_pl: synced_sum, self.sumsq_pl: synced_sumsq},
-        )
-        self.sess.run(self.recompute_op)
+        self.update_op(synced_count, synced_sum, synced_sumsq)
+        self.recompute_op()
+    
+    @tf.function
+    def set_variables(self, weights):
+        for i in range(len(self.variables)):
+            self.variables[i].assign(weights[i])
 
     def _mpi_average(self, x):
-        if MPI is None:
-            return x
         buf = np.zeros_like(x)
         MPI.COMM_WORLD.Allreduce(x, buf, op=MPI.SUM)
         buf /= MPI.COMM_WORLD.Get_size()
         return buf
 
     @staticmethod
-    def reshape_for_broadcasting(source, target):
-        """Reshapes a tensor (source) to have the correct shape and dtype of the target
-        before broadcasting it with MPI.
+    def _reshape(source, target):
+        """Reshapes a tensor (source) to have the correct shape
         """
-        dim = len(target.get_shape())
+        dim = len(target.shape)
         shape = ([1] * (dim - 1)) + [-1]
-        return tf.reshape(tf.cast(source, target.dtype), shape)
+        return tf.reshape(source, shape)
+    
+if __name__ == "__main__":
+    a = Normalizer(3)
+    b = Normalizer(3)

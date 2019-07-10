@@ -3,7 +3,6 @@ import os
 import numpy as np
 import pickle
 
-import glob2
 import matplotlib
 
 matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode

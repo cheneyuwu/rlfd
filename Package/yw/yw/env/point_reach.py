@@ -1,203 +1,153 @@
+"""Reacher Environment Implementation
 """
-Environment Requirement:
-    Need goal, observation, action -> currently we consider them as continuous
-    Implement the following methods: step, reset, render
-"""
-import math
 import numpy as np
 import matplotlib
 
-matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode
+matplotlib.use("TkAgg")  #  TkAgg Can change to 'Agg' for non-interactive mode
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 
-class FakeData:
-    """ This will return an environment with all the required methods. Input dimensions are all (1,).
-        Use this for debugging only!
+def make(env_name, **env_args):
+    # note: we only have one environment
+    try:
+        _ = eval(env_name)(**env_args)
+    except:
+        return NotImplementedError
+    return eval(env_name)(**env_args)
+
+
+class Reacher:
+    """
+    2D reacher environment with blocks
     """
 
-    def __init__(self, seed=0):
-        self.random = np.random.RandomState(seed)
-        self._max_episode_steps = 1
-        self.max_u = 1
-        self.action_space = self.ActionSpace()
-
-    class ActionSpace:
-        def __init__(self, seed=0):
-            self.random = np.random.RandomState(seed)
-            self.shape = np.zeros(1).shape
-
-        def sample(self):
-            return self.random.rand(1)
-
-    def compute_reward(self, a, b, c=0):
-        raise NotImplementedError
-
-    def render(self):
-        raise NotImplementedError
-
-    def reset(self):
-        return 0
-
-    def seed(self):
-        raise NotImplementedError
-
-    def step(self, action):
-        return (
-            {"observation": np.zeros((1,)), "desired_goal": np.zeros((1,)), "achieved_goal": np.zeros((1,))},
-            0,
-            0,
-            {"is_success": 0},
-        )
-
-    def _get_state(self):
-        raise NotImplementedError
-
-
-class Reach1D:
-    def __init__(self, seed=0):
-        self.random = np.random.RandomState(seed)
-        self.interval = 0.1
-        self.mass = 1
-        self._max_episode_steps = 32
-        self.max_u = 5
-        self.action_space = self.ActionSpace()
-        plt.ion()
-        plt.show()
-        self.reset()
-
-    class ActionSpace:
-        def __init__(self, seed=0):
-            self.random = np.random.RandomState(seed)
-            self.shape = np.zeros(1).shape
-
-        def sample(self):
-            return self.random.rand(1)
-
-    def compute_reward(self, achieved_goal, desired_goal, info=0):
-        achieved_goal.reshape(-1, 1)
-        desired_goal.reshape(-1, 1)
-        return -abs(achieved_goal - desired_goal)
-
-    def render(self):
-        plt.subplot(211)
-        plt.cla()
-        plt.axis([0, 50, -1, 1])
-        plt.plot(self.history["t"], self.history["position"], "r")
-        plt.plot(self.history["t"], self.history["goal"], "g")
-        plt.subplot(212)
-        plt.plot(self.history["t"], self.history["r"], "g")
-        plt.show()
-        plt.pause(0.05)
-
-    def reset(self):
-        self.speed = np.zeros(1)
-        self.goal = self.random.rand(1) - 0.5
-        self.curr_pos = self.random.rand(1) - 0.5
-        self.T = 0
-        self.history = {"position": [], "goal": [], "t": [], "r": []}
-        plt.clf()
-        return self._get_state()[0]
-
-    def seed(self, seed=0):
-        self.random = np.random.RandomState(seed)
-
-    def step(self, action):
-        action = max(min(action * 10, self.max_u), -self.max_u)
-        acc = np.array((action / self.mass))
-        self.curr_pos = self.curr_pos + self.speed * self.interval + self.interval * self.interval * acc * 0.5
-        self.speed = self.speed + acc * self.interval
-        self.T = self.T + 1
-        self.history["position"].append(self.curr_pos)
-        self.history["goal"].append(self.goal)
-        self.history["t"].append(self.T)
-        _, r, _, _ = self._get_state()
-        self.history["r"].append(r)
-        return self._get_state()
-
-    def _get_state(self):
-        obs = np.concatenate((self.speed, self.curr_pos))
-        g = self.goal
-        ag = self.curr_pos
-        r = sum(-abs(ag - g))
-        return ({"observation": obs, "desired_goal": g, "achieved_goal": ag}, r, 0, {"is_success": (r > -0.02)})
-
-class Reach2D:
-    def __init__(self, order=2, sparse=False, seed=0):
+    def __init__(self, dim=2, order=2, sparse=False, block=False, seed=0):
         self.random = np.random.RandomState(seed)
         self.order = order
         self.sparse = sparse
-        self.interval = 0.1
+        self.dim = dim
+        self.interval = 0.1 # use 0.04 for block reach
         self.mass = 1
         self.boundary = 1.0
         self.threshold = self.boundary / 12
-        self._max_episode_steps = 42 if self.order == 2 else 24
+        self._max_episode_steps = 42 if self.order == 2 else 20
         self.max_u = 2
-        self.action_space = self.ActionSpace()
+        self.action_space = self.ActionSpace(self.dim)
+        if self.dim == 2: # create a workspace boundary only when dim is 2
+            self.workspace = self.Block((-self.boundary, -self.boundary), 2 * self.boundary, 2 * self.boundary)
+        self.blocks = []
+        if block == True:
+            assert self.dim == 2, "cannot have block for dimensions other than 2!"
+            # add blocks manually added
+            self.blocks.append(self.Block((-0.5, -0.5), 1.0, 1.0))
         plt.ion()
-        plt.show()
+        # plt.show()
         self.reset()
 
     class ActionSpace:
-        def __init__(self, seed=0):
+        def __init__(self, dim, seed=0):
+            self.dim = dim
             self.random = np.random.RandomState(seed)
-            self.shape = np.zeros(2).shape
+            self.shape = np.zeros(self.dim).shape
 
         def sample(self):
-            return self.random.rand(2)
+            return self.random.rand(self.dim)
+
+    class Block:
+        def __init__(self, start, width, height):
+            """
+            start (float) - (x, y) as the center of the square
+            height
+            width
+            """
+            self.start = start
+            self.height = height
+            self.width = width
+
+        def plot(self, ax):
+            rect = patches.Rectangle(self.start, self.width, self.height, linewidth=1, edgecolor="r", facecolor="none")
+            # Add the patch to the Axes
+            ax.add_patch(rect)
+
+        def inside(self, point):
+            return (
+                point[0] > self.start[0]
+                and point[0] < self.start[0] + self.width
+                and point[1] > self.start[1]
+                and point[1] < self.start[1] + self.height
+            )
+
+        def outside(self, point):
+            return (
+                point[0] <= self.start[0]
+                or point[0] >= self.start[0] + self.width
+                or point[1] <= self.start[1]
+                or point[1] >= self.start[1] + self.height
+            )
 
     def compute_reward(self, achieved_goal, desired_goal, info=0):
-        achieved_goal = achieved_goal.reshape(-1, 2)
-        desired_goal = desired_goal.reshape(-1, 2)
-        distance = np.sqrt(np.sum(np.square(achieved_goal - desired_goal), axis=1))
+        distance = self._compute_distance(achieved_goal, desired_goal)
         if self.sparse == False:
             return -distance
-            # return 1.0 / (1.0 + distance)
-        else: # self.sparse == True
+            # return 0.5 / (0.5 + distance)
+        else:  # self.sparse == True
             return (distance < self.threshold).astype(np.int64)
 
+    def _compute_distance(self, achieved_goal, desired_goal):
+        achieved_goal = achieved_goal.reshape(-1, self.dim)
+        desired_goal = desired_goal.reshape(-1, self.dim)
+        distance = np.sqrt(np.sum(np.square(achieved_goal - desired_goal), axis=1))
+        return distance
+
     def render(self):
+
         plt.clf()
-        plt.subplot(211)
-        plt.axis([-self.boundary, self.boundary, -self.boundary, self.boundary])
-        plt.plot(self.history["position"][-1][0], self.history["position"][-1][1], "o", color="r")
-        plt.plot(self.history["goal"][-1][0], self.history["goal"][-1][1], "o", color="g")
-        plt.subplot(212)
-        plt.axis([0, self._max_episode_steps, -2, 2])
-        plt.plot(self.history["t"], self.history["r"], "g")
-        plt.plot(self.history["t"], self.history["v"], "r")
+        # plot the environment visualization
+        ax = plt.subplot(211)
+        if self.dim == 1:
+            ax.axis([0, self._max_episode_steps, -2, 2])
+            ax.plot(self.history["t"], self.history["position"], color="r", label="current position")
+            ax.plot(self.history["t"], self.history["goal"], color="g", label="goal position")
+            ax.set_xlabel("time")
+            ax.set_ylabel("position")
+        elif self.dim == 2:
+            ax.axis([-self.boundary, self.boundary, -self.boundary, self.boundary])
+            ax.plot(
+                self.history["position"][-1][0],
+                self.history["position"][-1][1],
+                "o",
+                color="r",
+                label="current position",
+            )
+            ax.plot(self.history["goal"][-1][0], self.history["goal"][-1][1], "o", color="g", label="goal position")
+            for block in self.blocks:
+                block.plot(ax)
+            ax.set_xlabel("x")
+            ax.set_ylabel("y")
+        else:
+            assert False, "Cannot render when number of dimension is greate than 2."
+        ax.set_title("state")
+        ax.legend(loc="upper right")
+        # plot reward and success info
+        ax = plt.subplot(212)
+        ax.axis([0, self._max_episode_steps, -2, 2])
+        ax.plot(self.history["t"], self.history["r"], color="g", label="reward")
+        ax.plot(self.history["t"], self.history["v"], color="r", label="is_success")
+        ax.legend()
+        ax.set_title("info")
+
         plt.show()
         plt.pause(0.05)
 
-    def reset(self, init = None):
+    def reset(self):
 
-        # Randomly select the initial state
+        # The initial state and final goal is fixed
+        self.goal = self.random.uniform(-0.0, 0.0) * np.ones(self.dim) * self.boundary
+        self.curr_pos = -0.8 * np.ones(self.dim) * self.boundary
+        # self.curr_pos = self.random.uniform(-0.8, 0.0, self.dim) * self.boundary
         if self.order == 2:
-
-            # self.speed = np.zeros(2)
-            self.speed = 2 * (self.random.rand(2) - 0.5) * self.boundary
-
-            # self.goal = np.zeros(2)
-            self.goal = 2 * (self.random.rand(2) - 0.5) * self.boundary
-
-            self.curr_pos = 2 * (self.random.rand(2) - 0.5) * self.boundary
-
-        else: # 1
-
-            # self.goal = np.zeros(2)
-            self.goal = 2 * (self.random.rand(2) - 0.5) * self.boundary
-
-            self.curr_pos = 2 * (self.random.rand(2) - 0.5) * self.boundary
-
-        # Make it possible to override the initial state.
-        if init is not None:
-            if "observation" in init.keys():
-                if self.order == 2:
-                    self.curr_pos = init["observation"][2:4]
-                else:
-                    self.curr_pos = init["observation"][0:2]
-            if "goal" in init.keys():
-                self.goal = init["goal"][0:2]
+            self.speed = np.zeros(self.dim)
 
         self.T = 0
         self.history = {"position": [], "goal": [], "t": [], "r": [], "v": []}
@@ -211,10 +161,22 @@ class Reach2D:
         action.clip(-self.max_u, self.max_u)
         if self.order == 2:
             acc = action / self.mass
-            self.curr_pos = self.curr_pos + self.speed * self.interval + self.interval * self.interval * acc * 0.5
-            self.speed = self.speed + acc * self.interval
-        else: # 1
-            self.curr_pos = self.curr_pos + action * self.interval
+            new_curr_pos = self.curr_pos + self.speed * self.interval + self.interval * self.interval * acc * 0.5
+            new_speed = self.speed + acc * self.interval
+            if self.dim != 2 or (
+                all([block.outside(new_curr_pos) for block in self.blocks]) and self.workspace.inside(new_curr_pos)
+            ):
+                self.curr_pos = new_curr_pos
+                self.speed = new_speed
+            else:
+                self.speed = 0.0 * self.speed
+        else:  # 1
+            new_curr_pos = self.curr_pos + action * self.interval
+            if self.dim != 2 or (
+                all([block.outside(new_curr_pos) for block in self.blocks]) and self.workspace.inside(new_curr_pos)
+            ):
+                self.curr_pos = new_curr_pos
+
         self.T = self.T + 1
         self.history["position"].append(self.curr_pos)
         self.history["goal"].append(self.goal)
@@ -227,29 +189,50 @@ class Reach2D:
     def _get_state(self):
         if self.order == 2:
             obs = np.concatenate((self.speed, self.curr_pos))
-        else: # 1
+        else:  # 1
             obs = self.curr_pos
         g = self.goal
         ag = self.curr_pos
         r = self.compute_reward(ag, g)
+        # is_success or not
         if self.order == 2:
             position_ok = r > -self.threshold if self.sparse == False else r == 1
-            # position_ok = r > 0.9 if self.sparse == False else r == 1
             speed_ok = np.sqrt(np.sum(np.square(self.speed))) < 0.25
             is_success = position_ok and speed_ok
         else:
             is_success = r > -self.threshold if self.sparse == False else r == 1
+        # return distance as metric to measure performance
+        distance = self._compute_distance(ag, g)
         return (
             {"observation": obs, "desired_goal": g, "achieved_goal": ag},
             r,
             0,
-            {"is_success": is_success},
+            {"is_success": is_success, "shaping_reward": -distance},
         )
 
+
 if __name__ == "__main__":
-    a = Reach2D()
-    while True:
-        a.reset()
-        for i in range(100):
-            k, _, r, info = a.step([-math.sin(i / 10), -math.cos(i / 10)])
-            a.render()
+
+    env = make("Reacher", dim=1, order=1)
+    obs = env.reset()
+    for i in range(32):
+        action = obs["desired_goal"] - obs["observation"]
+        obs, r, done, info = env.step(action)
+        env.render()
+
+    env = make("Reacher", dim=2)
+    obs = env.reset()
+    for i in range(32):
+        obs, r, done, info = env.step([-np.sin(i / 10), -np.cos(i / 10)])
+        env.render()
+
+    env = make("Reacher", dim=2, order=1, block=True)
+    obs = env.reset()
+    for i in range(32):
+        action = obs["desired_goal"] - obs["observation"]
+        obs, r, done, info = env.step(action)
+        env.render()
+    for i in range(32):
+        action = -obs["desired_goal"] + obs["observation"]
+        obs, r, done, info = env.step(action)
+        env.render()
