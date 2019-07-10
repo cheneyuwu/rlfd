@@ -219,28 +219,13 @@ class MAFDemoShaping(DemoShaping):
         """
         state_tf = self._cast_concat_inputs(o, g, u)
 
-        # method 1 add noise to the state and take avg
-        # potential = []
-        # noise_dist = tfd.Normal(loc=[0.0] * o.shape[1], scale=0.4)
-        # for _ in range(4):
-        #     if g != None:
-        #         noise_tf = tf.concat(
-        #             (noise_dist.sample(tf.shape(o)[0]), tf.zeros(shape=(tf.shape(o)[0], g.shape[1] + u.shape[1]))),
-        #             axis=1,
-        #         )
-        #     else:
-        #         noise_tf = tf.concat(
-        #             (noise_dist.sample(tf.shape(o)[0]), tf.zeros(shape=(tf.shape(o)[0], u.shape[1]))), axis=1
-        #         )
-        #     state_with_noise_tf = state_tf + tf.cast(noise_tf, tf.float64)
-        #     potential.append(tf.reshape(self.nn.log_prob(state_with_noise_tf), (-1, 1)))
-        # potential = tf.reduce_mean(potential, axis=0)
-
-        # method 2 no noise
+        # method 1 with shift and annealing
         potential = tf.reshape(self.nn.log_prob(state_tf), (-1, 1))
-        potential = 1.0 * tf.clip_by_value(potential, -1000.0, 100.0)
+        potential = tf.clip_by_value(potential, -1000.0, 100.0)
+        potential = potential + 1000.0 # add shift
+        # potential = potential / 1000.0 # add scaling
 
-        # method 3 a numerical trick
+        # method 2 a numerical trick
         # potential = tf.reshape(tf.log(1 + self.nn.prob(state_tf)), (-1, 1))
 
         return potential

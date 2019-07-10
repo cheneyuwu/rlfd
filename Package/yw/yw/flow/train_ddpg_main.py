@@ -67,6 +67,8 @@ def train_reinforce(
         os.makedirs(query_shaping_save_path, exist_ok=True)
         query_potential_surface_save_path = save_path + "/query_potential_surface/"
         os.makedirs(query_potential_surface_save_path, exist_ok=True)
+        query_potential_based_policy_save_path = save_path + "/query_potential_based_policy/"
+        os.makedirs(query_potential_based_policy_save_path, exist_ok=True)
         query_action_save_path = save_path + "/query_action/"
         os.makedirs(query_action_save_path, exist_ok=True)
 
@@ -84,7 +86,7 @@ def train_reinforce(
                 if rank == 0 and epoch % (num_epoch / 10) == (num_epoch / 10 - 1):
                     logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
                     # query
-                    policy.query_potential_surface(fid=0)
+                    policy.query_potential_surface(filename=None, fid=0)
 
                 if rank == 0 and save_path and epoch % 100 == 0:
                     logger.info("Saving latest policy to {}.".format(latest_shaping_path))
@@ -96,7 +98,7 @@ def train_reinforce(
         else:
             logger.info("Use the provided policy weights: {}".format(shaping_policy))
             policy.load_shaping_weights(shaping_policy)
-            # # query
+            # query
             # dims = list(range(policy.dimo + policy.dimg))
             # for dim1, dim2 in combinations(dims, 2):
             #     policy.query_potential(
@@ -107,21 +109,29 @@ def train_reinforce(
             #         ),
             #     )
 
+    if policy.demo_critic in ["maf", "norm"]:
+        # query
+        policy.query_potential_based_policy(
+            filename=os.path.join(query_potential_based_policy_save_path, "query_000.npz"),  # comment
+            fid=1
+        )
+        pass
+
     best_success_rate = -1
 
     for epoch in range(n_epochs):
         logger.debug("train_ddpg_main.train_reinforce -> epoch: {}".format(epoch))
 
         # Store anything we need into a numpyz file.
-        # policy.query_uncertainty(os.path.join(query_uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
         policy.query_potential_surface(
             filename=os.path.join(query_potential_surface_save_path, "query_{:03d}.npz".format(epoch)),  # comment
-            fid=0,
+            fid=2,
         )
         policy.query_action(
             filename=os.path.join(query_action_save_path, "query_{:03d}.npz".format(epoch)),  # comment to show plot
-            fid=1,
+            fid=3,
         )
+        # policy.query_uncertainty(os.path.join(query_uncertainty_save_path, "query_{:03d}.npz".format(epoch)))
 
         # Train
         rollout_worker.clear_history()
@@ -218,12 +228,15 @@ def main(
     logger.set_level(loglevel)
     logger.debug("train_ddpg_main.launch -> Using debug mode. Avoid training with too many epochs.")
 
-    # Seed everything.
-    rank_seed = seed + 1_000_000 * rank
-    set_global_seeds(rank_seed)
 
     # Reset default graph every time this function is called. (must be called after setting seed)
     tf.reset_default_graph()
+    
+    # Seed everything.
+    rank_seed = seed + 1_000_000 * rank
+    set_global_seeds(rank_seed)
+    
+    # get a new default session for the current default graph
     tf.InteractiveSession()
 
     # Get default params from config and update params.

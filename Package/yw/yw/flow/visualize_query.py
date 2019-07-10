@@ -56,126 +56,64 @@ def create_animate(frame, data):
     visualize_action(ax, res)
 
 
-def create_plot(load_dirs, save):
+def create_plot(frame, fig, load_dirs, query_ls):
+
+    # Plot frame
+    fig.text(0.0, 0.0, "frame: {}".format(frame), ha="left", va="top", fontsize=14, color="r")
 
     # Load data
-    queries = {"query_action": None, "query_potential_surface": None, "query_potential_based_policy": None}
-    for q_k in queries.keys():
-        data = {}
-        for load_dir in load_dirs:
-            exp_name = load_dir.split("/")[-1]
+    data = {}
+    for load_dir in load_dirs:
+        exp_name = load_dir.split("/")[-1]
+        queries = {}
+        for q_k in query_ls:
             if q_k in os.listdir(load_dir):
                 q = os.path.join(load_dir, q_k)
                 result_files = os.listdir(q)
                 result_files.sort()
                 if result_files != []:
-                    data[exp_name] = {**np.load(os.path.join(q, result_files[-1]))}
-        queries[q_k] = data
+                    queries[q_k] = {
+                        **np.load(os.path.join(q, result_files[frame if frame < len(result_files) else -1]))
+                    }
+        if queries != {}:
+            data[exp_name] = queries
 
     # Initialization
-    fid = 0
+    # fig = plt.figure(0) # use the same figure
+    num_rows = len(query_ls)
+    num_cols = len(data.keys())
+    # fig.set_size_inches(4 * num_cols, 4 * num_rows)
+    gs = gridspec.GridSpec(num_rows, num_cols)
+    col = cm.jet(np.linspace(0, 1, num_cols))
 
-    # Plot query potential based policies
-    if queries["query_potential_based_policy"] != None:
-        # get data
-        data = queries["query_potential_based_policy"]
-        # create a new figure
-        fig = plt.figure(fid)
-        fid += 1
-        fig.set_size_inches(4 * len(data.keys()), 4)
-        fig.suptitle("Optimized Policy under Current Potential")
+    for i, exp in enumerate(data.keys()):
+        for j, query in enumerate(query_ls):
 
-        # merge plots
-        # gs = gridspec.GridSpec(1, 1)
-        # ax = plt.subplot(gs[0, 0])
-        # ax.clear()
-        # col = cm.jet(np.linspace(0, 1, len(data.keys())))
-        # col_patch = []
-        # for c, k in enumerate(data.keys()):
-        #     visualize_action(ax, data[k], plot_opts={"color": col[c]})
-        #     col_patch.append(mpatches.Patch(color=col[c], label=k))
-        # ax.legend(handles=col_patch, loc="lower left")
-        # ax.set_title("action")
+            if query not in data[exp].keys():
+                continue
 
-        # do not merge plots
-        gs = gridspec.GridSpec(1, len(data.keys()))
-        col = cm.jet(np.linspace(0, 1, len(data.keys())))
-        for c, k in enumerate(data.keys()):
-            ax = plt.subplot(gs[0, c])
-            ax.clear()
-            visualize_action(ax, data[k], plot_opts={"color": col[c]})
-            ax.legend(handles=[mpatches.Patch(color=col[c], label=k)], loc="lower left")
+            if query == "query_action":
+                ax = plt.subplot(gs[j, i])
+                ax.clear()
+                visualize_action(ax, data[exp][query], plot_opts={"color": col[i]})
+                ax.legend(handles=[mpatches.Patch(color=col[i], label=exp)], loc="lower left")
 
-        if save:
-            res_store_dir = os.path.join(load_dirs[0], "../action.png")
-            print("Storing action result to {}".format(res_store_dir))
-            plt.savefig(res_store_dir, dpi=200)
+            if query == "query_potential_based_policy":
+                ax = plt.subplot(gs[j, i])
+                ax.clear()
+                visualize_action(ax, data[exp][query], plot_opts={"color": col[i]})
+                ax.legend(handles=[mpatches.Patch(color=col[i], label=exp)], loc="lower left")
 
-    # Plot query actions
-    if queries["query_action"] != None:
-        # get data
-        data = queries["query_action"]
-        # create a new figure
-        fig = plt.figure(fid)
-        fid += 1
-        fig.set_size_inches(4 * len(data.keys()), 4)
-        fig.suptitle("Optimized Policy")
-
-        # merge plots
-        # gs = gridspec.GridSpec(1, 1)
-        # ax = plt.subplot(gs[0, 0])
-        # ax.clear()
-        # col = cm.jet(np.linspace(0, 1, len(data.keys())))
-        # col_patch = []
-        # for c, k in enumerate(data.keys()):
-        #     visualize_action(ax, data[k], plot_opts={"color": col[c]})
-        #     col_patch.append(mpatches.Patch(color=col[c], label=k))
-        # ax.legend(handles=col_patch, loc="lower left")
-        # ax.set_title("action")
-
-        # do not merge plots
-        gs = gridspec.GridSpec(1, len(data.keys()))
-        col = cm.jet(np.linspace(0, 1, len(data.keys())))
-        for c, k in enumerate(data.keys()):
-            ax = plt.subplot(gs[0, c])
-            ax.clear()
-            visualize_action(ax, data[k], plot_opts={"color": col[c]})
-            ax.legend(handles=[mpatches.Patch(color=col[c], label=k)], loc="lower left")
-
-        if save:
-            res_store_dir = os.path.join(load_dirs[0], "../action.png")
-            print("Storing action result to {}".format(res_store_dir))
-            plt.savefig(res_store_dir, dpi=200)
-
-    if queries["query_potential_surface"] != None:
-        # get data
-        data = queries["query_potential_surface"]
-        # create a new figure
-        fig = plt.figure(fid)
-        fid += 1
-        fig.set_size_inches(4 * len(data.keys()), 4)
-        fig.suptitle("Potential Surface")
-
-        gs = gridspec.GridSpec(1, len(data.keys()))
-        # create a new axes for action
-        for c, k in enumerate(data.keys()):
-            ax = plt.subplot(gs[0, c], projection="3d")
-            ax.clear()
-            # plot
-            visualize_potential_surface(ax, data[k])
-            ax.set_title(k)
-
-        if save:
-            res_store_dir = os.path.join(load_dirs[0], "../potential.png")
-            print("Storing action result to {}".format(res_store_dir))
-            plt.savefig(res_store_dir, dpi=200)
-
-    if not save:
-        plt.show()  # close the figure and then continue
+            if query == "query_potential_surface":
+                ax = plt.subplot(gs[j, i], projection="3d")
+                ax.clear()
+                visualize_potential_surface(ax, data[exp][query])
+                ax.set_title(exp)
 
 
 def main(mode, load_dirs, save, **kwargs):
 
+    # Allow load dir to be *
     for load_dir in load_dirs:
         if load_dir.split("/")[-1] == "*":
             root_dir = load_dir[:-2]
@@ -186,21 +124,57 @@ def main(mode, load_dirs, save, **kwargs):
                     load_dirs.append(path)
             break
 
+    # Data pre parser
+    query_ls = ["query_action", "query_potential_based_policy", "query_potential_surface"]
+    data = {}
+    num_frames = 0
+    for load_dir in load_dirs:
+        exp_name = load_dir.split("/")[-1]
+        queries = {}
+        for q_k in query_ls:
+            if q_k in os.listdir(load_dir):
+                q = os.path.join(load_dir, q_k)
+                result_files = os.listdir(q)
+                num_frames = max(num_frames, len(result_files))
+                if result_files != []:
+                    queries[q_k] = 1
+        if queries != {}:
+            data[exp_name] = queries
+
+    # Initialization
+    fig = plt.figure(0)  # use the same figure
+    num_rows = len(query_ls)
+    num_cols = len(data.keys())
+    fig.set_size_inches(4 * num_cols, 4 * num_rows)
+    for i, k in enumerate(query_ls):
+        y = 0.9 - 0.8 / num_rows * i
+        plt.figtext(0.0, y, k, ha="left", va="top", fontsize=14, color="b", rotation="horizontal")
+
     if mode == "plot":
 
-        create_plot(load_dirs, save)
-
-    else:
-        # Plot animation
-        fig = plt.figure()
-        res = animation.FuncAnimation(fig, create_animate, len(files), fargs=(data,), repeat=False, interval=300)
+        create_plot(frame=-1, fig=fig, load_dirs=load_dirs, query_ls=query_ls)
 
         if save:
-            res_store_dir = os.path.join(load_dir, "../uncertainty.mp4")
-            print("Storing animation result to {}".format(res_store_dir))
+            res_store_dir = os.path.join(load_dirs[0], "../queries.png")
+            print("Storing query plot to {}".format(res_store_dir))
+            plt.savefig(res_store_dir, dpi=200)
+
+    elif mode == "mv":
+        # Plot animation
+        fig = plt.figure(0)  # create figure before hand
+        res = animation.FuncAnimation(
+            fig, create_plot, num_frames, fargs=(fig, load_dirs, query_ls), repeat=False, interval=300
+        )
+
+        if save:
+            res_store_dir = os.path.join(load_dir, "../queries.mp4")
+            print("Storing query animation to {}".format(res_store_dir))
             res.save(res_store_dir, dpi=200)
-        else:
-            plt.show()  # close the figure and then continue
+
+    else:
+        return
+
+    plt.show()  # close the figure and then continue
 
 
 ap = ArgParser()

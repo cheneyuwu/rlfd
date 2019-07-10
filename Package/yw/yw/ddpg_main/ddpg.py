@@ -16,7 +16,7 @@ from yw.ddpg_main.demo_shaping import (
 from yw.util.util import store_args, import_function
 from yw.util.tf_util import flatten_grads
 
-# temp
+# for query
 import matplotlib.pylab as pl
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.mplot3d import Axes3D
@@ -345,7 +345,7 @@ class DDPG(object):
                 self.pi_adam.update(pi_grad, self.pi_lr)
         else:
             self.pi_adam.update(pi_grad, self.pi_lr)
-            
+
         self.training_step += 1
 
         # for debugging
@@ -944,6 +944,65 @@ class DDPG(object):
             pl.show()
             pl.pause(0.001)
 
+    def query_potential_based_policy(self, filename=None, fid=0):
+
+        """Create a policy that only optimize over the potential function
+        """
+
+        from yw.util.tf_util import nn
+
+        # input data
+        num_point = 24
+        ls = np.linspace(-1.0, 1.0, num_point)
+        o_1, o_2 = np.meshgrid(ls, ls)
+        o_r = np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1)
+        g_r = 0.0 * np.ones((num_point ** 2, 2))
+
+        # inputs
+        inputs_tf = {}
+        inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
+        inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
+
+        # add neural network and call neural network
+        with tf.variable_scope("potential_based_policy"):
+            state_tf = tf.concat((inputs_tf["o"], inputs_tf["g"]), axis=1)
+            pi_tf = self.max_u * tf.tanh(nn(state_tf, [self.hidden] * self.layers + [self.dimu]))
+
+            # add loss function and trainer
+            potential = tf.cast(self.demo_shaping.potential(o=inputs_tf["o"], g=inputs_tf["g"], u=pi_tf), tf.float32)
+            loss_tf = -tf.reduce_mean(potential)
+            train_op = tf.train.AdamOptimizer(1e-3).minimize(
+                loss_tf, var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="potential_based_policy")
+            )
+            init = tf.initializers.variables(
+                var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="potential_based_policy")
+            )
+
+        self.sess.run(init)
+        num_epochs = 100
+        for i in range(num_epochs):
+            loss, _ = self.sess.run([loss_tf, train_op], feed_dict={inputs_tf["o"]: o_r, inputs_tf["g"]: g_r})
+            if i % (num_epochs / 10) == (num_epochs / 10 - 1):
+                logger.info("Query: policy on potential only -> epoch: {} loss: {}".format(i, loss))
+
+        ret = self.sess.run(pi_tf, feed_dict={inputs_tf["o"]: o_r, inputs_tf["g"]: g_r})
+        res = {"o": o_r, "u": ret}
+
+        if filename:
+            logger.info("Query: policy on potential only -> storing query results to {}".format(filename))
+            np.savez_compressed(filename, **res)
+        else:
+            # plot the result on the fly
+            pl.figure(fid)  # create a new figure
+            gs = gridspec.GridSpec(1, 1)
+            ax = pl.subplot(gs[0, 0])
+            ax.clear()
+            visualize_query.visualize_action(ax, res)
+            pl.show()
+            pl.pause(10)
+    
+        exit() # this function adds extra nodes to the graph
+
     def query_action(self, filename=None, fid=0):
 
         """Only use this function for 1d first order reacher problem
@@ -958,17 +1017,6 @@ class DDPG(object):
         ret = self.get_actions(o=o_r, ag=None, g=g_r)
 
         res = {"o": o_r, "u": ret}
-
-        # # col = cm.jet(np.linspace(0, 1, len(arrow.keys())))
-        # # col_patch = []
-        # # for c, k in enumerate(arrow.keys()):
-        # for i in range(o_r.shape[0]):
-        #     ax.arrow(*o_r[i], *(ret[i] * 0.01), head_width=0.02)  # , color=col[c])
-        #     # col_patch.append(mpatches.Patch(color=col[c], label=k))
-        # ax.axis([-1.2, 1.2, -1.2, 1.2])
-        # # ax.legend(handles=col_patch)
-        # ax.set_xlabel("x")
-        # ax.set_ylabel("y")
 
         if filename:
             logger.info("Query: action over state space -> storing query results to {}".format(filename))
