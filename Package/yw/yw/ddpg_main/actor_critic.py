@@ -3,7 +3,7 @@ import tensorflow_probability as tfp
 
 tfd = tfp.distributions
 
-from yw.util.tf_util import nn
+from yw.util.tf_util import MLP
 
 
 class ActorCritic:
@@ -33,12 +33,24 @@ class ActorCritic:
         self.hidden = hidden
         self.layers = layers
 
+        # actor
+        with tf.variable_scope("pi"):
+            self.pi_nn = MLP([self.hidden] * self.layers + [self.dimu])
+
+        # critic
+        with tf.variable_scope("Q"):
+            with tf.variable_scope("Q1"):
+                self.q1_nn = MLP([self.hidden] * self.layers + [1])
+            with tf.variable_scope("Q2"):
+                self.q2_nn = MLP([self.hidden] * self.layers + [1])
+
     def actor(self, o, g):
 
         state = self._normalize_concat_state(o, g)
 
         with tf.variable_scope("pi"):
-            nn_pi_tf = tf.tanh(nn(state, [self.hidden] * self.layers + [self.dimu]))
+            # has to be in the correct scope when calling this script
+            nn_pi_tf = tf.tanh(self.pi_nn(state))
             if self.add_pi_noise:  # for td3, add noise!
                 nn_pi_tf += tfd.Normal(loc=[0.0] * self.dimu, scale=1.0).sample([tf.shape(o)[0]])
                 nn_pi_tf = tf.clip_by_value(nn_pi_tf, -1.0, 1.0)
@@ -52,8 +64,9 @@ class ActorCritic:
 
         with tf.variable_scope("Q"):
             with tf.variable_scope("Q1"):
+                # has to be in the correct scope when calling this script
                 input_q = tf.concat(axis=1, values=[state, u / self.max_u])
-                q_tf = nn(input_q, [self.hidden] * self.layers + [1])
+                q_tf = self.q1_nn(input_q)
 
         return q_tf
 
@@ -64,7 +77,8 @@ class ActorCritic:
         with tf.variable_scope("Q"):
             with tf.variable_scope("Q2"):
                 input_q = tf.concat(axis=1, values=[state, u / self.max_u])
-                q_tf = nn(input_q, [self.hidden] * self.layers + [1])
+                # has to be in the correct scope when calling this script
+                q_tf = self.q2_nn(input_q)
 
         return q_tf
 
