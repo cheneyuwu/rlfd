@@ -5,6 +5,7 @@ from train import Experiment, Demo, Train, Display, Plot
 from train import exp_parser
 
 from yw.flow import visualize_query
+from yw.flow.query import query_action
 
 
 class Query(Experiment):
@@ -30,7 +31,27 @@ class Query(Experiment):
             # os.path.join(self.result_dir, "RLDemoMAFClip1000"),
             # os.path.join(self.result_dir, "RL"),
             # temp
-            os.path.join(self.result_dir, "*"),
+            os.path.join(self.result_dir, "*")
+        ]
+        return command
+
+
+class QueryPolicy(Experiment):
+    """For result plotting
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.launch_function = query_action.main
+        self.parser = query_action.ap
+
+    @Experiment.execute
+    def query(self, **override):
+        command = self.shared_cmd.copy()
+        command["save"] = 1
+        command["directory"] = [
+            os.path.join(self.result_dir, "RLDemoMAF"),
+            # os.path.join(self.result_dir, "*") need this
         ]
         return command
 
@@ -43,7 +64,9 @@ demo_exp = Demo()
 train_exp = Train()
 display_exp = Display()
 plot_exp = Plot()
+
 query_exp = Query()
+query_policy_exp = QueryPolicy()
 
 # Common result directory
 result_dir = os.path.join(os.getenv("EXPERIMENT"), "TempResult/Temp")
@@ -51,7 +74,9 @@ train_exp.result_dir = result_dir
 demo_exp.result_dir = result_dir
 display_exp.result_dir = result_dir
 plot_exp.result_dir = result_dir
+
 query_exp.result_dir = result_dir
+query_policy_exp.result_dir = result_dir
 
 # Specify the environment and reward type.
 # If you want to use dense reward, add "Dense" to the reward name and make sure the env manager recognizes that.
@@ -60,12 +85,7 @@ environment = "Reach2DFDense"
 demo_data_size = 32
 seed = 0
 
-train_exp.set_shared_cmd(
-    env=environment,
-    n_cycles=10,
-    train_rl_epochs=500,
-    ddpg__action_l2=0.5,
-)
+train_exp.set_shared_cmd(env=environment, n_cycles=10, train_rl_epochs=500, ddpg__action_l2=0.5)
 demo_exp.set_shared_cmd(num_demo=demo_data_size)
 
 for i in range(1):
@@ -79,10 +99,7 @@ for i in range(1):
 
     # Train the RL without demonstration using dense reward.
     if "rldense" in target:
-        train_exp.rl_only_dense(
-            env="Reach2DFDense", 
-            seed=seed + 0,
-        )
+        train_exp.rl_only_dense(env="Reach2DFDense", seed=seed + 0)
 
     # Generate demonstration data
     if "demo" in target:
@@ -154,10 +171,10 @@ if "plot" in target:
 
 # Display a policy result (calls run_agent).
 if "display" in target:
-    display_exp.display(
-        policy_file=os.path.join(display_exp.result_dir, "RLDense/rl/policy_latest.pkl"), 
-        num_itr=10
-    )
+    display_exp.display(policy_file=os.path.join(display_exp.result_dir, "RLDense/rl/policy_latest.pkl"), num_itr=10)
+
+if "query_policy" in target:
+    query_policy_exp.query()
 
 if "query" in target:
     query_exp.query()

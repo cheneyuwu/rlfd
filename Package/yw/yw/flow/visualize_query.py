@@ -59,7 +59,7 @@ def create_animate(frame, data):
 def create_plot(frame, fig, load_dirs, query_ls):
 
     # Plot frame
-    fig.text(0.0, 0.0, "frame: {}".format(frame), ha="left", va="top", fontsize=14, color="r")
+    fig.text(0.02, 0.02, "frame: {}".format(frame), ha="left", va="bottom", fontsize=14, color="r")
 
     # Load data
     data = {}
@@ -80,11 +80,11 @@ def create_plot(frame, fig, load_dirs, query_ls):
 
     # Initialization
     # fig = plt.figure(0) # use the same figure
-    num_rows = len(query_ls)
-    num_cols = len(data.keys())
+    num_rows = len(data.keys())
+    num_cols = len(query_ls)
     # fig.set_size_inches(4 * num_cols, 4 * num_rows)
     gs = gridspec.GridSpec(num_rows, num_cols)
-    col = cm.jet(np.linspace(0, 1, num_cols))
+    col = cm.jet(np.linspace(0, 0.5, num_cols))
 
     for i, exp in enumerate(data.keys()):
         for j, query in enumerate(query_ls):
@@ -92,20 +92,29 @@ def create_plot(frame, fig, load_dirs, query_ls):
             if query not in data[exp].keys():
                 continue
 
-            if query == "query_action":
-                ax = plt.subplot(gs[j, i])
+            if query in [
+                "query_policy",
+                "query_optimized_p_only",
+                "query_optimized_q_only",
+                "query_optimized_p_plus_q",
+            ]:
+                ax = plt.subplot(gs[i, j])
                 ax.clear()
                 visualize_action(ax, data[exp][query], plot_opts={"color": col[i]})
                 ax.legend(handles=[mpatches.Patch(color=col[i], label=exp)], loc="lower left")
+                fig.text(
+                    0.05,
+                    0.8 - 0.85 * i / num_rows,
+                    exp,
+                    ha="center",
+                    va="center",
+                    fontsize=14,
+                    color="r",
+                    rotation="vertical",
+                )
 
-            if query == "query_potential_based_policy":
-                ax = plt.subplot(gs[j, i])
-                ax.clear()
-                visualize_action(ax, data[exp][query], plot_opts={"color": col[i]})
-                ax.legend(handles=[mpatches.Patch(color=col[i], label=exp)], loc="lower left")
-
-            if query == "query_potential_surface":
-                ax = plt.subplot(gs[j, i], projection="3d")
+            if query in ["query_potential_surface"]:
+                ax = plt.subplot(gs[i, j], projection="3d")
                 ax.clear()
                 visualize_potential_surface(ax, data[exp][query])
                 ax.set_title(exp)
@@ -125,7 +134,13 @@ def main(mode, load_dirs, save, **kwargs):
             break
 
     # Data pre parser
-    query_ls = ["query_action", "query_potential_based_policy", "query_potential_surface"]
+    query_ls = [
+        "query_optimized_p_only",
+        "query_optimized_q_only",
+        "query_optimized_p_plus_q",
+        "query_policy",
+        "query_potential_surface",
+    ]
     data = {}
     num_frames = 0
     for load_dir in load_dirs:
@@ -143,12 +158,16 @@ def main(mode, load_dirs, save, **kwargs):
 
     # Initialization
     fig = plt.figure(0)  # use the same figure
-    num_rows = len(query_ls)
-    num_cols = len(data.keys())
+    fig.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9, wspace=0.25, hspace=0.25)
+    num_rows = len(data.keys())
+    num_cols = len(query_ls)
     fig.set_size_inches(4 * num_cols, 4 * num_rows)
+
     for i, k in enumerate(query_ls):
-        y = 0.9 - 0.8 / num_rows * i
-        plt.figtext(0.0, y, k, ha="left", va="top", fontsize=14, color="b", rotation="horizontal")
+        x = 0.15 + 0.85 / num_cols * i
+        plt.figtext(
+            x, 0.95, k.replace("query_", ""), ha="center", va="center", fontsize=14, color="r", rotation="horizontal"
+        )
 
     if mode == "plot":
 

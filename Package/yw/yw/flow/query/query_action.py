@@ -20,8 +20,7 @@ from yw.util.util import set_global_seeds
 from yw.util.tf_util import nn
 from yw.flow import visualize_query
 
-
-def main(directory, save, **kwargs):
+def query_policy(directory, save):
     """Generate demo from policy file
     """
     assert directory != None, "Must provide the base directory!"
@@ -37,7 +36,7 @@ def main(directory, save, **kwargs):
     o_r = np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1)
     g_r = 0.0 * np.ones((num_point ** 2, 2))
 
-    for loss_mode in ["q_only", "p_only", "p_and_q"]:
+    for loss_mode in ["optimized_q_only", "optimized_p_only", "optimized_p_plus_q"]:
         # reset default graph every time this function is called.
         tf.reset_default_graph()
         # Set random seed for the current graph
@@ -65,13 +64,14 @@ def main(directory, save, **kwargs):
             else:
                 p_tf = None
 
-            if loss_mode == "q_only":
+            if loss_mode == "optimized_q_only":
                 loss_tf = -tf.reduce_mean(q_tf)
-            elif loss_mode == "p_only" and p_tf != None:
+            elif loss_mode == "optimized_p_only" and p_tf != None:
                 loss_tf = -tf.reduce_mean(p_tf)
-            elif loss_mode == "p_and_q" and p_tf != None:
+            elif loss_mode == "optimized_p_plus_q" and p_tf != None:
                 loss_tf = -tf.reduce_mean(p_tf) - tf.reduce_mean(q_tf)
             else:
+                tf.get_default_session().close()
                 continue
 
             train_op = tf.train.AdamOptimizer(1e-3).minimize(
@@ -88,15 +88,17 @@ def main(directory, save, **kwargs):
         for i in range(num_epochs):
             loss, _ = policy.sess.run([loss_tf, train_op], feed_dict={inputs_tf["o"]: o_r, inputs_tf["g"]: g_r})
             if i % (num_epochs / 10) == (num_epochs / 10 - 1):
-                logger.info("Query: policy optimized for {} -> epoch: {} loss: {}".format(loss_mode, i, loss))
+                logger.info("Query: offline policy {} -> epoch: {} loss: {}".format(loss_mode, i, loss))
 
         ret = policy.sess.run(pi_tf, feed_dict={inputs_tf["o"]: o_r, inputs_tf["g"]: g_r})
         res = {"o": o_r, "u": ret}
 
         if save:
             store_dir = os.path.join(directory, "query_" + loss_mode)
-            logger.info("Query: policy optimized for {}, storing query results to {}".format(loss_mode, save))
-            np.savez_compressed(save, **res)
+            os.makedirs(store_dir, exist_ok=True)
+            filename = os.path.join(store_dir, "query_000.npz")
+            logger.info("Query: offline policy {}, storing query results to {}".format(loss_mode, filename))
+            np.savez_compressed(filename, **res)
         else:
             # plot the result on the fly
             pl.figure(0)  # create a new figure
@@ -105,17 +107,36 @@ def main(directory, save, **kwargs):
             ax.clear()
             visualize_query.visualize_action(ax, res)
             pl.show()
-            pl.pause(1)
+            pl.pause(0.1)
 
         # Close the default session to prevent memory leaking
         tf.get_default_session().close()
 
 
+def main(directories, save, **kwargs):
+
+    # Allow load dir to be *
+    for d in directories:
+        if d.split("/")[-1] == "*":
+            root_dir = load_dir[:-2]
+            load_dirs = []
+            for d in os.listdir(root_dir):
+                path = os.path.join(root_dir, d)
+                if os.path.isdir(path) and d.startswith("RL"):
+                    load_dirs.append(path)
+            directories = load_dirs
+            break
+
+    for d in directories:
+        query_policy(d, save)
+
 from yw.util.cmd_util import ArgParser
 
 ap = ArgParser()
-ap.parser.add_argument("--directory", help="directory for load and store", type=str, default=None)
-ap.parser.add_argument("--save", help="save for later plotting", type=int, default=0)
+ap.parser.add_argument(
+    "--directory", help="directories to load", type=str, action="append", default=None, dest="directories"
+)
+ap.parser.add_argument("--save", help="save for later plotting", type=int, default=1)
 
 if __name__ == "__main__":
     ap.parse(sys.argv)

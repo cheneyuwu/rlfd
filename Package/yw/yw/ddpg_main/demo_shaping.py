@@ -221,7 +221,7 @@ class MAFDemoShaping(DemoShaping):
 
         # method 1 with shift and annealing
         potential = tf.reshape(self.nn.log_prob(state_tf), (-1, 1))
-        potential = tf.clip_by_value(potential, -1000.0, 100.0)
+        potential = tf.clip_by_value(potential, -1000.0, 1000000.0)
         potential = potential + 1000.0 # add shift
         # potential = potential / 1000.0 # add scaling
 

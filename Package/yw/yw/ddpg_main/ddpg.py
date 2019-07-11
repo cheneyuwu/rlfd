@@ -787,7 +787,7 @@ class DDPG(object):
             pl.show()
             pl.pause(0.001)
 
-    def query_action(self, filename=None, fid=0):
+    def query_policy(self, filename=None, fid=0):
 
         """Only use this function for 1d first order reacher problem
         """
