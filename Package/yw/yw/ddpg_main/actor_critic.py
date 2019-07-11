@@ -3,62 +3,90 @@ import tensorflow_probability as tfp
 
 tfd = tfp.distributions
 
-from yw.util.tf_util import nn
+from yw.util.tf_util import MLP
 
 
 class ActorCritic:
-    def __init__(
-        self, inputs_tf, dimo, dimg, dimu, max_u, o_stats, g_stats, use_td3, add_pi_noise, hidden, layers, **kwargs
-    ):
+    def __init__(self, dimo, dimg, dimu, max_u, o_stats, g_stats, add_pi_noise, hidden, layers, **kwargs):
         """The actor-critic network and related training code.
 
         Args:
-            inputs_tf    (dict of tensor) - all necessary inputs for the network: theobservation (o), the goal (g), and the action (u)
             dimo         (int)            - the dimension of the observations
             dimg         (int)            - the dimension of the goals
             dimu         (int)            - the dimension of the actions
             max_u        (float)          - the maximum magnitude of actions; action outputs will be scaled accordingly
             o_stats      (Normalizer)     - normalizer for observations
             g_stats      (Normalizer)     - normalizer for goals
-            use_td3      (int)            - number of critic for each actor, refer to td3 algorithm
             hidden       (int)            - number of hidden units that should be used in hidden layers
             add_pi_noise (bool)
             layers       (int)            - number of hidden layers
         """
 
-        # Prepare inputs for actor and critic.
-        self.o_tf = inputs_tf["o"]
-        state = o_stats.normalize(self.o_tf)
-        # state = self.o_tf
-        # for multigoal environments, we have goal as another states
-        if dimg != 0:
-            self.g_tf = inputs_tf["g"]
-            goal = g_stats.normalize(self.g_tf)
-            # goal = self.g_tf
-            state = tf.concat(axis=1, values=[state, goal])
-        self.u_tf = inputs_tf["u"]
+        # Params
+        self.dimo = dimo
+        self.dimg = dimg
+        self.dimu = dimu
+        self.max_u = max_u
+        self.o_stats = o_stats
+        self.g_stats = g_stats
+        self.add_pi_noise = add_pi_noise
+        self.hidden = hidden
+        self.layers = layers
+
+        # actor
+        with tf.variable_scope("pi"):
+            self.pi_nn = MLP([self.hidden] * self.layers + [self.dimu])
+
+        # critic
+        with tf.variable_scope("Q"):
+            with tf.variable_scope("Q1"):
+                self.q1_nn = MLP([self.hidden] * self.layers + [1])
+            with tf.variable_scope("Q2"):
+                self.q2_nn = MLP([self.hidden] * self.layers + [1])
+
+    def actor(self, o, g):
+
+        state = self._normalize_concat_state(o, g)
 
         with tf.variable_scope("pi"):
-            nn_pi_tf = tf.tanh(nn(state, [hidden] * layers + [dimu]))
-            if use_td3 and add_pi_noise:  # for td3, add noise!
-                nn_pi_tf += tfd.Normal(loc=[0.0] * dimu, scale=1.0).sample([tf.shape(self.o_tf)[0]])
+            # has to be in the correct scope when calling this script
+            nn_pi_tf = tf.tanh(self.pi_nn(state))
+            if self.add_pi_noise:  # for td3, add noise!
+                nn_pi_tf += tfd.Normal(loc=[0.0] * self.dimu, scale=1.0).sample([tf.shape(o)[0]])
                 nn_pi_tf = tf.clip_by_value(nn_pi_tf, -1.0, 1.0)
-            self.pi_tf = max_u * nn_pi_tf
+            pi_tf = self.max_u * nn_pi_tf
+
+        return pi_tf
+
+    def critic1(self, o, g, u):
+
+        state = self._normalize_concat_state(o, g)
 
         with tf.variable_scope("Q"):
             with tf.variable_scope("Q1"):
-                # for policy training
-                input_Q = tf.concat(axis=1, values=[state, self.pi_tf / max_u])
-                self.Q_pi_tf = nn(input_Q, [hidden] * layers + [1])
-                # for critic training
-                input_Q = tf.concat(axis=1, values=[state, self.u_tf / max_u])
-                self.Q_tf = nn(input_Q, [hidden] * layers + [1], reuse=True)
+                # has to be in the correct scope when calling this script
+                input_q = tf.concat(axis=1, values=[state, u / self.max_u])
+                q_tf = self.q1_nn(input_q)
 
-            if use_td3:
-                with tf.variable_scope("Q2"):
-                    # for policy training
-                    input_Q = tf.concat(axis=1, values=[state, self.pi_tf / max_u])
-                    self.Q2_pi_tf = nn(input_Q, [hidden] * layers + [1])
-                    # for critic training
-                    input_Q = tf.concat(axis=1, values=[state, self.u_tf / max_u])
-                    self.Q2_tf = nn(input_Q, [hidden] * layers + [1], reuse=True)
+        return q_tf
+
+    def critic2(self, o, g, u):
+
+        state = self._normalize_concat_state(o, g)
+
+        with tf.variable_scope("Q"):
+            with tf.variable_scope("Q2"):
+                input_q = tf.concat(axis=1, values=[state, u / self.max_u])
+                # has to be in the correct scope when calling this script
+                q_tf = self.q2_nn(input_q)
+
+        return q_tf
+
+    def _normalize_concat_state(self, o, g):
+        state = self.o_stats.normalize(o)
+        # for multigoal environments, we have goal as another states
+        if self.dimg != 0:
+            goal = self.g_stats.normalize(g)
+            state = tf.concat(axis=1, values=[state, goal])
+        return state
+

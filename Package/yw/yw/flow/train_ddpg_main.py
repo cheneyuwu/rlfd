@@ -60,16 +60,14 @@ def train_reinforce(
         os.makedirs(shaping_save_path, exist_ok=True)
         latest_shaping_path = os.path.join(shaping_save_path, "shaping_latest.ckpt")
         # queries
-        query_uncertainty_save_path = save_path + "/uncertainty/"
+        query_uncertainty_save_path = save_path + "/query_uncertainty/"
         os.makedirs(query_uncertainty_save_path, exist_ok=True)
         query_shaping_save_path = save_path + "/query_shaping/"
         os.makedirs(query_shaping_save_path, exist_ok=True)
         query_potential_surface_save_path = save_path + "/query_potential_surface/"
         os.makedirs(query_potential_surface_save_path, exist_ok=True)
-        query_potential_based_policy_save_path = save_path + "/query_potential_based_policy/"
-        os.makedirs(query_potential_based_policy_save_path, exist_ok=True)
-        query_action_save_path = save_path + "/query_action/"
-        os.makedirs(query_action_save_path, exist_ok=True)
+        query_policy_save_path = save_path + "/query_policy/"
+        os.makedirs(query_policy_save_path, exist_ok=True)
 
     if policy.demo_actor != "none" or policy.demo_critic != "none":
         policy.init_demo_buffer(demo_file, update_stats=policy.demo_actor != "none")
@@ -118,8 +116,8 @@ def train_reinforce(
             filename=os.path.join(query_potential_surface_save_path, "query_{:03d}.npz".format(epoch)),  # comment
             fid=2,
         )
-        policy.query_action(
-            filename=os.path.join(query_action_save_path, "query_{:03d}.npz".format(epoch)),  # comment to show plot
+        policy.query_policy(
+            filename=os.path.join(query_policy_save_path, "query_{:03d}.npz".format(epoch)),  # comment to show plot
             fid=3,
         )
         # policy.query_uncertainty(os.path.join(query_uncertainty_save_path, "query_{:03d}.npz".format(epoch)))

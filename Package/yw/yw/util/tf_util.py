@@ -151,6 +151,27 @@ def adjust_shape(placeholder, data):
 # =============================================================================
 
 
+class MLP:
+    def __init__(self, layers_sizes, name=""):
+        self.layers = []
+        for i, size in enumerate(layers_sizes):
+            activation = "relu" if i < len(layers_sizes) - 1 else None
+            self.layers.append(
+                tf.layers.Dense(
+                    units=size,
+                    activation=activation,
+                    kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False),
+                    name=name + "_" + str(i),
+                )
+            )
+
+    def __call__(self, input):
+        res = input
+        for l in self.layers:
+            res = l(res)
+        return res
+
+
 def nn(input, layers_sizes, reuse=None, flatten=False, name=""):
     """Creates a simple neural network
     """
@@ -300,6 +321,7 @@ class NormalizingFlow:
 # MAF
 # =============================================================================
 
+
 class MAF:
     def __init__(self, base_dist, dim=2, num_layers=6):
         self.bijectors = []
@@ -323,6 +345,7 @@ class MAF:
         # output
         self.log_prob = self.dist.log_prob
         self.prob = self.dist.prob
+
 
 if __name__ == "__main__":
 
