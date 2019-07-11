@@ -23,7 +23,6 @@ class RolloutWorker:
         noise_eps=0.0,
         random_eps=0.0,
         rollout_batch_size=1,
-        use_target_net=False,
         compute_Q=False,
         history_len=100,
         render=False,
@@ -37,7 +36,6 @@ class RolloutWorker:
             policy             (object)      - the policy that is used to act
             dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
             rollout_batch_size (int)         - the number of parallel rollouts that should be used
-            use_target_net     (bool)        - whether or not to use the target net for rollouts
             compute_Q          (bool)        - whether or not to compute the Q values alongside the actions
             noise_eps          (float)       - scale of the additive Gaussian noise
             random_eps         (float)       - probability of selecting a completely random action
@@ -49,7 +47,6 @@ class RolloutWorker:
         self.dims = dims
         self.T = T
         self.rollout_batch_size = rollout_batch_size
-        self.use_target_net = use_target_net
         self.compute_Q = compute_Q
         self.noise_eps = noise_eps
         self.random_eps = random_eps
@@ -114,7 +111,6 @@ class RolloutWorker:
                 compute_Q=self.compute_Q,
                 noise_eps=self.noise_eps,
                 random_eps=self.random_eps,
-                use_target_net=self.use_target_net,
             )
             if self.compute_Q:
                 u = policy_output[0]

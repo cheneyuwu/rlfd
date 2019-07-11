@@ -176,19 +176,18 @@ class DDPG(object):
         with tf.variable_scope(self.scope):
             self._create_network()
 
-    def get_actions(self, o, g, noise_eps=0.0, random_eps=0.0, use_target_net=False, compute_Q=False):
+    def get_actions(self, o, g, noise_eps=0.0, random_eps=0.0, compute_Q=False):
 
-        policy = self.target if use_target_net else self.main
         # values to compute
-        vals = [policy.pi_tf, policy.Q_pi_tf]
+        vals = [self.main_pi_tf, self.main_q_pi_tf]
         # feed
         feed = {}
         o = self._preprocess_state(o)
-        feed[policy.o_tf] = o.reshape(-1, self.dimo)
+        feed[self.inputs_tf["o"]] = o.reshape(-1, self.dimo)
         if self.dimg != 0:
             g = self._preprocess_state(g)
-            feed[policy.g_tf] = g.reshape(-1, self.dimg)
-        feed[policy.u_tf] = np.zeros((o.size // self.dimo, self.dimu), dtype=np.float32)
+            feed[self.inputs_tf["g"]] = g.reshape(-1, self.dimg)
+        # feed[policy.u_tf] = np.zeros((o.size // self.dimo, self.dimu), dtype=np.float32)
         # compute
         ret = self.sess.run(vals, feed_dict=feed)
 
@@ -346,10 +345,11 @@ class DDPG(object):
             return logs
 
     def _create_network(self):
-        self.sess = tf.get_default_session()
-        if self.sess is None:
-            self.sess = tf.InteractiveSession()
 
+        self.sess = tf.get_default_session()
+        assert self.sess != None, "must have a default session before creating DDPG"
+
+        # inputs to ddpg
         self.inputs_tf = {}
         self.inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
         self.inputs_tf["o_2"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
@@ -359,60 +359,67 @@ class DDPG(object):
             self.inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
             self.inputs_tf["g_2"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
 
-        self.target_inputs_tf = self.inputs_tf.copy()
-        # The input to the target network has to be the resultant observation and goal!
-        self.target_inputs_tf["o"] = self.inputs_tf["o_2"]
-        if self.dimg != 0:
-            self.target_inputs_tf["g"] = self.inputs_tf["g_2"]
-
-        # Creating a normalizer for goal and observation.
+        # create a normalizer for goal and observation.
         with tf.variable_scope("o_stats") as vs:
             self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
         with tf.variable_scope("g_stats") as vs:
             self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
 
-        # Networks
-        with tf.variable_scope("main", reuse=tf.AUTO_REUSE) as vs:
+        # models
+        with tf.variable_scope("main", reuse=tf.AUTO_REUSE):
             self.main = ActorCritic(
-                inputs_tf=self.inputs_tf,
                 dimo=self.dimo,
                 dimg=self.dimg,
                 dimu=self.dimu,
                 max_u=self.max_u,
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
-                use_td3=self.use_td3,
                 hidden=self.hidden,
                 layers=self.layers,
                 add_pi_noise=False,
             )
-            self.main_shaping = ActorCritic(
-                inputs_tf=self.target_inputs_tf,
-                dimo=self.dimo,
-                dimg=self.dimg,
-                dimu=self.dimu,
-                max_u=self.max_u,
-                o_stats=self.o_stats,
-                g_stats=self.g_stats,
-                use_td3=self.use_td3,
-                hidden=self.hidden,
-                layers=self.layers,
-                add_pi_noise=False,
-            )
-        with tf.variable_scope("target") as vs:
+            # actor output
+            self.main_pi_tf = self.main.actor(o=self.inputs_tf["o"], g=self.inputs_tf["g"])
+            # critic output
+            self.main_q_tf = self.main.critic1(o=self.inputs_tf["o"], g=self.inputs_tf["g"], u=self.inputs_tf["u"])
+            self.main_q_pi_tf = self.main.critic1(o=self.inputs_tf["o"], g=self.inputs_tf["g"], u=self.main_pi_tf)
+            if self.use_td3:
+                self.main_q2_tf = self.main.critic2(
+                    o=self.inputs_tf["o"], g=self.inputs_tf["g"], u=self.inputs_tf["u"]
+                )
+                self.main_q2_pi_tf = self.main.critic2(o=self.inputs_tf["o"], g=self.inputs_tf["g"], u=self.main_pi_tf)
+            # output for shaping
+            self.main_shaping_pi_tf = self.main.actor(o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"])
+
+        with tf.variable_scope("target", reuse=tf.AUTO_REUSE):
             self.target = ActorCritic(
-                inputs_tf=self.target_inputs_tf,
                 dimo=self.dimo,
                 dimg=self.dimg,
                 dimu=self.dimu,
                 max_u=self.max_u,
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
-                use_td3=self.use_td3,
                 hidden=self.hidden,
                 layers=self.layers,
-                add_pi_noise=True,
+                add_pi_noise=self.use_td3,
             )
+            # actor output
+            self.target_pi_tf = self.target.actor(o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"])
+            # critic output
+            self.target_q_tf = self.target.critic1(
+                o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"], u=self.inputs_tf["u"]
+            )
+            self.target_q_pi_tf = self.target.critic1(
+                o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"], u=self.target_pi_tf
+            )
+            if self.use_td3:
+                self.target_q2_tf = self.target.critic2(
+                    o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"], u=self.inputs_tf["u"]
+                )
+                self.target_q2_pi_tf = self.target.critic2(
+                    o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"], u=self.target_pi_tf
+                )
+
         assert len(self._vars("main")) == len(self._vars("target"))
 
         # Add shaping reward
@@ -483,10 +490,10 @@ class DDPG(object):
                     u=self.inputs_tf["u"],
                     o_2=self.inputs_tf["o_2"],
                     g_2=self.inputs_tf["g_2"] if self.dimg != 0 else None,
-                    u_2=self.main_shaping.pi_tf,
+                    u_2=self.main_shaping_pi_tf,
                 )
                 self.demo_actor_shaping = self.demo_shaping.potential(
-                    o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.main.pi_tf
+                    o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.main_pi_tf
                 )
                 self.demo_shaping_check = self.demo_shaping.potential(
                     o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.inputs_tf["u"]
@@ -499,9 +506,9 @@ class DDPG(object):
             target_tf += self.demo_critic_shaping
         # td3 target
         if self.use_td3:
-            target_tf += self.gamma * tf.minimum(self.target.Q_pi_tf, self.target.Q2_pi_tf)
+            target_tf += self.gamma * tf.minimum(self.target_q_pi_tf, self.target_q2_pi_tf)
         else:
-            target_tf += self.gamma * self.target.Q_pi_tf
+            target_tf += self.gamma * self.target_q_pi_tf
         # clipping
         clip_range = (-self.clip_return, 0.0 if self.clip_pos_returns else self.clip_return)
         target_tf = tf.clip_by_value(target_tf, *clip_range)
@@ -510,32 +517,30 @@ class DDPG(object):
 
         # td3 loss
         if self.use_td3:
-            rl_bellman_1_tf = tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf)
-            rl_bellman_2_tf = tf.square(tf.stop_gradient(target_tf) - self.main.Q2_tf)
+            rl_bellman_1_tf = tf.square(tf.stop_gradient(target_tf) - self.main_q_tf)
+            rl_bellman_2_tf = tf.square(tf.stop_gradient(target_tf) - self.main_q2_tf)
             rl_loss_tf = (tf.reduce_mean(rl_bellman_1_tf) + tf.reduce_mean(rl_bellman_2_tf)) / 2.0
         else:
-            rl_bellman_tf = tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf)
+            rl_bellman_tf = tf.square(tf.stop_gradient(target_tf) - self.main_q_tf)
             rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
         self.Q_loss_tf = rl_loss_tf
 
         # Actor Loss
         if self.demo_actor != "none":
-            # train with demonstrations and use demo and q_filter both
-            # where is the demonstrator action better than actor action according to the critic? choose those sample only
             # primary loss scaled by it's respective weight prm_loss_weight
-            pi_loss_tf = -self.prm_loss_weight * tf.reduce_mean(self.main.Q_pi_tf)
+            pi_loss_tf = -self.prm_loss_weight * tf.reduce_mean(self.main_q_pi_tf)
             # L2 loss on action values scaled by the same weight prm_loss_weight
             pi_loss_tf += (
-                self.prm_loss_weight * self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
+                self.prm_loss_weight * self.action_l2 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
             )
             # define the cloning loss on the actor's actions only on the samples which adhere to the above masks
             mask = np.concatenate(
                 (np.zeros(self.batch_size - self.batch_size_demo), np.ones(self.batch_size_demo)), axis=0
             )
-            actor_pi_tf = tf.boolean_mask((self.main.pi_tf), mask)
+            actor_pi_tf = tf.boolean_mask((self.main_pi_tf), mask)
             demo_pi_tf = tf.boolean_mask((self.inputs_tf["u"]), mask)
             if self.q_filter:
-                q_filter_mask = tf.reshape(tf.boolean_mask(self.main.Q_tf > self.main.Q_pi_tf, mask), [-1])
+                q_filter_mask = tf.reshape(tf.boolean_mask(self.main_q_tf > self.main_q_pi_tf, mask), [-1])
                 cloning_loss_tf = tf.reduce_sum(
                     tf.square(
                         tf.boolean_mask(actor_pi_tf, q_filter_mask, axis=0)
@@ -548,13 +553,13 @@ class DDPG(object):
             pi_loss_tf += self.aux_loss_weight * cloning_loss_tf
 
         elif self.demo_critic != "none":
-            pi_loss_tf = -tf.reduce_mean(self.main.Q_pi_tf)
+            pi_loss_tf = -tf.reduce_mean(self.main_q_pi_tf)
             pi_loss_tf += -tf.reduce_mean(self.demo_actor_shaping)
-            pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
+            pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
 
         else:  # If not training with demonstrations
-            pi_loss_tf = -tf.reduce_mean(self.main.Q_pi_tf)
-            pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
+            pi_loss_tf = -tf.reduce_mean(self.main_q_pi_tf)
+            pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
 
         self.pi_loss_tf = pi_loss_tf
 
@@ -829,19 +834,18 @@ class DDPG(object):
         u_r = u.reshape((-1, 1))
         g_r = g.reshape((-1, 1))
 
-        policy = self.main
         name = ["o", "u", "g", "q_var", "q_mean"]
-        feed = {policy.o_tf: o_r, policy.g_tf: g_r, policy.u_tf: u_r}
+        feed = {self.inputs_tf["o"]: o_r, self.inputs_tf["g"]: g_r, self.inputs_tf["u"]: u_r}
         # feed demonstration data
         if self.demo_critic != "none":
             demo_data = self.demo_buffer.sample_all()
             for k in self.demo_inputs_tf.keys():
                 feed[self.demo_inputs_tf[k]] = demo_data[k]
-        queries = [policy.Q_var_tf, policy.Q_mean_tf]
+        queries = [self.main_q_tf]
         res = self.sess.run(queries, feed_dict=feed)
 
         if self.demo_critic != "none":
-            temp = self.sess.run(self.demo_shaping_check_ls[0], feed_dict=feed)
+            temp = self.sess.run(self.demo_shaping_check, feed_dict=feed)
             temp = temp.reshape(-1)
             res[1] = temp
 
