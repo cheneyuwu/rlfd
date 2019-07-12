@@ -392,7 +392,6 @@ def test_nf(demo_file, **kwargs):
 
 if __name__ == "__main__":
 
-    # from yw.ddpg_main.replay_buffer import UniformReplayBuffer
     import sys
     from yw.util.cmd_util import ArgParser
 

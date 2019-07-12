@@ -1,16 +1,3 @@
-"""Active learning project
-
-    This python script trains an agent from demonstration data and aims to out-perform expert demonstration though
-    reinforcement learning and active learning.
-
-    Steps:
-        1. Train a Q value estimator through supervised learning from demonstration.
-            Should allow user to use existing policy file.
-            train_demo.py contains this part only.
-        2. Train an agent based on RL (DDPG) to output an action for each input that contains a state and a goal.
-
-"""
-
 import os
 import sys
 
@@ -61,13 +48,13 @@ def train(
     query_policy_save_path = root_dir + "/query_policy/"
     os.makedirs(query_policy_save_path, exist_ok=True)
 
-    if policy.demo_actor != "none" or policy.demo_critic != "none":
+    if policy.demo_strategy != "none":
         demo_file = os.path.join(root_dir, "demo_data.npz")
         assert os.path.isfile(demo_file), "demonstration training set does not exist"
-        policy.init_demo_buffer(demo_file, update_stats=policy.demo_actor != "none")
+        policy.init_demo_buffer(demo_file, update_stats=policy.demo_strategy == "bc")
 
     # Pre-Training a potential function
-    if policy.demo_critic == "maf":
+    if policy.demo_strategy == "maf":
         if not shaping_policy:
             logger.info("Training the policy for reward shaping.")
             num_epoch = 1000

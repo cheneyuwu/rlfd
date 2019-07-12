@@ -43,15 +43,13 @@ class DDPG(object):
         T,
         clip_pos_returns,
         clip_return,
-        demo_critic,
-        demo_actor,
+        demo_strategy,
         num_demo,
         q_filter,
         batch_size_demo,
         prm_loss_weight,
         aux_loss_weight,
         replay_strategy,
-        demo_replay_strategy,
         gamma,
         info,
         **kwargs
@@ -79,8 +77,7 @@ class DDPG(object):
             # Replay Buffer
             buffer_size        (int)          - number of transitions that are stored in the replay buffer
             # HER
-            replay_strategy (function)     - function that samples from the replay buffer
-            demo_replay_strategy (function)
+            replay_strategy    (dict)         - strategy to use and function that samples from the replay buffer
             # Dual Network Set
             polyak             (float)        - coefficient for Polyak-averaging of the target network
             # Training
@@ -90,8 +87,7 @@ class DDPG(object):
             action_l2          (float)        - coefficient for L2 penalty on the actions
             gamma              (float)        - gamma used for Q learning updates
             # Use demonstration to shape critic or actor
-            demo_actor         (str)          - whether or not to use demonstration network to shape the critic or actor
-            demo_critic        (str)          - whether or not to use demonstration network to shape the critic or actor
+            demo_strategy      (str)          - whether or not to use demonstration with different strategies
             num_demo           (int)          - Number of episodes in to be used in the demonstration buffer
             batch_size_demo    (int)          - number of samples to be used from the demonstrations buffer, per mpi thread
             q_filter           (boolean)      - whether or not a filter on the q value update should be used when training with demonstartions
@@ -121,15 +117,13 @@ class DDPG(object):
         self.T = T
         self.clip_pos_returns = clip_pos_returns
         self.clip_return = clip_return
-        self.demo_critic = demo_critic
-        self.demo_actor = demo_actor
+        self.demo_strategy = demo_strategy
         self.num_demo = num_demo
         self.q_filter = q_filter
         self.batch_size_demo = batch_size_demo
         self.prm_loss_weight = prm_loss_weight
         self.aux_loss_weight = aux_loss_weight
         self.replay_strategy = replay_strategy
-        self.demo_replay_strategy = demo_replay_strategy
         self.gamma = gamma
         self.info = info
 
@@ -151,26 +145,25 @@ class DDPG(object):
         for key, val in input_dims.items():
             if key.startswith("info"):
                 buffer_shapes[key] = (self.T, *(tuple([val]) if val > 0 else tuple()))
-        # initialize primary buffer
+        # initialize replay buffer(s)
         if not self.replay_strategy:
             pass
         elif self.replay_strategy["strategy"] == "her":
             self.replay_buffer = HERReplayBuffer(
                 buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
             )
+            if self.demo_strategy != "none":
+                self.demo_buffer = HERReplayBuffer(
+                    buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
+                )
         else:
             self.replay_buffer = UniformReplayBuffer(
                 buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
             )
-        # initialize the demo buffer
-        if not self.demo_replay_strategy:
-            pass
-        elif self.demo_actor != "none" or self.demo_critic != "none":
-            self.demo_buffer = UniformReplayBuffer(
-                buffer_shapes, self.buffer_size, self.T, **self.demo_replay_strategy["args"]
-            )
-            # This does not matter is using demo_critic, since we call sample all
-            # self.demo_buffer = HERReplayBuffer(buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"])
+            if self.demo_strategy != "none":
+                self.demo_buffer = UniformReplayBuffer(
+                    buffer_shapes, self.buffer_size, self.T, **self.demo_replay_strategy["args"]
+                )
 
         # Create the DDPG agent
         with tf.variable_scope(self.scope):
@@ -223,7 +216,7 @@ class DDPG(object):
         self.demo_buffer.store_episode(episode_batch)
 
         # feed demonstration data for norm shaping
-        if self.demo_critic == "norm":
+        if self.demo_strategy == "norm":
             demo_data = self.demo_buffer.sample_all()
             demo_data["o"] = self._preprocess_state(demo_data["o"])
             if self.dimg != 0:
@@ -231,7 +224,6 @@ class DDPG(object):
             for k in self.demo_inputs_tf.keys():  # o g u
                 self.sess.run(tf.assign(self.demo_inputs_tf[k], demo_data[k]))
 
-        # currently we do not update status if using demo_actor==none
         if update_stats:
             logger.info("Updating stats using data from demostration buffer.")
             self._update_stats(episode_batch)
@@ -249,7 +241,7 @@ class DDPG(object):
 
     def sample_batch(self):
         # use demonstration buffer to sample as well if demo flag is set TRUE
-        if self.demo_actor != "none":
+        if self.demo_strategy == "bc":
             transitions = {}
             transition_rollout = self.replay_buffer.sample(self.batch_size - self.batch_size_demo)
             transition_demo = self.demo_buffer.sample(self.batch_size_demo)
@@ -270,7 +262,7 @@ class DDPG(object):
     def train_shaping(self):
         # train normalizing flow
         loss = 0
-        if self.demo_critic == "maf":
+        if self.demo_strategy == "maf":
             self.sess.run(self.demo_iter_tf.initializer)
             losses = np.empty(0)
             while True:
@@ -423,67 +415,67 @@ class DDPG(object):
         assert len(self._vars("main")) == len(self._vars("target"))
 
         # Add shaping reward
-        if self.demo_critic != "none":
-            with tf.variable_scope("shaping") as vs:
-                if self.demo_critic == "manual":
-                    self.demo_shaping = ManualDemoShaping(gamma=self.gamma)
-                elif self.demo_critic == "norm":
-                    num_transitions = self.num_demo * self.T
-                    self.demo_inputs_tf = {}
-                    self.demo_inputs_tf["o"] = tf.Variable(
-                        initial_value=tf.zeros((num_transitions, self.dimo), dtype=tf.float32),
+        with tf.variable_scope("shaping") as vs:
+            if self.demo_strategy == "manual":
+                self.demo_shaping = ManualDemoShaping(gamma=self.gamma)
+            elif self.demo_strategy == "norm":
+                num_transitions = self.num_demo * self.T
+                self.demo_inputs_tf = {}
+                self.demo_inputs_tf["o"] = tf.Variable(
+                    initial_value=tf.zeros((num_transitions, self.dimo), dtype=tf.float32),
+                    trainable=False,
+                    dtype=tf.float32,
+                )
+                if self.dimg != 0:
+                    self.demo_inputs_tf["g"] = tf.Variable(
+                        initial_value=tf.zeros((num_transitions, self.dimg), dtype=tf.float32),
                         trainable=False,
                         dtype=tf.float32,
                     )
+                self.demo_inputs_tf["u"] = tf.Variable(
+                    initial_value=tf.zeros((num_transitions, self.dimu), dtype=tf.float32),
+                    trainable=False,
+                    dtype=tf.float32,
+                )
+                self.demo_shaping = GaussianDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
+            elif self.demo_strategy == "maf":
+                # input dataset that loads from demo_buffer
+                demo_shapes = {}
+                demo_shapes["o"] = (self.dimo,)
+                if self.dimg != 0:
+                    demo_shapes["g"] = (self.dimg,)
+                demo_shapes["u"] = (self.dimu,)
+                num_transitions = self.num_demo * self.T
+
+                def generate_demo_data():
+                    demo_data = self.demo_buffer.sample_all()
+                    demo_data["o"] = self._preprocess_state(demo_data["o"])
                     if self.dimg != 0:
-                        self.demo_inputs_tf["g"] = tf.Variable(
-                            initial_value=tf.zeros((num_transitions, self.dimg), dtype=tf.float32),
-                            trainable=False,
-                            dtype=tf.float32,
-                        )
-                    self.demo_inputs_tf["u"] = tf.Variable(
-                        initial_value=tf.zeros((num_transitions, self.dimu), dtype=tf.float32),
-                        trainable=False,
-                        dtype=tf.float32,
+                        demo_data["g"] = self._preprocess_state(demo_data["g"])
+                    assert all([demo_data[k].shape[0] == num_transitions for k in demo_data.keys()])
+                    for i in range(num_transitions):
+                        yield {k: demo_data[k][i] for k in demo_shapes.keys()}
+
+                demo_dataset = (
+                    tf.data.Dataset.from_generator(
+                        generate_demo_data,
+                        output_types={k: tf.float32 for k in demo_shapes.keys()},
+                        output_shapes=demo_shapes,
                     )
-                    self.demo_shaping = GaussianDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
-                elif self.demo_critic == "maf":
-                    # input dataset that loads from demo_buffer
-                    demo_shapes = {}
-                    demo_shapes["o"] = (self.dimo,)
-                    if self.dimg != 0:
-                        demo_shapes["g"] = (self.dimg,)
-                    demo_shapes["u"] = (self.dimu,)
-                    num_transitions = self.num_demo * self.T
+                    .take(num_transitions)
+                    .shuffle(num_transitions)
+                    .repeat(1)
+                    .batch(128)
+                )
+                self.demo_iter_tf = demo_dataset.make_initializable_iterator()
+                self.demo_inputs_tf = self.demo_iter_tf.get_next()
 
-                    def generate_demo_data():
-                        demo_data = self.demo_buffer.sample_all()
-                        demo_data["o"] = self._preprocess_state(demo_data["o"])
-                        if self.dimg != 0:
-                            demo_data["g"] = self._preprocess_state(demo_data["g"])
-                        assert all([demo_data[k].shape[0] == num_transitions for k in demo_data.keys()])
-                        for i in range(num_transitions):
-                            yield {k: demo_data[k][i] for k in demo_shapes.keys()}
+                # self.demo_shaping = NormalizingFlowDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
+                self.demo_shaping = MAFDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
+            else:
+                self.demo_shaping = None
 
-                    demo_dataset = (
-                        tf.data.Dataset.from_generator(
-                            generate_demo_data,
-                            output_types={k: tf.float32 for k in demo_shapes.keys()},
-                            output_shapes=demo_shapes,
-                        )
-                        .take(num_transitions)
-                        .shuffle(num_transitions)
-                        .repeat(1)
-                        .batch(128)
-                    )
-                    self.demo_iter_tf = demo_dataset.make_initializable_iterator()
-                    self.demo_inputs_tf = self.demo_iter_tf.get_next()
-
-                    # self.demo_shaping = NormalizingFlowDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
-                    self.demo_shaping = MAFDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
-                else:
-                    assert 0, "unknown shaping method"
-
+            if self.demo_shaping != None:
                 self.demo_critic_shaping = self.demo_shaping.reward(
                     o=self.inputs_tf["o"],
                     g=self.inputs_tf["g"] if self.dimg != 0 else None,
@@ -502,7 +494,7 @@ class DDPG(object):
         # Critic loss
         target_tf = self.inputs_tf["r"]
         # demo shaping
-        if self.demo_critic != "none":
+        if self.demo_shaping != None:
             target_tf += self.demo_critic_shaping
         # td3 target
         if self.use_td3:
@@ -526,7 +518,7 @@ class DDPG(object):
         self.Q_loss_tf = rl_loss_tf
 
         # Actor Loss
-        if self.demo_actor != "none":
+        if self.demo_strategy == "bc":
             # primary loss scaled by it's respective weight prm_loss_weight
             pi_loss_tf = -self.prm_loss_weight * tf.reduce_mean(self.main_q_pi_tf)
             # L2 loss on action values scaled by the same weight prm_loss_weight
@@ -552,7 +544,7 @@ class DDPG(object):
             # adding the cloning loss to the actor loss as an auxilliary loss scaled by its weight aux_loss_weight
             pi_loss_tf += self.aux_loss_weight * cloning_loss_tf
 
-        elif self.demo_critic != "none":
+        elif self.demo_strategy != "none":
             pi_loss_tf = -tf.reduce_mean(self.main_q_pi_tf)
             pi_loss_tf += -tf.reduce_mean(self.demo_actor_shaping)
             pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
@@ -633,7 +625,7 @@ class DDPG(object):
 
         # """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
         # """
-        excluded_names = ["self", "demo_replay_strategy", "replay_strategy"]
+        excluded_names = ["self", "replay_strategy"]
 
         state = {k: v for k, v in self.init_args.items() if not k in excluded_names}
         state["tf"] = self.sess.run([x for x in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)])
@@ -641,11 +633,9 @@ class DDPG(object):
 
     def __setstate__(self, state):
 
-        # We don't need these for playing the policy.
+        # We don't need the replay strategy for playing the policy.
         assert "replay_strategy" not in state
-        assert "demo_replay_strategy" not in state
         state["replay_strategy"] = None
-        state["demo_replay_strategy"] = None
 
         kwargs = state["kwargs"]
         del state["kwargs"]
@@ -754,8 +744,6 @@ class DDPG(object):
     def query_potential_surface(self, filename=None, fid=0):
         """Check the output from demo shaping potential function
         """
-        if not "Reach" in self.info["env_name"] or self.demo_critic == "none":
-            return
 
         potential = self.demo_shaping_check
 
