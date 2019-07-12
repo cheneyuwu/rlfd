@@ -366,7 +366,7 @@ class DDPG(object):
             self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
 
         # models
-        with tf.variable_scope("main", reuse=tf.AUTO_REUSE):
+        with tf.variable_scope("main"):
             self.main = ActorCritic(
                 dimo=self.dimo,
                 dimg=self.dimg,
@@ -391,7 +391,7 @@ class DDPG(object):
             # output for shaping
             self.main_shaping_pi_tf = self.main.actor(o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"])
 
-        with tf.variable_scope("target", reuse=tf.AUTO_REUSE):
+        with tf.variable_scope("target"):
             self.target = ActorCritic(
                 dimo=self.dimo,
                 dimg=self.dimg,
@@ -814,51 +814,3 @@ class DDPG(object):
             visualize_query.visualize_action(ax, res)
             pl.show()
             pl.pause(0.001)
-
-    def query_uncertainty(self, filename=None):
-        """Check the output from demonstration NN when the state is fixed and the action forms a 2d space.
-
-        This check can only be used for the Reach2DFirstOrder environment.
-        """
-        if not "Reach" in self.info["env_name"]:
-            return
-
-        logger.info("Query: uncertainty -> Plot the uncertainty over (s, a) space of critic.")
-
-        num_point = 24
-        ls = np.linspace(-1.0, 1.0, num_point)
-        ls2 = ls * 2
-        o, u = np.meshgrid(ls, ls2)
-        g = 0.0 * np.ones((pow(num_point, 2), 1))
-        o_r = o.reshape((-1, 1))
-        u_r = u.reshape((-1, 1))
-        g_r = g.reshape((-1, 1))
-
-        name = ["o", "u", "g", "q_var", "q_mean"]
-        feed = {self.inputs_tf["o"]: o_r, self.inputs_tf["g"]: g_r, self.inputs_tf["u"]: u_r}
-        # feed demonstration data
-        if self.demo_critic != "none":
-            demo_data = self.demo_buffer.sample_all()
-            for k in self.demo_inputs_tf.keys():
-                feed[self.demo_inputs_tf[k]] = demo_data[k]
-        queries = [self.main_q_tf]
-        res = self.sess.run(queries, feed_dict=feed)
-
-        if self.demo_critic != "none":
-            temp = self.sess.run(self.demo_shaping_check, feed_dict=feed)
-            temp = temp.reshape(-1)
-            res[1] = temp
-
-        o_r = o.reshape((num_point, num_point))
-        u_r = u.reshape((num_point, num_point))
-        g_r = g.reshape((num_point, num_point))
-        for i in range(len(res)):
-            res[i] = res[i].reshape((num_point, num_point))
-
-        ret = [o_r, u_r, g_r] + res
-
-        if filename:
-            logger.info("Query: uncertainty -> storing query results to {}".format(filename))
-            np.savez_compressed(filename, **dict(zip(name, ret)))
-        else:
-            logger.info("Query: uncertainty -> ", ret)

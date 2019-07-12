@@ -152,18 +152,19 @@ def adjust_shape(placeholder, data):
 
 
 class MLP:
-    def __init__(self, layers_sizes, name=""):
+    def __init__(self, input_shape, layers_sizes, name=""):
         self.layers = []
         for i, size in enumerate(layers_sizes):
             activation = "relu" if i < len(layers_sizes) - 1 else None
-            self.layers.append(
-                tf.layers.Dense(
-                    units=size,
-                    activation=activation,
-                    kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False),
-                    name=name + "_" + str(i),
-                )
+            layer = tf.layers.Dense(
+                units=size,
+                activation=activation,
+                kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False),
+                name=name + "_" + str(i),
             )
+            layer.build(input_shape=input_shape)
+            input_shape = layer.compute_output_shape(input_shape)
+            self.layers.append(layer)
 
     def __call__(self, input):
         res = input
