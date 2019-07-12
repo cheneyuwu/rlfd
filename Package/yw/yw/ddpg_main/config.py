@@ -14,7 +14,7 @@ DEFAULT_PARAMS = {
     "config": "default",
     "seed": 0,
     # Environment Config
-    "env_name": "FetchPickAndPlace-v1",
+    "env_name": "FetchReach-v1",
     "r_scale": 1.0,  # re-scale the reward. Only use this for dense rewards.
     "r_shift": 0.0,  # re-scale the reward. Only use this for dense rewards.
     "eps_length": 0,  # change the length of the episode.
@@ -34,7 +34,7 @@ DEFAULT_PARAMS = {
         "demo_critic": "none",  # whether or not to use shaping
         "demo_actor": "none",  # whether or not to use bc
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
-        "num_demo": 1000,  # number of expert demo episodes
+        "num_demo": 0,  # number of expert demo episodes
         "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
         "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss also called the cloning loss
         # double q learning
@@ -65,9 +65,11 @@ DEFAULT_PARAMS = {
         "compute_Q": True,
     },
     # Training Config
-    "train_rl_epochs": 1,
+    "n_epochs": 10,
     "n_cycles": 10,  # per epoch
     "n_batches": 40,  # training batches per cycle
+    "save_interval": 2,
+    "shaping_policy": 0,  # whether or not to use a pretrained shaping policy
 }
 
 
