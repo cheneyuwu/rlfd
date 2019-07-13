@@ -162,7 +162,7 @@ class DDPG(object):
             )
             if self.demo_strategy != "none":
                 self.demo_buffer = UniformReplayBuffer(
-                    buffer_shapes, self.buffer_size, self.T, **self.demo_replay_strategy["args"]
+                    buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
                 )
 
         # Create the DDPG agent
