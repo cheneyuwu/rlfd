@@ -371,17 +371,25 @@ class DDPG(object):
                 add_pi_noise=False,
             )
             # actor output
-            self.main_pi_tf = self.main.actor(o=self.inputs_tf["o"], g=self.inputs_tf["g"])
+            self.main_pi_tf = self.main.actor(o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None)
             # critic output
-            self.main_q_tf = self.main.critic1(o=self.inputs_tf["o"], g=self.inputs_tf["g"], u=self.inputs_tf["u"])
-            self.main_q_pi_tf = self.main.critic1(o=self.inputs_tf["o"], g=self.inputs_tf["g"], u=self.main_pi_tf)
+            self.main_q_tf = self.main.critic1(
+                o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.inputs_tf["u"]
+            )
+            self.main_q_pi_tf = self.main.critic1(
+                o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.main_pi_tf
+            )
             if self.use_td3:
                 self.main_q2_tf = self.main.critic2(
-                    o=self.inputs_tf["o"], g=self.inputs_tf["g"], u=self.inputs_tf["u"]
+                    o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.inputs_tf["u"]
                 )
-                self.main_q2_pi_tf = self.main.critic2(o=self.inputs_tf["o"], g=self.inputs_tf["g"], u=self.main_pi_tf)
+                self.main_q2_pi_tf = self.main.critic2(
+                    o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.main_pi_tf
+                )
             # output for shaping
-            self.main_shaping_pi_tf = self.main.actor(o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"])
+            self.main_shaping_pi_tf = self.main.actor(
+                o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"] if self.dimg != 0 else None
+            )
 
         with tf.variable_scope("target"):
             self.target = ActorCritic(
@@ -396,20 +404,22 @@ class DDPG(object):
                 add_pi_noise=self.use_td3,
             )
             # actor output
-            self.target_pi_tf = self.target.actor(o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"])
+            self.target_pi_tf = self.target.actor(
+                o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"] if self.dimg != 0 else None
+            )
             # critic output
             self.target_q_tf = self.target.critic1(
-                o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"], u=self.inputs_tf["u"]
+                o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"] if self.dimg != 0 else None, u=self.inputs_tf["u"]
             )
             self.target_q_pi_tf = self.target.critic1(
-                o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"], u=self.target_pi_tf
+                o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"] if self.dimg != 0 else None, u=self.target_pi_tf
             )
             if self.use_td3:
                 self.target_q2_tf = self.target.critic2(
-                    o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"], u=self.inputs_tf["u"]
+                    o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"] if self.dimg != 0 else None, u=self.inputs_tf["u"]
                 )
                 self.target_q2_pi_tf = self.target.critic2(
-                    o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"], u=self.target_pi_tf
+                    o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"] if self.dimg != 0 else None, u=self.target_pi_tf
                 )
 
         assert len(self._vars("main")) == len(self._vars("target"))
