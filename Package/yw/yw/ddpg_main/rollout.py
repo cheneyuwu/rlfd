@@ -24,7 +24,7 @@ class RolloutWorker:
         random_eps=0.0,
         rollout_batch_size=1,
         compute_Q=False,
-        history_len=100,
+        history_len=10,
         render=False,
         **kwargs
     ):
@@ -60,6 +60,7 @@ class RolloutWorker:
         self.total_reward_history = deque(maxlen=history_len)
         self.total_shaping_reward_history = deque(maxlen=history_len)
         self.Q_history = deque(maxlen=history_len)
+        self.QP_history = deque(maxlen=history_len)
         self.n_episodes = 0
 
         self.envs = [make_env() for _ in range(rollout_batch_size)]
@@ -102,7 +103,7 @@ class RolloutWorker:
         info_values = [
             np.empty((self.T, self.rollout_batch_size, self.dims["info_" + key]), np.float32) for key in self.info_keys
         ]
-        Qs = []
+        Qs, QPs = [], []
         for t in range(self.T):
             logger.debug("RolloutWorker.generate_rollouts -> step {}".format(t))
             policy_output = self.policy.get_actions(
@@ -114,8 +115,12 @@ class RolloutWorker:
             )
             if self.compute_Q:
                 u = policy_output[0]
+                # Q value
                 Q = policy_output[1]
                 Q = Q.reshape(-1, 1)
+                # Q plus P
+                QP = policy_output[2]
+                QP = QP.reshape(-1, 1)
             else:
                 u = np.array(policy_output)
             u = u.reshape(-1, self.dims["u"])
@@ -158,6 +163,7 @@ class RolloutWorker:
             shaping_rewards.append(shaping_reward.copy())
             if self.compute_Q:
                 Qs.append(Q.copy())
+                QPs.append(QP.copy())
             o[...] = o_new
             ag[...] = ag_new
         obs.append(o.copy())
@@ -165,8 +171,6 @@ class RolloutWorker:
 
         # Will contain episode info
         episode = dict(o=obs, u=acts, g=goals, ag=achieved_goals, r=rewards)
-        if self.compute_Q:
-            episode["q"] = Qs
         for key, value in zip(self.info_keys, info_values):
             episode["info_{}".format(key)] = value
         episode = RolloutWorker.convert_episode_to_batch_major(episode)
@@ -190,6 +194,7 @@ class RolloutWorker:
         # Q output from critic networks
         if self.compute_Q:
             self.Q_history.append(np.mean(Qs))
+            self.QP_history.append(np.mean(QPs))
         self.n_episodes += self.rollout_batch_size
 
         return episode
@@ -201,6 +206,7 @@ class RolloutWorker:
         self.total_shaping_reward_history.clear()
         self.success_history.clear()
         self.Q_history.clear()
+        self.QP_history.clear()
 
     def current_total_reward(self):
         return np.mean(self.total_reward_history)
@@ -213,6 +219,9 @@ class RolloutWorker:
 
     def current_mean_Q(self):
         return np.mean(self.Q_history)
+
+    def current_mean_QP(self):
+        return np.mean(self.QP_history)
 
     def save_policy(self, path):
         """Pickles the current policy for later inspection.
@@ -229,6 +238,7 @@ class RolloutWorker:
         logs += [("success_rate", np.mean(self.success_history))]
         if self.compute_Q:
             logs += [("mean_Q", np.mean(self.Q_history))]
+            logs += [("mean_Q_plus_P", np.mean(self.QP_history))]
         logs += [("episode", self.n_episodes)]
 
         if prefix is not "" and not prefix.endswith("/"):

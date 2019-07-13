@@ -120,6 +120,7 @@ if "plot" in target:
             "epoch:test/total_shaping_reward",
             "epoch:test/total_reward",
             "epoch:test/mean_Q",
+            "epoch:test/mean_Q_plus_P",
         ],
     )
 

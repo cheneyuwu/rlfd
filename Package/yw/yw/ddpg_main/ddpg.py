@@ -173,6 +173,10 @@ class DDPG(object):
 
         # values to compute
         vals = [self.main_pi_tf, self.main_q_pi_tf]
+        if self.demo_shaping != None:
+            vals.append(self.main_q_pi_tf + self.demo_actor_shaping)
+        else:
+            vals.append(self.main_q_pi_tf)
         # feed
         feed = {}
         o = self._preprocess_state(o)
@@ -180,7 +184,6 @@ class DDPG(object):
         if self.dimg != 0:
             g = self._preprocess_state(g)
             feed[self.inputs_tf["g"]] = g.reshape(-1, self.dimg)
-        # feed[policy.u_tf] = np.zeros((o.size // self.dimo, self.dimu), dtype=np.float32)
         # compute
         ret = self.sess.run(vals, feed_dict=feed)
 
