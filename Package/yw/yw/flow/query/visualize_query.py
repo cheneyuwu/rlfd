@@ -170,7 +170,7 @@ def main(mode, load_dirs, save, **kwargs):
     fig.set_size_inches(4 * num_cols, 4 * num_rows)
 
     for i, k in enumerate(query_ls):
-        x = 0.15 + 0.85 / num_cols * i
+        x = 0.14 + 0.83 / num_cols * i
         plt.figtext(
             x, 0.95, k.replace("query_", ""), ha="center", va="center", fontsize=14, color="r", rotation="horizontal"
         )
