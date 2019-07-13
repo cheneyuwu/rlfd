@@ -20,7 +20,7 @@ from yw.util.cmd_util import ArgParser
 
 def visualize_potential_surface(ax, res):
 
-    ax.plot_surface(*res["o"], res["potential"])
+    ax.plot_trisurf(res["o"][:, 0],res["o"][:, 1], res["surf"][:, 0])
     ax.set_xlabel("s1")
     ax.set_ylabel("s2")
     ax.set_zlabel("potential")
