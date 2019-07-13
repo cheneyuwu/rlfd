@@ -4,8 +4,7 @@ import sys
 from train import Experiment, Demo, Train, Display, Plot
 from train import exp_parser
 
-from yw.flow import visualize_query
-from yw.flow.query import query_action
+from yw.flow.query import generate_query, visualize_query
 
 
 class Query(Experiment):
@@ -42,16 +41,16 @@ class QueryPolicy(Experiment):
 
     def __init__(self):
         super().__init__()
-        self.launch_function = query_action.main
-        self.parser = query_action.ap
+        self.launch_function = generate_query.main
+        self.parser = generate_query.ap
 
     @Experiment.execute
     def query(self, **override):
         command = self.shared_cmd.copy()
         command["save"] = 1
         command["directory"] = [
-            os.path.join(self.result_dir, "RLDemoMAF"),
-            # os.path.join(self.result_dir, "*") need this
+            # os.path.join(self.result_dir, "RLDemoMAF"),
+            os.path.join(self.result_dir, "*")  # need this
         ]
         return command
 
@@ -78,83 +77,38 @@ plot_exp.result_dir = result_dir
 query_exp.result_dir = result_dir
 query_policy_exp.result_dir = result_dir
 
-# Specify the environment and reward type.
-# If you want to use dense reward, add "Dense" to the reward name and make sure the env manager recognizes that.
-# Please follow this convention so that you can plot the same env with different reward types in the same graph.
-environment = "Reach2DFDense"
-demo_data_size = 32
-seed = 0
+# Train the RL without demonstration using dense reward.
+if "rldense" in target:
+    train_exp.launch(root_dir=os.path.join(train_exp.result_dir, "RLDense"))
 
-train_exp.set_shared_cmd(env=environment, n_cycles=10, train_rl_epochs=500, ddpg__action_l2=0.5)
-demo_exp.set_shared_cmd(num_demo=demo_data_size)
+# Generate demonstration data
+if "demo" in target:
+    demo_exp.generate_demo(
+        num_demo=100, policy_file=os.path.join(demo_exp.result_dir, "RLDense/rl/policy_latest.pkl"), seed=seed + 20
+    )
 
-for i in range(1):
+# Train the RL without demonstration using sparse reward.
+if "rlsparse" in target:
+    train_exp.launch(root_dir=os.path.join(train_exp.result_dir, "RL"))
 
-    # Change seed value in each iteration
-    seed += i * 100
+# Train the RL with demonstration through BC
+if "bc" in target:
+    train_exp.launch(root_dir=os.path.join(train_exp.result_dir, "RLDemoBC"))
 
-    # Change the result directory so that different seed goes to different directory
-    # train_exp.result_dir = os.path.join(result_dir, "Exp" + str(i))
-    # demo_exp.result_dir = os.path.join(result_dir, "Exp" + str(i))
 
-    # Train the RL without demonstration using dense reward.
-    if "rldense" in target:
-        train_exp.rl_only_dense(env="Reach2DFDense", seed=seed + 0)
+# Train the RL with demonstration through shaping
+if "norm" in target:
+    train_exp.launch(root_dir=os.path.join(train_exp.result_dir, "RLDemoNorm"))
 
-    # Generate demonstration data
-    if "demo" in target:
-        demo_exp.generate_demo(
-            policy_file=os.path.join(demo_exp.result_dir, "RLDense/rl/policy_latest.pkl"), seed=seed + 20
-        )
 
-    # Train the RL without demonstration using sparse reward.
-    if "rlsparse" in target:
-        train_exp.rl_only(seed=seed + 10)
+# Train the RL with demonstration through shaping
+if "maf" in target:
+    train_exp.launch(root_dir=os.path.join(train_exp.result_dir, "RLDemoMAF"))
 
-    # Train the RL with demonstration through BC
-    if "bc" in target:
-        train_exp.rl_with_bc(
-            seed=seed + 30,
-            rl_batch_size_demo=128,
-            num_demo=demo_data_size,
-            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment.replace("Dense", "") + ".npz"),
-        )
 
-    # Train the RL with demonstration through shaping
-    if "norm" in target:
-        train_exp.rl_with_shaping(
-            logdir=os.path.join(train_exp.result_dir, "RLDemoNorm"),
-            save_path=os.path.join(train_exp.result_dir, "RLDemoNorm"),
-            seed=seed + 40,
-            num_demo=demo_data_size,
-            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment.replace("Dense", "") + ".npz"),
-            demo_critic="norm",
-            # shaping_policy=os.path.join(train_exp.result_dir, "RLDemoShaping", "shaping/shaping_latest.ckpt"),
-        )
-
-    # Train the RL with demonstration through shaping
-    if "maf" in target:
-        train_exp.rl_with_shaping(
-            logdir=os.path.join(train_exp.result_dir, "RLDemoMAF"),
-            save_path=os.path.join(train_exp.result_dir, "RLDemoMAF"),
-            seed=seed + 40,
-            num_demo=demo_data_size,
-            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment.replace("Dense", "") + ".npz"),
-            demo_critic="maf",
-            # shaping_policy=os.path.join(train_exp.result_dir, "RLDemoShaping", "shaping/shaping_latest.ckpt"),
-        )
-
-    # Train the RL with demonstration through shaping
-    if "manual" in target:
-        train_exp.rl_with_shaping(
-            logdir=os.path.join(train_exp.result_dir, "RLDemoManual"),
-            save_path=os.path.join(train_exp.result_dir, "RLDemoManual"),
-            seed=seed + 40,
-            num_demo=demo_data_size,
-            demo_file=os.path.join(train_exp.result_dir, "DemoData", environment.replace("Dense", "") + ".npz"),
-            demo_critic="manual",
-            # shaping_policy=os.path.join(train_exp.result_dir, "RLDemoShaping", "shaping/shaping_latest.ckpt"),
-        )
+# Train the RL with demonstration through shaping
+if "manual" in target:
+    train_exp.launch(logdir=os.path.join(train_exp.result_dir, "RLDemoManual"))
 
 
 # Plot the training result

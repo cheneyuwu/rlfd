@@ -93,71 +93,11 @@ class Train(Experiment):
         self.launch_function = train_ddpg_main.main
         self.parser = train_ddpg_main.ap
         self.use_mpi = True
-        # command common to all sub exps
-        self.set_shared_cmd(
-            loglevel=2,
-            save_interval=2,
-            env="Reach2D",
-        )
 
     @Experiment.execute
-    def rl_only_dense(self, **kwargs):
+    def launch(self, **kwargs):
         command = self.shared_cmd.copy()
-        command["logdir"] = os.path.join(self.result_dir, "RLDense")
-        command["save_path"] = os.path.join(self.result_dir, "RLDense")
-        command["rl_replay_strategy"] = "none"
-        return command
-
-    @Experiment.execute
-    def rl_her_only(self, **kwargs):
-        command = self.shared_cmd.copy()
-        command["logdir"] = os.path.join(self.result_dir, "RLHER")
-        command["save_path"] = os.path.join(self.result_dir, "RLHER")
-        command["rl_replay_strategy"] = "her"
-        return command
-
-    @Experiment.execute
-    def rl_only(self, **kwargs):
-        command = self.shared_cmd.copy()
-        command["logdir"] = os.path.join(self.result_dir, "RL")
-        command["save_path"] = os.path.join(self.result_dir, "RL")
-        command["rl_replay_strategy"] = "none"
-        return command
-
-    @Experiment.execute
-    def rl_her_with_shaping(self, **kwargs):
-        command = self.shared_cmd.copy()
-        command["logdir"] = os.path.join(self.result_dir, "RLHERDemoShaping")
-        command["save_path"] = os.path.join(self.result_dir, "RLDemoShaping")
-        command["rl_replay_strategy"] = "her"
-        command["demo_critic"] = "maf"
-        return command
-
-    @Experiment.execute
-    def rl_with_shaping(self, **kwargs):
-        command = self.shared_cmd.copy()
-        command["logdir"] = os.path.join(self.result_dir, "RLDemoShaping")
-        command["save_path"] = os.path.join(self.result_dir, "RLDemoShaping")
-        command["rl_replay_strategy"] = "none"
-        command["demo_critic"] = "maf"
-        return command
-
-    @Experiment.execute
-    def rl_her_with_bc(self, **kwargs):
-        command = self.shared_cmd.copy()
-        command["logdir"] = os.path.join(self.result_dir, "RLHERDemoBC")
-        command["save_path"] = os.path.join(self.result_dir, "RLHERDemoBC")
-        command["rl_replay_strategy"] = "her"
-        command["demo_actor"] = "bc"
-        return command
-
-    @Experiment.execute
-    def rl_with_bc(self, **kwargs):
-        command = self.shared_cmd.copy()
-        command["logdir"] = os.path.join(self.result_dir, "RLDemoBC")
-        command["save_path"] = os.path.join(self.result_dir, "RLDemoBC")
-        command["rl_replay_strategy"] = "none"
-        command["demo_actor"] = "bc"
+        command["root_dir"] = os.path.join(self.result_dir, "RLDense")
         return command
 
 
@@ -200,12 +140,7 @@ from yw.util.cmd_util import ArgParser
 
 exp_parser = ArgParser()
 exp_parser.parser.add_argument(
-    "--target",
-    help="which script to run",
-    type=str,
-    action="append",
-    default=None,
-    dest="targets",
+    "--target", help="which script to run", type=str, action="append", default=None, dest="targets"
 )
 
 

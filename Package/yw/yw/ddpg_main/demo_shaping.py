@@ -209,7 +209,7 @@ class MAFDemoShaping(DemoShaping):
         # )
         # entropy_weight = 10.0
         self.loss = neg_log_prob  # + neg_entropy * entropy_weight
-        self.train_op = tf.train.AdamOptimizer(1e-3).minimize(self.loss)
+        self.train_op = tf.train.AdamOptimizer(1e-4).minimize(self.loss)
 
         super().__init__(gamma)
 
@@ -392,7 +392,6 @@ def test_nf(demo_file, **kwargs):
 
 if __name__ == "__main__":
 
-    # from yw.ddpg_main.replay_buffer import UniformReplayBuffer
     import sys
     from yw.util.cmd_util import ArgParser
 

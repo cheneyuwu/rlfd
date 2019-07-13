@@ -20,7 +20,7 @@ from yw.util.cmd_util import ArgParser
 
 def visualize_potential_surface(ax, res):
 
-    ax.plot_surface(*res["o"], res["potential"])
+    ax.plot_trisurf(res["o"][:, 0],res["o"][:, 1], res["surf"][:, 0])
     ax.set_xlabel("s1")
     ax.set_ylabel("s2")
     ax.set_zlabel("potential")
@@ -113,7 +113,11 @@ def create_plot(frame, fig, load_dirs, query_ls):
                     rotation="vertical",
                 )
 
-            if query in ["query_potential_surface"]:
+            if query in [
+                "query_surface_p_only",
+                "query_surface_q_only",
+                "query_surface_p_plus_q",
+            ]:
                 ax = plt.subplot(gs[i, j], projection="3d")
                 ax.clear()
                 visualize_potential_surface(ax, data[exp][query])
@@ -139,7 +143,9 @@ def main(mode, load_dirs, save, **kwargs):
         "query_optimized_q_only",
         "query_optimized_p_plus_q",
         "query_policy",
-        "query_potential_surface",
+        "query_surface_p_only",
+        "query_surface_q_only",
+        "query_surface_p_plus_q",
     ]
     data = {}
     num_frames = 0

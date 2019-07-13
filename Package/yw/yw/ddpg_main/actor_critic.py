@@ -30,55 +30,40 @@ class ActorCritic:
         self.o_stats = o_stats
         self.g_stats = g_stats
         self.add_pi_noise = add_pi_noise
-        self.hidden = hidden
-        self.layers = layers
 
         # actor
         with tf.variable_scope("pi"):
-            self.pi_nn = MLP([self.hidden] * self.layers + [self.dimu])
+            input_shape = (None, self.dimo + self.dimg)
+            self.pi_nn = MLP(input_shape=input_shape, layers_sizes=[hidden] * layers + [self.dimu])
 
         # critic
         with tf.variable_scope("Q"):
+            input_shape = (None, self.dimo + self.dimg + self.dimu)
             with tf.variable_scope("Q1"):
-                self.q1_nn = MLP([self.hidden] * self.layers + [1])
+                self.q1_nn = MLP(input_shape=input_shape, layers_sizes=[hidden] * layers + [1])
             with tf.variable_scope("Q2"):
-                self.q2_nn = MLP([self.hidden] * self.layers + [1])
+                self.q2_nn = MLP(input_shape=input_shape, layers_sizes=[hidden] * layers + [1])
 
     def actor(self, o, g):
-
         state = self._normalize_concat_state(o, g)
-
-        with tf.variable_scope("pi"):
-            # has to be in the correct scope when calling this script
-            nn_pi_tf = tf.tanh(self.pi_nn(state))
-            if self.add_pi_noise:  # for td3, add noise!
-                nn_pi_tf += tfd.Normal(loc=[0.0] * self.dimu, scale=1.0).sample([tf.shape(o)[0]])
-                nn_pi_tf = tf.clip_by_value(nn_pi_tf, -1.0, 1.0)
-            pi_tf = self.max_u * nn_pi_tf
-
+        nn_pi_tf = tf.tanh(self.pi_nn(state))
+        if self.add_pi_noise:  # for td3, add noise!
+            nn_pi_tf += tfd.Normal(loc=[0.0] * self.dimu, scale=1.0).sample([tf.shape(o)[0]])
+            nn_pi_tf = tf.clip_by_value(nn_pi_tf, -1.0, 1.0)
+        pi_tf = self.max_u * nn_pi_tf
         return pi_tf
 
     def critic1(self, o, g, u):
-
         state = self._normalize_concat_state(o, g)
-
-        with tf.variable_scope("Q"):
-            with tf.variable_scope("Q1"):
-                # has to be in the correct scope when calling this script
-                input_q = tf.concat(axis=1, values=[state, u / self.max_u])
-                q_tf = self.q1_nn(input_q)
+        input_q = tf.concat(axis=1, values=[state, u / self.max_u])
+        q_tf = self.q1_nn(input_q)
 
         return q_tf
 
     def critic2(self, o, g, u):
-
         state = self._normalize_concat_state(o, g)
-
-        with tf.variable_scope("Q"):
-            with tf.variable_scope("Q2"):
-                input_q = tf.concat(axis=1, values=[state, u / self.max_u])
-                # has to be in the correct scope when calling this script
-                q_tf = self.q2_nn(input_q)
+        input_q = tf.concat(axis=1, values=[state, u / self.max_u])
+        q_tf = self.q2_nn(input_q)
 
         return q_tf
 
@@ -89,4 +74,3 @@ class ActorCritic:
             goal = self.g_stats.normalize(g)
             state = tf.concat(axis=1, values=[state, goal])
         return state
-
