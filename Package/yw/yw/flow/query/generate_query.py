@@ -20,6 +20,7 @@ from yw.util.util import set_global_seeds
 from yw.util.tf_util import nn
 from yw.flow.query import visualize_query
 
+
 def query(directory, save):
     """Generate demo from policy file
     """
@@ -37,7 +38,7 @@ def query(directory, save):
     u_r = 1.0 * np.ones((num_point ** 2, 2))
 
     for loss_mode in ["surface_q_only", "surface_p_only", "surface_p_plus_q"]:
-        
+
         # reset default graph every time this function is called.
         tf.reset_default_graph()
         # Set random seed for the current graph
@@ -54,7 +55,6 @@ def query(directory, save):
         inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, policy.dimo))
         inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, policy.dimg))
         inputs_tf["u"] = tf.placeholder(tf.float32, shape=(None, policy.dimu))
-
 
         q_value = policy.main.critic1(o=inputs_tf["o"], g=inputs_tf["g"], u=inputs_tf["u"])
         if policy.demo_shaping != None:
@@ -119,7 +119,7 @@ def query(directory, save):
 
             # add loss function and trainer
             q_tf = policy.main.critic1(o=inputs_tf["o"], g=inputs_tf["g"], u=pi_tf)
-            if "demo_shaping" in policy.__dict__.keys():
+            if policy.demo_shaping != None:
                 p_tf = policy.demo_shaping.potential(o=inputs_tf["o"], g=inputs_tf["g"], u=pi_tf)
             else:
                 p_tf = None
