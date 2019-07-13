@@ -19,7 +19,7 @@ from yw.util.tf_util import flatten_grads
 import matplotlib.pylab as pl
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.mplot3d import Axes3D
-from yw.flow import visualize_query
+from yw.flow.query import visualize_query
 
 
 class DDPG(object):
@@ -352,9 +352,9 @@ class DDPG(object):
             self.inputs_tf["g_2"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
 
         # create a normalizer for goal and observation.
-        with tf.variable_scope("o_stats") as vs:
+        with tf.variable_scope("o_stats"):
             self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
-        with tf.variable_scope("g_stats") as vs:
+        with tf.variable_scope("g_stats"):
             self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
 
         # models
@@ -415,7 +415,7 @@ class DDPG(object):
         assert len(self._vars("main")) == len(self._vars("target"))
 
         # Add shaping reward
-        with tf.variable_scope("shaping") as vs:
+        with tf.variable_scope("shaping"):
             if self.demo_strategy == "manual":
                 self.demo_shaping = ManualDemoShaping(gamma=self.gamma)
             elif self.demo_strategy == "norm":
@@ -740,40 +740,6 @@ class DDPG(object):
             pl.savefig(filename)
         # pl.show()
         # pl.pause(0.001)
-
-    def query_potential_surface(self, filename=None, fid=0):
-        """Check the output from demo shaping potential function
-        """
-
-        potential = self.demo_shaping_check
-
-        num_point = 24
-        ls = np.linspace(-1.0, 1.0, num_point)
-        ls2 = ls * 2
-        o_1, o_2 = np.meshgrid(ls, ls)
-        u_1, u_2 = np.meshgrid(ls2, ls2)
-        o_r = np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1)
-        u_r = np.concatenate((u_1.reshape(-1, 1), u_2.reshape(-1, 1)), axis=1)
-        g_r = np.zeros((num_point ** 2, 2))
-
-        feed = {self.inputs_tf["o"]: o_r, self.inputs_tf["u"]: u_r, self.inputs_tf["g"]: g_r}
-        ret = self.sess.run(potential, feed_dict=feed)
-        ret = ret.reshape((num_point, num_point))
-
-        res = {"o": (o_1, o_2), "potential": ret}
-
-        if filename:
-            logger.info("Query: action over state space -> storing query results to {}".format(filename))
-            np.savez_compressed(filename, **res)
-        else:
-            # plot the result on the fly
-            pl.figure(fid)
-            gs = gridspec.GridSpec(1, 1)
-            ax = pl.subplot(gs[0, 0], projection="3d")
-            ax.clear()
-            visualize_query.visualize_potential_surface(ax, res)
-            pl.show()
-            pl.pause(0.001)
 
     def query_policy(self, filename=None, fid=0):
 

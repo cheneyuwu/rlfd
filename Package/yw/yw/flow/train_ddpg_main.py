@@ -63,9 +63,7 @@ def train(
 
                 if rank == 0 and epoch % (num_epoch / 10) == (num_epoch / 10 - 1):
                     logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-                    # query
-                    policy.query_potential_surface(filename=None, fid=0)
-
+                    
                 if rank == 0 and epoch % 100 == 0:
                     logger.info("Saving latest policy to {}.".format(latest_shaping_path))
                     policy.save_shaping_weights(latest_shaping_path)
@@ -176,6 +174,9 @@ def main(root_dir, **kwargs):
     else:
         logger.warn("WARNING: params.json not found! using the default parameters.")
         params = config.DEFAULT_PARAMS.copy()
+        if rank == 0:
+            with open(param_file, "w") as f:
+                json.dump(params, f)
 
     # Reset default graph (must be called before setting seed)
     tf.reset_default_graph()

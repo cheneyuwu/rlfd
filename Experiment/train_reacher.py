@@ -4,8 +4,7 @@ import sys
 from train import Experiment, Demo, Train, Display, Plot
 from train import exp_parser
 
-from yw.flow import visualize_query
-from yw.flow.query import query_action
+from yw.flow.query import generate_query, visualize_query
 
 
 class Query(Experiment):
@@ -42,16 +41,16 @@ class QueryPolicy(Experiment):
 
     def __init__(self):
         super().__init__()
-        self.launch_function = query_action.main
-        self.parser = query_action.ap
+        self.launch_function = generate_query.main
+        self.parser = generate_query.ap
 
     @Experiment.execute
     def query(self, **override):
         command = self.shared_cmd.copy()
         command["save"] = 1
         command["directory"] = [
-            os.path.join(self.result_dir, "RLDemoMAF"),
-            # os.path.join(self.result_dir, "*") need this
+            # os.path.join(self.result_dir, "RLDemoMAF"),
+            os.path.join(self.result_dir, "*")  # need this
         ]
         return command
 

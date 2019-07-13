@@ -18,9 +18,9 @@ from yw.tool import logger
 from yw.ddpg_main import config
 from yw.util.util import set_global_seeds
 from yw.util.tf_util import nn
-from yw.flow import visualize_query
+from yw.flow.query import visualize_query
 
-def query_surface(directory, save):
+def query(directory, save):
     """Generate demo from policy file
     """
     assert directory != None, "Must provide the base directory!"
@@ -57,7 +57,7 @@ def query_surface(directory, save):
 
 
         q_value = policy.main.critic1(o=inputs_tf["o"], g=inputs_tf["g"], u=inputs_tf["u"])
-        if "demo_shaping" in policy.__dict__.keys():
+        if policy.demo_shaping != None:
             potential = policy.demo_shaping.potential(o=inputs_tf["o"], g=inputs_tf["g"], u=inputs_tf["u"])
         else:
             potential = None
@@ -95,23 +95,6 @@ def query_surface(directory, save):
 
         # Close the default session to prevent memory leaking
         tf.get_default_session().close()
-
-
-def query_policy(directory, save):
-    """Generate demo from policy file
-    """
-    assert directory != None, "Must provide the base directory!"
-
-    # Setup
-    policy_file = os.path.join(directory, "rl/policy_latest.pkl")  # assumed to be in this directory
-    # rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
-
-    # input data - used for both training and test set
-    num_point = 24
-    ls = np.linspace(-1.0, 1.0, num_point)
-    o_1, o_2 = np.meshgrid(ls, ls)
-    o_r = np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1)
-    g_r = 0.0 * np.ones((num_point ** 2, 2))
 
     for loss_mode in ["optimized_q_only", "optimized_p_only", "optimized_p_plus_q"]:
         # reset default graph every time this function is called.
@@ -204,8 +187,8 @@ def main(directories, save, **kwargs):
             break
 
     for d in directories:
-        query_surface(d, 0)
-        # query_policy(d, save)
+        query(d, save)
+
 
 from yw.util.cmd_util import ArgParser
 
