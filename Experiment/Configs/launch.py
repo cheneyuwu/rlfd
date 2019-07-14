@@ -73,7 +73,12 @@ def main(targets, exp_dir, policy_dir, **kwargs):
             # store json config file to the target directory
             for k, v in dir_param_dict.items():
                 if os.path.exists(k):
-                    if not input("Directory {} already exists! overwrite the directory? (!enter to cancel): ") == "":
+                    if (
+                        not input(
+                            "Directory {} already exists! overwrite the directory? (!enter to cancel): ".format(k)
+                        )
+                        == ""
+                    ):
                         print("Canceled!")
                         exit(1)
                 os.makedirs(k, exist_ok=True)
