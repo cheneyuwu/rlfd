@@ -427,6 +427,10 @@ class DDPG(object):
                 self.target_q2_pi_tf = self.target.critic2(
                     o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"] if self.dimg != 0 else None, u=self.target_pi_tf
                 )
+            # output for shaping
+            self.target_shaping_pi_tf = self.target.actor(
+                o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"] if self.dimg != 0 else None
+            )
 
         assert len(self._vars("main")) == len(self._vars("target"))
 
@@ -498,7 +502,8 @@ class DDPG(object):
                     u=self.inputs_tf["u"],
                     o_2=self.inputs_tf["o_2"],
                     g_2=self.inputs_tf["g_2"] if self.dimg != 0 else None,
-                    u_2=self.main_shaping_pi_tf,
+                    # u_2=self.main_shaping_pi_tf,
+                    u_2=self.target_shaping_pi_tf,
                 )
                 self.demo_actor_shaping = self.demo_shaping.potential(
                     o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.main_pi_tf
