@@ -23,10 +23,11 @@ from yw.ddpg_main import config
 from yw.tool import logger
 
 
-def main(policy_file, seed, num_itr, render, env_args, **kwargs):
+def main(policy_file, seed, num_itr, env_args=None, **kwargs):
 
-
-    rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0    
+    logger.configure()
+    assert logger.get_dir() is not None
+    rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
 
     # Reset default graph every time this function is called.
     tf.reset_default_graph()
@@ -46,7 +47,7 @@ def main(policy_file, seed, num_itr, render, env_args, **kwargs):
     params["eps_length"] = policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T
     params["env_args"] = dict(env_args) if env_args != None else policy.info["env_args"]
     params["seed"] = seed
-    params["render"] = render
+    params["render"] = True
     params["rollout_batch_size"] = 1
     params = config.add_env_params(params=params)
     demo = config.config_demo(params=params, policy=policy)
@@ -61,7 +62,7 @@ def main(policy_file, seed, num_itr, render, env_args, **kwargs):
         logger.record_tabular(key, np.mean(val))
     if rank == 0:
         logger.dump_tabular()
-    
+
     # Close the default session to prevent memory leaking
     tf.get_default_session().close()
 
@@ -72,9 +73,8 @@ from yw.util.cmd_util import ArgParser
 ap = ArgParser()
 
 ap.parser.add_argument("--policy_file", help="demonstration training dataset", type=str, default=None)
-ap.parser.add_argument("--seed", help="RNG seed", type=int, default=413)
+ap.parser.add_argument("--seed", help="RNG seed", type=int, default=0)
 ap.parser.add_argument("--num_itr", help="number of iterations", type=int, default=1)
-ap.parser.add_argument("--render", help="render or not", type=int, default=1)
 ap.parser.add_argument(
     "--env_arg",
     help="extra args passed to the environment",

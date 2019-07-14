@@ -27,11 +27,13 @@ def query(directory, save):
     assert directory != None, "Must provide the base directory!"
 
     # Setup
+    logger.configure()
+    assert logger.get_dir() is not None
     policy_file = os.path.join(directory, "rl/policy_latest.pkl")  # assumed to be in this directory
 
     # input data - used for both training and test set
     num_point = 24
-    ls = np.linspace(-1.0, 1.0, num_point)
+    ls = np.linspace(-1.0, 0.0, num_point)
     o_1, o_2 = np.meshgrid(ls, ls)
     o_r = np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1)
     g_r = 0.0 * np.ones((num_point ** 2, 2))
@@ -182,7 +184,7 @@ def main(directories, save, **kwargs):
             directories = []
             for d in os.listdir(root_dir):
                 path = os.path.join(root_dir, d)
-                if os.path.isdir(path) and d.startswith("RL"):
+                if os.path.isdir(path) and os.path.exists(os.path.join(path, "rl")):
                     directories.append(path)
             break
 

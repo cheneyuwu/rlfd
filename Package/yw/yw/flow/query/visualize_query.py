@@ -20,7 +20,7 @@ from yw.util.cmd_util import ArgParser
 
 def visualize_potential_surface(ax, res):
 
-    ax.plot_trisurf(res["o"][:, 0],res["o"][:, 1], res["surf"][:, 0])
+    ax.plot_trisurf(res["o"][:, 0], res["o"][:, 1], res["surf"][:, 0])
     ax.set_xlabel("s1")
     ax.set_ylabel("s2")
     ax.set_zlabel("potential")
@@ -113,18 +113,14 @@ def create_plot(frame, fig, load_dirs, query_ls):
                     rotation="vertical",
                 )
 
-            if query in [
-                "query_surface_p_only",
-                "query_surface_q_only",
-                "query_surface_p_plus_q",
-            ]:
+            if query in ["query_surface_p_only", "query_surface_q_only", "query_surface_p_plus_q"]:
                 ax = plt.subplot(gs[i, j], projection="3d")
                 ax.clear()
                 visualize_potential_surface(ax, data[exp][query])
                 ax.set_title(exp)
 
 
-def main(mode, load_dirs, save, **kwargs):
+def main(load_dirs, save, mode="plot", **kwargs):
 
     # Allow load dir to be *
     for load_dir in load_dirs:
@@ -133,7 +129,7 @@ def main(mode, load_dirs, save, **kwargs):
             load_dirs = []
             for d in os.listdir(root_dir):
                 path = os.path.join(root_dir, d)
-                if os.path.isdir(path):
+                if os.path.isdir(path) and os.path.exists(os.path.join(path, "rl")):
                     load_dirs.append(path)
             break
 
