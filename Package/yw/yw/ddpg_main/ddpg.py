@@ -174,9 +174,7 @@ class DDPG(object):
         # values to compute
         vals = [self.main_pi_tf, self.main_q_pi_tf]
         if self.demo_shaping != None:
-            vals.append(self.main_q_pi_tf + self.demo_actor_shaping)
-        else:
-            vals.append(self.main_q_pi_tf)
+            vals.append(self.demo_actor_shaping)
         # feed
         feed = {}
         o = self._preprocess_state(o)
@@ -198,6 +196,11 @@ class DDPG(object):
             u = u[0]
         u = u.copy()
         ret[0] = u
+
+        if self.demo_shaping != None:
+            ret[2] = ret[2] + ret[1]
+        else:
+            ret.append(ret[1])
 
         if compute_Q:
             return ret
