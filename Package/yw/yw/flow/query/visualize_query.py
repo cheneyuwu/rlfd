@@ -37,8 +37,8 @@ def visualize_action(ax, res, plot_opts={}):
     for i in range(res["o"].shape[0]):
         ax.arrow(*res["o"][i], *(res["u"][i] * 0.05), head_width=0.01, **plot_opts)
     ax.axis([-1, 1, -1, 1])
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
+    ax.set_xlabel("s1")
+    ax.set_ylabel("s2")
 
 
 def create_animate(frame, data):
@@ -118,6 +118,16 @@ def create_plot(frame, fig, load_dirs, query_ls):
                 ax.clear()
                 visualize_potential_surface(ax, data[exp][query])
                 ax.set_title(exp)
+                fig.text(
+                    0.05,
+                    0.8 - 0.85 * i / num_rows,
+                    exp,
+                    ha="center",
+                    va="center",
+                    fontsize=14,
+                    color="r",
+                    rotation="vertical",
+                )
 
 
 def main(load_dirs, save, mode="plot", **kwargs):
