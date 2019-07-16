@@ -1,9 +1,9 @@
 params_config = {
     # Config Summary
-    "config": ("rldense-maf-scale1",),  # change this for each customized params file
+    "config": ("rlsparse",),  # change this for each customized params file
     "seed": 0,
     # Environment Config
-    "env_name": "Reach2DFDense",
+    "env_name": "Reach2DF",
     "r_scale": 1.0,  # scale the reward of the environment down
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 0,  # overwrite the default length of the episode
@@ -19,9 +19,9 @@ params_config = {
         "action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)
         "batch_size": 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
-        "demo_strategy": "maf",  # choose between ["none", "bc", "norm", "manual", "maf"]
+        "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "maf"]
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
-        "num_demo": 32,  # number of expert demo episodes
+        "num_demo": 0,  # number of expert demo episodes
         "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
         "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss also called the cloning loss
         # double q learning
@@ -52,7 +52,7 @@ params_config = {
     },
     # Training Config
     "train": {
-        "n_epochs": 500,
+        "n_epochs": 100,
         "n_cycles": 10,  # per epoch
         "n_batches": 40,  # training batches per cycle
         "save_interval": 2,

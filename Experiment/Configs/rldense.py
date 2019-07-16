@@ -1,6 +1,6 @@
 params_config = {
     # Config Summary
-    "config": ["rldense"],  # change this for each customized params file
+    "config": ("rldense",),  # change this for each customized params file
     "seed": 0,
     # Environment Config
     "env_name": "Reach2DFDense",
@@ -13,8 +13,7 @@ params_config = {
         "buffer_size": int(1e6),
         "scope": "ddpg",
         "use_td3": 1,  # whether or not to use td3
-        "layers": 3,  # number of layers in the critic/actor networks
-        "hidden": 256,  # number of neurons in each hidden layers
+        "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layers
         "Q_lr": 0.001,  # critic learning rate
         "pi_lr": 0.001,  # actor learning rate
         "action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)
@@ -53,7 +52,7 @@ params_config = {
     },
     # Training Config
     "train": {
-        "n_epochs": 10,
+        "n_epochs": 200,
         "n_cycles": 10,  # per epoch
         "n_batches": 40,  # training batches per cycle
         "save_interval": 2,
