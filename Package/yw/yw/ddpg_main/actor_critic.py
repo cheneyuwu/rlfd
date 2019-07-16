@@ -7,7 +7,7 @@ from yw.util.tf_util import MLP
 
 
 class ActorCritic:
-    def __init__(self, dimo, dimg, dimu, max_u, o_stats, g_stats, add_pi_noise, hidden, layers, **kwargs):
+    def __init__(self, dimo, dimg, dimu, max_u, o_stats, g_stats, add_pi_noise, layer_sizes, **kwargs):
         """The actor-critic network and related training code.
 
         Args:
@@ -17,9 +17,8 @@ class ActorCritic:
             max_u        (float)          - the maximum magnitude of actions; action outputs will be scaled accordingly
             o_stats      (Normalizer)     - normalizer for observations
             g_stats      (Normalizer)     - normalizer for goals
-            hidden       (int)            - number of hidden units that should be used in hidden layers
+            layer_sizes  (list of ints)   - number of hidden units in each layer
             add_pi_noise (bool)
-            layers       (int)            - number of hidden layers
         """
 
         # Params
@@ -34,15 +33,15 @@ class ActorCritic:
         # actor
         with tf.variable_scope("pi"):
             input_shape = (None, self.dimo + self.dimg)
-            self.pi_nn = MLP(input_shape=input_shape, layers_sizes=[hidden] * layers + [self.dimu])
+            self.pi_nn = MLP(input_shape=input_shape, layers_sizes=layer_sizes + [self.dimu])
 
         # critic
         with tf.variable_scope("Q"):
             input_shape = (None, self.dimo + self.dimg + self.dimu)
             with tf.variable_scope("Q1"):
-                self.q1_nn = MLP(input_shape=input_shape, layers_sizes=[hidden] * layers + [1])
+                self.q1_nn = MLP(input_shape=input_shape, layers_sizes=layer_sizes + [1])
             with tf.variable_scope("Q2"):
-                self.q2_nn = MLP(input_shape=input_shape, layers_sizes=[hidden] * layers + [1])
+                self.q2_nn = MLP(input_shape=input_shape, layers_sizes=layer_sizes + [1])
 
     def actor(self, o, g):
         state = self._normalize_concat_state(o, g)

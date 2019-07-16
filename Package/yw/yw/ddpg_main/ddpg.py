@@ -27,8 +27,7 @@ class DDPG(object):
         self,
         input_dims,
         use_td3,
-        hidden,
-        layers,
+        layer_sizes,
         polyak,
         buffer_size,
         batch_size,
@@ -71,8 +70,7 @@ class DDPG(object):
             # NN Configuration
             scope              (str)          - the scope used for the TensorFlow graph
             input_dims         (dict of ints) - dimensions for the observation (o), the goal (g), and the actions (u)
-            hidden             (int)          - number of units in the hidden layers
-            layers             (int)          - number of hidden layers
+            layer_sizes        (list of ints) - number of units in each hidden layers
             reuse              (boolean)      - whether or not the networks should be reused
             # Replay Buffer
             buffer_size        (int)          - number of transitions that are stored in the replay buffer
@@ -101,8 +99,7 @@ class DDPG(object):
         # Parameters
         self.input_dims = input_dims
         self.use_td3 = use_td3
-        self.hidden = hidden
-        self.layers = layers
+        self.layer_sizes = layer_sizes
         self.polyak = polyak
         self.buffer_size = buffer_size
         self.batch_size = batch_size
@@ -372,8 +369,7 @@ class DDPG(object):
                 max_u=self.max_u,
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
-                hidden=self.hidden,
-                layers=self.layers,
+                layer_sizes=self.layer_sizes,
                 add_pi_noise=False,
             )
             # actor output
@@ -392,10 +388,6 @@ class DDPG(object):
                 self.main_q2_pi_tf = self.main.critic2(
                     o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.main_pi_tf
                 )
-            # output for shaping
-            self.main_shaping_pi_tf = self.main.actor(
-                o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"] if self.dimg != 0 else None
-            )
 
         with tf.variable_scope("target"):
             self.target = ActorCritic(
@@ -405,8 +397,7 @@ class DDPG(object):
                 max_u=self.max_u,
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
-                hidden=self.hidden,
-                layers=self.layers,
+                layer_sizes=self.layer_sizes,
                 add_pi_noise=self.use_td3,
             )
             # actor output
@@ -427,10 +418,6 @@ class DDPG(object):
                 self.target_q2_pi_tf = self.target.critic2(
                     o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"] if self.dimg != 0 else None, u=self.target_pi_tf
                 )
-            # output for shaping
-            self.target_shaping_pi_tf = self.target.actor(
-                o=self.inputs_tf["o_2"], g=self.inputs_tf["g_2"] if self.dimg != 0 else None
-            )
 
         assert len(self._vars("main")) == len(self._vars("target"))
 
@@ -502,8 +489,7 @@ class DDPG(object):
                     u=self.inputs_tf["u"],
                     o_2=self.inputs_tf["o_2"],
                     g_2=self.inputs_tf["g_2"] if self.dimg != 0 else None,
-                    # u_2=self.main_shaping_pi_tf,
-                    u_2=self.target_shaping_pi_tf,
+                    u_2=self.target_pi_tf,
                 )
                 self.demo_actor_shaping = self.demo_shaping.potential(
                     o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None, u=self.main_pi_tf

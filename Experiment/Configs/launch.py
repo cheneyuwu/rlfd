@@ -30,7 +30,7 @@ def import_param_config(load_dir):
 def generate_params(root_dir, param_config):
     res = {root_dir: {}}  # the result is a directory name with a dict
     for param_name, param_val in param_config.items():
-        if type(param_val) == list:
+        if type(param_val) == tuple:
             new_res = {}
             for direc, params in res.items():
                 for val in param_val:
@@ -110,7 +110,7 @@ def main(targets, exp_dir, policy_dir, **kwargs):
             print("\n\n=================================================")
             print("Displaying.")
             print("=================================================")
-            display_entry(policy_file=os.path.join(policy_dir, "rl/policy_latest.pkl"), seed=0, num_itr=1)
+            display_entry(policy_file=os.path.join(policy_dir, "rl/policy_latest.pkl"), seed=0, num_itr=10)
 
         elif target == "plot" and rank == 0:
             print("\n\n=================================================")
