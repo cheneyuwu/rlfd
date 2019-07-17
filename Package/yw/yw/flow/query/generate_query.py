@@ -20,24 +20,27 @@ from yw.util.util import set_global_seeds
 from yw.util.tf_util import nn
 from yw.flow.query import visualize_query
 
+
 def query(directory, save):
     """Generate demo from policy file
     """
     assert directory != None, "Must provide the base directory!"
 
     # Setup
+    logger.configure()
+    assert logger.get_dir() is not None
     policy_file = os.path.join(directory, "rl/policy_latest.pkl")  # assumed to be in this directory
 
     # input data - used for both training and test set
     num_point = 24
-    ls = np.linspace(-1.0, 1.0, num_point)
+    ls = np.linspace(-1.0, 0.0, num_point)
     o_1, o_2 = np.meshgrid(ls, ls)
     o_r = np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1)
     g_r = 0.0 * np.ones((num_point ** 2, 2))
     u_r = 1.0 * np.ones((num_point ** 2, 2))
 
     for loss_mode in ["surface_q_only", "surface_p_only", "surface_p_plus_q"]:
-        
+
         # reset default graph every time this function is called.
         tf.reset_default_graph()
         # Set random seed for the current graph
@@ -54,7 +57,6 @@ def query(directory, save):
         inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, policy.dimo))
         inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, policy.dimg))
         inputs_tf["u"] = tf.placeholder(tf.float32, shape=(None, policy.dimu))
-
 
         q_value = policy.main.critic1(o=inputs_tf["o"], g=inputs_tf["g"], u=inputs_tf["u"])
         if policy.demo_shaping != None:
@@ -115,11 +117,11 @@ def query(directory, save):
         state_tf = tf.concat((inputs_tf["o"], inputs_tf["g"]), axis=1)
 
         with tf.variable_scope("query"):
-            pi_tf = policy.max_u * tf.tanh(nn(state_tf, [policy.hidden] * policy.layers + [policy.dimu]))
+            pi_tf = policy.max_u * tf.tanh(nn(state_tf, policy.layer_sizes + [policy.dimu]))
 
             # add loss function and trainer
             q_tf = policy.main.critic1(o=inputs_tf["o"], g=inputs_tf["g"], u=pi_tf)
-            if "demo_shaping" in policy.__dict__.keys():
+            if policy.demo_shaping != None:
                 p_tf = policy.demo_shaping.potential(o=inputs_tf["o"], g=inputs_tf["g"], u=pi_tf)
             else:
                 p_tf = None
@@ -182,7 +184,7 @@ def main(directories, save, **kwargs):
             directories = []
             for d in os.listdir(root_dir):
                 path = os.path.join(root_dir, d)
-                if os.path.isdir(path) and d.startswith("RL"):
+                if os.path.isdir(path) and os.path.exists(os.path.join(path, "rl")):
                     directories.append(path)
             break
 

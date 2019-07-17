@@ -24,8 +24,7 @@ DEFAULT_PARAMS = {
         "buffer_size": int(1e6),
         "scope": "ddpg",
         "use_td3": 1,  # whether or not to use td3
-        "layers": 3,  # number of layers in the critic/actor networks
-        "hidden": 256,  # number of neurons in each hidden layers
+        "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layer
         "Q_lr": 0.001,  # critic learning rate
         "pi_lr": 0.001,  # actor learning rate
         "action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)

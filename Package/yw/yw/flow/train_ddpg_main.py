@@ -12,7 +12,6 @@ import numpy as np
 import tensorflow as tf
 
 from yw.tool import logger
-from yw.util.cmd_util import ArgParser
 from yw.ddpg_main import config
 from yw.util.util import set_global_seeds
 from yw.util.mpi_util import mpi_average
@@ -63,7 +62,7 @@ def train(
 
                 if rank == 0 and epoch % (num_epoch / 10) == (num_epoch / 10 - 1):
                     logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-                    
+
                 if rank == 0 and epoch % 100 == 0:
                     logger.info("Saving latest policy to {}.".format(latest_shaping_path))
                     policy.save_shaping_weights(latest_shaping_path)
@@ -200,10 +199,13 @@ def main(root_dir, **kwargs):
     tf.get_default_session().close()
 
 
-ap = ArgParser()
-# logging and saving path
-ap.parser.add_argument("--root_dir", help="directory to launching process", type=str, default=None)
-
 if __name__ == "__main__":
+
+    from yw.util.cmd_util import ArgParser
+
+    ap = ArgParser()
+    # logging and saving path
+    ap.parser.add_argument("--root_dir", help="directory to launching process", type=str, default=None)
+
     ap.parse(sys.argv)
     main(**ap.get_dict())

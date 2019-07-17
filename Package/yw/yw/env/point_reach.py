@@ -27,14 +27,14 @@ class Reacher:
         self.order = order
         self.sparse = sparse
         self.dim = dim
-        self.interval = 0.1 # use 0.04 for block reach
+        self.interval = 0.1  # use 0.04 for block reach
         self.mass = 1
         self.boundary = 1.0
         self.threshold = self.boundary / 12
         self._max_episode_steps = 42 if self.order == 2 else 20
         self.max_u = 2
         self.action_space = self.ActionSpace(self.dim)
-        if self.dim == 2: # create a workspace boundary only when dim is 2
+        if self.dim == 2:  # create a workspace boundary only when dim is 2
             self.workspace = self.Block((-self.boundary, -self.boundary), 2 * self.boundary, 2 * self.boundary)
         self.blocks = []
         if block == True:
@@ -144,8 +144,7 @@ class Reacher:
 
         # The initial state and final goal is fixed
         self.goal = self.random.uniform(-0.0, 0.0) * np.ones(self.dim) * self.boundary
-        self.curr_pos = -0.8 * np.ones(self.dim) * self.boundary
-        # self.curr_pos = self.random.uniform(-0.8, 0.0, self.dim) * self.boundary
+        self.curr_pos = self.random.uniform(-0.8, -0.8) * np.ones(self.dim) * self.boundary
         if self.order == 2:
             self.speed = np.zeros(self.dim)
 

@@ -20,7 +20,7 @@ from yw.util.cmd_util import ArgParser
 
 def visualize_potential_surface(ax, res):
 
-    ax.plot_trisurf(res["o"][:, 0],res["o"][:, 1], res["surf"][:, 0])
+    ax.plot_trisurf(res["o"][:, 0], res["o"][:, 1], res["surf"][:, 0])
     ax.set_xlabel("s1")
     ax.set_ylabel("s2")
     ax.set_zlabel("potential")
@@ -36,9 +36,9 @@ def visualize_potential_surface(ax, res):
 def visualize_action(ax, res, plot_opts={}):
     for i in range(res["o"].shape[0]):
         ax.arrow(*res["o"][i], *(res["u"][i] * 0.05), head_width=0.01, **plot_opts)
-    ax.axis([-1, 1, -1, 1])
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
+    ax.axis([-1, 0, -1, 0])
+    ax.set_xlabel("s1")
+    ax.set_ylabel("s2")
 
 
 def create_animate(frame, data):
@@ -102,29 +102,26 @@ def create_plot(frame, fig, load_dirs, query_ls):
                 ax.clear()
                 visualize_action(ax, data[exp][query], plot_opts={"color": col[i]})
                 ax.legend(handles=[mpatches.Patch(color=col[i], label=exp)], loc="lower left")
-                fig.text(
-                    0.05,
-                    0.8 - 0.85 * i / num_rows,
-                    exp,
-                    ha="center",
-                    va="center",
-                    fontsize=14,
-                    color="r",
-                    rotation="vertical",
-                )
 
-            if query in [
-                "query_surface_p_only",
-                "query_surface_q_only",
-                "query_surface_p_plus_q",
-            ]:
+            if query in ["query_surface_p_only", "query_surface_q_only", "query_surface_p_plus_q"]:
                 ax = plt.subplot(gs[i, j], projection="3d")
                 ax.clear()
                 visualize_potential_surface(ax, data[exp][query])
                 ax.set_title(exp)
 
+            fig.text(
+                0.05,
+                0.8 - 0.85 * i / num_rows,
+                exp,
+                ha="center",
+                va="center",
+                fontsize=14,
+                color="r",
+                rotation="vertical",
+            )
 
-def main(mode, load_dirs, save, **kwargs):
+
+def main(load_dirs, save, mode="plot", **kwargs):
 
     # Allow load dir to be *
     for load_dir in load_dirs:
@@ -133,7 +130,7 @@ def main(mode, load_dirs, save, **kwargs):
             load_dirs = []
             for d in os.listdir(root_dir):
                 path = os.path.join(root_dir, d)
-                if os.path.isdir(path):
+                if os.path.isdir(path) and os.path.exists(os.path.join(path, "rl")):
                     load_dirs.append(path)
             break
 
@@ -170,7 +167,7 @@ def main(mode, load_dirs, save, **kwargs):
     fig.set_size_inches(4 * num_cols, 4 * num_rows)
 
     for i, k in enumerate(query_ls):
-        x = 0.15 + 0.85 / num_cols * i
+        x = 0.14 + 0.83 / num_cols * i
         plt.figtext(
             x, 0.95, k.replace("query_", ""), ha="center", va="center", fontsize=14, color="r", rotation="horizontal"
         )

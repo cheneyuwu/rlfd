@@ -69,7 +69,7 @@ def load_results(root_dir_or_dirs):
     return allresults
 
 
-def plot_results(allresults, xys, target_dir, smooth=False):
+def plot_results(allresults, xys, target_dir, smooth=0):
 
     # collect data
     data = {}
@@ -111,7 +111,7 @@ def plot_results(allresults, xys, target_dir, smooth=False):
                 xs, ys = zip(*data[env_id][xy][config])
                 xs, ys = pad(xs), pad(ys)
                 assert xs.shape == ys.shape
-                
+
                 # from openai spinning up
                 # ax.plot(xs[0], np.nanmedian(ys, axis=0), label=config)
                 # ax.fill_between(xs[0], np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25)
@@ -120,8 +120,10 @@ def plot_results(allresults, xys, target_dir, smooth=False):
                 var_y = np.nanvar(ys, axis=0)
                 ax.plot(xs[0], mean_y, label=config, color=colors[j % len(colors)])
                 ax.fill_between(xs[0], mean_y - var_y, mean_y + var_y, alpha=0.5, color=colors[j % len(colors)])
-                ax.fill_between(xs[0], mean_y - 3 * var_y, mean_y + 3 * var_y, alpha=0.25, color=colors[j % len(colors)])
-                
+                ax.fill_between(
+                    xs[0], mean_y - 3 * var_y, mean_y + 3 * var_y, alpha=0.25, color=colors[j % len(colors)]
+                )
+
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_label)
                 ax.legend(fontsize=5)
@@ -133,7 +135,7 @@ def plot_results(allresults, xys, target_dir, smooth=False):
     plt.show()
 
 
-def main(dirs, xys, save_path, smooth, **kwargs):
+def main(dirs, xys, save_path=None, smooth=0, **kwargs):
     results = load_results(dirs)
     # get directory to save results
     target_dir = save_path if save_path else dirs[0]
