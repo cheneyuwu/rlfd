@@ -117,7 +117,7 @@ def query(directory, save):
         state_tf = tf.concat((inputs_tf["o"], inputs_tf["g"]), axis=1)
 
         with tf.variable_scope("query"):
-            pi_tf = policy.max_u * tf.tanh(nn(state_tf, [policy.hidden] * policy.layers + [policy.dimu]))
+            pi_tf = policy.max_u * tf.tanh(nn(state_tf, policy.layer_sizes + [policy.dimu]))
 
             # add loss function and trainer
             q_tf = policy.main.critic1(o=inputs_tf["o"], g=inputs_tf["g"], u=pi_tf)

@@ -143,7 +143,7 @@ class Reacher:
     def reset(self):
 
         # The initial state and final goal is fixed
-        self.goal = self.random.uniform(-0.8, 0.0) * np.ones(self.dim) * self.boundary
+        self.goal = self.random.uniform(-0.0, 0.0) * np.ones(self.dim) * self.boundary
         self.curr_pos = self.random.uniform(-0.8, -0.8) * np.ones(self.dim) * self.boundary
         if self.order == 2:
             self.speed = np.zeros(self.dim)
