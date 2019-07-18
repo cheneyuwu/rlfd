@@ -7,7 +7,7 @@ from yw.util.tf_util import MLP
 
 
 class ActorCritic:
-    def __init__(self, dimo, dimg, dimu, max_u, o_stats, g_stats, add_pi_noise, layer_sizes, **kwargs):
+    def __init__(self, dimo, dimg, dimu, max_u, o_stats, g_stats, use_td3, add_pi_noise, layer_sizes, **kwargs):
         """The actor-critic network and related training code.
 
         Args:
@@ -28,6 +28,7 @@ class ActorCritic:
         self.max_u = max_u
         self.o_stats = o_stats
         self.g_stats = g_stats
+        self.use_td3 = use_td3
         self.add_pi_noise = add_pi_noise
 
         # actor
@@ -40,8 +41,9 @@ class ActorCritic:
             input_shape = (None, self.dimo + self.dimg + self.dimu)
             with tf.variable_scope("Q1"):
                 self.q1_nn = MLP(input_shape=input_shape, layers_sizes=layer_sizes + [1])
-            with tf.variable_scope("Q2"):
-                self.q2_nn = MLP(input_shape=input_shape, layers_sizes=layer_sizes + [1])
+            if self.use_td3:
+                with tf.variable_scope("Q2"):
+                    self.q2_nn = MLP(input_shape=input_shape, layers_sizes=layer_sizes + [1])
 
     def actor(self, o, g):
         state = self._normalize_concat_state(o, g)
