@@ -370,7 +370,8 @@ class DDPG(object):
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
                 layer_sizes=self.layer_sizes,
-                add_pi_noise=False,
+                use_td3=self.use_td3,
+                add_pi_noise=0,
             )
             # actor output
             self.main_pi_tf = self.main.actor(o=self.inputs_tf["o"], g=self.inputs_tf["g"] if self.dimg != 0 else None)
@@ -398,6 +399,7 @@ class DDPG(object):
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
                 layer_sizes=self.layer_sizes,
+                use_td3=self.use_td3,
                 add_pi_noise=self.use_td3,
             )
             # actor output
