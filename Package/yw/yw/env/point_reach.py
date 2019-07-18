@@ -13,7 +13,7 @@ def make(env_name, **env_args):
     try:
         _ = eval(env_name)(**env_args)
     except:
-        return NotImplementedError
+        raise NotImplementedError
     return eval(env_name)(**env_args)
 
 
@@ -90,7 +90,8 @@ class Reacher:
         distance = self._compute_distance(achieved_goal, desired_goal)
         if self.sparse == False:
             return -distance
-            # return 0.5 / (0.5 + distance)
+            # return np.maximum(-0.5, -distance)
+            # return 0.2 / (0.2 + distance)
         else:  # self.sparse == True
             return (distance < self.threshold).astype(np.int64)
 
@@ -193,15 +194,12 @@ class Reacher:
         g = self.goal
         ag = self.curr_pos
         r = self.compute_reward(ag, g)
-        # is_success or not
-        if self.order == 2:
-            position_ok = r > -self.threshold if self.sparse == False else r == 1
-            speed_ok = np.sqrt(np.sum(np.square(self.speed))) < 0.25
-            is_success = position_ok and speed_ok
-        else:
-            is_success = r > -self.threshold if self.sparse == False else r == 1
         # return distance as metric to measure performance
         distance = self._compute_distance(ag, g)
+        # is_success or not
+        is_success = distance < self.threshold
+        if self.order == 2:
+            is_success = is_success and np.sqrt(np.sum(np.square(self.speed))) < 0.25
         return (
             {"observation": obs, "desired_goal": g, "achieved_goal": ag},
             r,
