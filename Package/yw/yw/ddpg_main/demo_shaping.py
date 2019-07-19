@@ -175,7 +175,7 @@ class NormalizingFlowDemoShaping(DemoShaping):
 
 
 class MAFDemoShaping(DemoShaping):
-    def __init__(self, gamma, demo_inputs_tf):
+    def __init__(self, gamma, demo_inputs_tf, prm_loss_weight, reg_loss_weight, potential_weight):
         """
         Implement the state, action based potential function and corresponding actions
         Args:
@@ -204,12 +204,15 @@ class MAFDemoShaping(DemoShaping):
         # log probability
         neg_log_prob = -tf.reduce_mean(tf.reshape(self.nn.log_prob(demo_state_tf), (-1, 1)))
         # regularizer
-        # neg_entropy = tf.reduce_mean(
-        #     tf.reshape(self.nn.prob(demo_state_tf), (-1, 1)) * tf.reshape(self.nn.log_prob(demo_state_tf), (-1, 1))
-        # )
-        # entropy_weight = 10.0
-        self.loss = neg_log_prob  # + neg_entropy * entropy_weight
+        jacobian = tf.gradients(neg_log_prob, demo_state_tf)
+        regularizer = tf.norm(jacobian[0], ord=2)
+        self.loss = prm_loss_weight * neg_log_prob + reg_loss_weight * regularizer
+        # optimizers
         self.train_op = tf.train.AdamOptimizer(1e-4).minimize(self.loss)
+
+        # params for potentials
+        self.scale = tf.constant(5, dtype=tf.float64)
+        self.weight = tf.constant(potential_weight, dtype=tf.float64)
 
         super().__init__(gamma)
 
@@ -220,13 +223,25 @@ class MAFDemoShaping(DemoShaping):
         state_tf = self._cast_concat_inputs(o, g, u)
 
         # method 1 with shift and annealing
-        potential = tf.reshape(self.nn.log_prob(state_tf), (-1, 1))
-        potential = tf.clip_by_value(potential, -1000.0, 1000000.0)
-        potential = potential + 1000.0 # add shift
-        # potential = potential / 1000.0 # add scaling
+        potential = tf.reshape(self.nn.prob(state_tf), (-1, 1))
+        potential = tf.log(potential + tf.exp(-self.scale))
+        potential = potential + self.scale  # add shift
+        potential = self.weight * potential / self.scale  # add scaling
 
-        # method 2 a numerical trick
-        # potential = tf.reshape(tf.log(1 + self.nn.prob(state_tf)), (-1, 1))
+        # method 2 add noise to the state and take avg
+        # scale = 1000.0
+        # num_sample = 8
+        # expanded_state_tf = tf.tile(tf.expand_dims(state_tf, 1), [1, num_sample, 1])
+        # # make noise
+        # noise_dist = tfd.Normal(loc=[0.0] * expanded_state_tf.shape[-1], scale=0.04)
+        # noise_tf = tf.cast(noise_dist.sample(tf.shape(expanded_state_tf)[:-1]), tf.float64)
+        # noise_tf = tf.clip_by_value(noise_tf, -0.04, 0.04)
+        # expanded_state_with_noise_tf = expanded_state_tf + noise_tf
+        # potential = tf.reshape(self.nn.log_prob(expanded_state_with_noise_tf), (-1, num_sample, 1))
+        # potential = tf.clip_by_value(potential, -scale, 1000000.0)
+        # potential = potential + scale  # add shift
+        # potential = potential / scale  # add scaling
+        # potential = tf.reduce_mean(potential, axis=1)
 
         return tf.cast(potential, tf.float32)
 

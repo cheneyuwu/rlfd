@@ -49,7 +49,7 @@ class ActorCritic:
         state = self._normalize_concat_state(o, g)
         nn_pi_tf = tf.tanh(self.pi_nn(state))
         if self.add_pi_noise:  # for td3, add noise!
-            nn_pi_tf += tfd.Normal(loc=[0.0] * self.dimu, scale=1.0).sample([tf.shape(o)[0]])
+            nn_pi_tf += tfd.Normal(loc=[0.0] * self.dimu, scale=0.1).sample([tf.shape(o)[0]])
             nn_pi_tf = tf.clip_by_value(nn_pi_tf, -1.0, 1.0)
         pi_tf = self.max_u * nn_pi_tf
         return pi_tf

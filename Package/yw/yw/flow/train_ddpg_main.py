@@ -71,8 +71,8 @@ def train(
                 logger.info("Saving latest policy to {}.".format(latest_shaping_path))
                 policy.save_shaping_weights(latest_shaping_path)
         else:
-            logger.info("Using the provided policy weights: {}".format(shaping_policy))
-            policy.load_shaping_weights(shaping_policy)
+            logger.info("Using the provided policy weights: {}".format(latest_shaping_path))
+            policy.load_shaping_weights(latest_shaping_path)
             # query
             # dims = list(range(policy.dimo + policy.dimg))
             # for dim1, dim2 in combinations(dims, 2):

@@ -84,7 +84,7 @@ def create_plot(frame, fig, load_dirs, query_ls):
     num_cols = len(query_ls)
     # fig.set_size_inches(4 * num_cols, 4 * num_rows)
     gs = gridspec.GridSpec(num_rows, num_cols)
-    col = cm.jet(np.linspace(0, 0.5, num_cols))
+    col = cm.jet(np.linspace(0, 1.0, num_rows))
 
     for i, exp in enumerate(data.keys()):
         for j, query in enumerate(query_ls):

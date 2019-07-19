@@ -48,6 +48,7 @@ class DDPG(object):
         batch_size_demo,
         prm_loss_weight,
         aux_loss_weight,
+        shaping_params,
         replay_strategy,
         gamma,
         info,
@@ -121,6 +122,7 @@ class DDPG(object):
         self.prm_loss_weight = prm_loss_weight
         self.aux_loss_weight = aux_loss_weight
         self.replay_strategy = replay_strategy
+        self.shaping_params = shaping_params
         self.gamma = gamma
         self.info = info
 
@@ -480,7 +482,9 @@ class DDPG(object):
                 self.demo_inputs_tf = self.demo_iter_tf.get_next()
 
                 # self.demo_shaping = NormalizingFlowDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
-                self.demo_shaping = MAFDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
+                self.demo_shaping = MAFDemoShaping(
+                    gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params
+                )
             else:
                 self.demo_shaping = None
 

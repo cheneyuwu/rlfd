@@ -22,7 +22,7 @@ from yw.flow.query.visualize_query import main as visualize_query_entry
 def import_param_config(load_dir):
     """Assume that there is a gv called params_config that contains all the params
     """
-    module = importlib.import_module(load_dir.replace(".py", ""))
+    module = importlib.import_module(load_dir.replace("/", ".").replace(".py", ""))
     params_config = getattr(module, "params_config")
     return params_config
 
