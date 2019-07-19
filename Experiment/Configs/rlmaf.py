@@ -1,6 +1,6 @@
 params_config = {
     # Config Summary
-    "config": ("rldense-maf-scale1",),  # change this for each customized params file
+    "config": ("RLwithMAFShaping",),  # change this for each customized params file
     "seed": 0,
     # Environment Config
     "env_name": "Reach2DFDense",
@@ -11,21 +11,26 @@ params_config = {
     # DDPG Config
     "ddpg": {
         "buffer_size": int(1e6),
+        # replay strategy to be used
+        "replay_strategy": "none",  # choose between ["her", "none"] (her for hindsight exp replay)
+        # networks
         "scope": "ddpg",
         "use_td3": 1,  # whether or not to use td3
         "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layers
         "Q_lr": 0.001,  # critic learning rate
         "pi_lr": 0.001,  # actor learning rate
-        "action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)
+        "action_l2": 0.1,  # quadratic penalty on actions (before rescaling by max_u)
         "batch_size": 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
-        "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
-        "demo_strategy": "maf",  # choose between ["none", "bc", "norm", "manual", "maf"]
-        "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
-        "num_demo": 32,  # number of expert demo episodes
-        "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
-        "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss also called the cloning loss
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
+        # use demonstrations
+        "demo_strategy": "maf",  # choose between ["none", "bc", "norm", "manual", "maf"]
+        "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
+        "num_demo": 32,  # number of expert demo episodes
+        "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
+        "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
+        "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss also called the cloning loss
+        "shaping_params": {"prm_loss_weight": 1.0, "reg_loss_weight": 500.0, "potential_weight": 5.0},
         # normalization
         "norm_eps": 0.01,  # epsilon used for observation normalization
         "norm_clip": 5,  # normalized observations are cropped to this values
@@ -33,8 +38,6 @@ params_config = {
         "clip_obs": 200.0,
         "clip_pos_returns": False,  # Whether or not this environment has positive return or not.
         "clip_return": False,
-        # replay strategy to be used
-        "replay_strategy": "none",  # choose between ["her", "none"] (her for hindsight exp replay)
     },
     # HER Config
     "her": {"k": 4},  # number of additional goals used for replay

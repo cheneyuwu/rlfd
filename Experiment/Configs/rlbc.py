@@ -1,9 +1,9 @@
 params_config = {
     # Config Summary
-    "config": ("RL",),  # change this for each customized params file
+    "config": ("RLwithBC",),  # change this for each customized params file
     "seed": 0,
     # Environment Config
-    "env_name": "Reach2DF",
+    "env_name": "Reach2DFDense",
     "r_scale": 1.0,  # scale the reward of the environment down
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 0,  # overwrite the default length of the episode
@@ -24,9 +24,9 @@ params_config = {
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
         # use demonstrations
-        "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "maf"]
+        "demo_strategy": "bc",  # choose between ["none", "bc", "norm", "manual", "maf"]
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
-        "num_demo": 0,  # number of expert demo episodes
+        "num_demo": 32,  # number of expert demo episodes
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
         "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
         "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss also called the cloning loss
