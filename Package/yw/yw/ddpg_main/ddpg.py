@@ -759,6 +759,9 @@ class DDPG(object):
         """Only use this function for 1d first order reacher problem
         """
 
+        if not "Reach2D" in self.info["env_name"]:
+            return
+
         num_point = 24
         ls = np.linspace(-1.0, 1.0, num_point)
         o_1, o_2 = np.meshgrid(ls, ls)
