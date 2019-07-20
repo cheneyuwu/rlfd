@@ -41,11 +41,7 @@ DEFAULT_PARAMS = {
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
         "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
         "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss also called the cloning loss
-        "shaping_params": {
-            "prm_loss_weight": 1.0,
-            "reg_loss_weight": 500.0,
-            "potential_weight": 5.0,
-        },
+        "shaping_params": {"prm_loss_weight": 1.0, "reg_loss_weight": 500.0, "potential_weight": 5.0},
         # normalization
         "norm_eps": 0.01,  # epsilon used for observation normalization
         "norm_clip": 5,  # normalized observations are cropped to this values
@@ -169,7 +165,7 @@ def configure_her(params):
     return her_params
 
 
-def configure_ddpg(params):
+def configure_ddpg(params, comm=None):
     # Extract relevant parameters.
     ddpg_params = params["ddpg"]
 
@@ -201,7 +197,7 @@ def configure_ddpg(params):
     log_params(ddpg_params)
     logger.info("*** ddpg_params ***")
 
-    policy = DDPG(**ddpg_params)
+    policy = DDPG(**ddpg_params, comm=comm)
     return policy
 
 

@@ -15,7 +15,7 @@ except ImportError:
     MPI = None
 
 from yw.tool import logger
-from yw.util.mpi_util import mpi_input
+from yw.util.mpi_util import mpi_input, mpi_exit
 from yw.flow.train_ddpg_main import main as train_entry
 from yw.flow.generate_demo import main as demo_entry
 from yw.flow.plot import main as plot_entry
@@ -63,9 +63,15 @@ def generate_params(root_dir, param_config):
 def main(targets, exp_dir, policy_dir, **kwargs):
 
     # Consider rank as pid.
-    rank = MPI.COMM_WORLD.Get_rank() if MPI is not None else 0
+    comm = MPI.COMM_WORLD if MPI is not None else None
+    total_num_cpu = comm.Get_size() if comm is not None else 1
+    rank = comm.Get_rank() if comm is not None else 0
+
+    # Use the default logger setting
+    logger.configure()
 
     for target in targets:
+
         if "train:" in target:
             logger.info("\n\n=================================================")
             logger.info("Launching the training experiment!")
@@ -76,31 +82,65 @@ def main(targets, exp_dir, policy_dir, **kwargs):
             dir_param_dict = generate_params(exp_dir, params_config)
 
             # store json config file to the target directory
-            for k, v in dir_param_dict.items():
-                if os.path.exists(k):
-                    if (
-                        not mpi_input(
-                            "Directory {} already exists! overwrite the directory? (!enter to cancel): ".format(k)
-                        )
-                        == ""
-                    ):
-                        logger.info("Canceled!")
-                        exit(1)
-                os.makedirs(k, exist_ok=True)
-                # copy params.json file
-                with open(os.path.join(k, "params.json"), "w") as f:
-                    json.dump(v, f)
-                # copy demo_sata file if exist
-                demo_file = os.path.join(exp_dir, "demo_data.npz")
-                demo_dest = os.path.join(k, "demo_data.npz")
-                if os.path.isfile(demo_file):
-                    copyfile(demo_file, demo_dest)
+            if rank == 0:
+                for k, v in dir_param_dict.items():
+                    if os.path.exists(k):
+                        msg = "Directory {} already exists! overwrite the directory? (!enter to cancel): ".format(k)
+                        if not input(msg) == "":
+                            logger.info("Canceled!")
+                            mpi_exit(1)
+                    os.makedirs(k, exist_ok=True)
+                    # copy params.json file
+                    with open(os.path.join(k, "params.json"), "w") as f:
+                        json.dump(v, f)
+                    # copy demo_sata file if exist
+                    demo_file = os.path.join(exp_dir, "demo_data.npz")
+                    demo_dest = os.path.join(k, "demo_data.npz")
+                    if os.path.isfile(demo_file):
+                        copyfile(demo_file, demo_dest)
+
+            # sync the process
+            comm.Barrier()
+
+            if policy_dir == None:
+                policy_dir = list(dir_param_dict.keys())[0]
+                logger.info("Setting policy_dir to {}".format(policy_dir))
 
             # run experiments
-            for k in dir_param_dict.keys():
-                train_entry(root_dir=k)
-                if policy_dir == None:
-                    policy_dir = k
+            parallel = 1  # change this number to allow launching in serial
+            num_cpu = 2  # change this number to allow multiple processes
+            # total num exps
+            num_exp = len(dir_param_dict.keys())
+
+            if comm is None:
+                logger.info("No MPI provided. Launching scripts in series.")
+                for k in dir_param_dict.keys():
+                    train_entry(root_dir=k)
+
+            elif not parallel:
+                logger.info("{} experiments in series. ({} cpus for each experiment)".format(num_exp, num_cpu))
+                assert num_cpu <= total_num_cpu, "no enough cpu! need {} cpus".format(num_cpu)
+                comm_for_exps = comm.Split(color=int(rank >= num_cpu))
+                if rank < num_cpu:
+                    assert comm_for_exps.Get_size() == num_cpu
+                    for k in dir_param_dict.keys():
+                        train_entry(root_dir=k, comm=comm_for_exps)
+
+            else:
+                logger.info("{} experiments in parallel. ({} cpus for each experiment)".format(num_exp, num_cpu))
+                cpus_for_training = num_exp * num_cpu
+                assert cpus_for_training <= total_num_cpu, "no enough cpu! need {} cpus".format(cpus_for_training)
+                # select processes to run the experiment, which is [0, num_exp]
+                comm_for_exps = comm.Split(color=int(rank >= cpus_for_training))
+                if rank < cpus_for_training:
+                    assert comm_for_exps.Get_size() == cpus_for_training
+                    color_for_each_exp = comm_for_exps.Get_rank() % num_exp
+                    comm_for_each_exp = comm_for_exps.Split(color=color_for_each_exp)
+                    assert comm_for_each_exp.Get_size() == num_cpu
+                    k = list(dir_param_dict.keys())
+                    train_entry(root_dir=k[color_for_each_exp], comm=comm_for_each_exp)
+
+            comm.Barrier()
 
         elif target == "demo":
             assert policy_dir != None
@@ -150,6 +190,8 @@ def main(targets, exp_dir, policy_dir, **kwargs):
 
         else:
             assert 0, "unknown target: {}".format(target)
+
+        logger.reset()
 
     return
 

@@ -52,6 +52,7 @@ class DDPG(object):
         replay_strategy,
         gamma,
         info,
+        comm,
         **kwargs
     ):
         """Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER).
@@ -125,6 +126,7 @@ class DDPG(object):
         self.shaping_params = shaping_params
         self.gamma = gamma
         self.info = info
+        self.comm = comm
 
         # Prepare parameters
         self.dimo = self.input_dims["o"]
@@ -358,9 +360,9 @@ class DDPG(object):
 
         # create a normalizer for goal and observation.
         with tf.variable_scope("o_stats"):
-            self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
+            self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm)
         with tf.variable_scope("g_stats"):
-            self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
+            self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm)
 
         # models
         with tf.variable_scope("main"):
@@ -581,8 +583,8 @@ class DDPG(object):
         self.pi_grad_tf = flatten_grads(grads=pi_grads_tf, var_list=self._vars("main/pi"))
 
         # Optimizers
-        self.Q_adam = MpiAdam(self._vars("main/Q"), scale_grad_by_procs=False)
-        self.pi_adam = MpiAdam(self._vars("main/pi"), scale_grad_by_procs=False)
+        self.Q_adam = MpiAdam(self._vars("main/Q"), scale_grad_by_procs=False, comm=self.comm)
+        self.pi_adam = MpiAdam(self._vars("main/pi"), scale_grad_by_procs=False, comm=self.comm)
 
         # Polyak averaging
         self.main_vars = self._vars("main/Q") + self._vars("main/pi")
@@ -638,7 +640,7 @@ class DDPG(object):
 
         # """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
         # """
-        excluded_names = ["self", "replay_strategy"]
+        excluded_names = ["self", "replay_strategy", "comm"]
 
         state = {k: v for k, v in self.init_args.items() if not k in excluded_names}
         state["tf"] = self.sess.run([x for x in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)])
@@ -646,9 +648,8 @@ class DDPG(object):
 
     def __setstate__(self, state):
 
-        # We don't need the replay strategy for playing the policy.
-        assert "replay_strategy" not in state
         state["replay_strategy"] = None
+        state["comm"] = None
 
         kwargs = state["kwargs"]
         del state["kwargs"]

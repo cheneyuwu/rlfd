@@ -20,7 +20,17 @@ from itertools import combinations  # for dimension projection
 
 
 def train(
-    root_dir, save_interval, policy, rollout_worker, evaluator, n_epochs, n_batches, n_cycles, shaping_policy, **kwargs
+    comm,
+    root_dir,
+    save_interval,
+    policy,
+    rollout_worker,
+    evaluator,
+    n_epochs,
+    n_batches,
+    n_cycles,
+    shaping_policy,
+    **kwargs
 ):
     logger.info(
         "Training the RL agent with n_epochs: {:d}, n_cycles: {:d}, n_batches: {:d}.".format(
@@ -28,7 +38,7 @@ def train(
         )
     )
 
-    rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
+    rank = comm.Get_rank() if comm != None else 0
 
     assert root_dir != None
     # rl
@@ -115,17 +125,17 @@ def train(
         # Log
         logger.record_tabular("epoch", epoch)
         for key, val in evaluator.logs("test"):
-            logger.record_tabular(key, mpi_average(val))
+            logger.record_tabular(key, mpi_average(val, comm=comm))
         for key, val in rollout_worker.logs("train"):
-            logger.record_tabular(key, mpi_average(val))
+            logger.record_tabular(key, mpi_average(val, comm=comm))
         for key, val in policy.logs():
-            logger.record_tabular(key, mpi_average(val))
+            logger.record_tabular(key, mpi_average(val, comm=comm))
 
         if rank == 0:
             logger.dump_tabular()
 
         # Save the policy if it's better than the previous ones
-        success_rate = mpi_average(evaluator.current_success_rate())
+        success_rate = mpi_average(evaluator.current_success_rate(), comm=comm)
         if rank == 0 and success_rate >= best_success_rate:
             best_success_rate = success_rate
             logger.info("New best success rate: {}.".format(best_success_rate))
@@ -142,24 +152,32 @@ def train(
             evaluator.save_policy(latest_policy_path)
 
         # Make sure that different threads have different seeds
-        if MPI != None:
+        if comm != None:
             local_uniform = np.random.uniform(size=(1,))
             root_uniform = local_uniform.copy()
-            MPI.COMM_WORLD.Bcast(root_uniform, root=0)
+            comm.Bcast(root_uniform, root=0)
             if rank != 0:
                 assert local_uniform[0] != root_uniform[0]
 
 
-def main(root_dir, **kwargs):
+def main(root_dir, comm=None, **kwargs):
 
     assert root_dir is not None, "provide root directory for saving training data"
 
-    # Configure logging, consider rank as pid
-    rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
-    logger.configure(dir=root_dir if rank == 0 else None)
+    # Consider rank as pid.
+    if comm is None:
+        comm = MPI.COMM_WORLD if MPI is not None else None
+    num_cpu = comm.Get_size() if comm is not None else 1
+    rank = comm.Get_rank() if comm is not None else 0
+
+    if MPI.COMM_WORLD.Get_rank() == 0 and rank == 0:
+        logger.configure(dir=root_dir, format_strs=["stdout", "log", "csv"], log_suffix="")
+    elif rank == 0:
+        logger.configure(dir=root_dir, format_strs=["log", "csv"], log_suffix="")
+    else:
+        logger.configure(format_strs=["log"])
     assert logger.get_dir() is not None
 
-    num_cpu = MPI.COMM_WORLD.Get_size() if MPI != None else 1
     log_level = 2  # 1 for debugging, 2 for info
     logger.set_level(log_level)
     logger.info("Launching the training process with {} cpu core(s).".format(num_cpu))
@@ -188,12 +206,19 @@ def main(root_dir, **kwargs):
     params = config.add_env_params(params=params)
 
     # Configure and train rl agent
-    policy = config.configure_ddpg(params=params)
+    policy = config.configure_ddpg(params=params, comm=comm)
     rollout_worker = config.config_rollout(params=params, policy=policy)
     evaluator = config.config_evaluator(params=params, policy=policy)
 
     # Launch the training script
-    train(root_dir=root_dir, policy=policy, rollout_worker=rollout_worker, evaluator=evaluator, **params["train"])
+    train(
+        comm=comm,
+        root_dir=root_dir,
+        policy=policy,
+        rollout_worker=rollout_worker,
+        evaluator=evaluator,
+        **params["train"]
+    )
 
     # Close the default session to prevent memory leaking
     tf.get_default_session().close()

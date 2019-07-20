@@ -10,7 +10,7 @@ import tensorflow as tf
 
 
 class Normalizer:
-    def __init__(self, size, eps=1e-2, default_clip_range=np.inf, sess=None):
+    def __init__(self, size, eps=1e-2, default_clip_range=np.inf, sess=None, comm=None):
         """A normalizer that ensures that observations are approximately distributed according to
         a standard Normal distribution (i.e. have mean zero and variance one).
 
@@ -24,6 +24,7 @@ class Normalizer:
         self.eps = eps
         self.default_clip_range = default_clip_range
         self.sess = sess if sess is not None else tf.get_default_session()
+        self.comm = MPI.COMM_WORLD if comm is None and MPI is not None else comm
 
         self.local_sum = np.zeros(self.size, np.float32)
         self.local_sumsq = np.zeros(self.size, np.float32)
@@ -129,11 +130,11 @@ class Normalizer:
         self.sess.run(self.recompute_op)
 
     def _mpi_average(self, x):
-        if MPI is None:
+        if self.comm is None:
             return x
         buf = np.zeros_like(x)
-        MPI.COMM_WORLD.Allreduce(x, buf, op=MPI.SUM)
-        buf /= MPI.COMM_WORLD.Get_size()
+        self.comm.Allreduce(x, buf, op=MPI.SUM)
+        buf /= self.comm.Get_size()
         return buf
 
     @staticmethod

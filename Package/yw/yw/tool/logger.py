@@ -211,29 +211,28 @@ class Logger(object):
 # =====================================
 
 
-def configure(dir=None, format_strs=None):
-    if dir is None:
-        dir = os.getenv("LOGDIR")
+def configure(dir=None, format_strs=None, log_suffix=None):
+
+    # Use LOGDIR as the default logging directory
+    dir = os.getenv("LOGDIR") if dir is None else dir
     assert isinstance(dir, str), 'Provide default logging directory by setting environment variable "LOGDIR"!'
     os.makedirs(dir, exist_ok=True)
 
-    log_suffix = ""
+    # Decide what fomat to log, by default, COMM_WORLD rank 0 log to stdout and txt, others to txt
+    # check environment variables here instead of importing mpi4py to avoid calling MPI_Init() when this module is
+    # imported
     rank = 0
-    # check environment variables here instead of importing mpi4py
-    # to avoid calling MPI_Init() when this module is imported
     for varname in ["PMI_RANK", "OMPI_COMM_WORLD_RANK"]:
         if varname in os.environ:
             rank = int(os.environ[varname])
-    if rank > 0:
-        log_suffix = "-rank%03i" % rank
+    # default log_suffix
+    if log_suffix is None:
+        assert rank < 9999, "increase this number"
+        log_suffix = "-rank{0:04d}".format(rank) if rank > 0 else ""
 
+    # Decide the output format, by default it is stdout for rank 0 and log for others
     if format_strs is None:
-        if rank == 0:
-            # format_strs = os.getenv('OPENAI_LOG_FORMAT', 'stdout,log,csv').split(',')
-            format_strs = ["stdout", "log", "csv"]
-        else:
-            # format_strs = os.getenv('OPENAI_LOG_FORMAT_MPI', 'log').split(',')
-            format_strs = ["log"]
+        format_strs = ["stdout"] if rank == 0 else []
     format_strs = filter(None, format_strs)
     output_formats = [make_output_format(f, dir, log_suffix) for f in format_strs]
 
@@ -329,15 +328,7 @@ def reset():
 
 
 def _configure_default_logger():
-    rank = 0
-    # check environment variables here instead of importing mpi4py
-    # to avoid calling MPI_Init() when this module is imported
-    for varname in ["PMI_RANK", "OMPI_COMM_WORLD_RANK"]:
-        if varname in os.environ:
-            rank = int(os.environ[varname])
-    format_strs = ["stdout"] if rank == 0 else []
-    # keep the old default of only writing to stdout
-    configure(format_strs=format_strs)
+    configure()
     Logger.DEFAULT = Logger.CURRENT
 
 
