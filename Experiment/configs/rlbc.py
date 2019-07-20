@@ -3,7 +3,7 @@ params_config = {
     "config": ("RLwithBC",),  # change this for each customized params file
     "seed": 0,
     # Environment Config
-    "env_name": "Reach2DFDense",
+    "env_name": "Reach2DF",
     "r_scale": 1.0,  # scale the reward of the environment down
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 0,  # overwrite the default length of the episode
@@ -26,7 +26,7 @@ params_config = {
         # use demonstrations
         "demo_strategy": "bc",  # choose between ["none", "bc", "norm", "manual", "maf"]
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
-        "num_demo": 32,  # number of expert demo episodes
+        "num_demo": 100,  # number of expert demo episodes
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
         "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
         "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss also called the cloning loss
@@ -50,7 +50,7 @@ params_config = {
     "evaluator": {
         "rollout_batch_size": 20,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
         "random_eps": 0.0,
-        "noise_eps": 0.01,
+        "noise_eps": 0.0,
         "compute_Q": True,
     },
     # Training Config
