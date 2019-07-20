@@ -91,7 +91,7 @@ class Reacher:
         if self.sparse == False:
             return -distance
             # return np.maximum(-0.5, -distance)
-            # return 0.2 / (0.2 + distance)
+            # return 0.05 / (0.05 + distance)
         else:  # self.sparse == True
             return (distance < self.threshold).astype(np.int64)
 
@@ -144,7 +144,8 @@ class Reacher:
     def reset(self):
 
         # The initial state and final goal is fixed
-        self.goal = self.random.uniform(-0.0, 0.0) * np.ones(self.dim) * self.boundary
+        # self.goal = self.random.uniform(-0.2, 0.2) * np.ones(self.dim) * self.boundary
+        self.goal = self.random.uniform(-0.2, 0.2, size=2) * self.boundary
         self.curr_pos = self.random.uniform(-0.8, -0.8) * np.ones(self.dim) * self.boundary
         if self.order == 2:
             self.speed = np.zeros(self.dim)

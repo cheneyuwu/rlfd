@@ -50,7 +50,7 @@ params_config = {
     "evaluator": {
         "rollout_batch_size": 20,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
         "random_eps": 0.0,
-        "noise_eps": 0.01,
+        "noise_eps": 0.0,
         "compute_Q": True,
     },
     # Training Config
