@@ -42,7 +42,7 @@ def store_args(method):
 
 def set_global_seeds(i):
     try:
-        import MPI
+        from mpi4py import MPI
 
         rank = MPI.COMM_WORLD.Get_rank()
     except ImportError:

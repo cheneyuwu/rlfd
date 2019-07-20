@@ -6,11 +6,16 @@ import copy
 import importlib
 from shutil import copyfile
 
+# must include gym before loading mpi, for compute canada cluster
+import gym
+
 try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
 
+from yw.tool import logger
+from yw.util.mpi_util import mpi_input
 from yw.flow.train_ddpg_main import main as train_entry
 from yw.flow.generate_demo import main as demo_entry
 from yw.flow.plot import main as plot_entry
@@ -62,9 +67,9 @@ def main(targets, exp_dir, policy_dir, **kwargs):
 
     for target in targets:
         if "train:" in target:
-            print("\n\n=================================================")
-            print("Launching the training experiment!")
-            print("=================================================")
+            logger.info("\n\n=================================================")
+            logger.info("Launching the training experiment!")
+            logger.info("=================================================")
             # adding checking
             config_file = target.replace("train:", "")
             params_config = import_param_config(config_file)
@@ -74,12 +79,12 @@ def main(targets, exp_dir, policy_dir, **kwargs):
             for k, v in dir_param_dict.items():
                 if os.path.exists(k):
                     if (
-                        not input(
+                        not mpi_input(
                             "Directory {} already exists! overwrite the directory? (!enter to cancel): ".format(k)
                         )
                         == ""
                     ):
-                        print("Canceled!")
+                        logger.info("Canceled!")
                         exit(1)
                 os.makedirs(k, exist_ok=True)
                 # copy params.json file
@@ -100,22 +105,22 @@ def main(targets, exp_dir, policy_dir, **kwargs):
         elif target == "demo":
             assert policy_dir != None
             policy_file = os.path.join(policy_dir, "rl/policy_latest.pkl")
-            print("\n\n=================================================")
-            print("Using policy file from {} to generate demo data.".format(policy_file))
-            print("=================================================")
+            logger.info("\n\n=================================================")
+            logger.info("Using policy file from {} to generate demo data.".format(policy_file))
+            logger.info("=================================================")
             demo_entry(num_eps=100, seed=0, policy_file=policy_file, store_dir=exp_dir)
 
         elif target == "display":
             assert policy_dir != None
-            print("\n\n=================================================")
-            print("Displaying.")
-            print("=================================================")
+            logger.info("\n\n=================================================")
+            logger.info("Displaying.")
+            logger.info("=================================================")
             display_entry(policy_file=os.path.join(policy_dir, "rl/policy_latest.pkl"), seed=0, num_itr=10)
 
         elif target == "plot" and rank == 0:
-            print("\n\n=================================================")
-            print("Plotting.")
-            print("=================================================")
+            logger.info("\n\n=================================================")
+            logger.info("Plotting.")
+            logger.info("=================================================")
             plot_entry(
                 dirs=[exp_dir],
                 xys=[
@@ -130,15 +135,15 @@ def main(targets, exp_dir, policy_dir, **kwargs):
         elif target == "gen_query":
             # currently assume only 1 level of subdir
             query_dir = os.path.join(exp_dir, "*")
-            print("\n\n=================================================")
-            print("Generating queries at: {}".format(query_dir))
-            print("=================================================")
+            logger.info("\n\n=================================================")
+            logger.info("Generating queries at: {}".format(query_dir))
+            logger.info("=================================================")
             generate_query_entry(directories=[query_dir], save=1)
 
         elif target == "vis_query":
-            print("\n\n=================================================")
-            print("Visualizing queries.")
-            print("=================================================")
+            logger.info("\n\n=================================================")
+            logger.info("Visualizing queries.")
+            logger.info("=================================================")
             # currently assume only 1 level of subdir
             query_dir = os.path.join(exp_dir, "*")
             visualize_query_entry(load_dirs=[query_dir], save=1)

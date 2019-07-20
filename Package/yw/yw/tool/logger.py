@@ -329,7 +329,13 @@ def reset():
 
 
 def _configure_default_logger():
-    format_strs = ["stdout"]
+    rank = 0
+    # check environment variables here instead of importing mpi4py
+    # to avoid calling MPI_Init() when this module is imported
+    for varname in ["PMI_RANK", "OMPI_COMM_WORLD_RANK"]:
+        if varname in os.environ:
+            rank = int(os.environ[varname])
+    format_strs = ["stdout"] if rank == 0 else []
     # keep the old default of only writing to stdout
     configure(format_strs=format_strs)
     Logger.DEFAULT = Logger.CURRENT

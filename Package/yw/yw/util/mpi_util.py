@@ -28,6 +28,17 @@ def install_mpi_excepthook():
 
     sys.excepthook = new_hook
 
+def mpi_input(msg, comm=None):
+    if MPI is None:
+        return input(msg)
+    if comm is None:
+        comm = MPI.COMM_WORLD
+    if comm.Get_rank() == 0:
+        ret = input(msg)
+    else:
+        ret = None
+    ret = comm.bcast(ret, root=0)
+    return ret
 
 def mpi_average(value):
     if MPI is None:
