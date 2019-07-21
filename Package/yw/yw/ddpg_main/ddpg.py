@@ -669,7 +669,7 @@ class DDPG(object):
     def query_potential(self, dim1=0, dim2=1, filename=None):
         """Check the output from demo shaping potential function
         """
-        if not "Reach" in self.info["env_name"]:
+        if not "Reach2DF" in self.info["env_name"]:
             return
 
         logger.info("Query: potential -> Plot the potential over (s, a) space of demo shaping.")
@@ -760,7 +760,7 @@ class DDPG(object):
         """Only use this function for 1d first order reacher problem
         """
 
-        if not "Reach2D" in self.info["env_name"]:
+        if not "Reach2DF" in self.info["env_name"]:
             return
 
         num_point = 24

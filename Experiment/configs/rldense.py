@@ -1,9 +1,9 @@
 params_config = {
     # Config Summary
     "config": ("RLwithDenseRwd",),  # change this for each customized params file
-    "seed": 0,
+    "seed": tuple(range(4)),
     # Environment Config
-    "env_name": "Reach2DFDense",
+    "env_name": "Reach2DDense",
     "r_scale": 1.0,  # scale the reward of the environment down
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 0,  # overwrite the default length of the episode
@@ -55,7 +55,7 @@ params_config = {
     },
     # Training Config
     "train": {
-        "n_epochs": 500,
+        "n_epochs": 100,
         "n_cycles": 10,  # per epoch
         "n_batches": 40,  # training batches per cycle
         "save_interval": 2,

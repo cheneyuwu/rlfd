@@ -1,9 +1,9 @@
 params_config = {
     # Config Summary
     "config": ("RL",),  # change this for each customized params file
-    "seed": 0,
+    "seed": tuple(range(4)),
     # Environment Config
-    "env_name": "Reach2DF",
+    "env_name": "Reach2D",
     "r_scale": 1.0,  # scale the reward of the environment down
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 0,  # overwrite the default length of the episode
