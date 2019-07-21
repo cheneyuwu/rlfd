@@ -165,7 +165,8 @@ def main(root_dir, comm=None, **kwargs):
     assert root_dir is not None, "provide root directory for saving training data"
 
     # Consider rank as pid.
-    comm = MPI.COMM_WORLD if comm is None and MPI is not None else None
+    if comm is None:
+        comm = MPI.COMM_WORLD if MPI is not None else None
     num_cpu = comm.Get_size() if comm is not None else 1
     rank = comm.Get_rank() if comm is not None else 0
 
