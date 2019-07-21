@@ -72,11 +72,11 @@ def main(policy_file, store_dir, seed, num_eps, **kwargs):
     assert all([episode[k].shape[0] == num_eps for k in episode.keys()])
 
     # Add expected Q value
-    exp_q = np.empty(episode["r"].shape)
-    exp_q[:, -1, :] = episode["r"][:, -1, :] / (1 - policy.gamma)
-    for i in range(params["eps_length"] - 1):
-        exp_q[:, -2 - i, :] = policy.gamma * exp_q[:, -1 - i, :] + episode["r"][:, -2 - i, :]
-    episode["q"] = exp_q
+    # exp_q = np.empty(episode["r"].shape)
+    # exp_q[:, -1, :] = episode["r"][:, -1, :] / (1 - policy.gamma)
+    # for i in range(params["eps_length"] - 1):
+    #     exp_q[:, -2 - i, :] = policy.gamma * exp_q[:, -1 - i, :] + episode["r"][:, -2 - i, :]
+    # episode["q"] = exp_q
 
     # record logs
     for key, val in demo.logs("test"):

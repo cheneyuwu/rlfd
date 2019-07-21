@@ -108,7 +108,7 @@ def main(targets, exp_dir, policy_dir, **kwargs):
 
             # run experiments
             parallel = 1  # change this number to allow launching in serial
-            num_cpu = 2  # change this number to allow multiple processes
+            num_cpu = 1  # change this number to allow multiple processes
             # total num exps
             num_exp = len(dir_param_dict.keys())
 
@@ -157,20 +157,21 @@ def main(targets, exp_dir, policy_dir, **kwargs):
             logger.info("=================================================")
             display_entry(policy_file=os.path.join(policy_dir, "rl/policy_latest.pkl"), seed=0, num_itr=10)
 
-        elif target == "plot" and rank == 0:
+        elif target == "plot":
             logger.info("\n\n=================================================")
             logger.info("Plotting.")
             logger.info("=================================================")
-            plot_entry(
-                dirs=[exp_dir],
-                xys=[
-                    "epoch:test/success_rate",
-                    "epoch:test/total_shaping_reward",
-                    "epoch:test/total_reward",
-                    "epoch:test/mean_Q",
-                    "epoch:test/mean_Q_plus_P",
-                ],
-            )
+            if rank == 0:  # plot does not need to be run on all threads
+                plot_entry(
+                    dirs=[exp_dir],
+                    xys=[
+                        "epoch:test/success_rate",
+                        "epoch:test/total_shaping_reward",
+                        "epoch:test/total_reward",
+                        "epoch:test/mean_Q",
+                        "epoch:test/mean_Q_plus_P",
+                    ],
+                )
 
         elif target == "gen_query":
             # currently assume only 1 level of subdir
@@ -191,6 +192,7 @@ def main(targets, exp_dir, policy_dir, **kwargs):
         else:
             assert 0, "unknown target: {}".format(target)
 
+        comm.Barrier()
         logger.reset()
 
     return
