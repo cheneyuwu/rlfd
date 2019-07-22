@@ -60,7 +60,7 @@ def generate_params(root_dir, param_config):
     return res
 
 
-def main(targets, exp_dir, policy_dir, **kwargs):
+def main(targets, exp_dir, policy_file, **kwargs):
 
     # Consider rank as pid.
     comm = MPI.COMM_WORLD if MPI is not None else None
@@ -102,9 +102,9 @@ def main(targets, exp_dir, policy_dir, **kwargs):
             # sync the process
             comm.Barrier()
 
-            if policy_dir == None:
-                policy_dir = list(dir_param_dict.keys())[0]
-                logger.info("Setting policy_dir to {}".format(policy_dir))
+            if policy_file == None:
+                policy_file = oslpath.join(list(dir_param_dict.keys())[0], "rl/policy_latest.pkl")
+                logger.info("Setting policy_file to {}".format(policy_file))
 
             # run experiments
             parallel = 1  # change this number to allow launching in serial
@@ -143,19 +143,18 @@ def main(targets, exp_dir, policy_dir, **kwargs):
             comm.Barrier()
 
         elif target == "demo":
-            assert policy_dir != None
-            policy_file = os.path.join(policy_dir, "rl/policy_latest.pkl")
+            assert policy_file != None
             logger.info("\n\n=================================================")
             logger.info("Using policy file from {} to generate demo data.".format(policy_file))
             logger.info("=================================================")
             demo_entry(num_eps=100, seed=0, policy_file=policy_file, store_dir=exp_dir)
 
         elif target == "display":
-            assert policy_dir != None
+            assert policy_file != None
             logger.info("\n\n=================================================")
-            logger.info("Displaying.")
+            logger.info("Displaying using policy file from {}.".format(policy_file))
             logger.info("=================================================")
-            display_entry(policy_file=os.path.join(policy_dir, "rl/policy_latest.pkl"), seed=0, num_itr=10)
+            display_entry(policy_file=policy_file, seed=0, num_itr=10)
 
         elif target == "plot":
             logger.info("\n\n=================================================")
@@ -231,7 +230,7 @@ if __name__ == "__main__":
         default=os.path.join(os.getenv("EXPERIMENT"), "TempResult/Temp"),
     )
     exp_parser.parser.add_argument(
-        "--policy_dir", help="top level directory to store experiment results", type=str, default=None
+        "--policy_file", help="top level directory to store experiment results", type=str, default=None
     )
     exp_parser.parse(sys.argv)
     main(**exp_parser.get_dict())
