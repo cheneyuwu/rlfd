@@ -103,7 +103,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
             comm.Barrier()
 
             if policy_file == None:
-                policy_file = oslpath.join(list(dir_param_dict.keys())[0], "rl/policy_latest.pkl")
+                policy_file = os.path.join(list(dir_param_dict.keys())[0], "rl/policy_latest.pkl")
                 logger.info("Setting policy_file to {}".format(policy_file))
 
             # run experiments
