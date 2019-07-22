@@ -117,7 +117,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 # ax.fill_between(xs[0], np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25)
                 # ours
                 mean_y = np.nanmean(ys, axis=0)
-                var_y = np.nanvar(ys, axis=0)
+                var_y = np.nanstd(ys, axis=0)
                 ax.plot(xs[0], mean_y, label=config, color=colors[j % len(colors)])
                 ax.fill_between(xs[0], mean_y - var_y, mean_y + var_y, alpha=0.5, color=colors[j % len(colors)])
                 ax.fill_between(
