@@ -248,7 +248,7 @@ class DDPG(object):
 
     def sample_batch(self):
         # use demonstration buffer to sample as well if demo flag is set TRUE
-        if self.demo_strategy == "bc":
+        if self.demo_strategy == "bc" or self.demo_strategy == "rbmaf" or self.demo_strategy == "rb":
             transitions = {}
             transition_rollout = self.replay_buffer.sample(self.batch_size - self.batch_size_demo)
             transition_demo = self.demo_buffer.sample(self.batch_size_demo)
@@ -269,7 +269,7 @@ class DDPG(object):
     def train_shaping(self):
         # train normalizing flow
         loss = 0
-        if self.demo_strategy == "maf":
+        if self.demo_strategy == "maf" or self.demo_strategy == "rbmaf":
             self.sess.run(self.demo_iter_tf.initializer)
             losses = np.empty(0)
             while True:
@@ -451,7 +451,7 @@ class DDPG(object):
                     dtype=tf.float32,
                 )
                 self.demo_shaping = GaussianDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
-            elif self.demo_strategy == "maf":
+            elif self.demo_strategy == "maf" or self.demo_strategy == "rbmaf":
                 # input dataset that loads from demo_buffer
                 demo_shapes = {}
                 demo_shapes["o"] = (self.dimo,)

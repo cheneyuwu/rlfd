@@ -1,6 +1,6 @@
 params_config = {
     # Config Summary
-    "config": ("RLwithMAFShaping",),  # change this for each customized params file
+    "config": ("RLwithRBMAFShaping",),  # change this for each customized params file
     "seed": tuple(range(2)),
     # Environment Config
     "env_name": "FetchReach-v1",
@@ -24,7 +24,7 @@ params_config = {
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
         # use demonstrations
-        "demo_strategy": "maf",  # choose between ["none", "bc", "norm", "manual", "maf"]
+        "demo_strategy": "rbmaf",  # choose between ["none", "bc", "norm", "manual", "maf"]
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
         "num_demo": 100,  # number of expert demo episodes
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs

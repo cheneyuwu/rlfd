@@ -57,13 +57,15 @@ def train(
     query_policy_save_path = root_dir + "/query_policy/"
     os.makedirs(query_policy_save_path, exist_ok=True)
 
+    # Adding demonstration data to the demonstration buffer
     if policy.demo_strategy != "none":
         demo_file = os.path.join(root_dir, "demo_data.npz")
         assert os.path.isfile(demo_file), "demonstration training set does not exist"
-        policy.init_demo_buffer(demo_file, update_stats=policy.demo_strategy == "bc")
+        update_stats = policy.demo_strategy == "bc" or policy.demo_strategy == "rbmaf" or policy.demo_strategy == "rb"
+        policy.init_demo_buffer(demo_file, update_stats=update_stats)
 
     # Pre-Training a potential function
-    if policy.demo_strategy == "maf":
+    if policy.demo_strategy == "maf" or policy.demo_strategy == "rbmaf":
         if not shaping_policy:
             logger.info("Training the policy for reward shaping.")
             num_epoch = 1000

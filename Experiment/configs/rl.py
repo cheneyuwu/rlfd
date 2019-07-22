@@ -1,9 +1,9 @@
 params_config = {
     # Config Summary
     "config": ("RL",),  # change this for each customized params file
-    "seed": tuple(range(4)),
+    "seed": tuple(range(2)),
     # Environment Config
-    "env_name": "Reach2D",
+    "env_name": "FetchReach-v1",
     "r_scale": 1.0,  # scale the reward of the environment down
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 0,  # overwrite the default length of the episode
@@ -44,8 +44,8 @@ params_config = {
     # Rollouts Config
     "rollout": {
         "rollout_batch_size": 4,  # per mpi thread
-        "random_eps": 0.1,  # percentage of time a random action is taken
-        "noise_eps": 0.1,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
+        "random_eps": 0.2,  # percentage of time a random action is taken
+        "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
     },
     "evaluator": {
         "rollout_batch_size": 20,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
@@ -58,7 +58,7 @@ params_config = {
         "n_epochs": 500,
         "n_cycles": 10,  # per epoch
         "n_batches": 40,  # training batches per cycle
-        "save_interval": 2,
+        "save_interval": 10,
         "shaping_policy": 0,  # whether or not to use a pretrained shaping policy
     },
 }

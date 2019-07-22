@@ -234,3 +234,4 @@ if __name__ == "__main__":
     )
     exp_parser.parse(sys.argv)
     main(**exp_parser.get_dict())
+    exit(0)

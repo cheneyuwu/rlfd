@@ -35,7 +35,7 @@ DEFAULT_PARAMS = {
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
         # use demonstrations
-        "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "maf"]
+        "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "maf", "rbmaf", "rb"]
         "num_demo": 0,  # number of expert demo episodes
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
