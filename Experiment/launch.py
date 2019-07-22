@@ -85,11 +85,9 @@ def main(targets, exp_dir, policy_file, **kwargs):
             if rank == 0:
                 for k, v in dir_param_dict.items():
                     if os.path.exists(k):
-                        msg = "Directory {} already exists! overwrite the directory? (!enter to cancel): ".format(k)
-                        if not input(msg) == "":
-                            logger.info("Canceled!")
-                            mpi_exit(1)
-                    os.makedirs(k, exist_ok=True)
+                        logger.info("Directory {} already exists!".format(k))
+                        mpi_exit(1)
+                    os.makedirs(k, exist_ok=False)
                     # copy params.json file
                     with open(os.path.join(k, "params.json"), "w") as f:
                         json.dump(v, f)

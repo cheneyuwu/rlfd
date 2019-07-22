@@ -193,9 +193,12 @@ def main(root_dir, comm=None, **kwargs):
     else:
         logger.warn("WARNING: params.json not found! using the default parameters.")
         params = config.DEFAULT_PARAMS.copy()
-        if rank == 0:
-            with open(param_file, "w") as f:
-                json.dump(params, f)
+    if rank == 0:
+        comp_param_file = os.path.join(root_dir, "params_comp.json")
+        # if params["config"] == "default": # Modify the config name here!
+        #     params["config"] = "RL+Demo:" + params["ddpg"]["demo_strategy"]
+        with open(comp_param_file, "w") as f:
+            json.dump(params, f)
 
     # Reset default graph (must be called before setting seed)
     tf.reset_default_graph()

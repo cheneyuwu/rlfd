@@ -559,7 +559,7 @@ class DDPG(object):
             # adding the cloning loss to the actor loss as an auxilliary loss scaled by its weight aux_loss_weight
             pi_loss_tf += self.aux_loss_weight * cloning_loss_tf
 
-        elif self.demo_strategy != "none":
+        elif self.demo_shaping != None:
             pi_loss_tf = -tf.reduce_mean(self.main_q_pi_tf)
             pi_loss_tf += -tf.reduce_mean(self.demo_actor_shaping)
             pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
