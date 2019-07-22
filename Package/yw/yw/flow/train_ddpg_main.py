@@ -186,7 +186,7 @@ def main(root_dir, comm=None, **kwargs):
     logger.info("Setting log level to {}.".format(log_level))
 
     # Get default params from config and update params.
-    param_file = os.path.join(root_dir, "params.json")
+    param_file = os.path.join(root_dir, "copied_params.json")
     if os.path.isfile(param_file):
         with open(param_file, "r") as f:
             params = json.load(f)
@@ -194,7 +194,7 @@ def main(root_dir, comm=None, **kwargs):
         logger.warn("WARNING: params.json not found! using the default parameters.")
         params = config.DEFAULT_PARAMS.copy()
     if rank == 0:
-        comp_param_file = os.path.join(root_dir, "params_comp.json")
+        comp_param_file = os.path.join(root_dir, "params.json")
         # if params["config"] == "default": # Modify the config name here!
         #     params["config"] = "RL+Demo:" + params["ddpg"]["demo_strategy"]
         with open(comp_param_file, "w") as f:

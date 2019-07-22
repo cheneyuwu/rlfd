@@ -89,7 +89,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
                         mpi_exit(1)
                     os.makedirs(k, exist_ok=False)
                     # copy params.json file
-                    with open(os.path.join(k, "params.json"), "w") as f:
+                    with open(os.path.join(k, "copied_params.json"), "w") as f:
                         json.dump(v, f)
                     # copy demo_sata file if exist
                     demo_file = os.path.join(exp_dir, "demo_data.npz")
