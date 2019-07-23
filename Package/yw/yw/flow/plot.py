@@ -6,6 +6,7 @@ import matplotlib
 
 matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
 import numpy as np
 import json
@@ -102,8 +103,8 @@ def plot_results(allresults, xys, target_dir, smooth=0):
         print("Creating plots for environment: {}".format(env_id))
 
         fig.clf()
-        colors = ["r", "g", "b", "c", "m", "y", "k"]
         for i, xy in enumerate(data[env_id].keys(), 1):
+            colors = cm.jet(np.linspace(0, 1.0, len(data[env_id][xy].keys())))
             ax = fig.add_subplot(1, len(xys), i)
             x_label = xy.split(":")[0]
             y_label = xy.split(":")[1]
