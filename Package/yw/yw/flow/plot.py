@@ -99,6 +99,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
 
     # each environment goes to one image
     fig = plt.figure()
+    fig.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9, wspace=0.25, hspace=0.25)
     for env_id in sorted(data.keys()):
         print("Creating plots for environment: {}".format(env_id))
 
