@@ -1,7 +1,6 @@
 params_config = {
     # Config Summary
     "config": ("RL",),  # change this for each customized params file
-    "seed": tuple(range(2)),
     # Environment Config
     "env_name": "FetchReach-v1",
     "r_scale": 1.0,  # scale the reward of the environment down
@@ -26,11 +25,11 @@ params_config = {
         # use demonstrations
         "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "maf"]
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
-        "num_demo": 0,  # number of expert demo episodes
+        "num_demo": 100,  # number of expert demo episodes
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
         "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
         "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss also called the cloning loss
-        "shaping_params": {"prm_loss_weight": 1.0, "reg_loss_weight": 500.0, "potential_weight": 5.0},
+        "shaping_params": {"prm_loss_weight": 1.0, "reg_loss_weight": 1000.0, "potential_weight": 2.0},
         # normalization
         "norm_eps": 0.01,  # epsilon used for observation normalization
         "norm_clip": 5,  # normalized observations are cropped to this values
@@ -61,4 +60,5 @@ params_config = {
         "save_interval": 10,
         "shaping_policy": 0,  # whether or not to use a pretrained shaping policy
     },
+    "seed": tuple(range(2)),
 }
