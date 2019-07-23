@@ -104,7 +104,8 @@ def plot_results(allresults, xys, target_dir, smooth=0):
 
         fig.clf()
         for i, xy in enumerate(data[env_id].keys(), 1):
-            colors = cm.jet(np.linspace(0, 1.0, len(data[env_id][xy].keys())))
+            colors = ["r", "g", "b", "c", "m", "y", "k"]
+            # colors = cm.jet(np.linspace(0, 1.0, len(data[env_id][xy].keys())))
             ax = fig.add_subplot(1, len(xys), i)
             x_label = xy.split(":")[0]
             y_label = xy.split(":")[1]
