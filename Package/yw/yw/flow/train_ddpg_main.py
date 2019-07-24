@@ -78,10 +78,10 @@ def train(
                 if rank == 0 and epoch % 100 == 0:
                     logger.info("Saving latest policy to {}.".format(latest_shaping_path))
                     policy.save_shaping_weights(latest_shaping_path)
-
-            if rank == 0:
-                logger.info("Saving latest policy to {}.".format(latest_shaping_path))
-                policy.save_shaping_weights(latest_shaping_path)
+            # uncomment to save trained potential functions
+            # if rank == 0:
+            #     logger.info("Saving latest policy to {}.".format(latest_shaping_path))
+            #     policy.save_shaping_weights(latest_shaping_path)
         else:
             logger.info("Using the provided policy weights: {}".format(latest_shaping_path))
             policy.load_shaping_weights(latest_shaping_path)
