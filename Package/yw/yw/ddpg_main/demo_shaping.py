@@ -177,7 +177,6 @@ class NormalizingFlowDemoShaping(DemoShaping):
 class MAFDemoShaping(DemoShaping):
     def __init__(self, gamma, demo_inputs_tf, prm_loss_weight, reg_loss_weight, potential_weight):
         """
-        Implement the state, action based potential function and corresponding actions
         Args:
             o - observation
             g - goal
