@@ -519,9 +519,7 @@ class DDPG(object):
         # clipping
         clip_range = (-self.clip_return, 0.0 if self.clip_pos_returns else self.clip_return)
         target_tf = tf.clip_by_value(target_tf, *clip_range)
-
         assert target_tf.shape[1] == 1
-
         # td3 loss
         if self.use_td3:
             rl_bellman_1_tf = tf.square(tf.stop_gradient(target_tf) - self.main_q_tf)
