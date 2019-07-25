@@ -60,5 +60,5 @@ params_config = {
         "save_interval": 10,
         "shaping_policy": 0,  # whether or not to use a pretrained shaping policy
     },
-    "seed": tuple(range(2)),
+    "seed": tuple(range(4)),
 }

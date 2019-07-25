@@ -39,7 +39,7 @@ def main(policy_file, store_dir, seed, num_eps, **kwargs):
         policy = pickle.load(f)
 
     # Extract environment construction information
-    env_name = policy.info["env_name"]
+    env_name = policy.info["env_name"].replace("Dense", "") # the reward should be correct for sparse reward case
     T = policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T
     max_concurrency = 10  # avoid too many envs
 

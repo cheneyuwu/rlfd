@@ -235,7 +235,7 @@ def config_demo(params, policy):
     demo_params = {
         "compute_Q": True,
         "random_eps": 0.0,
-        "noise_eps": 0.01,
+        "noise_eps": 0.1,
         "render": params["render"],
         "T": params["eps_length"],
         "rollout_batch_size": params["rollout_batch_size"],
