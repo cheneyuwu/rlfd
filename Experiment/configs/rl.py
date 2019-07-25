@@ -25,7 +25,7 @@ params_config = {
         # use demonstrations
         "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "maf"]
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
-        "num_demo": 32,  # number of expert demo episodes
+        "num_demo": 10,  # number of expert demo episodes
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
         "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
         "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss also called the cloning loss
