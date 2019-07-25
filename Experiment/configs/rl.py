@@ -2,7 +2,7 @@ params_config = {
     # Config Summary
     "config": ("RL",),  # change this for each customized params file
     # Environment Config
-    "env_name": "FetchReach-v1",
+    "env_name": "FetchPickAndPlace-v1",
     "r_scale": 1.0,  # scale the reward of the environment down
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 0,  # overwrite the default length of the episode
@@ -29,7 +29,7 @@ params_config = {
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
         "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
         "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss also called the cloning loss
-        "shaping_params": {"prm_loss_weight": 1.0, "reg_loss_weight": 500.0, "potential_weight": 5.0},
+        "shaping_params": {"prm_loss_weight": 1.0, "reg_loss_weight": 800.0, "potential_weight": 4.0},
         # normalization
         "norm_eps": 0.01,  # epsilon used for observation normalization
         "norm_clip": 5,  # normalized observations are cropped to this values
