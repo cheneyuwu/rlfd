@@ -5,7 +5,7 @@ params_config = {
     "env_name": "FetchPickAndPlace-v1",
     "r_scale": 1.0,  # scale the reward of the environment down
     "r_shift": 0.0,  # shift the reward of the environment up
-    "eps_length": 0,  # overwrite the default length of the episode
+    "eps_length": 30,  # overwrite the default length of the episode
     "env_args": {},  # extra arguments passed to the environment.
     # DDPG Config
     "ddpg": {
