@@ -18,17 +18,19 @@ params_config = {
         "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layers
         "Q_lr": 0.001,  # critic learning rate
         "pi_lr": 0.001,  # actor learning rate
-        "action_l2": 0.1,  # quadratic penalty on actions (before rescaling by max_u)
+        "action_l2": 0.4,  # (1.0 for OpenAI envs) quadratic penalty on actions (before rescaling by max_u)
         "batch_size": 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
         # use demonstrations
         "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "maf"]
+        "sample_demo_buffer": 0,  # whether or not to sample from demonstration buffer
+        "use_demo_reward": 0,  # whether or not to assume that demonstrations also have rewards
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
         "num_demo": 10,  # number of expert demo episodes
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
-        "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
-        "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss also called the cloning loss
+        "prm_loss_weight": 1.0,  # (0.001 for OpenAI) weight corresponding to the primary loss
+        "aux_loss_weight": 1.0,  # (0.0078 for OpenAI) weight corresponding to the auxilliary loss also called the cloning loss
         "shaping_params": {"prm_loss_weight": 1.0, "reg_loss_weight": 800.0, "potential_weight": 4.0},
         # normalization
         "norm_eps": 0.01,  # epsilon used for observation normalization
@@ -43,8 +45,8 @@ params_config = {
     # Rollouts Config
     "rollout": {
         "rollout_batch_size": 4,  # per mpi thread
-        "random_eps": 0.2,  # percentage of time a random action is taken
-        "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
+        "random_eps": 0.1,  # (0.3 for OpenAI) percentage of time a random action is taken
+        "noise_eps": 0.1,  # (0.2 for OpenAI) std of gaussian noise added to not-completely-random actions as a percentage of max_u
     },
     "evaluator": {
         "rollout_batch_size": 20,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
@@ -60,5 +62,5 @@ params_config = {
         "save_interval": 10,
         "shaping_policy": 0,  # whether or not to use a pretrained shaping policy
     },
-    "seed": tuple(range(4)),
+    "seed": tuple(range(2)),
 }

@@ -61,14 +61,13 @@ def train(
     if policy.demo_strategy != "none":
         demo_file = os.path.join(root_dir, "demo_data.npz")
         assert os.path.isfile(demo_file), "demonstration training set does not exist"
-        update_stats = policy.demo_strategy == "bc" or policy.demo_strategy == "rbmaf" or policy.demo_strategy == "rb"
-        policy.init_demo_buffer(demo_file, update_stats=update_stats)
+        policy.init_demo_buffer(demo_file, update_stats=policy.sample_demo_buffer)
 
     # Pre-Training a potential function
     if policy.demo_strategy == "maf" or policy.demo_strategy == "rbmaf":
         if not shaping_policy:
             logger.info("Training the policy for reward shaping.")
-            num_epoch = 1000
+            num_epoch = 2000
             for epoch in range(num_epoch):
                 loss = policy.train_shaping()
 

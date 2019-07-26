@@ -43,6 +43,8 @@ class DDPG(object):
         clip_pos_returns,
         clip_return,
         demo_strategy,
+        sample_demo_buffer,
+        use_demo_reward,
         num_demo,
         q_filter,
         batch_size_demo,
@@ -88,6 +90,8 @@ class DDPG(object):
             gamma              (float)        - gamma used for Q learning updates
             # Use demonstration to shape critic or actor
             demo_strategy      (str)          - whether or not to use demonstration with different strategies
+            sample_demo_buffer (int)          - whether or not to sample from demonstration buffer
+            use_demo_reward    (int)          - whether or not to assue that demonstration dataset has rewards
             num_demo           (int)          - Number of episodes in to be used in the demonstration buffer
             batch_size_demo    (int)          - number of samples to be used from the demonstrations buffer, per mpi thread
             q_filter           (boolean)      - whether or not a filter on the q value update should be used when training with demonstartions
@@ -117,6 +121,8 @@ class DDPG(object):
         self.clip_pos_returns = clip_pos_returns
         self.clip_return = clip_return
         self.demo_strategy = demo_strategy
+        self.sample_demo_buffer = sample_demo_buffer
+        self.use_demo_reward = use_demo_reward
         self.num_demo = num_demo
         self.q_filter = q_filter
         self.batch_size_demo = batch_size_demo
@@ -240,7 +246,6 @@ class DDPG(object):
         episode_batch: array of batch_size x (T or T+1) x dim_key
                        'o' is of size T+1, others are of size T
         """
-
         self.replay_buffer.store_episode(episode_batch)
 
         if update_stats:
@@ -248,9 +253,9 @@ class DDPG(object):
 
     def sample_batch(self):
         # use demonstration buffer to sample as well if demo flag is set TRUE
-        if self.demo_strategy == "bc" or self.demo_strategy == "rbmaf" or self.demo_strategy == "rb":
+        if self.sample_demo_buffer:
             transitions = {}
-            transition_rollout = self.replay_buffer.sample(self.batch_size - self.batch_size_demo)
+            transition_rollout = self.replay_buffer.sample(self.batch_size)
             transition_demo = self.demo_buffer.sample(self.batch_size_demo)
             assert transition_rollout.keys() == transition_demo.keys()
             for k in transition_rollout.keys():
@@ -269,7 +274,7 @@ class DDPG(object):
     def train_shaping(self):
         # train normalizing flow
         loss = 0
-        if self.demo_strategy == "maf" or self.demo_strategy == "rbmaf":
+        if self.demo_strategy == "maf":
             self.sess.run(self.demo_iter_tf.initializer)
             losses = np.empty(0)
             while True:
@@ -451,7 +456,7 @@ class DDPG(object):
                     dtype=tf.float32,
                 )
                 self.demo_shaping = GaussianDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
-            elif self.demo_strategy == "maf" or self.demo_strategy == "rbmaf":
+            elif self.demo_strategy == "maf":
                 # input dataset that loads from demo_buffer
                 demo_shapes = {}
                 demo_shapes["o"] = (self.dimo,)
@@ -507,31 +512,37 @@ class DDPG(object):
                 )
 
         # Critic loss
+        # immediate reward
         target_tf = self.inputs_tf["r"]
-        # demo shaping
+        # demo shaping reward
         if self.demo_shaping != None:
             target_tf += self.demo_critic_shaping
-        # td3 target
+        # ddpg or td3 target with or without clipping
         if self.use_td3:
             target_tf += self.gamma * tf.minimum(self.target_q_pi_tf, self.target_q2_pi_tf)
         else:
             target_tf += self.gamma * self.target_q_pi_tf
-        # clipping
         clip_range = (-self.clip_return, 0.0 if self.clip_pos_returns else self.clip_return)
         target_tf = tf.clip_by_value(target_tf, *clip_range)
         assert target_tf.shape[1] == 1
-        # td3 loss
+        # final ddpg or td3 loss
         if self.use_td3:
             rl_bellman_1_tf = tf.square(tf.stop_gradient(target_tf) - self.main_q_tf)
             rl_bellman_2_tf = tf.square(tf.stop_gradient(target_tf) - self.main_q2_tf)
-            rl_loss_tf = (tf.reduce_mean(rl_bellman_1_tf) + tf.reduce_mean(rl_bellman_2_tf)) / 2.0
+            rl_bellman_tf = (rl_bellman_1_tf + rl_bellman_2_tf) / 2.0
         else:
             rl_bellman_tf = tf.square(tf.stop_gradient(target_tf) - self.main_q_tf)
-            rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
+        # whether or not to train the critic on demo reward (if sample from demonstration buffer)
+        if self.sample_demo_buffer and not self.use_demo_reward:
+            # mask off entries from demonstration dataset
+            mask = np.concatenate((np.ones(self.batch_size), np.zeros(self.batch_size_demo)), axis=0)
+            rl_bellman_tf = tf.boolean_mask(rl_bellman_tf, mask)
+        rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
         self.Q_loss_tf = rl_loss_tf
 
         # Actor Loss
         if self.demo_strategy == "bc":
+            assert self.sample_demo_buffer, "must sample from the demonstration buffer to use behavior cloning"
             # primary loss scaled by it's respective weight prm_loss_weight
             pi_loss_tf = -self.prm_loss_weight * tf.reduce_mean(self.main_q_pi_tf)
             # L2 loss on action values scaled by the same weight prm_loss_weight
@@ -539,30 +550,32 @@ class DDPG(object):
                 self.prm_loss_weight * self.action_l2 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
             )
             # define the cloning loss on the actor's actions only on the samples which adhere to the above masks
-            mask = np.concatenate(
-                (np.zeros(self.batch_size - self.batch_size_demo), np.ones(self.batch_size_demo)), axis=0
-            )
+            mask = np.concatenate((np.zeros(self.batch_size), np.ones(self.batch_size_demo)), axis=0)
             actor_pi_tf = tf.boolean_mask((self.main_pi_tf), mask)
             demo_pi_tf = tf.boolean_mask((self.inputs_tf["u"]), mask)
             if self.q_filter:
                 q_filter_mask = tf.reshape(tf.boolean_mask(self.main_q_tf > self.main_q_pi_tf, mask), [-1])
-                cloning_loss_tf = tf.reduce_sum(
+                # use to be tf.reduce_sum, however, use tf.reduce_mean makes the loss function independent from number
+                # of demonstrations
+                cloning_loss_tf = tf.reduce_mean(
                     tf.square(
                         tf.boolean_mask(actor_pi_tf, q_filter_mask, axis=0)
                         - tf.boolean_mask(demo_pi_tf, q_filter_mask, axis=0)
                     )
                 )
             else:
-                cloning_loss_tf = tf.reduce_sum(tf.square(actor_pi_tf - demo_pi_tf))
+                # use to be tf.reduce_sum, however, use tf.reduce_mean makes the loss function independent from number
+                # of demonstrations
+                cloning_loss_tf = tf.reduce_mean(tf.square(actor_pi_tf - demo_pi_tf))
             # adding the cloning loss to the actor loss as an auxilliary loss scaled by its weight aux_loss_weight
             pi_loss_tf += self.aux_loss_weight * cloning_loss_tf
 
-        elif self.demo_shaping != None:
+        elif self.demo_shaping != None:  # any type of shaping method
             pi_loss_tf = -tf.reduce_mean(self.main_q_pi_tf)
             pi_loss_tf += -tf.reduce_mean(self.demo_actor_shaping)
             pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
 
-        else:  # If not training with demonstrations
+        else:  # not training with demonstrations
             pi_loss_tf = -tf.reduce_mean(self.main_q_pi_tf)
             pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
 
