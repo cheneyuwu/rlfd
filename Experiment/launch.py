@@ -172,19 +172,17 @@ def main(targets, exp_dir, policy_file, **kwargs):
 
         elif target == "gen_query":
             # currently assume only 1 level of subdir
-            query_dir = os.path.join(exp_dir, "*")
             logger.info("\n\n=================================================")
-            logger.info("Generating queries at: {}".format(query_dir))
+            logger.info("Generating queries at: {}".format(exp_dir))
             logger.info("=================================================")
-            generate_query_entry(directories=[query_dir], save=1)
+            generate_query_entry(directories=[exp_dir], save=1)
 
         elif target == "vis_query":
             logger.info("\n\n=================================================")
             logger.info("Visualizing queries.")
             logger.info("=================================================")
             # currently assume only 1 level of subdir
-            query_dir = os.path.join(exp_dir, "*")
-            visualize_query_entry(load_dirs=[query_dir], save=1)
+            visualize_query_entry(directories=[exp_dir], save=1)
 
         else:
             assert 0, "unknown target: {}".format(target)

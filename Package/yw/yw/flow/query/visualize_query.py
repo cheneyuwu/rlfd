@@ -14,8 +14,8 @@ from matplotlib import cm
 import matplotlib.patches as mpatches
 import matplotlib.animation as animation
 
-
-from yw.util.cmd_util import ArgParser
+from yw.tool import logger
+from yw.flow.plot import load_results
 
 
 def visualize_potential_surface(ax, res):
@@ -56,15 +56,16 @@ def create_animate(frame, data):
     visualize_action(ax, res)
 
 
-def create_plot(frame, fig, load_dirs, query_ls):
+def create_plot(frame, fig, all_results, query_ls):
 
     # Plot frame
     fig.text(0.02, 0.02, "frame: {}".format(frame), ha="left", va="bottom", fontsize=14, color="r")
 
     # Load data
     data = {}
-    for load_dir in load_dirs:
-        exp_name = load_dir.split("/")[-1]
+    for result in all_results:
+        exp_name = result["params"]["config"]
+        load_dir = result["dirname"]
         queries = {}
         for q_k in query_ls:
             if q_k in os.listdir(load_dir):
@@ -121,33 +122,28 @@ def create_plot(frame, fig, load_dirs, query_ls):
             )
 
 
-def main(load_dirs, save, mode="plot", **kwargs):
+def main(directories, save, mode="plot", **kwargs):
+
+    logger.configure()
+    assert logger.get_dir() is not None
 
     # Allow load dir to be *
-    for load_dir in load_dirs:
-        if load_dir.split("/")[-1] == "*":
-            root_dir = load_dir[:-2]
-            load_dirs = []
-            for d in os.listdir(root_dir):
-                path = os.path.join(root_dir, d)
-                if os.path.isdir(path) and os.path.exists(os.path.join(path, "rl")):
-                    load_dirs.append(path)
-            break
-
+    all_results = load_results(directories)
     # Data pre parser
     query_ls = [
-        "query_optimized_p_only",
-        "query_optimized_q_only",
-        "query_optimized_p_plus_q",
-        "query_policy",
+        # "query_optimized_p_only",
+        # "query_optimized_q_only",
+        # "query_optimized_p_plus_q",
+        # "query_policy",
         "query_surface_p_only",
         "query_surface_q_only",
         "query_surface_p_plus_q",
     ]
     data = {}
     num_frames = 0
-    for load_dir in load_dirs:
-        exp_name = load_dir.split("/")[-1]
+    for result in all_results:
+        exp_name = result["params"]["config"]
+        load_dir = result["dirname"]
         queries = {}
         for q_k in query_ls:
             if q_k in os.listdir(load_dir):
@@ -174,10 +170,10 @@ def main(load_dirs, save, mode="plot", **kwargs):
 
     if mode == "plot":
 
-        create_plot(frame=-1, fig=fig, load_dirs=load_dirs, query_ls=query_ls)
+        create_plot(frame=-1, fig=fig, all_results=all_results, query_ls=query_ls)
 
         if save:
-            res_store_dir = os.path.join(load_dirs[0], "../queries.png")
+            res_store_dir = os.path.join(directories[0], "queries.png")
             print("Storing query plot to {}".format(res_store_dir))
             plt.savefig(res_store_dir, dpi=200)
 
@@ -185,11 +181,11 @@ def main(load_dirs, save, mode="plot", **kwargs):
         # Plot animation
         fig = plt.figure(0)  # create figure before hand
         res = animation.FuncAnimation(
-            fig, create_plot, num_frames, fargs=(fig, load_dirs, query_ls), repeat=False, interval=300
+            fig, create_plot, num_frames, fargs=(fig, all_results, query_ls), repeat=False, interval=300
         )
 
         if save:
-            res_store_dir = os.path.join(load_dir, "../queries.mp4")
+            res_store_dir = os.path.join(directories[0], "queries.mp4")
             print("Storing query animation to {}".format(res_store_dir))
             res.save(res_store_dir, dpi=200)
 
@@ -199,13 +195,14 @@ def main(load_dirs, save, mode="plot", **kwargs):
     plt.show()  # close the figure and then continue
 
 
-ap = ArgParser()
-ap.parser.add_argument("--mode", help="plot the last or create an animation", type=str, default="plot")
-ap.parser.add_argument(
-    "--load_dir", help="which script to run", type=str, action="append", default=None, dest="load_dirs"
-)
-ap.parser.add_argument("--save", help="save gifure", type=int, default=0)
-
 if __name__ == "__main__":
+    from yw.util.cmd_util import ArgParser
+
+    ap = ArgParser()
+    ap.parser.add_argument("--mode", help="plot the last or create an animation", type=str, default="plot")
+    ap.parser.add_argument(
+        "--directory", help="which script to run", type=str, action="append", default=None, dest="directories"
+    )
+    ap.parser.add_argument("--save", help="save gifure", type=int, default=0)
     ap.parse(sys.argv)
     main(**ap.get_dict())
