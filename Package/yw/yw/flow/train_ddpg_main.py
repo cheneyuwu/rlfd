@@ -64,7 +64,7 @@ def train(
         policy.init_demo_buffer(demo_file, update_stats=policy.sample_demo_buffer)
 
     # Pre-Training a potential function
-    if policy.demo_strategy == "maf" or policy.demo_strategy == "rbmaf":
+    if policy.demo_strategy == "maf":
         if not shaping_policy:
             logger.info("Training the policy for reward shaping.")
             num_epoch = 2000
