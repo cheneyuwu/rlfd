@@ -98,7 +98,6 @@ def train(
     best_success_rate = -1
 
     for epoch in range(n_epochs):
-        logger.debug("train_ddpg_main.train_reinforce -> epoch: {}".format(epoch))
 
         # Store anything we need into a numpyz file.
         policy.query_policy(
@@ -109,17 +108,14 @@ def train(
         # Train
         rollout_worker.clear_history()
         for cycle in range(n_cycles):
-            logger.debug("train_ddpg_main.train_reinforce -> cycle: {}".format(cycle))
             episode = rollout_worker.generate_rollouts()
             policy.store_episode(episode)
             for batch in range(n_batches):
-                logger.debug("train_ddpg_main.train_reinforce -> batch: {}".format(batch))
                 policy.train()
             policy.check_train()
             policy.update_target_net()
 
         # Test
-        logger.debug("train_ddpg_main.train_reinforce -> Testing.")
         evaluator.clear_history()
         evaluator.generate_rollouts()
 
