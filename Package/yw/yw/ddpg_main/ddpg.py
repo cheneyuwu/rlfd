@@ -569,16 +569,13 @@ class DDPG(object):
                 cloning_loss_tf = tf.reduce_mean(tf.square(actor_pi_tf - demo_pi_tf))
             # adding the cloning loss to the actor loss as an auxilliary loss scaled by its weight aux_loss_weight
             pi_loss_tf += self.aux_loss_weight * cloning_loss_tf
-
         elif self.demo_shaping != None:  # any type of shaping method
             pi_loss_tf = -tf.reduce_mean(self.main_q_pi_tf)
             pi_loss_tf += -tf.reduce_mean(self.demo_actor_shaping)
             pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
-
         else:  # not training with demonstrations
             pi_loss_tf = -tf.reduce_mean(self.main_q_pi_tf)
             pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
-
         self.pi_loss_tf = pi_loss_tf
 
         # Gradients
