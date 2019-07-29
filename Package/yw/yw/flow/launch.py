@@ -73,7 +73,14 @@ def main(targets, exp_dir, policy_file, **kwargs):
     # Use the default logger setting
     logger.configure()
 
+    # Setup
     assert targets is not None, "require --targets"
+    # get the abs path of the exp dir
+    assert exp_dir is not None, "must provide the experiment root directory --exp_dir"
+    exp_dir = os.path.abspath(os.path.expanduser(exp_dir))
+    if policy_file is not None:
+        policy_file = os.path.abspath(os.path.expanduser(policy_file))
+
     for target in targets:
         if "rename:" in target:
             logger.info("\n\n=================================================")
