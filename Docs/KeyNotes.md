@@ -14,19 +14,20 @@
   $\underset{(s,a,r,s',d) \sim {\mathcal D}}{{\mathrm E}}\left[\Bigg( Q_{\phi}(s,a) - \left(r + \gamma (1 - d) \max_{a'} Q_{\phi}(s',a') \right) \Bigg)^2\right]$
 
 ## Idea 1: Learning from demonstrations through shaping
-- use a potential function, which is a maf trained on masked auto regressive flow
+- Use a potential function, which is a maf trained on masked auto regressive flow
 - Environments to Test
-1. Reach (Current)
-    The initial state of the arm is fixed. The target position is also fixed.
-2. Pick and Place
-    The initial state of the arm, initial location of the object to be picked and the target position are fixed.
-3. Peg in Hole
-    The arm always holds the object.
-    The initial state is fixed
-    The hole location is fixed.
-    Later we can change the shape of the hole to make the environment harder.
-4. Stack(?)
-    2 or 3 objects are put on the table, and the goal is to put one on another.
+    -  Currently we focus on single goal environment. Lower number of dimensions so that the potential function is more accurate.
+    1. Reach (Current)
+        The initial state of the arm is fixed. The target position is also fixed.
+    2. Pick and Place
+        The initial state of the arm, initial location of the object to be picked and the target position are fixed.
+    3. Peg in Hole
+        The arm always holds the object.
+        The initial state is fixed
+        The hole location is fixed.
+        Later we can change the shape of the hole to make the environment harder.
+    4. Stack(?)
+        2 or 3 objects are put on the table, and the goal is to put one on another.
 
 ## Idea 2: Combine IL and RL by training DDPG critic using demonstration data.
 - Generate some demonstration trajectories $(s_1, a_1, r_1, s_2, a_2, r_2, ...)$.
