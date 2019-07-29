@@ -179,7 +179,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
             logger.info("\n\n=================================================")
             logger.info("Displaying using policy file from {}.".format(policy_file))
             logger.info("=================================================")
-            display_entry(policy_file=policy_file, seed=0, num_itr=10)
+            display_entry(policy_file=policy_file)
 
         elif target == "plot":
             logger.info("\n\n=================================================")
