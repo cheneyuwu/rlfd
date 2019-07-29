@@ -23,10 +23,10 @@ nvidia-smi --compute-mode=0
 source /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/setup.sh
 
 # LAUNCH_EXP_DIR="/home/yuchenwu/scratch/OpenAI/Temp"
-LAUNCH_EXP_DIR="/home/yuchenwu/scratch/OpenAI/FetchReachSingleGoalMerged"
+LAUNCH_EXP_DIR="TempResult/Temp"
 N_TASKS=20
 
-mpiexec -n ${N_TASKS} python ${PROJECT}/Experiment/launch.py --exp_dir ${LAUNCH_EXP_DIR} --targets train:configs/rlmerged.py
+mpiexec -n ${N_TASKS} python -m yw.flow.launch --exp_dir ${LAUNCH_EXP_DIR} --targets train:configs/rl.py # change this name
 # train:configs/rldense.py demo
 # train:configs/rlmaf.py
 # train:configs/rlrbmaf.py
