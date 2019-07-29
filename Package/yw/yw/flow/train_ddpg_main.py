@@ -42,19 +42,19 @@ def train(
 
     assert root_dir != None
     # rl
-    policy_save_path = root_dir + "/rl/"
+    policy_save_path = os.path.join(root_dir, "rl")
     os.makedirs(policy_save_path, exist_ok=True)
     latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
     best_policy_path = os.path.join(policy_save_path, "policy_best.pkl")
     periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")
     # shaping
-    shaping_save_path = root_dir + "/shaping/"
+    shaping_save_path = os.path.join(root_dir, "shaping")
     os.makedirs(shaping_save_path, exist_ok=True)
     latest_shaping_path = os.path.join(shaping_save_path, "shaping_latest.ckpt")
     # queries
-    query_shaping_save_path = root_dir + "/query_shaping/"
+    query_shaping_save_path = os.path.join(root_dir, "query_shaping")
     os.makedirs(query_shaping_save_path, exist_ok=True)
-    query_policy_save_path = root_dir + "/query_policy/"
+    query_policy_save_path = os.path.join(root_dir, "query_policy")
     os.makedirs(query_policy_save_path, exist_ok=True)
 
     # Adding demonstration data to the demonstration buffer
@@ -77,7 +77,7 @@ def train(
                 if rank == 0 and epoch % 100 == 0:
                     logger.info("Saving latest policy to {}.".format(latest_shaping_path))
                     policy.save_shaping_weights(latest_shaping_path)
-            # uncomment to save trained potential functions
+            # UNCOMMENT to save trained potential functions
             # if rank == 0:
             #     logger.info("Saving latest policy to {}.".format(latest_shaping_path))
             #     policy.save_shaping_weights(latest_shaping_path)
@@ -127,7 +127,6 @@ def train(
             logger.record_tabular(key, mpi_average(val, comm=comm))
         for key, val in policy.logs():
             logger.record_tabular(key, mpi_average(val, comm=comm))
-
         if rank == 0:
             logger.dump_tabular()
 
@@ -138,12 +137,10 @@ def train(
             logger.info("New best success rate: {}.".format(best_success_rate))
             logger.info("Saving policy to {}.".format(best_policy_path))
             evaluator.save_policy(best_policy_path)
-
         if rank == 0 and save_interval > 0 and epoch % save_interval == 0:
             policy_path = periodic_policy_path.format(epoch)
             logger.info("Saving periodic policy to {}.".format(policy_path))
             evaluator.save_policy(policy_path)
-
         if rank == 0:
             logger.info("Saving latest policy to {}.".format(latest_policy_path))
             evaluator.save_policy(latest_policy_path)

@@ -93,8 +93,9 @@ def main(targets, exp_dir, policy_file, **kwargs):
             if rank == 0:
                 for k, v in dir_param_dict.items():
                     assert os.path.exists(k)
-                    # copy params.json file, rename the configs
-                    v["config"] = str(v["ddpg"]["shaping_params"]["reg_loss_weight"]) + ":" + str(v["ddpg"]["shaping_params"]["potential_weight"])
+                    # copy params.json file, rename the config entry
+                    v["config"] = "default" # CHANGE this name to reflect the test config!
+                    # v["config"] = str(v["ddpg"]["shaping_params"]["reg_loss_weight"]) + ":" + str(v["ddpg"]["shaping_params"]["potential_weight"])
                     with open(os.path.join(k, "params_renamed.json"), "w") as f:
                         json.dump(v, f)
 
@@ -131,8 +132,8 @@ def main(targets, exp_dir, policy_file, **kwargs):
                 logger.info("Setting policy_file to {}".format(policy_file))
 
             # run experiments
-            parallel = 1  # change this number to allow launching in serial
-            num_cpu = 1  # change this number to allow multiple processes
+            parallel = 1  # CHANGE this number to allow launching in serial
+            num_cpu = 1  # CHANGE this number to allow multiple processes
             # total num exps
             num_exp = len(dir_param_dict.keys())
 

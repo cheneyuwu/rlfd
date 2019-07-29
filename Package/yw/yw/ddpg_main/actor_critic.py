@@ -74,4 +74,6 @@ class ActorCritic:
         if self.dimg != 0:
             goal = self.g_stats.normalize(g)
             state = tf.concat(axis=1, values=[state, goal])
+        else:
+            assert g is None
         return state
