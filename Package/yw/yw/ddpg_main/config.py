@@ -218,9 +218,7 @@ def config_rollout(params, policy):
 
 
 def config_evaluator(params, policy):
-
     eval_params = params["evaluator"]
-
     eval_params.update({"dims": params["dims"], "T": params["T"]})
 
     logger.info("*** eval_params ***")
@@ -234,15 +232,8 @@ def config_evaluator(params, policy):
 
 
 def config_demo(params, policy):
-    demo_params = {
-        "compute_Q": True,
-        "random_eps": 0.0,
-        "noise_eps": 0.1,
-        "render": params["render"],
-        "T": params["eps_length"],
-        "rollout_batch_size": params["rollout_batch_size"],
-        "dims": params["dims"],
-    }
+    demo_params = params["demo"]
+    demo_params.update({"dims": params["dims"], "T": params["T"]})
 
     logger.info("*** demo_params ***")
     log_params(demo_params)

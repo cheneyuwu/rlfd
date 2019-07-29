@@ -172,7 +172,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
             logger.info("\n\n=================================================")
             logger.info("Using policy file from {} to generate demo data.".format(policy_file))
             logger.info("=================================================")
-            demo_entry(num_eps=100, seed=0, policy_file=policy_file, store_dir=exp_dir)
+            demo_entry(policy_file=policy_file, root_dir=exp_dir)
 
         elif target == "display":
             assert policy_file != None
