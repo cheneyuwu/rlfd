@@ -1,10 +1,10 @@
 # Params from the original td3 paper
 params_config = {
     # Config Summary
-    "config": ("RLwithOriginalTD3Params",),  # change this for each customized params file
+    "config": "default",  # change this for each customized params file
     "seed": 0,
     # Environment Config
-    "env_name": "Reach2DFDense",
+    "env_name": "FetchPickAndPlace-v1",
     "r_scale": 1.0,  # scale the reward of the environment down
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 0,  # overwrite the default length of the episode

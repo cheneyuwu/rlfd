@@ -27,9 +27,12 @@ from yw.flow.query.visualize_query import main as visualize_query_entry
 def import_param_config(load_dir):
     """Assume that there is a gv called params_config that contains all the params
     """
-    module = importlib.import_module(load_dir.replace("/", ".").replace(".py", ""))
-    params_config = getattr(module, "params_config")
-    return params_config
+    # get the full path of the load directory
+    abs_load_dir = os.path.abspath(os.path.expanduser(load_dir))
+    spec = importlib.util.spec_from_file_location("module.name", abs_load_dir)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.params_config
 
 
 def generate_params(root_dir, param_config):
@@ -70,6 +73,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
     # Use the default logger setting
     logger.configure()
 
+    assert targets is not None, "require --targets"
     for target in targets:
         if "rename:" in target:
             logger.info("\n\n=================================================")
@@ -245,4 +249,3 @@ if __name__ == "__main__":
     )
     exp_parser.parse(sys.argv)
     main(**exp_parser.get_dict())
-    exit(0)

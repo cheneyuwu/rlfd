@@ -1,6 +1,7 @@
+# Best parameters found so far to be used for the Open AI fetch pick and place environment with a single goal.
 params_config = {
-    # Config Summary
-    "config": ("RL",),  # change this for each customized params file
+    # Config Summary (Overwrite this later)
+    "config": "default",  # change this for each customized params file
     # Environment Config
     "env_name": "FetchPickAndPlace-v1",
     "r_scale": 1.0,  # scale the reward of the environment down
@@ -31,7 +32,7 @@ params_config = {
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
         "prm_loss_weight": 1.0,  # (0.001 for OpenAI) weight corresponding to the primary loss
         "aux_loss_weight": 1.0,  # (0.0078 for OpenAI) weight corresponding to the auxilliary loss also called the cloning loss
-        "shaping_params": {"prm_loss_weight": 1.0, "reg_loss_weight": 800.0, "potential_weight": 4.0},
+        "shaping_params": {"prm_loss_weight": 1.0, "reg_loss_weight": 800.0, "potential_weight": 5.0},
         # normalization
         "norm_eps": 0.01,  # epsilon used for observation normalization
         "norm_clip": 5,  # normalized observations are cropped to this values
@@ -56,7 +57,7 @@ params_config = {
     },
     # Training Config
     "train": {
-        "n_epochs": 500,
+        "n_epochs": 1000,
         "n_cycles": 10,  # per epoch
         "n_batches": 40,  # training batches per cycle
         "save_interval": 10,
