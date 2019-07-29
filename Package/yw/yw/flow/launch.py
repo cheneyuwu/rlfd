@@ -244,7 +244,7 @@ if __name__ == "__main__":
 
     Run this script with different chain of targets and see what happens! I hope the flow makes sense:)
     """
-    exp_parser = ArgParser()
+    exp_parser = ArgParser(allow_unknown_args=False)
     exp_parser.parser.add_argument("--targets", help="target or list of target", type=str, nargs="+", default=None)
     exp_parser.parser.add_argument(
         "--exp_dir",
