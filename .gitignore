@@ -107,9 +107,6 @@ venv.bak/
 /Temp/
 Temp*/
 
-# Archived files
-Archive/
-
 # Mac
 .DS_store
 
