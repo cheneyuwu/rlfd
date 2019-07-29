@@ -159,7 +159,7 @@ class DDPG(object):
             self.replay_buffer = HERReplayBuffer(
                 buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
             )
-            if self.demo_strategy != "none":
+            if self.demo_strategy != "none" or self.sample_demo_buffer:
                 self.demo_buffer = HERReplayBuffer(
                     buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
                 )
@@ -167,7 +167,7 @@ class DDPG(object):
             self.replay_buffer = UniformReplayBuffer(
                 buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
             )
-            if self.demo_strategy != "none":
+            if self.demo_strategy != "none" or self.sample_demo_buffer:
                 self.demo_buffer = UniformReplayBuffer(
                     buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
                 )

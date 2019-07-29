@@ -71,6 +71,21 @@ def main(targets, exp_dir, policy_file, **kwargs):
     logger.configure()
 
     for target in targets:
+        if "rename:" in target:
+            logger.info("\n\n=================================================")
+            logger.info("Renaming the config to params_renamed.json!")
+            logger.info("=================================================")
+            # adding checking
+            config_file = target.replace("rename:", "")
+            params_config = import_param_config(config_file)
+            dir_param_dict = generate_params(exp_dir, params_config)
+            if rank == 0:
+                for k, v in dir_param_dict.items():
+                    assert os.path.exists(k)
+                    # copy params.json file, rename the configs
+                    v["config"] = str(v["ddpg"]["shaping_params"]["reg_loss_weight"]) + ":" + str(v["ddpg"]["shaping_params"]["potential_weight"])
+                    with open(os.path.join(k, "params_renamed.json"), "w") as f:
+                        json.dump(v, f)
 
         if "train:" in target:
             logger.info("\n\n=================================================")

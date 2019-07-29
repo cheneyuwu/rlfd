@@ -58,7 +58,7 @@ def train(
     os.makedirs(query_policy_save_path, exist_ok=True)
 
     # Adding demonstration data to the demonstration buffer
-    if policy.demo_strategy != "none":
+    if policy.demo_strategy != "none" or policy.sample_demo_buffer:
         demo_file = os.path.join(root_dir, "demo_data.npz")
         assert os.path.isfile(demo_file), "demonstration training set does not exist"
         policy.init_demo_buffer(demo_file, update_stats=policy.sample_demo_buffer)
@@ -67,7 +67,7 @@ def train(
     if policy.demo_strategy == "maf":
         if not shaping_policy:
             logger.info("Training the policy for reward shaping.")
-            num_epoch = 2000
+            num_epoch = 3000
             for epoch in range(num_epoch):
                 loss = policy.train_shaping()
 
@@ -190,8 +190,6 @@ def main(root_dir, comm=None, **kwargs):
         params = config.DEFAULT_PARAMS.copy()
     if rank == 0:
         comp_param_file = os.path.join(root_dir, "params.json")
-        # if params["config"] == "default": # Modify the config name here!
-        #     params["config"] = "RL+Demo:" + params["ddpg"]["demo_strategy"]
         with open(comp_param_file, "w") as f:
             json.dump(params, f)
 

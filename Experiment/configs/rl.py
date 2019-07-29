@@ -45,8 +45,8 @@ params_config = {
     # Rollouts Config
     "rollout": {
         "rollout_batch_size": 4,  # per mpi thread
-        "random_eps": 0.1,  # (0.3 for OpenAI) percentage of time a random action is taken
-        "noise_eps": 0.1,  # (0.2 for OpenAI) std of gaussian noise added to not-completely-random actions as a percentage of max_u
+        "random_eps": 0.2,  # (0.3 for OpenAI) percentage of time a random action is taken
+        "noise_eps": 0.2,  # (0.2 for OpenAI) std of gaussian noise added to not-completely-random actions as a percentage of max_u
     },
     "evaluator": {
         "rollout_batch_size": 20,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
