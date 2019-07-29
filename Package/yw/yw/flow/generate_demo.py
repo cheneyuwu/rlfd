@@ -21,13 +21,11 @@ DEFAULT_PARAMS = {
     "seed": 0,
     "num_eps": 100,
     "max_concurrency": 10,
-    "demo": {
-        "random_eps": 0.0,
-        "noise_eps": 0.1,
-        "compute_Q": True,
-        "render": 0,
-    },
+    "demo": {"random_eps": 0.0, "noise_eps": 0.1, "compute_Q": True, "render": 0},
+    "extra_noise_mean": 0.0,
+    "extra_noise_var": 0.0,
 }
+
 
 def main(policy_file, root_dir, **kwargs):
     """Generate demo from policy file
@@ -65,7 +63,7 @@ def main(policy_file, root_dir, **kwargs):
         policy = pickle.load(f)
 
     # Extract environment construction information
-    env_name = policy.info["env_name"].replace("Dense", "") # the reward should be sparse
+    env_name = policy.info["env_name"].replace("Dense", "")  # the reward should be sparse
     T = policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T
 
     # Prepare params.
@@ -98,6 +96,17 @@ def main(policy_file, root_dir, **kwargs):
     if rank == 0:
         logger.dump_tabular()
 
+    # Add extra noise to the demonstration actions (maybe to the states as well later)
+    logger.info(
+        "Adding gaussian noise with mean: {}, var: {} to the actions".format(
+            params["extra_noise_mean"], params["extra_noise_var"]
+        )
+    )
+    episode["u"] += np.random.normal(
+        loc=params["extra_noise_mean"], scale=params["extra_noise_var"], size=episode["u"].shape
+    )
+    np.clip(episode["u"], -policy.max_u, policy.max_u, out=episode["u"])
+
     # store demonstration data (only the main thread)
     if rank == 0:
         os.makedirs(root_dir, exist_ok=True)
@@ -108,6 +117,7 @@ def main(policy_file, root_dir, **kwargs):
 
     # Close the default session to prevent memory leaking
     tf.get_default_session().close()
+
 
 if __name__ == "__main__":
 
