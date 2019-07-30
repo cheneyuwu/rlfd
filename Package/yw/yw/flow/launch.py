@@ -99,7 +99,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     with open(os.path.join(k, "params_renamed.json"), "w") as f:
                         json.dump(v, f)
 
-        if "train:" in target:
+        elif "train:" in target:
             logger.info("\n\n=================================================")
             logger.info("Launching the training experiment!")
             logger.info("=================================================")
