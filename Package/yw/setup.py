@@ -15,7 +15,7 @@ setup(
         # "mpi4py",
         # "tensorflow==1.13.1",
         # "tensorflow_probability==0.6.0",
-        # "pandas",
+        "pandas",
     ],
     zip_safe=False,
 )
