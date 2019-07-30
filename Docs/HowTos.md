@@ -1,19 +1,38 @@
 # HowTos
 
-## Florian's lab computer
-- ssh -Y <username>@bali.utm.utoronto.ca
+## Install this package
+1. setup Mujoco
+  - On cluster: https://docs.computecanada.ca/wiki/MuJoCo
+2. download the repo
+  - `git clone git@github.com:cheneyuwu/RLProject`
+  - `git submodule init`
+  - `git submodule sync`
+  - `git submodule update --remote`
+3. enter virtual env and install packages: gym, yw, etc
+  - note: you need to manually install mujoco_py
+  - note: on compute canada cluster you need to manually install tensorflow and use `module load mpi4py` to get the mpi python package
 
 ## Compute Canada Cluster
 - [Wiki](https://docs.computecanada.ca/wiki/Main_Page)
 - Connect
-  - `ssh -Y yuchenwu@cedar.computecanada.ca`
+  - `ssh -Y yuchenwu@[cedar, beluga, graham].computecanada.ca`
   - Password: @0413Wuyuchen
-- Build environment
-  - module load python/3.6
-  - Use virtual env
-  - pip install ...
-    - numpy --no-index
-    - tensorflow_gpu
+  - add this to the `~/.ssh/config` for easy connect: `ssh [cedar, beluga, graham]`
+- Setup
+  1. setup ssh public key authentication
+    - `scp ~/.ssh/id_rsa.pub [cedar, beluga, graham]:~`
+    - create file `~/.ssh/authorized_keys` on server, and then copy the content of `id_rsa.pub` to this file
+    - `chmod 600 /home/USERNAME/.ssh/authorized_keys`
+    - `chmod 700 /home/USERNAME/.ssh`
+  2. generate ssh on the server and add it to the github account
+    - https://help.github.com/en/enterprise/2.15/user/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent
+  3. clone github repository and setup bash, vim, tmux, etc
+    - note that compute canada's bashrc is not empty, do not overwrite the original content
+  4. build virtual env
+    - `module load python/3.6` (make sure that you have the correct python version)
+    - create a folder `~/ENV` and run `virtualenv <env name>` inside this folder
+  5. Install this package (see above)
+
 
 - [SLURM](https://www.rc.fas.harvard.edu/resources/documentation/convenient-slurm-commands/)
   - Template
