@@ -10,12 +10,12 @@ setup(
     license="MIT",
     packages=["yw"],
     install_requires=[
-        "gym",
         "matplotlib",
-        "mpi4py",
+        # "gym",
+        # "mpi4py",
         # "tensorflow==1.13.1",
-        "tensorflow_probability",
-        "pandas",
+        # "tensorflow_probability==0.6.0",
+        # "pandas",
     ],
     zip_safe=False,
 )
