@@ -185,13 +185,6 @@ class RolloutWorker(RolloutWorkerBase):
     def generate_rollouts(self):
         """Performs `rollout_batch_size` rollouts for maximum time horizon `T` with the current policy
         """
-        self.reset()
-
-        # Store initial observations and goals
-        o = np.empty((self.rollout_batch_size, self.dims["o"]), np.float32)  # o
-        ag = np.empty((self.rollout_batch_size, self.dims["g"]), np.float32)  # ag
-        o[:] = self.initial_o
-        ag[:] = self.initial_ag
 
         # Information to store
         obs, achieved_goals, acts, goals, rewards, successes, shaping_rewards = [], [], [], [], [], [], []
@@ -199,6 +192,14 @@ class RolloutWorker(RolloutWorkerBase):
             np.empty((self.T, self.rollout_batch_size, self.dims["info_" + key]), np.float32) for key in self.info_keys
         ]
         Qs, QPs = [], []
+
+        # Store initial observations and goals
+        self.reset()
+        o = np.empty((self.rollout_batch_size, self.dims["o"]), np.float32)  # o
+        ag = np.empty((self.rollout_batch_size, self.dims["g"]), np.float32)  # ag
+        o[:] = self.initial_o
+        ag[:] = self.initial_ag
+
 
         # Main episode loop
         for t in range(self.T):
@@ -374,7 +375,7 @@ class SerialRolloutWorker(RolloutWorkerBase):
         """
 
         # Information to store
-        obs, obs_2, achieved_goals, achieved_goals_2, acts, goals, reward = [], [], [], [], [], [], []
+        obs, obs_2, achieved_goals, achieved_goals_2, acts, goals, rewards = [], [], [], [], [], [], []
         successes, shaping_rewards = [], []
         info_values = {"info_" + k: [] for k in self.info_keys}
         Qs, QPs = [], []
@@ -451,6 +452,8 @@ class SerialRolloutWorker(RolloutWorkerBase):
 
                 # end this episode if succeeded
                 if success:
+                    if t == 0:
+                        logger.warn("Starting with a success, this may be an indication of error!")
                     break 
 
         # Store all information into an episode dict

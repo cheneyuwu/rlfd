@@ -4,7 +4,7 @@ import numpy as np
 from yw.tool import logger
 
 from yw.ddpg_main.ddpg import DDPG
-from yw.ddpg_main.rollout import RolloutWorker
+from yw.ddpg_main.rollout import RolloutWorker, SerialRolloutWorker
 
 from yw.env.env_manager import EnvManager
 
