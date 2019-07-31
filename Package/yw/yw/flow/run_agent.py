@@ -19,13 +19,8 @@ from yw.util.util import set_global_seeds
 DEFAULT_PARAMS = {
     "seed": 0,
     "num_eps": 10,
-    "demo": {
-        "random_eps": 0.0,
-        "noise_eps": 0.1,
-        "compute_Q": True,
-        "render": 1,
-        "rollout_batch_size": 1,
-    },
+    "fix_T": False,
+    "demo": {"random_eps": 0.0, "noise_eps": 0.1, "compute_Q": True, "render": 1, "rollout_batch_size": 1},
 }
 
 
@@ -49,7 +44,7 @@ def main(policy_file, **kwargs):
         policy = pickle.load(f)
 
     # Extract environment construction information
-    env_name = policy.info["env_name"].replace("Dense", "") # the reward should be sparse
+    env_name = policy.info["env_name"].replace("Dense", "")  # the reward should be sparse
     T = policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T
 
     # Prepare params.
@@ -75,6 +70,7 @@ def main(policy_file, **kwargs):
 
     # Close the default session to prevent memory leaking
     tf.get_default_session().close()
+
 
 if __name__ == "__main__":
 

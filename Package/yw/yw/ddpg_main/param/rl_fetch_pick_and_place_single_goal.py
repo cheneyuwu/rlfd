@@ -8,6 +8,7 @@ params_config = {
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 30,  # overwrite the default length of the episode
     "env_args": {},  # extra arguments passed to the environment.
+    "fix_T": True,  # whether or not to fix episode length for all rollouts. If false, use the ring buffer
     # DDPG Config
     "ddpg": {
         "buffer_size": int(1e6),

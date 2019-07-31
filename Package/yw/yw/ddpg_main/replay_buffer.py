@@ -1,6 +1,124 @@
 import numpy as np
 
-class ReplayBuffer:
+
+class ReplayBufferBase:
+    def __init__(self, buffer_shapes, size):
+        """Creates a replay buffer.
+
+        Args:
+            buffer_shapes       (dict of float) - the shape for all buffers that are used in the replay buffer
+            size_in_transitions (int)           - the size of the buffer, measured in transitions
+        """
+        self.buffer_shapes = buffer_shapes
+        # memory management
+        self.size = size
+        self.current_size = 0
+
+    def sample_all(self):
+        """Returns all the transitions currently stored in the replay buffer.
+        """
+        raise NotImplementedError
+
+    def sample(self, batch_size):
+        """Returns a dict {key: array(batch_size x shapes[key])}
+        """
+        raise NotImplementedError
+
+    def store_episode(self, episode_batch):
+        """API for storing episodes. Including memory management.
+            episode_batch: array(batch_size x (T or T+1) x dim_key)
+        """
+        batch_sizes = [len(episode_batch[key]) for key in episode_batch.keys()]
+        assert np.all(np.array(batch_sizes) == batch_sizes[0])
+        batch_size = batch_sizes[0]
+
+        idxs = self._get_storage_idx(batch_size)
+
+        # load inputs into buffers
+        for key in self.buffers.keys():
+            self.buffers[key][idxs] = episode_batch[key]
+
+        # memory management
+        self.current_size = min(self.size, self.current_size + batch_size)
+
+    @property
+    def full(self):
+        return self.current_size == self.size
+
+    def get_current_size(self):
+        return self.current_size
+
+    def clear_buffer(self):
+        self.current_size = 0
+        self._clear_buffer()
+
+    def _clear_buffer(self):
+        """Overwrite this for further cleanup"""
+        pass
+
+
+class RingReplayBuffer(ReplayBufferBase):
+    def __init__(self, buffer_shapes, size_in_transitions):
+        """Creates a replay buffer.
+
+        Args:
+            buffer_shapes       (dict of float) - the shape for all buffers that are used in the replay buffer
+            size_in_transitions (int)           - the size of the buffer, measured in transitions
+        """
+        super().__init__(buffer_shapes=buffer_shapes, size=size_in_transitions)
+
+        # contains {key: array(transitions x dim_key)}
+        self.buffers = {key: np.empty([self.size, *shape], dtype=np.float32) for key, shape in buffer_shapes.items()}
+        self.pointer = 0
+
+    def sample_all(self):
+        """Returns all the transitions currently stored in the replay buffer.
+        """
+        transitions = {}  # make a copy of the stored data in case it gets changed
+        assert self.current_size > 0
+        for key in self.buffers.keys():
+            transitions[key] = self.buffers[key][: self.current_size].copy()
+
+        assert all([transitions[k].shape[0:1] == transitions["u"].shape[0:1] for k in transitions.keys()])
+
+        return transitions
+
+    def sample(self, batch_size):
+        """Returns a dict {key: array(batch_size x shapes[key])}
+        """
+        # Select which episodes and time steps to use.
+        idxs = np.random.randint(0, self.current_size, batch_size)
+        transitions = {key: self.buffers[key][idxs].copy() for key in self.buffers.keys()}
+
+        transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:]) for k in transitions.keys()}
+
+        assert all([transitions[k].shape[0] == batch_size for k in transitions.keys()])
+
+        return transitions
+
+    def _get_storage_idx(self, inc):
+        assert inc <= self.size, "batch committed to replay is too large!"
+        assert inc > 0, "invalid increment"
+        # go consecutively until you hit the end, and restart from the beginning.
+        if self.pointer + inc <= self.size:
+            idx = np.arange(self.pointer, self.pointer + inc)
+            self.pointer += inc
+        else:
+            overflow = inc - (self.size - self.pointer)
+            idx_a = np.arange(self.pointer, self.size)
+            idx_b = np.arange(0, overflow)
+            idx = np.concatenate([idx_a, idx_b])
+            self.pointer = overflow
+
+        if inc == 1:
+            idx = idx[0]
+        return idx
+
+    def _clear_buffer(self):
+        self.pointer = 0
+
+
+class ReplayBuffer(ReplayBufferBase):
     def __init__(self, buffer_shapes, size_in_transitions, T):
         """Creates a replay buffer.
 
@@ -8,31 +126,21 @@ class ReplayBuffer:
             buffer_shapes       (dict of int) - the shape for all buffers that are used in the replay buffer
             size_in_transitions (int)         - the size of the buffer, measured in transitions
             T                   (int)         - the time horizon for episodes
-            sample_transitions  (function)    - a function that samples from the replay buffer
         """
-        self.buffer_shapes = buffer_shapes
-        self.size = size_in_transitions // T
-        self.T = T
+
+        super().__init__(buffer_shapes=buffer_shapes, size=size_in_transitions // T)
 
         # self.buffers is {key: array(size_in_episodes x T or T+1 x dim_key)}
         self.buffers = {key: np.empty([self.size, *shape], dtype=np.float32) for key, shape in buffer_shapes.items()}
-
-        # memory management
-        self.current_size = 0
-        self.n_transitions_stored = 0
-
-    @property
-    def full(self):
-        return self.current_size == self.size
+        self.T = T
 
     def sample_all(self):
         """Returns all the transitions currently stored in the replay buffer.
         """
         buffers = {}
-        
         assert self.current_size > 0
         for key in self.buffers.keys():
-            buffers[key] = self.buffers[key][: self.current_size]
+            buffers[key] = self.buffers[key][: self.current_size].copy()
 
         # Split obs and goal (i.e. for (s, a, s'), put s and s' to two entries)
         buffers["o_2"] = buffers["o"][:, 1:, :]
@@ -42,11 +150,11 @@ class ReplayBuffer:
             buffers["ag"] = buffers["ag"][:, :-1, :]
         if "g" in buffers.keys():
             buffers["g_2"] = buffers["g"][:, :, :]
-        
-        # Merge the first and second dimension (dimensions are : episode x T or )
-        transitions = {k: buffers[k].reshape([-1]+ list(buffers[k].shape[2:])) for k in buffers.keys()}
 
-        assert all([buffers[k].shape[0:2] == buffers["u"].shape[0:2] for k in buffers.keys()])
+        # Merge the first and second dimension (dimensions are : episode x T or T+1 x dim)
+        transitions = {k: buffers[k].reshape([-1] + list(buffers[k].shape[2:])) for k in buffers.keys()}
+
+        assert all([transitions[k].shape[0:1] == transitions["u"].shape[0:1] for k in transitions.keys()])
 
         return transitions
 
@@ -71,44 +179,18 @@ class ReplayBuffer:
 
         return transitions
 
-    def store_episode(self, episode_batch):
-        """episode_batch: array(batch_size x (T or T+1) x dim_key)
-        """
-        batch_sizes = [len(episode_batch[key]) for key in episode_batch.keys()]
-        assert np.all(np.array(batch_sizes) == batch_sizes[0])
-        batch_size = batch_sizes[0]
-
-        idxs = self._get_storage_idx(batch_size)
-
-        # load inputs into buffers
-        for key in self.buffers.keys():
-            self.buffers[key][idxs] = episode_batch[key]
-
-        self.insert_transitions(idxs)
-
-        self.n_transitions_stored += batch_size * self.T
-
     def sample_transitions(self, buffers, batch_size):
         raise NotImplementedError
 
-    def insert_transitions(self, idxs):
-        pass
-
-    def get_current_episode_size(self):
+    def get_current_size_episode(self):
         return self.current_size
 
-    def get_current_size(self):
+    def get_current_size_transiton(self):
         return self.current_size * self.T
 
-    def get_transitions_stored(self):
-        return self.n_transitions_stored
-
-    def clear_buffer(self):
-        self.current_size = 0
-
-    def _get_storage_idx(self, inc=None):
-        inc = inc or 1  # size increment
-        assert inc <= self.size, "Batch committed to replay is too large!"
+    def _get_storage_idx(self, inc):
+        assert inc <= self.size, "batch committed to replay is too large!"
+        assert inc > 0, "invalid increment"
         # go consecutively until you hit the end, and then go randomly.
         if self.current_size + inc <= self.size:
             idx = np.arange(self.current_size, self.current_size + inc)
@@ -119,9 +201,6 @@ class ReplayBuffer:
             idx = np.concatenate([idx_a, idx_b])
         else:
             idx = np.random.randint(0, self.size, inc)
-
-        # update replay size
-        self.current_size = min(self.size, self.current_size + inc)
 
         if inc == 1:
             idx = idx[0]
@@ -142,7 +221,6 @@ class UniformReplayBuffer(ReplayBuffer):
         Return:
             transitions
         """
-
         # Select which episodes and time steps to use.
         episode_idxs = np.random.randint(0, buffers["u"].shape[0], batch_size)
         t_samples = np.random.randint(self.T, size=batch_size)
@@ -172,9 +250,7 @@ class HERReplayBuffer(ReplayBuffer):
         """
         buffers is {key: array(buffer_size x T x dim_key)}
         """
-
         # Select which episodes and time steps to use.
-
         episode_idxs = np.random.randint(0, buffers["u"].shape[0], batch_size)
         t_samples = np.random.randint(self.T, size=batch_size)
         transitions = {key: buffers[key][episode_idxs, t_samples].copy() for key in buffers.keys()}
