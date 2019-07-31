@@ -12,6 +12,7 @@ from yw.ddpg_main.demo_shaping import (
     GaussianDemoShaping,
     NormalizingFlowDemoShaping,
     MAFDemoShaping,
+    EnsMAFDemoShaping,
 )
 from yw.util.tf_util import flatten_grads
 
@@ -192,13 +193,9 @@ class DDPG(object):
                     buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
                 )
         elif self.replay_strategy["strategy"] == "none" and not self.fix_T:
-            self.replay_buffer = RingReplayBuffer(
-                buffer_shapes, self.buffer_size, **self.replay_strategy["args"]
-            )
+            self.replay_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size, **self.replay_strategy["args"])
             if self.demo_strategy != "none" or self.sample_demo_buffer:
-                self.demo_buffer = RingReplayBuffer(
-                    buffer_shapes, self.buffer_size, **self.replay_strategy["args"]
-                )
+                self.demo_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size, **self.replay_strategy["args"])
         else:
             assert False, "unknown replay strategy"
 
@@ -519,7 +516,10 @@ class DDPG(object):
                 self.demo_inputs_tf = self.demo_iter_tf.get_next()
 
                 # self.demo_shaping = NormalizingFlowDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
-                self.demo_shaping = MAFDemoShaping(
+                # self.demo_shaping = MAFDemoShaping(
+                #     gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params
+                # )
+                self.demo_shaping = EnsMAFDemoShaping(
                     gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params
                 )
             else:
