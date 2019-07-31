@@ -31,7 +31,7 @@ params_config = {
         "num_demo": 10,  # number of expert demo episodes
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
         "prm_loss_weight": 1.0,  # (0.001 for OpenAI) weight corresponding to the primary loss
-        "aux_loss_weight": 1.0,  # (0.0078 for OpenAI) weight corresponding to the auxilliary loss also called the cloning loss
+        "aux_loss_weight": 10.0,  # (0.0078 for OpenAI) weight corresponding to the auxilliary loss also called the cloning loss
         "shaping_params": {"prm_loss_weight": 1.0, "reg_loss_weight": 800.0, "potential_weight": 5.0},
         # normalization
         "norm_eps": 0.01,  # epsilon used for observation normalization
