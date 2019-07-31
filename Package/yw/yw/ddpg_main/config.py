@@ -239,7 +239,10 @@ def config_demo(params, policy):
     log_params(demo_params)
     logger.info("*** demo_params ***")
 
-    demo = RolloutWorker(params["make_env"], policy, **demo_params)
+    if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
+        demo = RolloutWorker(params["make_env"], policy, **demo_params)
+    else:
+        demo = SerialRolloutWorker(params["make_env"], policy, **demo_params)
     demo.seed(params["seed"])
 
     return demo
