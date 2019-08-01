@@ -26,6 +26,7 @@ def train(
     policy,
     rollout_worker,
     evaluator,
+    maf_n_epochs,
     n_epochs,
     n_batches,
     n_cycles,
@@ -67,11 +68,11 @@ def train(
     if policy.demo_strategy == "maf":
         if not shaping_policy:
             logger.info("Training the policy for reward shaping.")
-            num_epoch = 3000
+            num_epoch = maf_n_epochs
             for epoch in range(num_epoch):
                 loss = policy.train_shaping()
 
-                if rank == 0 and epoch % (num_epoch / 10) == (num_epoch / 10 - 1):
+                if rank == 0 and epoch % (num_epoch / 100) == (num_epoch / 100 - 1):
                     logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
 
                 if rank == 0 and epoch % 100 == 0:

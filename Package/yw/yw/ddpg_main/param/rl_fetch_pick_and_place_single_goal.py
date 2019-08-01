@@ -33,7 +33,15 @@ params_config = {
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
         "prm_loss_weight": 1.0,  # (0.001 for OpenAI) weight corresponding to the primary loss
         "aux_loss_weight": 10.0,  # (0.0078 for OpenAI) weight corresponding to the auxilliary loss also called the cloning loss
-        "shaping_params": {"num_ens": 1, "prm_loss_weight": 1.0, "reg_loss_weight": 800.0, "potential_weight": 5.0},
+        "shaping_params": {
+            "num_ens": 1,
+            "lr": 1e-4,
+            "num_maf_layers": 6,
+            "nn_layer_sizes": [512, 512],
+            "prm_loss_weight": 1.0,
+            "reg_loss_weight": 800.0,
+            "potential_weight": 5.0,
+        },
         # normalization
         "norm_eps": 0.01,  # epsilon used for observation normalization
         "norm_clip": 5,  # normalized observations are cropped to this values
@@ -61,6 +69,7 @@ params_config = {
         "n_epochs": 1000,
         "n_cycles": 10,  # per epoch
         "n_batches": 40,  # training batches per cycle
+        "maf_n_epochs": 6000,
         "save_interval": 10,
         "shaping_policy": 0,  # whether or not to use a pretrained shaping policy
     },

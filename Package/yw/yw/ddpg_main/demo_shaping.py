@@ -175,7 +175,17 @@ class NormalizingFlowDemoShaping(DemoShaping):
 
 
 class MAFDemoShaping(DemoShaping):
-    def __init__(self, gamma, demo_inputs_tf, prm_loss_weight, reg_loss_weight, potential_weight):
+    def __init__(
+        self,
+        gamma,
+        demo_inputs_tf,
+        lr,
+        num_maf_layers,
+        nn_layer_sizes,
+        prm_loss_weight,
+        reg_loss_weight,
+        potential_weight,
+    ):
         """
         Args:
             gamma
@@ -195,7 +205,9 @@ class MAFDemoShaping(DemoShaping):
         # normalizing flow nn
         demo_state_dim = int(demo_state_tf.shape[1])
         self.base_dist = tfd.MultivariateNormalDiag(loc=tf.zeros([demo_state_dim], tf.float64))
-        self.nn = MAF(base_dist=self.base_dist, dim=demo_state_dim, num_layers=6)
+        self.nn = MAF(
+            base_dist=self.base_dist, dim=demo_state_dim, num_maf_layers=num_maf_layers, nn_layer_sizes=nn_layer_sizes
+        )
 
         # loss function that tries to maximize log prob
         # log probability
@@ -205,7 +217,7 @@ class MAFDemoShaping(DemoShaping):
         regularizer = tf.norm(jacobian[0], ord=2)
         self.loss = prm_loss_weight * neg_log_prob + reg_loss_weight * regularizer
         # optimizers
-        self.train_op = tf.train.AdamOptimizer(1e-4).minimize(self.loss)
+        self.train_op = tf.train.AdamOptimizer(learning_rate=lr).minimize(self.loss)
 
         # params for potentials
         self.scale = tf.constant(5, dtype=tf.float64)
@@ -228,7 +240,18 @@ class MAFDemoShaping(DemoShaping):
 
 
 class EnsMAFDemoShaping(DemoShaping):
-    def __init__(self, num_ens, gamma, demo_inputs_tf, prm_loss_weight, reg_loss_weight, potential_weight):
+    def __init__(
+        self,
+        num_ens,
+        gamma,
+        demo_inputs_tf,
+        lr,
+        num_maf_layers,
+        nn_layer_sizes,
+        prm_loss_weight,
+        reg_loss_weight,
+        potential_weight,
+    ):
         """
         Args:
             gamma
@@ -244,6 +267,9 @@ class EnsMAFDemoShaping(DemoShaping):
                 self.mafs.append(
                     MAFDemoShaping(
                         gamma=gamma,
+                        lr=lr,
+                        num_maf_layers=num_maf_layers,
+                        nn_layer_sizes=nn_layer_sizes,
                         demo_inputs_tf=demo_inputs_tf,
                         prm_loss_weight=prm_loss_weight,
                         reg_loss_weight=reg_loss_weight,
@@ -253,7 +279,7 @@ class EnsMAFDemoShaping(DemoShaping):
 
         self.loss = tf.reduce_sum([ens.loss for ens in self.mafs], axis=0)
         # optimizers
-        self.train_op = tf.train.AdamOptimizer(1e-4).minimize(self.loss)
+        self.train_op = tf.train.AdamOptimizer(learning_rate=lr).minimize(self.loss)
 
         super().__init__(gamma)
 

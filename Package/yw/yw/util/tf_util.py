@@ -324,13 +324,13 @@ class NormalizingFlow:
 
 
 class MAF:
-    def __init__(self, base_dist, dim=2, num_layers=6):
+    def __init__(self, base_dist, dim, num_maf_layers=6, nn_layer_sizes=[512, 512]):
         self.bijectors = []
 
-        for _ in range(num_layers):
+        for _ in range(num_maf_layers):
             self.bijectors.append(
                 tfb.MaskedAutoregressiveFlow(
-                    shift_and_log_scale_fn=tfb.masked_autoregressive_default_template(hidden_layers=[512, 512])
+                    shift_and_log_scale_fn=tfb.masked_autoregressive_default_template(hidden_layers=nn_layer_sizes)
                 )
             )
             # BatchNorm helps to stabilize deep normalizing flows, esp. Real-NVP
