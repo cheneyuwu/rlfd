@@ -178,13 +178,11 @@ class MAFDemoShaping(DemoShaping):
     def __init__(self, gamma, demo_inputs_tf, prm_loss_weight, reg_loss_weight, potential_weight):
         """
         Args:
-            o - observation
-            g - goal
-            u - action
-            o_2 - observation that goes to
-            g_2 - same as g, idk why I must make this specific
-            u_2 - output from the actor of the main network
+            gamma
             demo_inputs_tf - demo_inputs that contains all the transitons from demonstration
+            prm_loss_weight
+            reg_loss_weight
+            potential_weight
         """
 
         self.demo_inputs_tf = demo_inputs_tf
@@ -221,28 +219,52 @@ class MAFDemoShaping(DemoShaping):
         """
         state_tf = self._cast_concat_inputs(o, g, u)
 
-        # method 1 with shift and annealing
         potential = tf.reshape(self.nn.prob(state_tf), (-1, 1))
         potential = tf.log(potential + tf.exp(-self.scale))
         potential = potential + self.scale  # add shift
         potential = self.weight * potential / self.scale  # add scaling
 
-        # method 2 add noise to the state and take avg
-        # scale = 1000.0
-        # num_sample = 8
-        # expanded_state_tf = tf.tile(tf.expand_dims(state_tf, 1), [1, num_sample, 1])
-        # # make noise
-        # noise_dist = tfd.Normal(loc=[0.0] * expanded_state_tf.shape[-1], scale=0.04)
-        # noise_tf = tf.cast(noise_dist.sample(tf.shape(expanded_state_tf)[:-1]), tf.float64)
-        # noise_tf = tf.clip_by_value(noise_tf, -0.04, 0.04)
-        # expanded_state_with_noise_tf = expanded_state_tf + noise_tf
-        # potential = tf.reshape(self.nn.log_prob(expanded_state_with_noise_tf), (-1, num_sample, 1))
-        # potential = tf.clip_by_value(potential, -scale, 1000000.0)
-        # potential = potential + scale  # add shift
-        # potential = potential / scale  # add scaling
-        # potential = tf.reduce_mean(potential, axis=1)
-
         return tf.cast(potential, tf.float32)
+
+
+class EnsMAFDemoShaping(DemoShaping):
+    def __init__(self, num_ens, gamma, demo_inputs_tf, prm_loss_weight, reg_loss_weight, potential_weight):
+        """
+        Args:
+            gamma
+            demo_inputs_tf - demo_inputs that contains all the transitons from demonstration
+            prm_loss_weight
+            reg_loss_weight
+            potential_weight
+        """
+        # setup ensemble
+        self.mafs = []
+        for i in range(num_ens):
+            with tf.variable_scope("ens_" + str(i)):
+                self.mafs.append(
+                    MAFDemoShaping(
+                        gamma=gamma,
+                        demo_inputs_tf=demo_inputs_tf,
+                        prm_loss_weight=prm_loss_weight,
+                        reg_loss_weight=reg_loss_weight,
+                        potential_weight=potential_weight,
+                    )
+                )
+
+        self.loss = tf.reduce_sum([ens.loss for ens in self.mafs], axis=0)
+        # optimizers
+        self.train_op = tf.train.AdamOptimizer(1e-4).minimize(self.loss)
+
+        super().__init__(gamma)
+
+    def potential(self, o, g, u):
+        """
+        Just return negative value of distance between current state and goal state
+        """
+        # return the mean potential of all ens
+        potential = tf.reduce_mean([ens.potential(o=o, g=g, u=u) for ens in self.mafs], axis=0)
+        assert potential.shape[1] == 1
+        return potential
 
 
 # Testing

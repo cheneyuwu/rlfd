@@ -6,12 +6,13 @@ from yw.tool import logger
 from yw.ddpg_main.mpi_adam import MpiAdam
 from yw.ddpg_main.normalizer import Normalizer
 from yw.ddpg_main.actor_critic import ActorCritic
-from yw.ddpg_main.replay_buffer import HERReplayBuffer, UniformReplayBuffer
+from yw.ddpg_main.replay_buffer import HERReplayBuffer, UniformReplayBuffer, RingReplayBuffer
 from yw.ddpg_main.demo_shaping import (
     ManualDemoShaping,
     GaussianDemoShaping,
     NormalizingFlowDemoShaping,
     MAFDemoShaping,
+    EnsMAFDemoShaping,
 )
 from yw.util.tf_util import flatten_grads
 
@@ -40,6 +41,7 @@ class DDPG(object):
         clip_obs,
         scope,
         T,
+        fix_T,
         clip_pos_returns,
         clip_return,
         demo_strategy,
@@ -64,8 +66,9 @@ class DDPG(object):
         Args:
             # Environment I/O and Config
             max_u              (float)        - maximum action magnitude, i.e. actions are in [-max_u, max_u]
-            clip_obs           (float)        - clip observations before normalization to be in [-clip_obs, clip_obs]
             T                  (int)          - the time horizon for rollouts
+            fix_T              (bool)         - every episode has fixed length
+            clip_obs           (float)        - clip observations before normalization to be in [-clip_obs, clip_obs]
             clip_pos_returns   (boolean)      - whether or not positive returns should be clipped (i.e. clip to 0)
             clip_return        (float)        - clip returns to be in [-clip_return, clip_return]
             # Normalizer
@@ -118,6 +121,7 @@ class DDPG(object):
         self.clip_obs = clip_obs
         self.scope = scope
         self.T = T
+        self.fix_T = fix_T
         self.clip_pos_returns = clip_pos_returns
         self.clip_return = clip_return
         self.demo_strategy = demo_strategy
@@ -142,20 +146,37 @@ class DDPG(object):
         # Configure the replay buffer
         # buffer shape
         buffer_shapes = {}
-        buffer_shapes["o"] = (self.T + 1, self.dimo)
-        buffer_shapes["u"] = (self.T, self.dimu)
-        buffer_shapes["r"] = (self.T, 1)
-        if self.dimg != 0:  # for multigoal environment - or states that do not change over episodes.
-            buffer_shapes["ag"] = (self.T + 1, self.dimg)
-            buffer_shapes["g"] = (self.T, self.dimg)
-        # add extra information
-        for key, val in input_dims.items():
-            if key.startswith("info"):
-                buffer_shapes[key] = (self.T, *(tuple([val]) if val > 0 else tuple()))
+        if self.fix_T:
+            buffer_shapes["o"] = (self.T + 1, self.dimo)
+            buffer_shapes["u"] = (self.T, self.dimu)
+            buffer_shapes["r"] = (self.T, 1)
+            if self.dimg != 0:  # for multigoal environment - or states that do not change over episodes.
+                buffer_shapes["ag"] = (self.T + 1, self.dimg)
+                buffer_shapes["g"] = (self.T, self.dimg)
+            # add extra information
+            for key, val in input_dims.items():
+                if key.startswith("info"):
+                    buffer_shapes[key] = (self.T, *(tuple([val]) if val > 0 else tuple()))
+        else:
+            buffer_shapes["o"] = (self.dimo,)
+            buffer_shapes["o_2"] = (self.dimo,)
+            buffer_shapes["u"] = (self.dimu,)
+            buffer_shapes["r"] = (1,)
+            if self.dimg != 0:  # for multigoal environment - or states that do not change over episodes.
+                buffer_shapes["ag"] = (self.dimg,)
+                buffer_shapes["g"] = (self.dimg,)
+                buffer_shapes["ag_2"] = (self.dimg,)
+                buffer_shapes["g_2"] = (self.dimg,)
+            # add extra information
+            for key, val in input_dims.items():
+                if key.startswith("info"):
+                    buffer_shapes[key] = tuple([val]) if val > 0 else tuple()
+
         # initialize replay buffer(s)
         if not self.replay_strategy:
             pass
         elif self.replay_strategy["strategy"] == "her":
+            assert self.fix_T
             self.replay_buffer = HERReplayBuffer(
                 buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
             )
@@ -163,7 +184,7 @@ class DDPG(object):
                 self.demo_buffer = HERReplayBuffer(
                     buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
                 )
-        else:
+        elif self.replay_strategy["strategy"] == "none" and self.fix_T:
             self.replay_buffer = UniformReplayBuffer(
                 buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
             )
@@ -171,6 +192,12 @@ class DDPG(object):
                 self.demo_buffer = UniformReplayBuffer(
                     buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
                 )
+        elif self.replay_strategy["strategy"] == "none" and not self.fix_T:
+            self.replay_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size, **self.replay_strategy["args"])
+            if self.demo_strategy != "none" or self.sample_demo_buffer:
+                self.demo_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size, **self.replay_strategy["args"])
+        else:
+            assert False, "unknown replay strategy"
 
         # Create the DDPG agent
         with tf.variable_scope(self.scope):
@@ -220,11 +247,22 @@ class DDPG(object):
         logger.info("Initializing demonstration buffer with {} episodes.".format(self.num_demo))
 
         demo_data = np.load(demo_file)  # load the demonstration data from data file
-        assert self.num_demo <= demo_data["u"].shape[0], "No enough demonstration data!"
 
         episode_batch = {**demo_data}
-        for key in episode_batch.keys():
-            episode_batch[key] = episode_batch[key][: self.num_demo]
+        if self.fix_T:
+            for key in episode_batch.keys():
+                assert len(episode_batch[key].shape) == 3  # (eps x T x dim)
+                assert self.num_demo <= episode_batch[key].shape[0], "No enough demonstration data!"
+                episode_batch[key] = episode_batch[key][: self.num_demo]
+        else:
+            assert "done" in episode_batch.keys()
+            dones = np.nonzero(episode_batch["done"])[0]
+            assert self.num_demo <= len(dones)
+            last_idx = dones[self.num_demo - 1]
+            for key in episode_batch.keys():
+                assert len(episode_batch[key].shape) == 2 if key != "done" else 1  # (transitions x dim)
+                episode_batch[key] = episode_batch[key][: last_idx + 1]
+
         # the demo buffer should already have: o, u, r, ag, g and necessary infos.
         self.demo_buffer.store_episode(episode_batch)
 
@@ -478,7 +516,10 @@ class DDPG(object):
                 self.demo_inputs_tf = self.demo_iter_tf.get_next()
 
                 # self.demo_shaping = NormalizingFlowDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
-                self.demo_shaping = MAFDemoShaping(
+                # self.demo_shaping = MAFDemoShaping(
+                #     gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params
+                # )
+                self.demo_shaping = EnsMAFDemoShaping(
                     gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params
                 )
             else:
@@ -611,12 +652,15 @@ class DDPG(object):
 
     def _update_stats(self, episode_batch):
         # add transitions to normalizer
-        episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
-        if self.dimg != 0:
-            episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
-            episode_batch["g_2"] = episode_batch["g"][:, :, :]
-        num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
-        transitions = self.replay_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
+        if self.fix_T:
+            episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
+            if self.dimg != 0:
+                episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
+                episode_batch["g_2"] = episode_batch["g"][:, :, :]
+            num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
+            transitions = self.replay_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
+        else:
+            transitions = episode_batch.copy()
 
         self.o_stats.update(self._preprocess_state(transitions["o"]))
         self.o_stats.recompute_stats()

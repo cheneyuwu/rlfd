@@ -4,7 +4,7 @@ import numpy as np
 from yw.tool import logger
 
 from yw.ddpg_main.ddpg import DDPG
-from yw.ddpg_main.rollout import RolloutWorker
+from yw.ddpg_main.rollout import RolloutWorker, SerialRolloutWorker
 
 from yw.env.env_manager import EnvManager
 
@@ -19,6 +19,7 @@ DEFAULT_PARAMS = {
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 0,  # overwrite the default length of the episode
     "env_args": {},  # extra arguments passed to the environment.
+    "fix_T": True,  # whether or not to fix episode length for all rollouts. If false, use the ring buffer
     # DDPG Config
     "ddpg": {
         # replay buffer setup
@@ -141,14 +142,6 @@ def add_env_params(params):
     return params
 
 
-def extract_params(params, prefix=""):
-    extracted_params = {key.replace(prefix, ""): params[key] for key in params.keys() if key.startswith(prefix)}
-    for key in extracted_params.keys():
-        params["_" + key] = params[prefix + key]
-        del params[prefix + key]
-    return extracted_params
-
-
 def configure_her(params):
     env = EnvCache.get_env(params["make_env"])
     env.reset()
@@ -183,6 +176,7 @@ def configure_ddpg(params, comm=None):
             "max_u": params["max_u"],
             "input_dims": params["dims"].copy(),  # agent takes an input observations
             "T": params["T"],
+            "fix_T": params["fix_T"],
             "clip_return": (1.0 / (1.0 - params["gamma"])) if params["ddpg"]["clip_return"] else np.inf,
             "gamma": params["gamma"],
         }
@@ -211,7 +205,10 @@ def config_rollout(params, policy):
     log_params(rollout_params)
     logger.info("*** rollout_params ***")
 
-    rollout_worker = RolloutWorker(params["make_env"], policy, **rollout_params)
+    if params["fix_T"]:
+        rollout_worker = RolloutWorker(params["make_env"], policy, **rollout_params)
+    else:
+        rollout_worker = SerialRolloutWorker(params["make_env"], policy, **rollout_params)
     rollout_worker.seed(params["seed"])
 
     return rollout_worker
@@ -225,7 +222,10 @@ def config_evaluator(params, policy):
     log_params(eval_params)
     logger.info("*** eval_params ***")
 
-    evaluator = RolloutWorker(params["make_env"], policy, **eval_params)
+    if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
+        evaluator = RolloutWorker(params["make_env"], policy, **eval_params)
+    else:
+        evaluator = SerialRolloutWorker(params["make_env"], policy, **eval_params)
     evaluator.seed(params["seed"])
 
     return evaluator
@@ -239,7 +239,10 @@ def config_demo(params, policy):
     log_params(demo_params)
     logger.info("*** demo_params ***")
 
-    demo = RolloutWorker(params["make_env"], policy, **demo_params)
+    if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
+        demo = RolloutWorker(params["make_env"], policy, **demo_params)
+    else:
+        demo = SerialRolloutWorker(params["make_env"], policy, **demo_params)
     demo.seed(params["seed"])
 
     return demo

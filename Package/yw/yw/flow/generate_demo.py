@@ -20,6 +20,7 @@ from yw.util.util import set_global_seeds
 DEFAULT_PARAMS = {
     "seed": 0,
     "num_eps": 100,
+    "fix_T": True,
     "max_concurrency": 10,
     "demo": {"random_eps": 0.0, "noise_eps": 0.1, "compute_Q": True, "render": 0},
     "extra_noise_mean": 0.0,
@@ -72,24 +73,30 @@ def main(policy_file, root_dir, **kwargs):
     params["r_shift"] = policy.info["r_shift"]
     params["eps_length"] = T
     params["env_args"] = policy.info["env_args"]
-    params["demo"]["rollout_batch_size"] = np.minimum(params["num_eps"], params["max_concurrency"])
+    if params["fix_T"]:
+        params["demo"]["rollout_batch_size"] = np.minimum(params["num_eps"], params["max_concurrency"])
+    else:
+        params["demo"]["rollout_batch_size"] = params["num_eps"]
     params = config.add_env_params(params=params)
     demo = config.config_demo(params=params, policy=policy)
 
     # Run evaluation.
-    episode = None
-    num_eps_togo = params["num_eps"]
-    demo.clear_history()
-    while num_eps_togo > 0:
-        eps = demo.generate_rollouts()
-        num_eps_to_store = np.minimum(num_eps_togo, params["max_concurrency"])
-        if episode == None:
-            episode = {k: eps[k][:num_eps_to_store, ...] for k in eps.keys()}
-        else:
-            episode = {k: np.concatenate((episode[k], eps[k][:num_eps_to_store, ...]), axis=0) for k in eps.keys()}
-        num_eps_togo -= num_eps_to_store
+    if params["fix_T"]:
+        episode = None
+        num_eps_togo = params["num_eps"]
+        demo.clear_history()
+        while num_eps_togo > 0:
+            eps = demo.generate_rollouts()
+            num_eps_to_store = np.minimum(num_eps_togo, params["max_concurrency"])
+            if episode == None:
+                episode = {k: eps[k][:num_eps_to_store, ...] for k in eps.keys()}
+            else:
+                episode = {k: np.concatenate((episode[k], eps[k][:num_eps_to_store, ...]), axis=0) for k in eps.keys()}
+            num_eps_togo -= num_eps_to_store
 
-    assert all([episode[k].shape[0] == params["num_eps"] for k in episode.keys()])
+        assert all([episode[k].shape[0] == params["num_eps"] for k in episode.keys()])
+    else:
+        episode = demo.generate_rollouts()
     # record logs
     for key, val in demo.logs("test"):
         logger.record_tabular(key, np.mean(val))

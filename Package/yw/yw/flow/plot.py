@@ -66,6 +66,7 @@ def load_results(root_dir_or_dirs):
                 if result["progress"] is None:
                     continue
                 paramsjson = os.path.join(dirname, "params.json")
+                # paramsjson = os.path.join(dirname, "params_renamed.json") # put here for the rename in launch.py
                 with open(paramsjson, "r") as f:
                     result["params"] = json.load(f)
                 allresults.append(result)

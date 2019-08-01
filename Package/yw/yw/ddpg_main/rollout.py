@@ -185,13 +185,6 @@ class RolloutWorker(RolloutWorkerBase):
     def generate_rollouts(self):
         """Performs `rollout_batch_size` rollouts for maximum time horizon `T` with the current policy
         """
-        self.reset()
-
-        # Store initial observations and goals
-        o = np.empty((self.rollout_batch_size, self.dims["o"]), np.float32)  # o
-        ag = np.empty((self.rollout_batch_size, self.dims["g"]), np.float32)  # ag
-        o[:] = self.initial_o
-        ag[:] = self.initial_ag
 
         # Information to store
         obs, achieved_goals, acts, goals, rewards, successes, shaping_rewards = [], [], [], [], [], [], []
@@ -199,6 +192,13 @@ class RolloutWorker(RolloutWorkerBase):
             np.empty((self.T, self.rollout_batch_size, self.dims["info_" + key]), np.float32) for key in self.info_keys
         ]
         Qs, QPs = [], []
+
+        # Store initial observations and goals
+        self.reset()
+        o = np.empty((self.rollout_batch_size, self.dims["o"]), np.float32)  # o
+        ag = np.empty((self.rollout_batch_size, self.dims["g"]), np.float32)  # ag
+        o[:] = self.initial_o
+        ag[:] = self.initial_ag
 
         # Main episode loop
         for t in range(self.T):
@@ -374,18 +374,19 @@ class SerialRolloutWorker(RolloutWorkerBase):
         """
 
         # Information to store
-        obs, obs_2, achieved_goals, achieved_goals_2, acts, goals, reward = [], [], [], [], [], [], []
+        obs, obs_2, achieved_goals, achieved_goals_2, acts, goals, rewards = [], [], [], [], [], [], []
         successes, shaping_rewards = [], []
         info_values = {"info_" + k: [] for k in self.info_keys}
         Qs, QPs = [], []
+        dones = []
 
         for batch in range(self.rollout_batch_size):
 
             self.reset()
 
             # Store initial observations and goals
-            o = np.empty(self.dims["o"], np.float32)  # o
-            ag = np.empty(self.dims["g"], np.float32)  # ag
+            o = np.empty((self.dims["o"],), np.float32)  # o
+            ag = np.empty((self.dims["g"],), np.float32)  # ag
             o[...] = self.initial_o
             ag[...] = self.initial_ag
 
@@ -405,25 +406,26 @@ class SerialRolloutWorker(RolloutWorkerBase):
                     QP = QP.reshape(1)
                 else:
                     u = np.array(policy_output)
-                u = u.reshape(self.dims["u"])  # make sure that the shape is correct
+                u = u.reshape((self.dims["u"],))  # make sure that the shape is correct
                 # compute the next states
-                o_new = np.empty(self.dims["o"])  # o_2
-                ag_new = np.empty(self.dims["g"])  # ag_2
-                r = np.empty(1)  # reward
-                success = np.zeros(1)  # from info
-                shaping_reward = np.zeros(1)  # from info
+                o_new = np.empty((self.dims["o"],))  # o_2
+                ag_new = np.empty((self.dims["g"],))  # ag_2
+                r = np.empty((1,))  # reward
+                success = np.zeros((1,))  # from info
+                shaping_reward = np.zeros((1,))  # from info
+                iv = {"info_" + k: np.empty((self.dims["info_"+k],)) for k in self.info_keys}
                 # compute new states and observations
                 try:
                     curr_o_new, curr_r, _, info = self.env.step(u)
-                    r = curr_r
-                    if "is_success" in info:
-                        success = info["is_success"]
-                    if "shaping_reward" in info:
-                        shaping_reward = info["shaping_reward"]
                     o_new[...] = curr_o_new["observation"]
                     ag_new[...] = curr_o_new["achieved_goal"]
+                    r[...] = curr_r
+                    if "is_success" in info:
+                        success[...] = info["is_success"]
+                    if "shaping_reward" in info:
+                        shaping_reward[...] = info["shaping_reward"]
                     for key in self.info_keys:
-                        info_values["info_"+key].append(info[key])
+                        iv["info_" + key][...] = info[key]
                     if self.render:
                         self.env.render()
                 except MujocoException:
@@ -442,6 +444,8 @@ class SerialRolloutWorker(RolloutWorkerBase):
                 rewards.append(r.copy())
                 successes.append(success.copy())
                 shaping_rewards.append(shaping_reward.copy())
+                for key in self.info_keys:
+                    info_values["info_" + key].append(iv["info_" + key].copy())
                 if self.compute_Q:
                     Qs.append(Q.copy())
                     QPs.append(QP.copy())
@@ -451,10 +455,24 @@ class SerialRolloutWorker(RolloutWorkerBase):
 
                 # end this episode if succeeded
                 if success:
-                    break 
+                    if t == 0:
+                        logger.warn("Starting with a success, this may be an indication of error!")
+                    dones.append(1)
+                    break
+                dones.append(int(t == self.T - 1))
 
         # Store all information into an episode dict
-        episode = dict(o=obs, o_2=obs_2, ag=achieved_goals, ag_2=achieved_goals_2, u=acts, g=goals, r=rewards)
+        episode = dict(
+            o=obs,
+            o_2=obs_2,
+            ag=achieved_goals,
+            ag_2=achieved_goals_2,
+            u=acts,
+            g=goals,
+            g_2=goals,
+            r=rewards,
+            done=dones,
+        )
         for key, value in info_values.items():
             episode[key] = value
         for key, value in episode.items():
