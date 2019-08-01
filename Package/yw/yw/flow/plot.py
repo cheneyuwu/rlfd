@@ -63,6 +63,8 @@ def load_results(root_dir_or_dirs):
                 result = {"dirname": dirname}
                 progcsv = os.path.join(dirname, "progress.csv")
                 result["progress"] = load_csv(progcsv)
+                if result["progress"] is None:
+                    continue
                 paramsjson = os.path.join(dirname, "params.json")
                 with open(paramsjson, "r") as f:
                     result["params"] = json.load(f)
@@ -105,8 +107,8 @@ def plot_results(allresults, xys, target_dir, smooth=0):
 
         fig.clf()
         for i, xy in enumerate(data[env_id].keys(), 1):
-            colors = ["r", "g", "b", "c", "m", "y", "k"]
-            # colors = cm.jet(np.linspace(0, 1.0, len(data[env_id][xy].keys())))
+            # colors = ["r", "g", "b", "c", "m", "y", "k"]
+            colors = cm.jet(np.linspace(0, 1.0, len(data[env_id][xy].keys())))
             ax = fig.add_subplot(1, len(xys), i)
             x_label = xy.split(":")[0]
             y_label = xy.split(":")[1]
@@ -122,10 +124,10 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 mean_y = np.nanmean(ys, axis=0)
                 var_y = np.nanstd(ys, axis=0)
                 ax.plot(xs[0], mean_y, label=config, color=colors[j % len(colors)])
-                ax.fill_between(xs[0], mean_y - var_y, mean_y + var_y, alpha=0.5, color=colors[j % len(colors)])
-                ax.fill_between(
-                    xs[0], mean_y - 3 * var_y, mean_y + 3 * var_y, alpha=0.25, color=colors[j % len(colors)]
-                )
+                # ax.fill_between(xs[0], mean_y - var_y, mean_y + var_y, alpha=0.5, color=colors[j % len(colors)])
+                # ax.fill_between(
+                #     xs[0], mean_y - 3 * var_y, mean_y + 3 * var_y, alpha=0.25, color=colors[j % len(colors)]
+                # )
 
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_label)
