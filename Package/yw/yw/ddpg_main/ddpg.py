@@ -464,21 +464,22 @@ class DDPG(object):
             if self.demo_strategy == "manual":
                 self.demo_shaping = ManualDemoShaping(gamma=self.gamma)
             elif self.demo_strategy == "norm":
-                num_transitions = self.num_demo * self.T
+                # Note that you can not use this to train with non-fixed T TODO: fix it!!
+                max_num_transitions = self.num_demo * self.T
                 self.demo_inputs_tf = {}
                 self.demo_inputs_tf["o"] = tf.Variable(
-                    initial_value=tf.zeros((num_transitions, self.dimo), dtype=tf.float32),
+                    initial_value=tf.zeros((max_num_transitions, self.dimo), dtype=tf.float32),
                     trainable=False,
                     dtype=tf.float32,
                 )
                 if self.dimg != 0:
                     self.demo_inputs_tf["g"] = tf.Variable(
-                        initial_value=tf.zeros((num_transitions, self.dimg), dtype=tf.float32),
+                        initial_value=tf.zeros((max_num_transitions, self.dimg), dtype=tf.float32),
                         trainable=False,
                         dtype=tf.float32,
                     )
                 self.demo_inputs_tf["u"] = tf.Variable(
-                    initial_value=tf.zeros((num_transitions, self.dimu), dtype=tf.float32),
+                    initial_value=tf.zeros((max_num_transitions, self.dimu), dtype=tf.float32),
                     trainable=False,
                     dtype=tf.float32,
                 )
@@ -490,10 +491,11 @@ class DDPG(object):
                 if self.dimg != 0:
                     demo_shapes["g"] = (self.dimg,)
                 demo_shapes["u"] = (self.dimu,)
-                num_transitions = self.num_demo * self.T
+                max_num_transitions = self.num_demo * self.T
 
                 def generate_demo_data():
                     demo_data = self.demo_buffer.sample_all()
+                    num_transitions = demo_data["u"].shape[0]
                     demo_data["o"] = self._preprocess_state(demo_data["o"])
                     if self.dimg != 0:
                         demo_data["g"] = self._preprocess_state(demo_data["g"])
@@ -507,8 +509,8 @@ class DDPG(object):
                         output_types={k: tf.float32 for k in demo_shapes.keys()},
                         output_shapes=demo_shapes,
                     )
-                    .take(num_transitions)
-                    .shuffle(num_transitions)
+                    .take(max_num_transitions)
+                    .shuffle(max_num_transitions)
                     .repeat(1)
                     .batch(128)
                 )
