@@ -465,6 +465,7 @@ class DDPG(object):
                 self.demo_shaping = ManualDemoShaping(gamma=self.gamma)
             elif self.demo_strategy == "norm":
                 # Note that you can not use this to train with non-fixed T TODO: fix it!!
+                assert self.fix_T
                 max_num_transitions = self.num_demo * self.T
                 self.demo_inputs_tf = {}
                 self.demo_inputs_tf["o"] = tf.Variable(
