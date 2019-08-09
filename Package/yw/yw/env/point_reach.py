@@ -93,7 +93,7 @@ class Reacher:
             # return np.maximum(-0.5, -distance)
             # return 0.05 / (0.05 + distance)
         else:  # self.sparse == True
-            return (distance < self.threshold).astype(np.int64)
+            return -(distance >= self.threshold).astype(np.int64)
 
     def _compute_distance(self, achieved_goal, desired_goal):
         achieved_goal = achieved_goal.reshape(-1, self.dim)
