@@ -25,12 +25,11 @@ from yw.flow.plot import load_results
 def query(result, save):
     """Generate demo from policy file
     """
-
     # Setup
     config = result["params"]["config"]
     directory = result["dirname"]
     policy_file = os.path.join(directory, "rl/policy_latest.pkl")  # assumed to be in this directory
-    
+
     # Load policy.
     # get a default session for the current graph
     tf.reset_default_graph()
@@ -44,14 +43,11 @@ def query(result, save):
     num_point = 24
     ls = np.linspace(-1.0, 1.0, num_point)
     o_1, o_2 = np.meshgrid(ls, ls)
-    o_1 = o_1.reshape(-1, 1)
-    o_2 = o_2.reshape(-1, 1)
     o_r = 0.0 * np.ones((num_point ** 2, policy.dimo))
-    o_r[..., dim1 : dim1 + 1] = o_1
-    o_r[..., dim2 : dim2 + 1] = o_2
+    o_r[..., dim1 : dim1 + 1] = o_1.reshape(-1, 1)
+    o_r[..., dim2 : dim2 + 1] = o_2.reshape(-1, 1)
     g_r = 0.0 * np.ones((num_point ** 2, policy.dimg))
-    u_r = 0.0 * np.ones((num_point ** 2, policy.dimu))
-    o_plot = np.concatenate((o_1, o_2), axis=1)
+    u_r = 2.0 * np.ones((num_point ** 2, policy.dimu))
 
     # Close the default session to prevent memory leaking
     tf.get_default_session().close()
@@ -71,7 +67,7 @@ def query(result, save):
 
         # input placeholders
         inputs_tf = {}
-        inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, policy.dimo))       
+        inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, policy.dimo))
         inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, policy.dimg)) if policy.dimg != 0 else None
         inputs_tf["u"] = tf.placeholder(tf.float32, shape=(None, policy.dimu))
 
@@ -93,10 +89,10 @@ def query(result, save):
 
         feed = {inputs_tf["o"]: o_r, inputs_tf["u"]: u_r}
         if policy.dimg != 0:
-            inputs_tf["g"] = g_r
+            feed[inputs_tf["g"]] = g_r
         ret = policy.sess.run(val, feed_dict=feed)
 
-        res = {"o": o_plot, "surf": ret}
+        res = {"o": (o_1, o_2), "surf": ret.reshape((num_point, num_point))}
 
         if save:
             store_dir = os.path.join(directory, "query_" + loss_mode)
@@ -117,7 +113,7 @@ def query(result, save):
         # Close the default session to prevent memory leaking
         tf.get_default_session().close()
 
-    # uncomment this for simple environments
+    # UNCOMMENT this for simple environments
     return
 
     for loss_mode in ["optimized_q_only", "optimized_p_only", "optimized_p_plus_q"]:
@@ -141,7 +137,6 @@ def query(result, save):
         else:
             inputs_tf["g"] = None
             state_tf = inputs_tf["o"]
-
 
         with tf.variable_scope("query"):
             pi_tf = policy.max_u * tf.tanh(nn(state_tf, policy.layer_sizes + [policy.dimu]))
@@ -183,7 +178,7 @@ def query(result, save):
                 logger.info("Query: offline policy {} -> epoch: {} loss: {}".format(loss_mode, i, loss))
 
         ret = policy.sess.run(pi_tf, feed_dict=feed)
-        res = {"o": o_plot, "u": ret}
+        res = {"o": np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1), "u": ret}
 
         if save:
             store_dir = os.path.join(directory, "query_" + loss_mode)

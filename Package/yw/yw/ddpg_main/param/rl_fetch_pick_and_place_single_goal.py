@@ -1,18 +1,18 @@
 # Best parameters found so far to be used for the Open AI fetch pick and place environment with a single goal.
 params_config = {
-    # Config Summary (Overwrite this later)
-    "config": "default",  # change this for each customized params file
+    # Config Summary
+    "config": "default",
     # Environment Config
     "env_name": "FetchPickAndPlace-v1",
     "r_scale": 1.0,  # scale the reward of the environment down
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 30,  # overwrite the default length of the episode
-    "env_args": {},  # extra arguments passed to the environment.
-    "fix_T": True,  # whether or not to fix episode length for all rollouts. If false, use the ring buffer
+    "env_args": {},  # extra arguments passed to the environment
+    "fix_T": True,  # whether or not to fix episode length for all rollouts. (if false, then use the ring buffer)
     # DDPG Config
     "ddpg": {
+        # replay buffer setup
         "buffer_size": int(1e6),
-        # replay strategy to be used
         "replay_strategy": "none",  # choose between ["her", "none"] (her for hindsight exp replay)
         # networks
         "scope": "ddpg",
@@ -28,19 +28,31 @@ params_config = {
         "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "maf"]
         "sample_demo_buffer": 0,  # whether or not to sample from demonstration buffer
         "use_demo_reward": 0,  # whether or not to assume that demonstrations also have rewards
-        "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
         "num_demo": 10,  # number of expert demo episodes
+        "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
         "prm_loss_weight": 1.0,  # (0.001 for OpenAI) weight corresponding to the primary loss
         "aux_loss_weight": 10.0,  # (0.0078 for OpenAI) weight corresponding to the auxilliary loss also called the cloning loss
         "shaping_params": {
-            "num_ens": 1,
-            "lr": 1e-4,
-            "num_maf_layers": 6,
-            "nn_layer_sizes": [512, 512],
-            "prm_loss_weight": 1.0,
-            "reg_loss_weight": 800.0,
-            "potential_weight": 5.0,
+            "batch_size": 128,
+            "nf": {
+                "num_ens": 1,
+                "nf_type": "maf",  # choose between ["maf", "realnvp"]
+                "lr": 1e-4,
+                "num_masked": 2,  # used only when nf_type is set to realnvp
+                "num_bijectors": 6,
+                "layer_sizes": [512, 512],
+                "prm_loss_weight": 1.0,
+                "reg_loss_weight": 800.0,
+                "potential_weight": 5.0,
+            },
+            "gan": {
+                "potential_weight": 3.0,
+                "layer_sizes": [256, 256, 256],
+                "latent_dim": 2,
+                "gp_lambda": 0.1,
+                "critic_iter": 5,
+            },
         },
         # normalization
         "norm_eps": 0.01,  # epsilon used for observation normalization
@@ -69,7 +81,7 @@ params_config = {
         "n_epochs": 1000,
         "n_cycles": 10,  # per epoch
         "n_batches": 40,  # training batches per cycle
-        "maf_n_epochs": 6000,
+        "shaping_n_epochs": 6000,
         "save_interval": 10,
         "shaping_policy": 0,  # whether or not to use a pretrained shaping policy
     },

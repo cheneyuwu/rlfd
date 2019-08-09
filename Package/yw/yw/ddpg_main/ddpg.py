@@ -10,9 +10,9 @@ from yw.ddpg_main.replay_buffer import HERReplayBuffer, UniformReplayBuffer, Rin
 from yw.ddpg_main.demo_shaping import (
     ManualDemoShaping,
     GaussianDemoShaping,
-    NormalizingFlowDemoShaping,
-    MAFDemoShaping,
-    EnsMAFDemoShaping,
+    NFDemoShaping,
+    EnsNFDemoShaping,
+    GANDemoShaping,
 )
 from yw.util.tf_util import flatten_grads
 
@@ -312,12 +312,12 @@ class DDPG(object):
     def train_shaping(self):
         # train normalizing flow
         loss = 0
-        if self.demo_strategy == "maf":
+        if self.demo_strategy in ["nf", "gan"]:
             self.sess.run(self.demo_iter_tf.initializer)
             losses = np.empty(0)
             while True:
                 try:
-                    loss, _ = self.sess.run([self.demo_shaping.loss, self.demo_shaping.train_op])
+                    loss = self.demo_shaping.train(sess=self.sess)
                     losses = np.append(losses, loss)
                 except tf.errors.OutOfRangeError:
                     loss = np.mean(losses)
@@ -485,7 +485,7 @@ class DDPG(object):
                     dtype=tf.float32,
                 )
                 self.demo_shaping = GaussianDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
-            elif self.demo_strategy == "maf":
+            elif self.demo_strategy in ["nf", "gan"]:
                 # input dataset that loads from demo_buffer
                 demo_shapes = {}
                 demo_shapes["o"] = (self.dimo,)
@@ -513,18 +513,24 @@ class DDPG(object):
                     .take(max_num_transitions)
                     .shuffle(max_num_transitions)
                     .repeat(1)
-                    .batch(128)
+                    .batch(self.shaping_params["batch_size"])
                 )
                 self.demo_iter_tf = demo_dataset.make_initializable_iterator()
                 self.demo_inputs_tf = self.demo_iter_tf.get_next()
 
-                # self.demo_shaping = NormalizingFlowDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
-                # self.demo_shaping = MAFDemoShaping(
-                #     gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params
-                # )
-                self.demo_shaping = EnsMAFDemoShaping(
-                    gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params
-                )
+                if self.demo_strategy == "nf":
+                    # self.demo_shaping = MAFDemoShaping(
+                    #     gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params["nf"]
+                    # )
+                    self.demo_shaping = EnsNFDemoShaping(
+                        gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params["nf"]
+                    )
+                elif self.demo_strategy == "gan":
+                    self.demo_shaping = GANDemoShaping(
+                        gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params["gan"]
+                    )
+                else:
+                    assert False
             else:
                 self.demo_shaping = None
 
@@ -798,15 +804,20 @@ class DDPG(object):
         if not "Reach2DF" in self.info["env_name"]:
             return
 
+        dim1 = 0
+        dim2 = 1
         num_point = 24
         ls = np.linspace(-1.0, 1.0, num_point)
         o_1, o_2 = np.meshgrid(ls, ls)
-        o_r = np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1)
-        g_r = 0.0 * np.ones((num_point ** 2, 2))
+        o_r = 0.0 * np.ones((num_point ** 2, self.dimo))
+        o_r[..., dim1 : dim1 + 1] = o_1.reshape(-1, 1)
+        o_r[..., dim2 : dim2 + 1] = o_2.reshape(-1, 1)
+        g_r = 0.0 * np.ones((num_point ** 2, self.dimg))
+        u_r = 0.0 * np.ones((num_point ** 2, self.dimu))
 
         ret = self.get_actions(o=o_r, g=g_r)
 
-        res = {"o": o_r, "u": ret}
+        res = {"o": np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1), "u": ret}
 
         if filename:
             logger.info("Query: action over state space -> storing query results to {}".format(filename))
