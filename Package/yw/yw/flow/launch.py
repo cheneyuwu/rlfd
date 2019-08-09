@@ -32,7 +32,10 @@ def import_param_config(load_dir):
     spec = importlib.util.spec_from_file_location("module.name", abs_load_dir)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.params_config
+    params_configs = [
+        getattr(module, params_config) for params_config in dir(module) if params_config.startswith("params_config")
+    ]
+    return params_configs
 
 
 def generate_params(root_dir, param_config):
@@ -88,13 +91,15 @@ def main(targets, exp_dir, policy_file, **kwargs):
             logger.info("=================================================")
             # adding checking
             config_file = target.replace("rename:", "")
-            params_config = import_param_config(config_file)
-            dir_param_dict = generate_params(exp_dir, params_config)
+            params_configs = import_param_config(config_file)
+            dir_param_dict = {}
+            for params_config in params_configs:
+                dir_param_dict.update(generate_params(exp_dir, params_config))
             if rank == 0:
                 for k, v in dir_param_dict.items():
                     assert os.path.exists(k)
                     # copy params.json file, rename the config entry
-                    v["config"] = "default" # CHANGE this name to reflect the test config!
+                    v["config"] = "default"  # CHANGE this name to reflect the test config!
                     # v["config"] = str(v["ddpg"]["shaping_params"]["reg_loss_weight"]) + ":" + str(v["ddpg"]["shaping_params"]["potential_weight"])
                     with open(os.path.join(k, "params_renamed.json"), "w") as f:
                         json.dump(v, f)
@@ -105,8 +110,10 @@ def main(targets, exp_dir, policy_file, **kwargs):
             logger.info("=================================================")
             # adding checking
             config_file = target.replace("train:", "")
-            params_config = import_param_config(config_file)
-            dir_param_dict = generate_params(exp_dir, params_config)
+            params_configs = import_param_config(config_file)
+            dir_param_dict = {}
+            for params_config in params_configs:
+                dir_param_dict.update(generate_params(exp_dir, params_config))
 
             # store json config file to the target directory
             if rank == 0:

@@ -28,7 +28,7 @@ params_config = {
         "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "maf"]
         "sample_demo_buffer": 0,  # whether or not to sample from demonstration buffer
         "use_demo_reward": 0,  # whether or not to assume that demonstrations also have rewards
-        "num_demo": 10,  # number of expert demo episodes
+        "num_demo": 20,  # number of expert demo episodes
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
         "prm_loss_weight": 1.0,  # (0.001 for OpenAI) weight corresponding to the primary loss
@@ -38,18 +38,18 @@ params_config = {
             "nf": {
                 "num_ens": 1,
                 "nf_type": "maf",  # choose between ["maf", "realnvp"]
-                "lr": 1e-4,
+                "lr": 5e-4,
                 "num_masked": 2,  # used only when nf_type is set to realnvp
                 "num_bijectors": 6,
                 "layer_sizes": [512, 512],
                 "prm_loss_weight": 1.0,
-                "reg_loss_weight": 800.0,
-                "potential_weight": 5.0,
+                "reg_loss_weight": 2200.0,
+                "potential_weight": 2.0,
             },
             "gan": {
-                "potential_weight": 3.0,
+                "potential_weight": 5.0,
                 "layer_sizes": [256, 256, 256],
-                "latent_dim": 2,
+                "latent_dim": 25,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
             },
@@ -78,10 +78,10 @@ params_config = {
     },
     # Training Config
     "train": {
-        "n_epochs": 1000,
+        "n_epochs": int(1e3),
         "n_cycles": 10,  # per epoch
         "n_batches": 40,  # training batches per cycle
-        "shaping_n_epochs": 6000,
+        "shaping_n_epochs": int(1e4),
         "save_interval": 10,
         "shaping_policy": 0,  # whether or not to use a pretrained shaping policy
     },
