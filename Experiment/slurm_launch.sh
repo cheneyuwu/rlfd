@@ -22,12 +22,9 @@ source /home/yuchenwu/ENV/tf114/bin/activate
 nvidia-smi --compute-mode=0
 source /home/yuchenwu/projects/def-florian7/yuchenwu/RLProject/setup.sh
 
+N_TASKS=20
 # LAUNCH_EXP_DIR="/home/yuchenwu/scratch/OpenAI/Temp"
 LAUNCH_EXP_DIR="."
-N_TASKS=20
+TRAINING_FILE="*.py"
 
-mpiexec -n ${N_TASKS} python -m yw.flow.launch --exp_dir ${LAUNCH_EXP_DIR} --targets train:rl.py # change this name
-# train:rldense.py demo
-# train:rlmaf.py
-# train:rlrbmaf.py
-# train:rlmerged.py
+mpiexec -n ${N_TASKS} python -m yw.flow.launch --exp_dir ${LAUNCH_EXP_DIR} --targets train:${TRAINING_FILE}
