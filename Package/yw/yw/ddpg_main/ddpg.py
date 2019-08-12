@@ -7,12 +7,7 @@ from yw.ddpg_main.mpi_adam import MpiAdam
 from yw.ddpg_main.normalizer import Normalizer
 from yw.ddpg_main.actor_critic import ActorCritic
 from yw.ddpg_main.replay_buffer import HERReplayBuffer, UniformReplayBuffer, RingReplayBuffer
-from yw.ddpg_main.demo_shaping import (
-    GaussianDemoShaping,
-    NFDemoShaping,
-    EnsNFDemoShaping,
-    GANDemoShaping,
-)
+from yw.ddpg_main.demo_shaping import GaussianDemoShaping, NFDemoShaping, EnsNFDemoShaping, GANDemoShaping
 from yw.util.tf_util import flatten_grads
 
 # for query
