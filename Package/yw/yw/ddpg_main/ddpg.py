@@ -455,9 +455,7 @@ class DDPG(object):
 
         # Add shaping reward
         with tf.variable_scope("shaping"):
-            if self.demo_strategy == "manual":
-                self.demo_shaping = ManualDemoShaping(gamma=self.gamma)
-            elif self.demo_strategy == "norm":
+            if self.demo_strategy == "norm":
                 # Note that you can not use this to train with non-fixed T TODO: fix it!!
                 assert self.fix_T
                 max_num_transitions = self.num_demo * self.T
