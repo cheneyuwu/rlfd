@@ -39,7 +39,7 @@ params_config = {
                 "num_ens": 1,
                 "nf_type": "maf",  # choose between ["maf", "realnvp"]
                 "lr": 5e-4,
-                "num_masked": 8,  # used only when nf_type is set to realnvp
+                "num_masked": 6,  # used only when nf_type is set to realnvp
                 "num_bijectors": 6,
                 "layer_sizes": [512, 512],
                 "prm_loss_weight": 1.0,
