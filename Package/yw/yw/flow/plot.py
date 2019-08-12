@@ -31,6 +31,15 @@ def pad(xs, value=np.nan):
     return np.array(padded_xs)
 
 
+def strip(xs):
+    minlen = np.min([len(x) for x in xs])
+    stripped_xs = []
+    for x in xs:
+        assert x.shape[0] >= minlen
+        stripped_xs.append(x[:minlen])
+    return np.array(stripped_xs)
+
+
 def smooth_reward_curve(x, y):
     halfwidth = int(np.ceil(len(x) / 60))  # Halfwidth of our smoothing convolution
     k = halfwidth
@@ -115,7 +124,9 @@ def plot_results(allresults, xys, target_dir, smooth=0):
             y_label = xy.split(":")[1]
             for j, config in enumerate(sorted(data[env_id][xy].keys())):
                 xs, ys = zip(*data[env_id][xy][config])
-                xs, ys = pad(xs), pad(ys)
+                # either pad with nan or strip to the minimum length
+                # xs, ys = pad(xs), pad(ys)
+                xs, ys = strip(xs), strip(ys)
                 assert xs.shape == ys.shape
 
                 # from openai spinning up
