@@ -182,6 +182,7 @@ def main(root_dir, comm=None, **kwargs):
     if os.path.isfile(param_file):
         with open(param_file, "r") as f:
             params = json.load(f)
+        config.check_params(params)
     else:
         logger.warn("WARNING: params.json not found! using the default parameters.")
         params = config.DEFAULT_PARAMS.copy()
