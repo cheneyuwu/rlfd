@@ -64,43 +64,10 @@ class DemoShaping:
         return state_tf
 
 
-class ManualDemoShaping(DemoShaping):
-    def __init__(self, gamma):
-        """
-        Implement the state, action based potential function and corresponding actions
-        Args:
-            o - observation
-            g - goal
-            u - action
-            o_2 - observation that goes to
-            g_2 - same as g, idk why I must make this specific
-            u_2 - output from the actor of the main network
-        """
-        super().__init__(gamma)
-
-    def potential(self, o, g, u):
-        """
-        Just return negative value of distance between current state and goal state
-        """
-        # state based, for reacher 1d, and 2d
-        ret = -tf.norm(tf.abs(o - g), ord=2, axis=1, keepdims=True) * 10
-        # state action based for reacher 1d
-        # ret = -(tf.clip_by_value((g - o) * 10, -2, 2) - u) ** 2
-        return ret
-
-
 class GaussianDemoShaping(DemoShaping):
     def __init__(self, gamma, demo_inputs_tf):
         """
         Implement the state, action based potential function and corresponding actions
-        Args:
-            o - observation
-            g - goal
-            u - action
-            o_2 - observation that goes to
-            g_2 - same as g, idk why I must make this specific
-            u_2 - output from the actor of the main network
-            demo_inputs_tf - demo_inputs that contains all the transitons from demonstration
         """
         self.demo_inputs_tf = demo_inputs_tf
         self.demo_state_tf = self._concat_inputs(
@@ -116,7 +83,6 @@ class GaussianDemoShaping(DemoShaping):
         """
         Just return negative value of distance between current state and goal state
         """
-
         state_tf = self._concat_inputs(o, g, u)
 
         # Calculate the potential
@@ -138,9 +104,9 @@ class GaussianDemoShaping(DemoShaping):
 class NFDemoShaping(DemoShaping):
     def __init__(
         self,
-        nf_type,
         gamma,
         demo_inputs_tf,
+        nf_type,
         lr,
         num_masked,
         num_bijectors,
@@ -311,7 +277,7 @@ class GANDemoShaping(DemoShaping):
         assert len(demo_state_tf.shape) == 2
         fake_data = self.generator(tf.random.normal([tf.shape(demo_state_tf)[0], latent_dim]))
         self.fake_data = fake_data  # exposed for internal testing
-        disc_fake = self.discriminator(self.fake_data)
+        disc_fake = self.discriminator(fake_data)
         disc_real = self.discriminator(demo_state_tf)
         # discriminator loss (including gp loss)
         alpha = tf.random_uniform(shape=[tf.shape(demo_state_tf)[0], 1], minval=0.0, maxval=1.0)

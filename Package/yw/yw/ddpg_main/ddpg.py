@@ -8,7 +8,6 @@ from yw.ddpg_main.normalizer import Normalizer
 from yw.ddpg_main.actor_critic import ActorCritic
 from yw.ddpg_main.replay_buffer import HERReplayBuffer, UniformReplayBuffer, RingReplayBuffer
 from yw.ddpg_main.demo_shaping import (
-    ManualDemoShaping,
     GaussianDemoShaping,
     NFDemoShaping,
     EnsNFDemoShaping,
