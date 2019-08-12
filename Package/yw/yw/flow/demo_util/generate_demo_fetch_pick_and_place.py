@@ -3,7 +3,7 @@ import numpy as np
 from yw.env.env_manager import EnvManager
 
 
-def fetch_pick_and_place_demo(env, run_id):
+def fetch_pick_and_place_demo(env, run_id, render):
 
     episodeAcs = []
     episodeObs = []
@@ -24,7 +24,8 @@ def fetch_pick_and_place_demo(env, run_id):
 
     # move to the above of the object
     while np.linalg.norm(object_oriented_goal) >= 0.005 and timeStep <= env._max_episode_steps:
-        env.render()
+        if render:
+            env.render()
         action = [0, 0, 0, 0]
         object_oriented_goal = object_rel_pos.copy()
         object_oriented_goal[2] += 0.03
@@ -46,7 +47,8 @@ def fetch_pick_and_place_demo(env, run_id):
 
     # take the object
     while np.linalg.norm(object_rel_pos) >= 0.005 and timeStep <= env._max_episode_steps:
-        env.render()
+        if render:
+            env.render()
         action = [0, 0, 0, 0]
         for i in range(len(object_rel_pos)):
             action[i] = object_rel_pos[i] * 10
@@ -77,7 +79,8 @@ def fetch_pick_and_place_demo(env, run_id):
     intermidiate_goal = objectPos * weight + goal * (1 - weight)
 
     while np.linalg.norm(intermidiate_goal - objectPos) >= 0.01 and timeStep <= env._max_episode_steps:
-        env.render()
+        if render:
+            env.render()
         action = [0, 0, 0, 0]
         for i in range(len(intermidiate_goal - objectPos)):
             action[i] = (intermidiate_goal - objectPos)[i] * 10
@@ -96,7 +99,8 @@ def fetch_pick_and_place_demo(env, run_id):
 
     # going to the final goal
     while np.linalg.norm(goal - objectPos) >= 0.01 and timeStep <= env._max_episode_steps:
-        env.render()
+        if render:
+            env.render()
         action = [0, 0, 0, 0]
         for i in range(len(goal - objectPos)):
             action[i] = (goal - objectPos)[i] * 10
@@ -114,7 +118,8 @@ def fetch_pick_and_place_demo(env, run_id):
         object_rel_pos = obsDataNew["observation"][6:9]
 
     while timeStep <= env._max_episode_steps:  # limit the number of timesteps in the episode to a fixed duration
-        env.render()
+        if render:
+            env.render()
         action = [0, 0, 0, 0]
         action[len(action) - 1] = -0.05  # keep the gripper closed
 
@@ -136,7 +141,8 @@ def fetch_pick_and_place_demo(env, run_id):
 
 def main():
 
-    num_itr = 3
+    num_itr = 30
+    render = True
     env = EnvManager(env_name="FetchPickAndPlace-v1", env_args={}, r_scale=1.0, r_shift=0.0, eps_length=50).get_env()
 
     demo_data_obs = []
@@ -146,7 +152,7 @@ def main():
 
     for i in range(num_itr):
         print("Iteration number: ", i)
-        episodeObs, episodeAcs, episodeReward, episodeInfo = fetch_pick_and_place_demo(env, i)
+        episodeObs, episodeAcs, episodeReward, episodeInfo = fetch_pick_and_place_demo(env, i, render=render)
         demo_data_obs.append(episodeObs)
         demo_data_acs.append(episodeAcs)
         demo_data_rewards.append(episodeReward)
