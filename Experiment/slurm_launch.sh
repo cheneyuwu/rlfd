@@ -28,3 +28,7 @@ LAUNCH_EXP_DIR="."
 TRAINING_FILE="*.py"
 
 mpiexec -n ${N_TASKS} python -m yw.flow.launch --exp_dir ${LAUNCH_EXP_DIR} --targets train:${TRAINING_FILE}
+
+# Extra
+# useful command for changing the config name for seeds that succeeded
+# find . -name log.txt | xargs grep -il -m 1 "new best success rate: 1.0" | sed -e "s/log.txt/params_renamed.json/" | xargs sed -i 's/", "env_name/-succeed", "env_name/'
