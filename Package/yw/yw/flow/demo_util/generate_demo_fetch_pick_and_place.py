@@ -11,117 +11,149 @@ def fetch_pick_and_place_demo(env, run_id, render):
     episodeReward = []
 
     last_obs = env.reset()
-    goal = last_obs["desired_goal"]
-    objectPos = last_obs["observation"][3:6]
-    object_rel_pos = last_obs["observation"][6:9]
+    episodeObs.append(last_obs)
 
     timeStep = 0  # count the total number of timesteps
 
-    object_oriented_goal = object_rel_pos.copy()
-    object_oriented_goal[2] += 0.03  # first make the gripper go slightly above the object
+    num_object = int(last_obs["desired_goal"].shape[0] / 3)
 
-    episodeObs.append(last_obs)
+    for i in range(num_object):
 
-    # move to the above of the object
-    while np.linalg.norm(object_oriented_goal) >= 0.005 and timeStep <= env._max_episode_steps:
-        if render:
-            env.render()
-        action = [0, 0, 0, 0]
+        goal_dim = 3 * i
+        obj_pos_dim = 10 + 15 * i
+        obj_rel_pos_dim = 10 + 15 * i + 3
+
+        goal = last_obs["desired_goal"][goal_dim : goal_dim + 3]
+        object_pos = last_obs["observation"][obj_pos_dim : obj_pos_dim + 3]
+        object_rel_pos = last_obs["observation"][obj_rel_pos_dim : obj_rel_pos_dim + 3]
+
+        # move to the above of the object
         object_oriented_goal = object_rel_pos.copy()
-        object_oriented_goal[2] += 0.03
+        object_oriented_goal[2] += 0.05
+        while np.linalg.norm(object_oriented_goal) >= 0.005 and timeStep <= env._max_episode_steps:
+            if render:
+                env.render()
+            action = [0, 0, 0, 0]
+            object_oriented_goal = object_rel_pos.copy()
+            object_oriented_goal[2] += 0.05
 
-        for i in range(len(object_oriented_goal)):
-            action[i] = object_oriented_goal[i] * 10
-        action[-1] = 0.05  # open
+            for i in range(len(object_oriented_goal)):
+                action[i] = object_oriented_goal[i] * 10
+            action[-1] = 0.05  # open
 
-        obsDataNew, reward, done, info = env.step(action)
-        timeStep += 1
+            obsDataNew, reward, done, info = env.step(action)
+            timeStep += 1
 
-        episodeAcs.append(action)
-        episodeInfo.append(info)
-        episodeObs.append(obsDataNew)
-        episodeReward.append([reward])
+            episodeAcs.append(action)
+            episodeInfo.append(info)
+            episodeObs.append(obsDataNew)
+            episodeReward.append([reward])
 
-        objectPos = obsDataNew["observation"][3:6]
-        object_rel_pos = obsDataNew["observation"][6:9]
+            object_pos = obsDataNew["observation"][obj_pos_dim : obj_pos_dim + 3]
+            object_rel_pos = obsDataNew["observation"][obj_rel_pos_dim : obj_rel_pos_dim + 3]
 
-    # take the object
-    while np.linalg.norm(object_rel_pos) >= 0.005 and timeStep <= env._max_episode_steps:
-        if render:
-            env.render()
-        action = [0, 0, 0, 0]
-        for i in range(len(object_rel_pos)):
-            action[i] = object_rel_pos[i] * 10
+        # take the object
+        while np.linalg.norm(object_rel_pos) >= 0.005 and timeStep <= env._max_episode_steps:
+            if render:
+                env.render()
+            action = [0, 0, 0, 0]
+            for i in range(len(object_rel_pos)):
+                action[i] = object_rel_pos[i] * 10
 
-        action[-1] = -0.05
+            action[-1] = -0.05
 
-        obsDataNew, reward, done, info = env.step(action)
-        timeStep += 1
+            obsDataNew, reward, done, info = env.step(action)
+            timeStep += 1
 
-        episodeAcs.append(action)
-        episodeInfo.append(info)
-        episodeObs.append(obsDataNew)
-        episodeReward.append([reward])
+            episodeAcs.append(action)
+            episodeInfo.append(info)
+            episodeObs.append(obsDataNew)
+            episodeReward.append([reward])
 
-        objectPos = obsDataNew["observation"][3:6]
-        object_rel_pos = obsDataNew["observation"][6:9]
+            object_pos = obsDataNew["observation"][obj_pos_dim : obj_pos_dim + 3]
+            object_rel_pos = obsDataNew["observation"][obj_rel_pos_dim : obj_rel_pos_dim + 3]
 
-    # set up the first goal
-    # method 1 completly random
-    # weight = np.random.uniform(0, 1, size=3)
-    # method 2 fixed with little disturbance
-    if run_id % 2 == 0:
-        weight = np.array((0.8, 0.2, 0.5)) + np.random.normal(scale=0.2, size=3)
-    elif run_id % 2 == 1:
-        weight = np.array((0.2, 0.8, 0.5)) + np.random.normal(scale=0.2, size=3)
-    else:
-        assert False
-    intermidiate_goal = objectPos * weight + goal * (1 - weight)
+        # set up the first goal
+        # method 1 completly random
+        # weight = np.random.uniform(0, 1, size=3)
+        # method 2 fixed with little disturbance
+        if run_id % 2 == 0:
+            weight = np.array((0.8, 0.2, 0.5)) + np.random.normal(scale=0.2, size=3)
+        elif run_id % 2 == 1:
+            weight = np.array((0.2, 0.8, 0.5)) + np.random.normal(scale=0.2, size=3)
+        else:
+            assert False
+        intermidiate_goal = object_pos * weight + goal * (1 - weight)
 
-    while np.linalg.norm(intermidiate_goal - objectPos) >= 0.01 and timeStep <= env._max_episode_steps:
-        if render:
-            env.render()
-        action = [0, 0, 0, 0]
-        for i in range(len(intermidiate_goal - objectPos)):
-            action[i] = (intermidiate_goal - objectPos)[i] * 10
-        action[len(action) - 1] = -0.05
+        while np.linalg.norm(intermidiate_goal - object_pos) >= 0.01 and timeStep <= env._max_episode_steps:
+            if render:
+                env.render()
+            action = [0, 0, 0, 0]
+            for i in range(len(intermidiate_goal - object_pos)):
+                action[i] = (intermidiate_goal - object_pos)[i] * 10
+            action[len(action) - 1] = -0.05
 
-        obsDataNew, reward, done, info = env.step(action)
-        timeStep += 1
+            obsDataNew, reward, done, info = env.step(action)
+            timeStep += 1
 
-        episodeAcs.append(action)
-        episodeInfo.append(info)
-        episodeObs.append(obsDataNew)
-        episodeReward.append([reward])
+            episodeAcs.append(action)
+            episodeInfo.append(info)
+            episodeObs.append(obsDataNew)
+            episodeReward.append([reward])
 
-        objectPos = obsDataNew["observation"][3:6]
-        object_rel_pos = obsDataNew["observation"][6:9]
+            object_pos = obsDataNew["observation"][obj_pos_dim : obj_pos_dim + 3]
+            object_rel_pos = obsDataNew["observation"][obj_rel_pos_dim : obj_rel_pos_dim + 3]
 
-    # going to the final goal
-    while np.linalg.norm(goal - objectPos) >= 0.01 and timeStep <= env._max_episode_steps:
-        if render:
-            env.render()
-        action = [0, 0, 0, 0]
-        for i in range(len(goal - objectPos)):
-            action[i] = (goal - objectPos)[i] * 10
-        action[len(action) - 1] = -0.05
+        # going to the final goal
+        while np.linalg.norm(goal - object_pos) >= 0.01 and timeStep <= env._max_episode_steps:
+            if render:
+                env.render()
+            action = [0, 0, 0, 0]
+            for i in range(len(goal - object_pos)):
+                action[i] = (goal - object_pos)[i] * 10
+            action[len(action) - 1] = -0.05
 
-        obsDataNew, reward, done, info = env.step(action)
-        timeStep += 1
+            obsDataNew, reward, done, info = env.step(action)
+            timeStep += 1
 
-        episodeAcs.append(action)
-        episodeInfo.append(info)
-        episodeObs.append(obsDataNew)
-        episodeReward.append([reward])
+            episodeAcs.append(action)
+            episodeInfo.append(info)
+            episodeObs.append(obsDataNew)
+            episodeReward.append([reward])
 
-        objectPos = obsDataNew["observation"][3:6]
-        object_rel_pos = obsDataNew["observation"][6:9]
+            object_pos = obsDataNew["observation"][obj_pos_dim : obj_pos_dim + 3]
+            object_rel_pos = obsDataNew["observation"][obj_rel_pos_dim : obj_rel_pos_dim + 3]
+
+        # release the gripper
+        object_oriented_goal = object_rel_pos.copy()
+        object_oriented_goal[2] += 0.1  # first make the gripper go slightly above the object
+        while np.linalg.norm(object_oriented_goal) >= 0.005 and timeStep <= env._max_episode_steps:
+            if render:
+                env.render()
+            action = [0, 0, 0, 0]
+            object_oriented_goal = object_rel_pos.copy()
+            object_oriented_goal[2] += 0.1
+
+            for i in range(len(object_oriented_goal)):
+                action[i] = object_oriented_goal[i] * 10
+            action[-1] = 0.05  # open
+
+            obsDataNew, reward, done, info = env.step(action)
+            timeStep += 1
+
+            episodeAcs.append(action)
+            episodeInfo.append(info)
+            episodeObs.append(obsDataNew)
+            episodeReward.append([reward])
+
+            object_pos = obsDataNew["observation"][obj_pos_dim : obj_pos_dim + 3]
+            object_rel_pos = obsDataNew["observation"][obj_rel_pos_dim : obj_rel_pos_dim + 3]
 
     while timeStep <= env._max_episode_steps:  # limit the number of timesteps in the episode to a fixed duration
         if render:
             env.render()
         action = [0, 0, 0, 0]
-        action[len(action) - 1] = -0.05  # keep the gripper closed
+        action[-1] = 0.05  # keep the gripper open
 
         obsDataNew, reward, done, info = env.step(action)
         timeStep += 1
@@ -130,9 +162,6 @@ def fetch_pick_and_place_demo(env, run_id, render):
         episodeInfo.append(info)
         episodeObs.append(obsDataNew)
         episodeReward.append([reward])
-
-        objectPos = obsDataNew["observation"][3:6]
-        object_rel_pos = obsDataNew["observation"][6:9]
 
     assert episodeInfo[-1]["is_success"]
 
@@ -141,9 +170,12 @@ def fetch_pick_and_place_demo(env, run_id, render):
 
 def main():
 
-    num_itr = 30
+    # Change the following parameters
+    num_itr = 1
     render = True
-    env = EnvManager(env_name="FetchPickAndPlace-v1", env_args={}, r_scale=1.0, r_shift=0.0, eps_length=50).get_env()
+    env = EnvManager(env_name="FetchMove-v1", env_args={}, r_scale=1.0, r_shift=0.0, eps_length=90).get_env()
+    # note: use eps_length=90 for 2 objects, 130 for 3 objects, 50 for pick and place
+    # End
 
     demo_data_obs = []
     demo_data_acs = []
