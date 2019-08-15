@@ -23,6 +23,7 @@ class DDPG(object):
         input_dims,
         use_td3,
         layer_sizes,
+        initializer_type,
         polyak,
         buffer_size,
         batch_size,
@@ -72,6 +73,7 @@ class DDPG(object):
             scope              (str)          - the scope used for the TensorFlow graph
             input_dims         (dict of ints) - dimensions for the observation (o), the goal (g), and the actions (u)
             layer_sizes        (list of ints) - number of units in each hidden layers
+            initializer_type   (str)          - initializer of the weight for both policy and critic
             reuse              (boolean)      - whether or not the networks should be reused
             # Replay Buffer
             buffer_size        (int)          - number of transitions that are stored in the replay buffer
@@ -103,6 +105,7 @@ class DDPG(object):
         self.input_dims = input_dims
         self.use_td3 = use_td3
         self.layer_sizes = layer_sizes
+        self.initializer_type = initializer_type
         self.polyak = polyak
         self.buffer_size = buffer_size
         self.batch_size = batch_size
@@ -418,6 +421,7 @@ class DDPG(object):
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
                 layer_sizes=self.layer_sizes,
+                initializer_type=self.initializer_type,
                 use_td3=self.use_td3,
                 add_pi_noise=0,
             )
@@ -439,6 +443,7 @@ class DDPG(object):
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
                 layer_sizes=self.layer_sizes,
+                initializer_type=self.initializer_type,
                 use_td3=self.use_td3,
                 add_pi_noise=self.use_td3,
             )

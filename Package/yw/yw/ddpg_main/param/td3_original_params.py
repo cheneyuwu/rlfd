@@ -13,11 +13,12 @@ params_config = {
     "ddpg": {
         # replay buffer setup
         "buffer_size": int(1e6),
-        "replay_strategy": "none",  # choose between ["her", "none"] (her for hindsight exp replay)
+        "replay_strategy": "none",  # ["her", "none"] (her for hindsight exp replay)
         # networks
         "scope": "ddpg",
         "use_td3": 1,  # whether or not to use td3
         "layer_sizes": [400, 300],  # number of neurons in each hidden layers
+        "initializer_type": "glorot", # ["zero", "glorot"]
         "Q_lr": 0.001,  # critic learning rate
         "pi_lr": 0.001,  # actor learning rate
         "action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)
@@ -25,7 +26,7 @@ params_config = {
         # double q learning
         "polyak": 0.995,  # polyak averaging coefficient for double q learning
         # use demonstrations
-        "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "nf", "gan"]
+        "demo_strategy": "none",  # ["none", "bc", "norm", "manual", "nf", "gan"]
         "sample_demo_buffer": 0,  # whether or not to sample from demonstration buffer
         "use_demo_reward": 0,  # whether or not to assume that demonstrations also have rewards, and train it on the critic
         "num_demo": 0,  # number of expert demo episodes
@@ -37,11 +38,12 @@ params_config = {
             "batch_size": 128,
             "nf": {
                 "num_ens": 1,
-                "nf_type": "maf",  # choose between ["maf", "realnvp"]
+                "nf_type": "maf",  # ["maf", "realnvp"]
                 "lr": 1e-4,
                 "num_masked": 2,  # used only when nf_type is set to realnvp
                 "num_bijectors": 6,
                 "layer_sizes": [512, 512],
+                "initializer_type": "glorot", # ["zero", "glorot"]
                 "prm_loss_weight": 1.0,
                 "reg_loss_weight": 800.0,
                 "potential_weight": 5.0,
@@ -49,6 +51,7 @@ params_config = {
             "gan": {
                 "potential_weight": 3.0,
                 "layer_sizes": [256, 256],
+                "initializer_type": "glorot", # ["zero", "glorot"]
                 "latent_dim": 2,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,

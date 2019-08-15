@@ -18,6 +18,7 @@ params_config = {
         "scope": "ddpg",
         "use_td3": 1,
         "layer_sizes": [256, 256, 256],
+        "initializer_type": "glorot", # ["zero", "glorot"]
         "Q_lr": 0.001,
         "pi_lr": 0.001,
         "action_l2": 0.4,
@@ -42,6 +43,7 @@ params_config = {
                 "num_masked": 6,
                 "num_bijectors": 6,
                 "layer_sizes": [512, 512],
+                "initializer_type": "glorot", # ["zero", "glorot"]
                 "prm_loss_weight": 1.0,
                 "reg_loss_weight": 2000.0,
                 "potential_weight": 3.0,
@@ -49,6 +51,7 @@ params_config = {
             "gan": {
                 "potential_weight": 5.0,
                 "layer_sizes": [256, 256, 256],
+                "initializer_type": "glorot", # ["zero", "glorot"]
                 "latent_dim": 40, # use the same number of dims as obs
                 "gp_lambda": 0.1,
                 "critic_iter": 5,

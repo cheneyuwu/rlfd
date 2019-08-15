@@ -18,6 +18,7 @@ params_config = {
         "scope": "ddpg",
         "use_td3": 1,  # whether or not to use td3
         "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layers
+        "initializer_type": "glorot", # ["zero", "glorot"]
         "Q_lr": 0.001,  # critic learning rate
         "pi_lr": 0.001,  # actor learning rate
         "action_l2": 0.4,  # (1.0 for OpenAI envs) quadratic penalty on actions (before rescaling by max_u)
@@ -42,6 +43,7 @@ params_config = {
                 "num_masked": 4,  # used only when nf_type is set to realnvp
                 "num_bijectors": 6,
                 "layer_sizes": [512, 512],
+                "initializer_type": "glorot", # ["zero", "glorot"]
                 "prm_loss_weight": 1.0,
                 "reg_loss_weight": 2200.0,
                 "potential_weight": 2.0,
@@ -49,6 +51,7 @@ params_config = {
             "gan": {
                 "potential_weight": 5.0,
                 "layer_sizes": [256, 256, 256],
+                "initializer_type": "glorot", # ["zero", "glorot"]
                 "latent_dim": 25,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,

@@ -152,14 +152,26 @@ def adjust_shape(placeholder, data):
 
 
 class MLP:
-    def __init__(self, input_shape, layers_sizes, name=""):
+    def __init__(self, input_shape, layers_sizes, initializer_type="glorot", name=""):
+        # choose initializer
+        if initializer_type == "zero":
+            kernel_initializer = tf.initializers.zeros()
+            bias_initializer = tf.initializers.constant(0.01)
+        elif initializer_type == "glorot":
+            kernel_initializer = tf.initializers.glorot_normal()
+            # kernel_initializer = tf.initializers.glorot_uniform()
+            bias_initializer = None
+        else:
+            assert False, "unsupported initializer type"
+        # build layers
         self.layers = []
         for i, size in enumerate(layers_sizes):
             activation = "relu" if i < len(layers_sizes) - 1 else None
             layer = tf.layers.Dense(
                 units=size,
                 activation=activation,
-                kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False),
+                kernel_initializer=kernel_initializer,
+                bias_initializer=bias_initializer,
                 name=name + "_" + str(i),
             )
             layer.build(input_shape=input_shape)
@@ -173,15 +185,27 @@ class MLP:
         return res
 
 
-def nn(input, layers_sizes, reuse=None, flatten=False, name=""):
+def nn(input, layers_sizes, reuse=None, flatten=False, initializer_type="glorot", name=""):
     """Creates a simple neural network
     """
+    # choose initializer
+    if initializer_type == "zero":
+        kernel_initializer = tf.initializers.zeros()
+        bias_initializer = tf.initializers.constant(0.01)
+    elif initializer_type == "glorot":
+        kernel_initializer = tf.initializers.glorot_normal()
+        # kernel_initializer = tf.initializers.glorot_uniform()
+        bias_initializer = None
+    else:
+        assert False, "unsupported initializer type"
+    # connect layers
     for i, size in enumerate(layers_sizes):
         activation = tf.nn.relu if i < len(layers_sizes) - 1 else None
         input = tf.layers.dense(
             inputs=input,
             units=size,
-            kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False),
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer,
             reuse=reuse,
             name=name + "_" + str(i),
         )
@@ -252,13 +276,26 @@ class ToyNF:
 # Modern Normalizing Flows
 # =============================================================================
 class MAF:
-    def __init__(self, base_dist, dim, num_bijectors=6, layer_sizes=[512, 512]):
-
+    def __init__(self, base_dist, dim, num_bijectors=6, layer_sizes=[512, 512], initializer_type="glorot"):
+        # choose initializer
+        if initializer_type == "zero":
+            kernel_initializer = tf.initializers.zeros()
+            bias_initializer = tf.initializers.constant(0.01)
+        elif initializer_type == "glorot":
+            kernel_initializer = tf.initializers.glorot_normal()
+            bias_initializer = None
+        else:
+            assert False, "unsupported initializer type"
+        # build layers
         self.bijectors = []
         for _ in range(num_bijectors):
             self.bijectors.append(
                 tfb.MaskedAutoregressiveFlow(
-                    shift_and_log_scale_fn=tfb.masked_autoregressive_default_template(hidden_layers=layer_sizes)
+                    shift_and_log_scale_fn=tfb.masked_autoregressive_default_template(
+                        hidden_layers=layer_sizes,
+                        kernel_initializer=kernel_initializer,
+                        bias_initializer=bias_initializer,
+                    )
                 )
             )
             # BatchNorm helps to stabilize deep normalizing flows, esp. Real-NVP
@@ -276,14 +313,27 @@ class MAF:
 
 
 class RealNVP:
-    def __init__(self, base_dist, dim, num_masked, num_bijectors=6, layer_sizes=[512, 512]):
-
+    def __init__(self, base_dist, dim, num_masked, num_bijectors=6, layer_sizes=[512, 512], initializer_type="glorot"):
+        # choose initializer
+        if initializer_type == "zero":
+            kernel_initializer = tf.initializers.zeros()
+            bias_initializer = tf.initializers.constant(0.01)
+        elif initializer_type == "glorot":
+            kernel_initializer = tf.initializers.glorot_normal()
+            bias_initializer = None
+        else:
+            assert False, "unsupported initializer type"
+        # build layers
         self.bijectors = []
         for _ in range(num_bijectors):
             self.bijectors.append(
                 tfb.RealNVP(
                     num_masked=num_masked,
-                    shift_and_log_scale_fn=tfb.real_nvp_default_template(hidden_layers=layer_sizes),
+                    shift_and_log_scale_fn=tfb.real_nvp_default_template(
+                        hidden_layers=layer_sizes,
+                        kernel_initializer=kernel_initializer,
+                        bias_initializer=bias_initializer,
+                    ),
                 )
             )
             # BatchNorm helps to stabilize deep normalizing flows, esp. Real-NVP
