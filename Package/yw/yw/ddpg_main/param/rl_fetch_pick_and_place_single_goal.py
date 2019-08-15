@@ -25,7 +25,7 @@ params_config = {
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
         # use demonstrations
-        "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "maf"]
+        "demo_strategy": "none",  # choose between ["none", "bc", "norm", "nf", "gan"]
         "sample_demo_buffer": 0,  # whether or not to sample from demonstration buffer
         "use_demo_reward": 0,  # whether or not to assume that demonstrations also have rewards
         "num_demo": 30,  # number of expert demo episodes
