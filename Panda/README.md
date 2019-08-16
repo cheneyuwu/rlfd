@@ -10,22 +10,20 @@
 - **Debugging** : Make sure you set the static ip everytime you unplug the ethernet cable. Also if you are using the ethernet to usb extension cable, to unplug, make sure you unplug the usb part, and not just the ethernet cable.
 
 ### ROS Node communication
-This is for communication between nuc and the pc. See [guide](http://wiki.ros.org/ROS/Tutorials/MultipleMachines)
+This is for communication between nuc and the pc. See [MultipleMachines](http://wiki.ros.org/ROS/Tutorials/MultipleMachines) and [NetworkSetup](http://wiki.ros.org/ROS/NetworkSetup)
 
 From nuc side:
 ```
-export ROS_IP=
-```
-You can run the master on the nuc, and launch a 
-```
-```
-
-
-From the pc side :
-
-```
+export ROS_IP=192.168.132.90  # current pc ip address
 export ROS_MASTER_URI=http://192.168.132.90:11311/
 ```
-These two are equivalent.
 
-To debug, try running `roswtf` which might give some hints as which part is probablematic. 
+From the pc side :
+Add the following to your ~/.bashrc
+
+```
+export ROS_IP=192.168.132.95  # current pc ip address
+export ROS_MASTER_URI=http://192.168.132.90:11311/  # nuc which is running roscore
+```
+
+To debug, try running `roswtf` which might give some hints as which part is probablematic.
