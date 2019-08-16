@@ -331,7 +331,7 @@ class DDPG(object):
         self.training_step += 1
         # for debugging
         self.current_batch = batch
-        
+
         return critic_loss, actor_loss
 
     def check_train(self):
@@ -368,7 +368,7 @@ class DDPG(object):
         # must set the default session before head
         self.sess = tf.get_default_session()
         assert self.sess != None, "must have a default session before creating DDPG"
-        
+
         # Inputs to ddpg
         self.inputs_tf = {}
         self.inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
@@ -384,7 +384,7 @@ class DDPG(object):
         input_g_tf = self.inputs_tf["g"] if self.dimg != 0 else None
         input_g_2_tf = self.inputs_tf["g_2"] if self.dimg != 0 else None
         input_u_tf = self.inputs_tf["u"]
-        
+
         # Normalizer for goal and observation.
         with tf.variable_scope("o_stats"):
             self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm)
@@ -434,7 +434,7 @@ class DDPG(object):
             if self.use_td3:
                 self.target_q2_tf = self.target.critic2(o=input_o_2_tf, g=input_g_2_tf, u=input_u_tf)
                 self.target_q2_pi_tf = self.target.critic2(o=input_o_2_tf, g=input_g_2_tf, u=self.target_pi_tf)
-        assert len(self._vars("main")) == len(self._vars("target"))
+        assert len(self.main.vars) == len(self.target.vars)
 
         # Add shaping reward
         with tf.variable_scope("shaping"):
@@ -588,28 +588,26 @@ class DDPG(object):
 
         # Gradients
         # gradients of Q
-        Q_grads_tf = tf.gradients(self.Q_loss_tf, self._vars("main/Q"))
-        assert len(self._vars("main/Q")) == len(Q_grads_tf)
-        self.Q_grads_vars_tf = zip(Q_grads_tf, self._vars("main/Q"))
-        self.Q_grad_tf = flatten_grads(grads=Q_grads_tf, var_list=self._vars("main/Q"))
+        Q_grads_tf = tf.gradients(self.Q_loss_tf, self.main.critic_vars)
+        assert len(self.main.critic_vars) == len(Q_grads_tf)
+        self.Q_grads_vars_tf = zip(Q_grads_tf, self.main.critic_vars)
+        self.Q_grad_tf = flatten_grads(grads=Q_grads_tf, var_list=self.main.critic_vars)
         # gradients of pi
-        pi_grads_tf = tf.gradients(self.pi_loss_tf, self._vars("main/pi"))
-        assert len(self._vars("main/pi")) == len(pi_grads_tf)
-        self.pi_grads_vars_tf = zip(pi_grads_tf, self._vars("main/pi"))
-        self.pi_grad_tf = flatten_grads(grads=pi_grads_tf, var_list=self._vars("main/pi"))
+        pi_grads_tf = tf.gradients(self.pi_loss_tf, self.main.actor_vars)
+        assert len(self.main.actor_vars) == len(pi_grads_tf)
+        self.pi_grads_vars_tf = zip(pi_grads_tf, self.main.actor_vars)
+        self.pi_grad_tf = flatten_grads(grads=pi_grads_tf, var_list=self.main.actor_vars)
 
         # Optimizers
-        self.Q_adam = MpiAdam(self._vars("main/Q"), scale_grad_by_procs=False, comm=self.comm)
-        self.pi_adam = MpiAdam(self._vars("main/pi"), scale_grad_by_procs=False, comm=self.comm)
+        self.Q_adam = MpiAdam(self.main.critic_vars, scale_grad_by_procs=False, comm=self.comm)
+        self.pi_adam = MpiAdam(self.main.actor_vars, scale_grad_by_procs=False, comm=self.comm)
 
         # Polyak averaging
-        self.main_vars = self._vars("main/Q") + self._vars("main/pi")
-        self.target_vars = self._vars("target/Q") + self._vars("target/pi")
-        self.init_target_net_op = list(map(lambda v: v[0].assign(v[1]), zip(self.target_vars, self.main_vars)))
+        self.init_target_net_op = list(map(lambda v: v[0].assign(v[1]), zip(self.target.vars, self.main.vars)))
         self.update_target_net_op = list(
             map(
                 lambda v: v[0].assign(self.polyak * v[0] + (1.0 - self.polyak) * v[1]),
-                zip(self.target_vars, self.main_vars),
+                zip(self.target.vars, self.main.vars),
             )
         )
 
@@ -623,15 +621,6 @@ class DDPG(object):
     def _preprocess_state(self, state):
         state = np.clip(state, -self.clip_obs, self.clip_obs)
         return state
-
-    def _global_vars(self, scope=""):
-        res = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope + "/" + scope)
-        return res
-
-    def _vars(self, scope=""):
-        res = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope + "/" + scope)
-        assert len(res) > 0
-        return res
 
     def _update_stats(self, episode_batch):
         # add transitions to normalizer
