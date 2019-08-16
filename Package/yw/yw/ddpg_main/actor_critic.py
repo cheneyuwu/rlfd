@@ -34,6 +34,7 @@ class ActorCritic:
         self.g_stats = g_stats
         self.use_td3 = use_td3
         self.add_pi_noise = add_pi_noise
+        self.scope = tf.get_variable_scope()
 
         # Actor Critic
         with tf.variable_scope("pi"):
@@ -52,6 +53,10 @@ class ActorCritic:
                     self.q2_nn = MLP(
                         input_shape=input_shape, layers_sizes=layer_sizes + [1], initializer_type=initializer_type
                     )
+
+        self.vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope.name)
+        self.actor_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope.name + "/" + "pi")
+        self.critic_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope.name + "/" + "Q")
 
     def actor(self, o, g):
         state = self._normalize_concat_state(o, g)

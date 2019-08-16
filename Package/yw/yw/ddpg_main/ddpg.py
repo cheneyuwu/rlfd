@@ -378,6 +378,12 @@ class DDPG(object):
         if self.dimg != 0:
             self.inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
             self.inputs_tf["g_2"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
+        # create a variable for each o, g, u key in the inputs_tf dict
+        input_o_tf = self.inputs_tf["o"]
+        input_o_2_tf = self.inputs_tf["o_2"]
+        input_g_tf = self.inputs_tf["g"] if self.dimg != 0 else None
+        input_g_2_tf = self.inputs_tf["g_2"] if self.dimg != 0 else None
+        input_u_tf = self.inputs_tf["u"]
         
         # Normalizer for goal and observation.
         with tf.variable_scope("o_stats"):
@@ -386,12 +392,6 @@ class DDPG(object):
             self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm)
 
         # Models
-        # create a variable for each o, g, u key in the inputs_tf dict
-        input_o_tf = self.inputs_tf["o"]
-        input_o_2_tf = self.inputs_tf["o_2"]
-        input_g_tf = self.inputs_tf["g"] if self.dimg != 0 else None
-        input_g_2_tf = self.inputs_tf["g_2"] if self.dimg != 0 else None
-        input_u_tf = self.inputs_tf["u"]
         with tf.variable_scope("main"):
             self.main = ActorCritic(
                 dimo=self.dimo,
