@@ -10,14 +10,17 @@ except ImportError:
 
 
 class ArgParser:
-    def __init__(self):
+    def __init__(self, allow_unknown_args=True):
         self.parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         self.dump = not MPI.COMM_WORLD.Get_rank() if MPI != None else True
+        self.allow_unknown_args = allow_unknown_args
 
     def parse(self, args):
         known, unknown = self.parser.parse_known_args(args)
         self.known_dict = vars(known)
         self.unknown_dict = self._parse_unknown_args(unknown)
+        if not self.allow_unknown_args:
+            assert self.unknown_dict == {}
 
         if self.dump:
             print("\nKnown arguments:")

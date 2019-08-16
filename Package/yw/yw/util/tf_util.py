@@ -152,14 +152,26 @@ def adjust_shape(placeholder, data):
 
 
 class MLP:
-    def __init__(self, input_shape, layers_sizes, name=""):
+    def __init__(self, input_shape, layers_sizes, initializer_type="glorot", name=""):
+        # choose initializer
+        if initializer_type == "zero":
+            kernel_initializer = tf.initializers.zeros()
+            bias_initializer = tf.initializers.constant(0.01)
+        elif initializer_type == "glorot":
+            kernel_initializer = tf.initializers.glorot_normal()
+            # kernel_initializer = tf.initializers.glorot_uniform()
+            bias_initializer = None
+        else:
+            assert False, "unsupported initializer type"
+        # build layers
         self.layers = []
         for i, size in enumerate(layers_sizes):
             activation = "relu" if i < len(layers_sizes) - 1 else None
             layer = tf.layers.Dense(
                 units=size,
                 activation=activation,
-                kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False),
+                kernel_initializer=kernel_initializer,
+                bias_initializer=bias_initializer,
                 name=name + "_" + str(i),
             )
             layer.build(input_shape=input_shape)
@@ -173,15 +185,27 @@ class MLP:
         return res
 
 
-def nn(input, layers_sizes, reuse=None, flatten=False, name=""):
+def nn(input, layers_sizes, reuse=None, flatten=False, initializer_type="glorot", name=""):
     """Creates a simple neural network
     """
+    # choose initializer
+    if initializer_type == "zero":
+        kernel_initializer = tf.initializers.zeros()
+        bias_initializer = tf.initializers.constant(0.01)
+    elif initializer_type == "glorot":
+        kernel_initializer = tf.initializers.glorot_normal()
+        # kernel_initializer = tf.initializers.glorot_uniform()
+        bias_initializer = None
+    else:
+        assert False, "unsupported initializer type"
+    # connect layers
     for i, size in enumerate(layers_sizes):
         activation = tf.nn.relu if i < len(layers_sizes) - 1 else None
         input = tf.layers.dense(
             inputs=input,
             units=size,
-            kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False),
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer,
             reuse=reuse,
             name=name + "_" + str(i),
         )
@@ -193,77 +217,7 @@ def nn(input, layers_sizes, reuse=None, flatten=False, name=""):
     return input
 
 
-mapping = {}
-
-
-def register(name):
-    def _thunk(func):
-        mapping[name] = func
-        return func
-
-    return _thunk
-
-
-@register("mlp")
-def mlp(num_layers=2, num_hidden=64, activation=tf.tanh, layer_norm=False):
-    """
-    Stack of fully-connected layers to be used in a policy / q-function approximator
-
-    Parameters:
-    ----------
-
-    num_layers: int                 number of fully-connected layers (default: 2)
-
-    num_hidden: int                 size of fully-connected layers (default: 64)
-
-    activation:                     activation function (default: tf.tanh)
-
-    Returns:
-    -------
-
-    function that builds fully connected network with a given input tensor / placeholder
-    """
-
-    def network_fn(X):
-        h = tf.layers.flatten(X)
-        for i in range(num_layers):
-            h = tf.layers.dense(
-                inputs=h,
-                units=num_hidden,
-                kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                name="mlp_fc_" + str(i),
-            )
-            if layer_norm:
-                h = tf.contrib.layers.layer_norm(h, center=True, scale=True)
-            h = activation(h)
-
-        return h
-
-    return network_fn
-
-
-def get_network_builder(name):
-    """
-    If you want to register your own network outside models.py, you just need:
-
-    Usage Example:
-    -------------
-    from baselines.common.models import register
-    @register("your_network_name")
-    def your_network_define(**net_kwargs):
-        ...
-        return network_fn
-
-    """
-    if callable(name):
-        return name
-    elif name in mapping:
-        return mapping[name]
-    else:
-        raise ValueError("Unknown network type: {}".format(name))
-
-
-# Build normalizing flows
+# Simple Normalizing Flow
 # =============================================================================
 
 # quite easy to interpret - multiplying by alpha causes a contraction in volume.
@@ -292,7 +246,7 @@ class LeakyReLU(tfb.Bijector):
         return tf.reduce_sum(log_abs_det_J_inv, axis=event_dims)
 
 
-class NormalizingFlow:
+class ToyNF:
     def __init__(self, base_dist, num_layers=6, d=2, r=2):
         self.bijectors = []
 
@@ -319,18 +273,29 @@ class NormalizingFlow:
         return self.dist.log_prob(input)
 
 
-# MAF
+# Modern Normalizing Flows
 # =============================================================================
-
-
 class MAF:
-    def __init__(self, base_dist, dim=2, num_layers=6):
+    def __init__(self, base_dist, dim, num_bijectors=6, layer_sizes=[512, 512], initializer_type="glorot"):
+        # choose initializer
+        if initializer_type == "zero":
+            kernel_initializer = tf.initializers.zeros()
+            bias_initializer = tf.initializers.constant(0.01)
+        elif initializer_type == "glorot":
+            kernel_initializer = tf.initializers.glorot_normal()
+            bias_initializer = None
+        else:
+            assert False, "unsupported initializer type"
+        # build layers
         self.bijectors = []
-
-        for _ in range(num_layers):
+        for _ in range(num_bijectors):
             self.bijectors.append(
                 tfb.MaskedAutoregressiveFlow(
-                    shift_and_log_scale_fn=tfb.masked_autoregressive_default_template(hidden_layers=[512, 512])
+                    shift_and_log_scale_fn=tfb.masked_autoregressive_default_template(
+                        hidden_layers=layer_sizes,
+                        kernel_initializer=kernel_initializer,
+                        bias_initializer=bias_initializer,
+                    )
                 )
             )
             # BatchNorm helps to stabilize deep normalizing flows, esp. Real-NVP
@@ -340,7 +305,6 @@ class MAF:
 
         # Discard the last Permute layer.
         flow_bijector = tfb.Chain(list(reversed(self.bijectors[:-1])))
-
         self.dist = tfd.TransformedDistribution(distribution=base_dist, bijector=flow_bijector)
 
         # output
@@ -348,105 +312,39 @@ class MAF:
         self.prob = self.dist.prob
 
 
-if __name__ == "__main__":
+class RealNVP:
+    def __init__(self, base_dist, dim, num_masked, num_bijectors=6, layer_sizes=[512, 512], initializer_type="glorot"):
+        # choose initializer
+        if initializer_type == "zero":
+            kernel_initializer = tf.initializers.zeros()
+            bias_initializer = tf.initializers.constant(0.01)
+        elif initializer_type == "glorot":
+            kernel_initializer = tf.initializers.glorot_normal()
+            bias_initializer = None
+        else:
+            assert False, "unsupported initializer type"
+        # build layers
+        self.bijectors = []
+        for _ in range(num_bijectors):
+            self.bijectors.append(
+                tfb.RealNVP(
+                    num_masked=num_masked,
+                    shift_and_log_scale_fn=tfb.real_nvp_default_template(
+                        hidden_layers=layer_sizes,
+                        kernel_initializer=kernel_initializer,
+                        bias_initializer=bias_initializer,
+                    ),
+                )
+            )
+            # BatchNorm helps to stabilize deep normalizing flows, esp. Real-NVP
+            # if i % 4 == 0:
+            #     self.bijectors.append(tfb.BatchNormalization())
+            self.bijectors.append(tfb.Permute(permutation=list(range(0, dim))[::-1]))
 
-    import matplotlib.pylab as pl
-    import matplotlib.gridspec as gridspec
+        # Discard the last Permute layer.
+        flow_bijector = tfb.Chain(list(reversed(self.bijectors[:-1])))
+        self.dist = tfd.TransformedDistribution(distribution=base_dist, bijector=flow_bijector)
 
-    batch_size = 512
-
-    def sample_target_halfmoon():
-        x2_dist = tfd.Normal(loc=tf.cast(0.0, tf.float32), scale=tf.cast(4.0, tf.float32))
-        x2_samples = x2_dist.sample(batch_size)
-        x1 = tfd.Normal(loc=0.25 * tf.square(x2_samples), scale=tf.ones(batch_size, dtype=tf.float32))
-        x1_samples = x1.sample()
-        x_samples = tf.stack([x1_samples, x2_samples], axis=1)
-        return x_samples  # shape (batch_size, 2)
-
-    def sample_flow(base_dist, transformed_dist):
-        x = base_dist.sample(512)
-        samples = [x]
-        names = [base_dist.name]
-        for bijector in reversed(transformed_dist.bijector.bijectors):
-            x = bijector.forward(x)
-            samples.append(x)
-            names.append(bijector.name)
-
-        return x, samples, names
-
-    def visualize_flow(gs, row, samples, titles):
-        X0 = samples[0]
-
-        for i, j in zip([0, len(samples) - 1], [0, 1]):  # range(len(samples)):
-            X1 = samples[i]
-
-            idx = np.logical_and(X0[:, 0] < 0, X0[:, 1] < 0)
-            ax = pl.subplot(gs[row, j])
-            pl.scatter(X1[idx, 0], X1[idx, 1], s=10, color="red")
-
-            idx = np.logical_and(X0[:, 0] > 0, X0[:, 1] < 0)
-            pl.scatter(X1[idx, 0], X1[idx, 1], s=10, color="green")
-
-            idx = np.logical_and(X0[:, 0] < 0, X0[:, 1] > 0)
-            pl.scatter(X1[idx, 0], X1[idx, 1], s=10, color="blue")
-
-            idx = np.logical_and(X0[:, 0] > 0, X0[:, 1] > 0)
-            pl.scatter(X1[idx, 0], X1[idx, 1], s=10, color="black")
-            pl.xlim([-5, 30])
-            pl.ylim([-10, 10])
-            pl.title(titles[j])
-
-    tf.set_random_seed(6)
-
-    sess = tf.Session(config=tf.ConfigProto(log_device_placement=False))
-    x_samples = sample_target_halfmoon()
-    np_samples = sess.run(x_samples)
-
-    base_dist = tfd.MultivariateNormalDiag(loc=tf.zeros([2], dtype=tf.float32))
-    nn = NormalizingFlow(base_dist)
-    transformed_dist = nn.dist
-    _, samples_no_training, _ = sample_flow(base_dist, transformed_dist)
-
-    sess.run(tf.global_variables_initializer())
-    samples_no_training = sess.run(samples_no_training)
-
-    pl.figure()
-    gs = gridspec.GridSpec(3, 3)
-
-    # Training dataset
-    ax = pl.subplot(gs[0, 0])
-    pl.scatter(np_samples[:, 0], np_samples[:, 1], s=10, color="red")
-    pl.xlim([-5, 30])
-    pl.ylim([-10, 10])
-    pl.title("Training samples")
-
-    # Flow before training
-    visualize_flow(gs, 1, samples_no_training, ["Base dist", "Samples w/o training"])
-
-    loss = -tf.reduce_mean(nn(x_samples))
-    train_op = tf.train.AdamOptimizer(1e-3).minimize(loss)
-
-    sess.run(tf.global_variables_initializer())
-
-    NUM_STEPS = 50000
-    global_step = []
-    np_losses = []
-    for i in range(NUM_STEPS):
-        _, np_loss = sess.run([train_op, loss])
-        if i % 1000 == 0:
-            global_step.append(i)
-            np_losses.append(np_loss)
-
-        if i % int(1e4) == 0:
-            print(i, np_loss)
-
-    # start = 10
-    # pl.plot(np_losses[start:])
-
-    _, samples_with_training, _ = sample_flow(base_dist, transformed_dist)
-    samples_with_training = sess.run(samples_with_training)
-
-    # Flow after training
-    visualize_flow(gs, 2, samples_with_training, ["Base dist", "Samples w/ training"])
-
-    pl.show()
+        # output
+        self.log_prob = self.dist.log_prob
+        self.prob = self.dist.prob

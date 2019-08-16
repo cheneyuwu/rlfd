@@ -19,25 +19,38 @@ from yw.ddpg_main import config
 from yw.util.util import set_global_seeds
 from yw.util.tf_util import nn
 from yw.flow.query import visualize_query
+from yw.flow.plot import load_results
 
 
-def query(directory, save):
+def query(result, save):
     """Generate demo from policy file
     """
-    assert directory != None, "Must provide the base directory!"
-
     # Setup
-    logger.configure()
-    assert logger.get_dir() is not None
+    config = result["params"]["config"]
+    directory = result["dirname"]
     policy_file = os.path.join(directory, "rl/policy_latest.pkl")  # assumed to be in this directory
 
+    # Load policy.
+    # get a default session for the current graph
+    tf.reset_default_graph()
+    tf.InteractiveSession()
+    with open(policy_file, "rb") as f:
+        policy = pickle.load(f)
+
     # input data - used for both training and test set
+    dim1 = 0
+    dim2 = 1
     num_point = 24
-    ls = np.linspace(-1.0, 0.0, num_point)
+    ls = np.linspace(-1.0, 1.0, num_point)
     o_1, o_2 = np.meshgrid(ls, ls)
-    o_r = np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1)
-    g_r = 0.0 * np.ones((num_point ** 2, 2))
-    u_r = 1.0 * np.ones((num_point ** 2, 2))
+    o_r = 0.0 * np.ones((num_point ** 2, policy.dimo))
+    o_r[..., dim1 : dim1 + 1] = o_1.reshape(-1, 1)
+    o_r[..., dim2 : dim2 + 1] = o_2.reshape(-1, 1)
+    g_r = 0.0 * np.ones((num_point ** 2, policy.dimg))
+    u_r = 2.0 * np.ones((num_point ** 2, policy.dimu))
+
+    # Close the default session to prevent memory leaking
+    tf.get_default_session().close()
 
     for loss_mode in ["surface_q_only", "surface_p_only", "surface_p_plus_q"]:
 
@@ -55,7 +68,7 @@ def query(directory, save):
         # input placeholders
         inputs_tf = {}
         inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, policy.dimo))
-        inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, policy.dimg))
+        inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, policy.dimg)) if policy.dimg != 0 else None
         inputs_tf["u"] = tf.placeholder(tf.float32, shape=(None, policy.dimu))
 
         q_value = policy.main.critic1(o=inputs_tf["o"], g=inputs_tf["g"], u=inputs_tf["u"])
@@ -74,10 +87,12 @@ def query(directory, save):
             tf.get_default_session().close()
             continue
 
-        feed = {inputs_tf["o"]: o_r, inputs_tf["u"]: u_r, inputs_tf["g"]: g_r}
+        feed = {inputs_tf["o"]: o_r, inputs_tf["u"]: u_r}
+        if policy.dimg != 0:
+            feed[inputs_tf["g"]] = g_r
         ret = policy.sess.run(val, feed_dict=feed)
 
-        res = {"o": o_r, "surf": ret}
+        res = {"o": (o_1, o_2), "surf": ret.reshape((num_point, num_point))}
 
         if save:
             store_dir = os.path.join(directory, "query_" + loss_mode)
@@ -98,6 +113,9 @@ def query(directory, save):
         # Close the default session to prevent memory leaking
         tf.get_default_session().close()
 
+    # UNCOMMENT this for simple environments
+    return
+
     for loss_mode in ["optimized_q_only", "optimized_p_only", "optimized_p_plus_q"]:
         # reset default graph every time this function is called.
         tf.reset_default_graph()
@@ -113,8 +131,12 @@ def query(directory, save):
         # input placeholders
         inputs_tf = {}
         inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, policy.dimo))
-        inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, policy.dimg))
-        state_tf = tf.concat((inputs_tf["o"], inputs_tf["g"]), axis=1)
+        if policy.dimg != 0:
+            inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, policy.dimg)) if policy.dimg != 0 else None
+            state_tf = tf.concat((inputs_tf["o"], inputs_tf["g"]), axis=1)
+        else:
+            inputs_tf["g"] = None
+            state_tf = inputs_tf["o"]
 
         with tf.variable_scope("query"):
             pi_tf = policy.max_u * tf.tanh(nn(state_tf, policy.layer_sizes + [policy.dimu]))
@@ -147,13 +169,16 @@ def query(directory, save):
 
         policy.sess.run(init)
         num_epochs = 1000
+        feed = {inputs_tf["o"]: o_r}
+        if policy.dimg != 0:
+            feed[inputs_tf["g"]] = g_r
         for i in range(num_epochs):
-            loss, _ = policy.sess.run([loss_tf, train_op], feed_dict={inputs_tf["o"]: o_r, inputs_tf["g"]: g_r})
+            loss, _ = policy.sess.run([loss_tf, train_op], feed_dict=feed)
             if i % (num_epochs / 10) == (num_epochs / 10 - 1):
                 logger.info("Query: offline policy {} -> epoch: {} loss: {}".format(loss_mode, i, loss))
 
-        ret = policy.sess.run(pi_tf, feed_dict={inputs_tf["o"]: o_r, inputs_tf["g"]: g_r})
-        res = {"o": o_r, "u": ret}
+        ret = policy.sess.run(pi_tf, feed_dict=feed)
+        res = {"o": np.concatenate((o_1.reshape(-1, 1), o_2.reshape(-1, 1)), axis=1), "u": ret}
 
         if save:
             store_dir = os.path.join(directory, "query_" + loss_mode)
@@ -177,30 +202,24 @@ def query(directory, save):
 
 def main(directories, save, **kwargs):
 
+    logger.configure()
+    assert logger.get_dir() is not None
+
     # Allow load dir to be *
-    for load_dir in directories:
-        if load_dir.split("/")[-1] == "*":
-            root_dir = load_dir[:-2]
-            directories = []
-            for d in os.listdir(root_dir):
-                path = os.path.join(root_dir, d)
-                if os.path.isdir(path) and os.path.exists(os.path.join(path, "rl")):
-                    directories.append(path)
-            break
+    all_results = load_results(directories)
 
-    for d in directories:
-        query(d, save)
+    for result in all_results:
+        query(result, save)
 
-
-from yw.util.cmd_util import ArgParser
-
-ap = ArgParser()
-ap.parser.add_argument(
-    "--directory", help="directories to load", type=str, action="append", default=None, dest="directories"
-)
-ap.parser.add_argument("--save", help="save for later plotting", type=int, default=1)
 
 if __name__ == "__main__":
+    from yw.util.cmd_util import ArgParser
+
+    ap = ArgParser()
+    ap.parser.add_argument(
+        "--directory", help="directories to load", type=str, action="append", default=None, dest="directories"
+    )
+    ap.parser.add_argument("--save", help="save for later plotting", type=int, default=1)
     ap.parse(sys.argv)
 
     main(**ap.get_dict())

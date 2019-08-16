@@ -31,7 +31,7 @@ class Reacher:
         self.mass = 1
         self.boundary = 1.0
         self.threshold = self.boundary / 12
-        self._max_episode_steps = 42 if self.order == 2 else 20
+        self._max_episode_steps = 30 if self.order == 2 else 20
         self.max_u = 2
         self.action_space = self.ActionSpace(self.dim)
         if self.dim == 2:  # create a workspace boundary only when dim is 2
@@ -91,9 +91,9 @@ class Reacher:
         if self.sparse == False:
             return -distance
             # return np.maximum(-0.5, -distance)
-            # return 0.2 / (0.2 + distance)
+            # return 0.05 / (0.05 + distance)
         else:  # self.sparse == True
-            return (distance < self.threshold).astype(np.int64)
+            return -(distance >= self.threshold).astype(np.int64)
 
     def _compute_distance(self, achieved_goal, desired_goal):
         achieved_goal = achieved_goal.reshape(-1, self.dim)
@@ -144,7 +144,8 @@ class Reacher:
     def reset(self):
 
         # The initial state and final goal is fixed
-        self.goal = self.random.uniform(-0.0, 0.0) * np.ones(self.dim) * self.boundary
+        # self.goal = self.random.uniform(-0.2, 0.2) * np.ones(self.dim) * self.boundary
+        self.goal = self.random.uniform(-0.2, 0.2, size=2) * self.boundary
         self.curr_pos = self.random.uniform(-0.8, -0.8) * np.ones(self.dim) * self.boundary
         if self.order == 2:
             self.speed = np.zeros(self.dim)

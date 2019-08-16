@@ -6,6 +6,7 @@ import matplotlib
 
 matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
 import numpy as np
 import json
@@ -16,18 +17,27 @@ from yw.util.reader_util import load_csv
 
 def pad(xs, value=np.nan):
     maxlen = np.max([len(x) for x in xs])
-
     padded_xs = []
     for x in xs:
-        if x.shape[0] >= maxlen:
+        assert x.shape[0] <= maxlen
+        if x.shape[0] == maxlen:
             padded_xs.append(x)
-
-        padding = np.ones((maxlen - x.shape[0],) + x.shape[1:]) * value
-        x_padded = np.concatenate([x, padding], axis=0)
-        assert x_padded.shape[1:] == x.shape[1:]
-        assert x_padded.shape[0] == maxlen
-        padded_xs.append(x_padded)
+        else:
+            padding = np.ones((maxlen - x.shape[0],) + x.shape[1:]) * value
+            x_padded = np.concatenate([x, padding], axis=0)
+            assert x_padded.shape[1:] == x.shape[1:]
+            assert x_padded.shape[0] == maxlen
+            padded_xs.append(x_padded)
     return np.array(padded_xs)
+
+
+def strip(xs):
+    minlen = np.min([len(x) for x in xs])
+    stripped_xs = []
+    for x in xs:
+        assert x.shape[0] >= minlen
+        stripped_xs.append(x[:minlen])
+    return np.array(stripped_xs)
 
 
 def smooth_reward_curve(x, y):
@@ -62,7 +72,10 @@ def load_results(root_dir_or_dirs):
                 result = {"dirname": dirname}
                 progcsv = os.path.join(dirname, "progress.csv")
                 result["progress"] = load_csv(progcsv)
+                if result["progress"] is None:
+                    continue
                 paramsjson = os.path.join(dirname, "params.json")
+                # paramsjson = os.path.join(dirname, "params_renamed.json") # put here for the rename in launch.py
                 with open(paramsjson, "r") as f:
                     result["params"] = json.load(f)
                 allresults.append(result)
@@ -98,18 +111,22 @@ def plot_results(allresults, xys, target_dir, smooth=0):
 
     # each environment goes to one image
     fig = plt.figure()
+    fig.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9, wspace=0.25, hspace=0.25)
     for env_id in sorted(data.keys()):
         print("Creating plots for environment: {}".format(env_id))
 
         fig.clf()
-        colors = ["r", "g", "b", "c", "m", "y", "k"]
         for i, xy in enumerate(data[env_id].keys(), 1):
+            # colors = ["r", "g", "b", "c", "m", "y", "k"]
+            colors = cm.jet(np.linspace(0, 1.0, len(data[env_id][xy].keys())))
             ax = fig.add_subplot(1, len(xys), i)
             x_label = xy.split(":")[0]
             y_label = xy.split(":")[1]
             for j, config in enumerate(sorted(data[env_id][xy].keys())):
                 xs, ys = zip(*data[env_id][xy][config])
-                xs, ys = pad(xs), pad(ys)
+                # either pad with nan or strip to the minimum length
+                # xs, ys = pad(xs), pad(ys)
+                xs, ys = strip(xs), strip(ys)
                 assert xs.shape == ys.shape
 
                 # from openai spinning up
@@ -117,12 +134,12 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 # ax.fill_between(xs[0], np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25)
                 # ours
                 mean_y = np.nanmean(ys, axis=0)
-                var_y = np.nanvar(ys, axis=0)
+                var_y = np.nanstd(ys, axis=0)
                 ax.plot(xs[0], mean_y, label=config, color=colors[j % len(colors)])
-                ax.fill_between(xs[0], mean_y - var_y, mean_y + var_y, alpha=0.5, color=colors[j % len(colors)])
-                ax.fill_between(
-                    xs[0], mean_y - 3 * var_y, mean_y + 3 * var_y, alpha=0.25, color=colors[j % len(colors)]
-                )
+                # ax.fill_between(xs[0], mean_y - var_y, mean_y + var_y, alpha=0.5, color=colors[j % len(colors)])
+                # ax.fill_between(
+                #     xs[0], mean_y - 3 * var_y, mean_y + 3 * var_y, alpha=0.25, color=colors[j % len(colors)]
+                # )
 
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_label)

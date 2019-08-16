@@ -1,8 +1,3 @@
-# =============================================================================
-# Import
-# =============================================================================
-
-# Infra import
 import tensorflow as tf
 import numpy as np
 
@@ -11,7 +6,6 @@ try:
 except ImportError:
     MPI = None
 
-# DDPG Package import
 import yw.util.tf_util as U
 
 

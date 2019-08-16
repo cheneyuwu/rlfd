@@ -29,14 +29,39 @@ def install_mpi_excepthook():
     sys.excepthook = new_hook
 
 
-def mpi_average(value):
+def mpi_input(msg, comm=None):
+    if MPI is None:
+        return input(msg)
+    if comm is None:
+        comm = MPI.COMM_WORLD
+    if comm.Get_rank() == 0:
+        ret = input(msg)
+    else:
+        ret = None
+    ret = comm.bcast(ret, root=0)
+    return ret
+
+
+def mpi_exit(code=0, comm=None):
+    """Allow 1 process to terminate other processes
+    """
+    if MPI is None:
+        exit(code)
+    if comm is None:
+        comm = MPI.COMM_WORLD
+    comm.Abort(code)
+
+
+def mpi_average(value, comm=None):
     if MPI is None:
         return value
+    if comm is None:
+        comm = MPI.COMM_WORLD
     if not isinstance(value, list):
         value = [value]
     elif len(value) == 0:
         value = [0.0]
-    return mpi_moments(np.array(value))[0]
+    return mpi_moments(np.array(value), comm=comm)[0]
 
 
 def mpi_mean(x, axis=0, comm=None, keepdims=False):

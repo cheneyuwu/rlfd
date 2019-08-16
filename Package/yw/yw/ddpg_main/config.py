@@ -4,21 +4,21 @@ import numpy as np
 from yw.tool import logger
 
 from yw.ddpg_main.ddpg import DDPG
-from yw.ddpg_main.rollout import RolloutWorker
+from yw.ddpg_main.rollout import RolloutWorker, SerialRolloutWorker
 
 from yw.env.env_manager import EnvManager
 
 
 DEFAULT_PARAMS = {
     # Config Summary
-    "config": "default",  # change this for each customized params file
-    "seed": 0,
+    "config": "default",
     # Environment Config
     "env_name": "FetchReach-v1",
     "r_scale": 1.0,  # scale the reward of the environment down
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 0,  # overwrite the default length of the episode
-    "env_args": {},  # extra arguments passed to the environment.
+    "env_args": {},  # extra arguments passed to the environment
+    "fix_T": True,  # whether or not to fix episode length for all rollouts. (if false, then use the ring buffer)
     # DDPG Config
     "ddpg": {
         # replay buffer setup
@@ -28,6 +28,7 @@ DEFAULT_PARAMS = {
         "scope": "ddpg",
         "use_td3": 1,  # whether or not to use td3
         "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layer
+        "initializer_type": "glorot",  # choose between ["zero", "glorot"]
         "Q_lr": 0.001,  # critic learning rate
         "pi_lr": 0.001,  # actor learning rate
         "action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)
@@ -35,16 +36,37 @@ DEFAULT_PARAMS = {
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
         # use demonstrations
-        "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "maf"]
+        "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "nf", "gan"]
+        "sample_demo_buffer": 0,  # whether or not to sample from demonstration buffer
+        "use_demo_reward": 0,  # whether or not to assume that demonstrations also have rewards, and train it on the critic
         "num_demo": 0,  # number of expert demo episodes
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
         "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
         "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss also called the cloning loss
         "shaping_params": {
-            "prm_loss_weight": 1.0,
-            "reg_loss_weight": 500.0,
-            "potential_weight": 5.0,
+            "batch_size": 128,
+            "nf": {
+                "num_ens": 1,
+                "nf_type": "maf",  # choose between ["maf", "realnvp"]
+                "lr": 1e-4,
+                "num_masked": 2,  # used only when nf_type is set to realnvp
+                "num_bijectors": 6,
+                "layer_sizes": [512, 512],
+                "initializer_type": "glorot",  # choose between ["zero", "glorot"]
+                "prm_loss_weight": 1.0,
+                "reg_loss_weight": 500.0,
+                "potential_weight": 5.0,
+            },
+            "gan": {
+                "num_ens": 1,
+                "layer_sizes": [256, 256],
+                "initializer_type": "glorot",  # choose between ["zero", "glorot"]
+                "latent_dim": 6,
+                "gp_lambda": 0.1,
+                "critic_iter": 5,
+                "potential_weight": 3.0,
+            },
         },
         # normalization
         "norm_eps": 0.01,  # epsilon used for observation normalization
@@ -58,14 +80,17 @@ DEFAULT_PARAMS = {
     "her": {"k": 4},  # number of additional goals used for replay
     # Rollouts Config
     "rollout": {
-        "rollout_batch_size": 4,  # per mpi thread
-        "random_eps": 0.3,  # percentage of time a random action is taken
+        "rollout_batch_size": 4,
         "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
+        "polyak_noise": 0.0,  # use polyak_noise * last_noise + (1 - polyak_noise) * curr_noise
+        "random_eps": 0.3,  # percentage of time a random action is taken
+        "compute_Q": False,
     },
     "evaluator": {
-        "rollout_batch_size": 20,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
-        "random_eps": 0.0,
+        "rollout_batch_size": 20,
         "noise_eps": 0.0,
+        "polyak_noise": 0.0,
+        "random_eps": 0.0,
         "compute_Q": True,
     },
     # Training Config
@@ -73,15 +98,29 @@ DEFAULT_PARAMS = {
         "n_epochs": 10,
         "n_cycles": 10,  # per epoch
         "n_batches": 40,  # training batches per cycle
+        "shaping_n_epochs": 100,
         "save_interval": 2,
         "shaping_policy": 0,  # whether or not to use a pretrained shaping policy
     },
+    "seed": 0,
 }
 
 
 def log_params(params):
     for key in sorted(params.keys()):
         logger.info("{:<30}{}".format(key, params[key]))
+
+
+def check_params(params, default_params=DEFAULT_PARAMS):
+    """make sure that the keys match"""
+    assert type(params) == dict
+    assert type(default_params) == dict
+    for key, value in default_params.items():
+        assert key in params.keys(), "missing key: {} in provided params".format(key)
+        if type(value) == dict:
+            check_params(params[key], value)
+    for key, value in params.items():
+        assert key in default_params.keys(), "provided params has an extra key: {}".format(key)
 
 
 # Helper Functions for Configuration
@@ -143,14 +182,6 @@ def add_env_params(params):
     return params
 
 
-def extract_params(params, prefix=""):
-    extracted_params = {key.replace(prefix, ""): params[key] for key in params.keys() if key.startswith(prefix)}
-    for key in extracted_params.keys():
-        params["_" + key] = params[prefix + key]
-        del params[prefix + key]
-    return extracted_params
-
-
 def configure_her(params):
     env = EnvCache.get_env(params["make_env"])
     env.reset()
@@ -169,7 +200,7 @@ def configure_her(params):
     return her_params
 
 
-def configure_ddpg(params):
+def configure_ddpg(params, comm=None):
     # Extract relevant parameters.
     ddpg_params = params["ddpg"]
 
@@ -185,6 +216,7 @@ def configure_ddpg(params):
             "max_u": params["max_u"],
             "input_dims": params["dims"].copy(),  # agent takes an input observations
             "T": params["T"],
+            "fix_T": params["fix_T"],
             "clip_return": (1.0 / (1.0 - params["gamma"])) if params["ddpg"]["clip_return"] else np.inf,
             "gamma": params["gamma"],
         }
@@ -201,56 +233,56 @@ def configure_ddpg(params):
     log_params(ddpg_params)
     logger.info("*** ddpg_params ***")
 
-    policy = DDPG(**ddpg_params)
+    policy = DDPG(**ddpg_params, comm=comm)
     return policy
 
 
 def config_rollout(params, policy):
     rollout_params = params["rollout"]
-    rollout_params.update({"dims": params["dims"], "T": params["T"]})
+    rollout_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
 
     logger.info("\n*** rollout_params ***")
     log_params(rollout_params)
     logger.info("*** rollout_params ***")
 
-    rollout_worker = RolloutWorker(params["make_env"], policy, **rollout_params)
+    if params["fix_T"]:
+        rollout_worker = RolloutWorker(params["make_env"], policy, **rollout_params)
+    else:
+        rollout_worker = SerialRolloutWorker(params["make_env"], policy, **rollout_params)
     rollout_worker.seed(params["seed"])
 
     return rollout_worker
 
 
 def config_evaluator(params, policy):
-
     eval_params = params["evaluator"]
-
-    eval_params.update({"dims": params["dims"], "T": params["T"]})
+    eval_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
 
     logger.info("*** eval_params ***")
     log_params(eval_params)
     logger.info("*** eval_params ***")
 
-    evaluator = RolloutWorker(params["make_env"], policy, **eval_params)
+    if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
+        evaluator = RolloutWorker(params["make_env"], policy, **eval_params)
+    else:
+        evaluator = SerialRolloutWorker(params["make_env"], policy, **eval_params)
     evaluator.seed(params["seed"])
 
     return evaluator
 
 
 def config_demo(params, policy):
-    demo_params = {
-        "compute_Q": True,
-        "random_eps": 0.0,
-        "noise_eps": 0.01,
-        "render": params["render"],
-        "T": params["eps_length"],
-        "rollout_batch_size": params["rollout_batch_size"],
-        "dims": params["dims"],
-    }
+    demo_params = params["demo"]
+    demo_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
 
     logger.info("*** demo_params ***")
     log_params(demo_params)
     logger.info("*** demo_params ***")
 
-    demo = RolloutWorker(params["make_env"], policy, **demo_params)
+    if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
+        demo = RolloutWorker(params["make_env"], policy, **demo_params)
+    else:
+        demo = SerialRolloutWorker(params["make_env"], policy, **demo_params)
     demo.seed(params["seed"])
 
     return demo
