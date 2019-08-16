@@ -27,3 +27,14 @@ export ROS_MASTER_URI=http://192.168.132.90:11311/  # nuc which is running rosco
 ```
 
 To debug, try running `roswtf` which might give some hints as which part is probablematic.
+
+You can also visualize the robot arm in rviz. Run `rviz rviz`, add `Robotmodel`, inside Global Options, set the frame to `panda_link0`.
+
+
+
+## Things to keep in mind
+- Only one instance of a `franka::Robot` can connect to the robot. This means, that for example the `franka_joint_state_publisher` cannot run in parallel to the `franka_control_node`. This also implies that you cannot execute the visualization example alongside a separate program running a controller.
+
+
+
+
