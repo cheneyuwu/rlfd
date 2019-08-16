@@ -200,7 +200,7 @@ class DDPG(object):
         with tf.variable_scope(self.scope):
             self._create_network()
 
-    def get_actions(self, o, g, noise_eps=0.0, random_eps=0.0, compute_Q=False):
+    def get_actions(self, o, g, compute_Q=False):
 
         # values to compute
         vals = [self.main_pi_tf, self.main_q_pi_tf]
@@ -215,18 +215,6 @@ class DDPG(object):
             feed[self.inputs_tf["g"]] = g.reshape(-1, self.dimg)
         # compute
         ret = self.sess.run(vals, feed_dict=feed)
-
-        # action post-processing
-        u = ret[0]
-        u += noise_eps * self.max_u * np.random.randn(*u.shape)  # gaussian noise
-        u = np.clip(u, -self.max_u, self.max_u)
-        u += np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (
-            self._random_action(u.shape[0]) - u
-        )  # eps-greedy
-        if u.shape[0] == 1:
-            u = u[0]
-        u = u.copy()
-        ret[0] = u
 
         if self.demo_shaping != None:
             ret[2] = ret[2] + ret[1]

@@ -22,7 +22,7 @@ DEFAULT_PARAMS = {
     "num_eps": 100,
     "fix_T": True,
     "max_concurrency": 10,
-    "demo": {"random_eps": 0.0, "noise_eps": 0.1, "compute_Q": True, "render": False},
+    "demo": {"random_eps": 0.0, "noise_eps": 0.1, "polyak_noise": 0.0, "compute_Q": True, "render": False},
     "extra_noise_mean": 0.0,
     "extra_noise_var": 0.0,
 }

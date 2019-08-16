@@ -28,7 +28,7 @@ DEFAULT_PARAMS = {
         "scope": "ddpg",
         "use_td3": 1,  # whether or not to use td3
         "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layer
-        "initializer_type": "glorot", # choose between ["zero", "glorot"]
+        "initializer_type": "glorot",  # choose between ["zero", "glorot"]
         "Q_lr": 0.001,  # critic learning rate
         "pi_lr": 0.001,  # actor learning rate
         "action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)
@@ -53,7 +53,7 @@ DEFAULT_PARAMS = {
                 "num_masked": 2,  # used only when nf_type is set to realnvp
                 "num_bijectors": 6,
                 "layer_sizes": [512, 512],
-                "initializer_type": "glorot", # choose between ["zero", "glorot"]
+                "initializer_type": "glorot",  # choose between ["zero", "glorot"]
                 "prm_loss_weight": 1.0,
                 "reg_loss_weight": 500.0,
                 "potential_weight": 5.0,
@@ -61,7 +61,7 @@ DEFAULT_PARAMS = {
             "gan": {
                 "potential_weight": 3.0,
                 "layer_sizes": [256, 256],
-                "initializer_type": "glorot", # choose between ["zero", "glorot"]
+                "initializer_type": "glorot",  # choose between ["zero", "glorot"]
                 "latent_dim": 6,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
@@ -79,14 +79,17 @@ DEFAULT_PARAMS = {
     "her": {"k": 4},  # number of additional goals used for replay
     # Rollouts Config
     "rollout": {
-        "rollout_batch_size": 4,  # per mpi thread
-        "random_eps": 0.3,  # percentage of time a random action is taken
+        "rollout_batch_size": 4,
         "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
+        "polyak_noise": 0.0,  # use polyak_noise * last_noise + (1 - polyak_noise) * curr_noise
+        "random_eps": 0.3,  # percentage of time a random action is taken
+        "compute_Q": False,
     },
     "evaluator": {
-        "rollout_batch_size": 20,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
-        "random_eps": 0.0,
+        "rollout_batch_size": 20,
         "noise_eps": 0.0,
+        "polyak_noise": 0.0,
+        "random_eps": 0.0,
         "compute_Q": True,
     },
     # Training Config
@@ -235,7 +238,7 @@ def configure_ddpg(params, comm=None):
 
 def config_rollout(params, policy):
     rollout_params = params["rollout"]
-    rollout_params.update({"dims": params["dims"], "T": params["T"]})
+    rollout_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
 
     logger.info("\n*** rollout_params ***")
     log_params(rollout_params)
@@ -252,7 +255,7 @@ def config_rollout(params, policy):
 
 def config_evaluator(params, policy):
     eval_params = params["evaluator"]
-    eval_params.update({"dims": params["dims"], "T": params["T"]})
+    eval_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
 
     logger.info("*** eval_params ***")
     log_params(eval_params)
@@ -269,7 +272,7 @@ def config_evaluator(params, policy):
 
 def config_demo(params, policy):
     demo_params = params["demo"]
-    demo_params.update({"dims": params["dims"], "T": params["T"]})
+    demo_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
 
     logger.info("*** demo_params ***")
     log_params(demo_params)

@@ -18,7 +18,7 @@ params_config = {
         "scope": "ddpg",
         "use_td3": 1,  # whether or not to use td3
         "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layers
-        "initializer_type": "glorot", # ["zero", "glorot"]
+        "initializer_type": "glorot",  # ["zero", "glorot"]
         "Q_lr": 0.001,  # critic learning rate
         "pi_lr": 0.001,  # actor learning rate
         "action_l2": 0.4,  # (1.0 for OpenAI envs) quadratic penalty on actions (before rescaling by max_u)
@@ -43,7 +43,7 @@ params_config = {
                 "num_masked": 6,  # used only when nf_type is set to realnvp
                 "num_bijectors": 6,
                 "layer_sizes": [512, 512],
-                "initializer_type": "glorot", # ["zero", "glorot"]
+                "initializer_type": "glorot",  # ["zero", "glorot"]
                 "prm_loss_weight": 1.0,
                 "reg_loss_weight": 2200.0,
                 "potential_weight": 2.0,
@@ -51,7 +51,7 @@ params_config = {
             "gan": {
                 "potential_weight": 5.0,
                 "layer_sizes": [256, 256, 256],
-                "initializer_type": "glorot", # ["zero", "glorot"]
+                "initializer_type": "glorot",  # ["zero", "glorot"]
                 "latent_dim": 25,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
@@ -70,13 +70,16 @@ params_config = {
     # Rollouts Config
     "rollout": {
         "rollout_batch_size": 4,  # per mpi thread
-        "random_eps": 0.2,  # (0.3 for OpenAI) percentage of time a random action is taken
         "noise_eps": 0.2,  # (0.2 for OpenAI) std of gaussian noise added to not-completely-random actions as a percentage of max_u
+        "polyak_noise": 0.0,
+        "random_eps": 0.2,  # (0.3 for OpenAI) percentage of time a random action is taken
+        "compute_Q": False,
     },
     "evaluator": {
         "rollout_batch_size": 20,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
-        "random_eps": 0.0,
         "noise_eps": 0.05,
+        "polyak_noise": 0.0,
+        "random_eps": 0.0,
         "compute_Q": True,
     },
     # Training Config

@@ -70,13 +70,16 @@ params_config = {
     # Rollouts Config
     "rollout": {
         "rollout_batch_size": 4,
-        "random_eps": 0.2,
-        "noise_eps": 0.2,
+        "noise_eps": 0.2,  # 
+        "polyak_noise": 0.0, 
+        "random_eps": 0.2,  # 
+        "compute_Q": False,
     },
     "evaluator": {
         "rollout_batch_size": 20,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
-        "random_eps": 0.0,
         "noise_eps": 0.05,
+        "polyak_noise": 0.0, 
+        "random_eps": 0.0,
         "compute_Q": True,
     },
     # Training Config
