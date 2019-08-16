@@ -254,10 +254,7 @@ if __name__ == "__main__":
     exp_parser = ArgParser(allow_unknown_args=False)
     exp_parser.parser.add_argument("--targets", help="target or list of target", type=str, nargs="+", default=None)
     exp_parser.parser.add_argument(
-        "--exp_dir",
-        help="top level directory to store experiment results",
-        type=str,
-        default=os.path.join(os.getenv("EXPERIMENT"), "TempResult/Temp"),
+        "--exp_dir", help="top level directory to store experiment results", type=str, default=os.getcwd()
     )
     exp_parser.parser.add_argument(
         "--policy_file", help="top level directory to store experiment results", type=str, default=None
