@@ -210,13 +210,13 @@ class RolloutWorker(RolloutWorkerBase):
         self.clear_history()
 
     def seed(self, seed):
-        """set seed for environment
+        """ Set seed for environment
         """
         for idx, env in enumerate(self.envs):
             env.seed(seed + 1000 * idx)
 
     def generate_rollouts(self):
-        """Performs `rollout_batch_size` rollouts for maximum time horizon `T` with the current policy
+        """ Performs `rollout_batch_size` rollouts for maximum time horizon `T` with the current policy
         """
 
         # Information to store
@@ -326,7 +326,7 @@ class RolloutWorker(RolloutWorkerBase):
         return episode
 
     def reset(self):
-        """Perform a reset of environments
+        """ Perform a reset of environments.
         """
         for i in range(self.rollout_batch_size):
             obs = self.envs[i].reset()
@@ -335,8 +335,7 @@ class RolloutWorker(RolloutWorkerBase):
             self.g[i] = obs["desired_goal"]
 
     def _convert_episode_to_batch_major(self, episode):
-        """Converts an episode to have the batch dimension in the major (first)
-        dimension.
+        """ Converts an episode to have the batch dimension in the major (first) dimension.
         """
         episode_batch = {}
         for key in episode.keys():
@@ -403,12 +402,12 @@ class SerialRolloutWorker(RolloutWorkerBase):
         self.clear_history()
 
     def seed(self, seed):
-        """set seed for environment
+        """ Set seed for environment
         """
         self.env.seed(seed)
 
     def generate_rollouts(self):
-        """Performs `rollout_batch_size` rollouts for maximum time horizon `T` with the current policy
+        """ Performs `rollout_batch_size` rollouts for maximum time horizon `T` with the current policy
         """
 
         # Information to store
@@ -536,7 +535,7 @@ class SerialRolloutWorker(RolloutWorkerBase):
         return episode
 
     def reset(self):
-        """Perform a reset of environments
+        """ Perform a reset of environments
         """
         obs = self.env.reset()
         self.initial_o[...] = obs["observation"]

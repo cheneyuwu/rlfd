@@ -27,14 +27,14 @@ class DemoShaping:
         else:
             self.saver = None
 
+    def potential(self, o, g, u):
+        raise NotImplementedError
+
     def reward(self, o, g, u, o_2, g_2, u_2):
         potential = self.potential(o, g, u)
         next_potential = self.potential(o_2, g_2, u_2)
         assert potential.shape[1] == next_potential.shape[1] == 1
         return self.gamma * next_potential - potential
-
-    def potential(self, o, g, u):
-        raise NotImplementedError
 
     def save_weights(self, sess, path):
         if self.saver:
@@ -45,7 +45,7 @@ class DemoShaping:
             self.saver.restore(sess, path)
 
     def _concat_inputs(self, o, g, u):
-        # Concat demonstration inputs
+        # concat demonstration inputs
         state_tf = o
         if g != None:
             # for multigoal environments, we have goal as another states
@@ -55,7 +55,7 @@ class DemoShaping:
         return state_tf
 
     def _cast_concat_inputs(self, o, g, u):
-        # Concat demonstration inputs
+        # concat demonstration inputs
         state_tf = tf.cast(o, tf.float64)
         if g != None:
             # for multigoal environments, we have goal as another states
@@ -76,8 +76,8 @@ class GaussianDemoShaping(DemoShaping):
             self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
             self.demo_inputs_tf["u"],
         )
-        self.sigma = 1.0  # a hyperparam to be tuned
-        self.scale = 1.0  # another hyperparam to be tuned
+        self.sigma = 1.0  # hyperparam to be tuned
+        self.scale = 1.0  # hyperparam to be tuned
         super().__init__(gamma)
 
     def potential(self, o, g, u):
@@ -119,13 +119,12 @@ class NFDemoShaping(DemoShaping):
     ):
         """
         Args:
-            gamma
-            demo_inputs_tf - demo_inputs that contains all the transitons from demonstration
-            prm_loss_weight
-            reg_loss_weight
-            potential_weight
+            gamma            (float) - discount factor
+            demo_inputs_tf           - demo_inputs that contains all the transitons from demonstration
+            prm_loss_weight  (float)
+            reg_loss_weight  (float)
+            potential_weight (float)
         """
-
         self.demo_inputs_tf = demo_inputs_tf
         demo_state_tf = self._cast_concat_inputs(
             self.demo_inputs_tf["o"],
@@ -135,7 +134,6 @@ class NFDemoShaping(DemoShaping):
         # params for potentials
         self.scale = tf.constant(5, dtype=tf.float64)
         self.potential_weight = tf.constant(potential_weight, dtype=tf.float64)
-
         # normalizing flow nn
         demo_state_dim = int(demo_state_tf.shape[1])
         self.base_dist = tfd.MultivariateNormalDiag(loc=tf.zeros([demo_state_dim], tf.float64))
@@ -158,7 +156,6 @@ class NFDemoShaping(DemoShaping):
             )
         else:
             assert False
-
         # loss function that tries to maximize log prob
         # log probability
         neg_log_prob = tf.clip_by_value(-self.nf.log_prob(demo_state_tf), -1e5, 1e5)
@@ -173,22 +170,16 @@ class NFDemoShaping(DemoShaping):
         super().__init__(gamma)
 
     def potential(self, o, g, u):
-        """
-        Just return negative value of distance between current state and goal state
-        """
         state_tf = self._cast_concat_inputs(o, g, u)
 
         potential = tf.reshape(self.nf.prob(state_tf), (-1, 1))
         potential = tf.log(potential + tf.exp(-self.scale))
         potential = potential + self.scale  # add shift
         potential = self.potential_weight * potential / self.scale  # add scaling
-
         return tf.cast(potential, tf.float32)
 
     def train(self, sess, feed_dict={}):
-
         loss, _ = sess.run([self.loss, self.train_op], feed_dict=feed_dict)
-
         return loss
 
 
@@ -196,9 +187,9 @@ class EnsNFDemoShaping(DemoShaping):
     def __init__(
         self,
         num_ens,
-        nf_type,
         gamma,
         demo_inputs_tf,
+        nf_type,
         lr,
         num_masked,
         num_bijectors,
@@ -210,11 +201,12 @@ class EnsNFDemoShaping(DemoShaping):
     ):
         """
         Args:
-            gamma
-            demo_inputs_tf - demo_inputs that contains all the transitons from demonstration
-            prm_loss_weight
-            reg_loss_weight
-            potential_weight
+            num_ens          (int)   - number of nf ensembles
+            gamma            (float) - discount factor
+            demo_inputs_tf           - demo_inputs that contains all the transitons from demonstration
+            prm_loss_weight  (float)
+            reg_loss_weight  (float)
+            potential_weight (float)
         """
         # setup ensemble
         self.nfs = []
@@ -235,7 +227,7 @@ class EnsNFDemoShaping(DemoShaping):
                         potential_weight=potential_weight,
                     )
                 )
-
+        # loss
         self.loss = tf.reduce_sum([ens.loss for ens in self.nfs], axis=0)
         # optimizers
         self.train_op = tf.train.AdamOptimizer(learning_rate=lr).minimize(self.loss)
@@ -243,18 +235,13 @@ class EnsNFDemoShaping(DemoShaping):
         super().__init__(gamma)
 
     def potential(self, o, g, u):
-        """
-        Just return negative value of distance between current state and goal state
-        """
         # return the mean potential of all ens
         potential = tf.reduce_mean([ens.potential(o=o, g=g, u=u) for ens in self.nfs], axis=0)
         assert potential.shape[1] == 1
         return potential
 
     def train(self, sess, feed_dict={}):
-
         loss, _ = sess.run([self.loss, self.train_op], feed_dict=feed_dict)
-
         return loss
 
 
@@ -270,7 +257,12 @@ class GANDemoShaping(DemoShaping):
         gp_lambda,
         critic_iter,
     ):
-        """ Using the output of a GAN's discriminator as potential. Use GAN with Wasserstein distance plus gradient penalty.
+        """
+        GAN with Wasserstein distance plus gradient penalty.
+        Args:
+            gamma            (float) - discount factor
+            demo_inputs_tf           - demo_inputs that contains all the transitons from demonstration
+            potential_weight (float)
         """
         # Parameters
         self.demo_inputs_tf = demo_inputs_tf
@@ -333,7 +325,7 @@ class GANDemoShaping(DemoShaping):
 
     def potential(self, o, g, u):
         """
-        Just return the value of the discriminator on current state and goal state
+        Use the output of the GAN's discriminator as potential.
         """
         state_tf = self._concat_inputs(o, g, u)
         potential = self.discriminator(state_tf)
@@ -347,8 +339,8 @@ class GANDemoShaping(DemoShaping):
         if self.train_gen == 0:
             sess.run(self.gen_train_op)
         self.train_gen = np.mod(self.train_gen + 1, self.critic_iter)
-
         return disc_cost
+
 
 class EnsGANDemoShaping(DemoShaping):
     def __init__(
@@ -360,21 +352,21 @@ class EnsGANDemoShaping(DemoShaping):
         initializer_type,
         latent_dim,
         gp_lambda,
-        critic_iter,        
+        critic_iter,
         potential_weight,
     ):
         """
         Args:
-            gamma
-            demo_inputs_tf - demo_inputs that contains all the transitons from demonstration
-            prm_loss_weight
-            reg_loss_weight
-            potential_weight
+            num_ens          (int)   - number of ensembles
+            gamma            (float) - discount factor
+            demo_inputs_tf           - demo_inputs that contains all the transitons from demonstration
+            potential_weight (float)
         """
+        # Parameters for training
         self.critic_iter = critic_iter
         self.train_gen = 0  # counter
 
-        # setup ensemble
+        # Setup ensemble
         self.gans = []
         for i in range(num_ens):
             with tf.variable_scope("ens_" + str(i)):
@@ -408,9 +400,6 @@ class EnsGANDemoShaping(DemoShaping):
         super().__init__(gamma)
 
     def potential(self, o, g, u):
-        """
-        Just return negative value of distance between current state and goal state
-        """
         # return the mean potential of all ens
         potential = tf.reduce_mean([ens.potential(o=o, g=g, u=u) for ens in self.gans], axis=0)
         assert potential.shape[1] == 1
@@ -423,9 +412,7 @@ class EnsGANDemoShaping(DemoShaping):
         if self.train_gen == 0:
             sess.run(self.gen_train_op)
         self.train_gen = np.mod(self.train_gen + 1, self.critic_iter)
-
         return disc_cost
-    
 
 
 # Testing
@@ -670,6 +657,5 @@ def test_gan():
 
 
 if __name__ == "__main__":
-
     test_nf()
     test_gan()

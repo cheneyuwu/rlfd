@@ -16,7 +16,7 @@ from yw.ddpg_main.demo_shaping import (
 )
 from yw.util.tf_util import flatten_grads
 
-# for query
+# for query (debugging only)
 import matplotlib.pylab as pl
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.mplot3d import Axes3D
@@ -60,9 +60,9 @@ class DDPG(object):
         comm,
         **kwargs
     ):
-        """Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER).
-
-        Added functionality to use demonstrations for training to Overcome exploration problem.
+        """
+        Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER). Added functionality
+        to use demonstrations for training to Overcome exploration problem.
 
         Args:
             # Environment I/O and Config
@@ -97,11 +97,11 @@ class DDPG(object):
             demo_strategy      (str)          - whether or not to use demonstration with different strategies
             sample_demo_buffer (int)          - whether or not to sample from demonstration buffer
             use_demo_reward    (int)          - whether or not to assue that demonstration dataset has rewards
-            num_demo           (int)          - Number of episodes in to be used in the demonstration buffer
+            num_demo           (int)          - number of episodes in to be used in the demonstration buffer
             batch_size_demo    (int)          - number of samples to be used from the demonstrations buffer, per mpi thread
             q_filter           (boolean)      - whether or not a filter on the q value update should be used when training with demonstartions
-            prm_loss_weight    (float)        - Weight corresponding to the primary loss
-            aux_loss_weight    (float)        - Weight corresponding to the auxilliary loss also called the cloning loss
+            prm_loss_weight    (float)        - weight corresponding to the primary loss
+            aux_loss_weight    (float)        - weight corresponding to the auxilliary loss also called the cloning loss
 
         """
         # Store initial args passed into the function
@@ -156,7 +156,6 @@ class DDPG(object):
             if self.dimg != 0:  # for multigoal environment - or states that do not change over episodes.
                 buffer_shapes["ag"] = (self.T + 1, self.dimg)
                 buffer_shapes["g"] = (self.T, self.dimg)
-            # add extra information
             for key, val in input_dims.items():
                 if key.startswith("info"):
                     buffer_shapes[key] = (self.T, *(tuple([val]) if val > 0 else tuple()))
@@ -170,11 +169,9 @@ class DDPG(object):
                 buffer_shapes["g"] = (self.dimg,)
                 buffer_shapes["ag_2"] = (self.dimg,)
                 buffer_shapes["g_2"] = (self.dimg,)
-            # add extra information
             for key, val in input_dims.items():
                 if key.startswith("info"):
                     buffer_shapes[key] = tuple([val]) if val > 0 else tuple()
-
         # initialize replay buffer(s)
         if not self.replay_strategy:
             pass
@@ -207,7 +204,6 @@ class DDPG(object):
             self._create_network()
 
     def get_actions(self, o, g, compute_Q=False):
-
         # values to compute
         vals = [self.main_pi_tf, self.main_q_pi_tf]
         if self.demo_shaping != None:
@@ -221,24 +217,24 @@ class DDPG(object):
             feed[self.inputs_tf["g"]] = g.reshape(-1, self.dimg)
         # compute
         ret = self.sess.run(vals, feed_dict=feed)
-
+        # post processing
         if self.demo_shaping != None:
             ret[2] = ret[2] + ret[1]
         else:
             ret.append(ret[1])
-
+        # return u only if compute_Q is set to false
         if compute_Q:
             return ret
         else:
             return ret[0]
 
     def init_demo_buffer(self, demo_file, update_stats=True):
-        """ Initialize the demonstration buffer.
+        """
+        Initialize the demonstration buffer.
         """
         logger.info("Initializing demonstration buffer with {} episodes.".format(self.num_demo))
-
-        demo_data = np.load(demo_file)  # load the demonstration data from data file
-
+        # load the demonstration data from data file
+        demo_data = np.load(demo_file)
         episode_batch = {**demo_data}
         if self.fix_T:
             for key in episode_batch.keys():
@@ -253,10 +249,8 @@ class DDPG(object):
             for key in episode_batch.keys():
                 assert len(episode_batch[key].shape) == 2 if key != "done" else 1  # (transitions x dim)
                 episode_batch[key] = episode_batch[key][: last_idx + 1]
-
         # the demo buffer should already have: o, u, r, ag, g and necessary infos.
         self.demo_buffer.store_episode(episode_batch)
-
         # feed demonstration data for norm shaping
         if self.demo_strategy == "norm":
             demo_data = self.demo_buffer.sample_all()
@@ -265,18 +259,15 @@ class DDPG(object):
                 demo_data["g"] = self._preprocess_state(demo_data["g"])
             for k in self.demo_inputs_tf.keys():  # o g u
                 self.sess.run(tf.assign(self.demo_inputs_tf[k], demo_data[k]))
-
         if update_stats:
             logger.info("Updating stats using data from demostration buffer.")
             self._update_stats(episode_batch)
 
     def store_episode(self, episode_batch, update_stats=True):
         """
-        episode_batch: array of batch_size x (T or T+1) x dim_key
-                       'o' is of size T+1, others are of size T
+        episode_batch: array of batch_size x (T or T+1) x dim_key ('o' and 'ag' is of size T+1, others are of size T)
         """
         self.replay_buffer.store_episode(episode_batch)
-
         if update_stats:
             self._update_stats(episode_batch)
 
@@ -291,7 +282,7 @@ class DDPG(object):
                 transitions[k] = np.concatenate((transition_rollout[k], transition_demo[k]))
         else:
             transitions = self.replay_buffer.sample(self.batch_size)  # otherwise only sample from primary buffer
-
+        # process state and goal
         transitions["o"] = self._preprocess_state(transitions["o"])
         transitions["o_2"] = self._preprocess_state(transitions["o_2"])
         if self.dimg != 0:
@@ -330,21 +321,17 @@ class DDPG(object):
         critic_loss, actor_loss, Q_grad, pi_grad = self.sess.run(
             [self.Q_loss_tf, self.pi_loss_tf, self.Q_grad_tf, self.pi_grad_tf], feed_dict=feed
         )
-
-        # update Q every time
         self.Q_adam.update(Q_grad, self.Q_lr)
-        # update Pi every other time
         if self.use_td3:
+            # update Pi every other time
             if self.training_step % 2 == 0:
                 self.pi_adam.update(pi_grad, self.pi_lr)
         else:
             self.pi_adam.update(pi_grad, self.pi_lr)
-
         self.training_step += 1
-
         # for debugging
         self.current_batch = batch
-
+        
         return critic_loss, actor_loss
 
     def check_train(self):
@@ -378,11 +365,11 @@ class DDPG(object):
             return logs
 
     def _create_network(self):
-
+        # must set the default session before head
         self.sess = tf.get_default_session()
         assert self.sess != None, "must have a default session before creating DDPG"
-
-        # inputs to ddpg
+        
+        # Inputs to ddpg
         self.inputs_tf = {}
         self.inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
         self.inputs_tf["o_2"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
@@ -391,21 +378,20 @@ class DDPG(object):
         if self.dimg != 0:
             self.inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
             self.inputs_tf["g_2"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
-
-        # create a normalizer for goal and observation.
+        
+        # Normalizer for goal and observation.
         with tf.variable_scope("o_stats"):
             self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm)
         with tf.variable_scope("g_stats"):
             self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm)
 
-        # models
+        # Models
         # create a variable for each o, g, u key in the inputs_tf dict
         input_o_tf = self.inputs_tf["o"]
         input_o_2_tf = self.inputs_tf["o_2"]
         input_g_tf = self.inputs_tf["g"] if self.dimg != 0 else None
         input_g_2_tf = self.inputs_tf["g_2"] if self.dimg != 0 else None
         input_u_tf = self.inputs_tf["u"]
-
         with tf.variable_scope("main"):
             self.main = ActorCritic(
                 dimo=self.dimo,
@@ -427,7 +413,6 @@ class DDPG(object):
             if self.use_td3:
                 self.main_q2_tf = self.main.critic2(o=input_o_tf, g=input_g_tf, u=input_u_tf)
                 self.main_q2_pi_tf = self.main.critic2(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
-
         with tf.variable_scope("target"):
             self.target = ActorCritic(
                 dimo=self.dimo,
@@ -449,13 +434,12 @@ class DDPG(object):
             if self.use_td3:
                 self.target_q2_tf = self.target.critic2(o=input_o_2_tf, g=input_g_2_tf, u=input_u_tf)
                 self.target_q2_pi_tf = self.target.critic2(o=input_o_2_tf, g=input_g_2_tf, u=self.target_pi_tf)
-
         assert len(self._vars("main")) == len(self._vars("target"))
 
         # Add shaping reward
         with tf.variable_scope("shaping"):
             if self.demo_strategy == "norm":
-                # Note that you can not use this to train with non-fixed T TODO: fix it!!
+                # note that you can not use this to train with non-fixed T TODO: fix it!!
                 assert self.fix_T
                 max_num_transitions = self.num_demo * self.T
                 self.demo_inputs_tf = {}
@@ -508,7 +492,7 @@ class DDPG(object):
                 )
                 self.demo_iter_tf = demo_dataset.make_initializable_iterator()
                 self.demo_inputs_tf = self.demo_iter_tf.get_next()
-
+                # potential function approximator, nf or gan
                 if self.demo_strategy == "nf":
                     # self.demo_shaping = MAFDemoShaping(
                     #     gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params["nf"]
@@ -630,15 +614,11 @@ class DDPG(object):
         )
 
         # Initialize all variables
-        # tf.variables_initializer(self._global_vars("")).run()
         self.sess.run(tf.global_variables_initializer())
         self.Q_adam.sync()
         self.pi_adam.sync()
         self.init_target_net()
         self.training_step = 0  # initialize number of training step
-
-    def _random_action(self, n):
-        return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
 
     def _preprocess_state(self, state):
         state = np.clip(state, -self.clip_obs, self.clip_obs)
@@ -672,9 +652,9 @@ class DDPG(object):
             self.g_stats.recompute_stats()
 
     def __getstate__(self):
-
-        # """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
-        # """
+        """
+        Our policies can be loaded from pkl, but after unpickling you cannot continue training.
+        """
         excluded_names = ["self", "replay_strategy", "comm"]
 
         state = {k: v for k, v in self.init_args.items() if not k in excluded_names}
@@ -682,10 +662,8 @@ class DDPG(object):
         return state
 
     def __setstate__(self, state):
-
         state["replay_strategy"] = None
         state["comm"] = None
-
         kwargs = state["kwargs"]
         del state["kwargs"]
 
@@ -696,10 +674,8 @@ class DDPG(object):
         self.sess.run(node)
 
     ###########################################
-    # Queries
+    # Queries (for debugging only)
     ###########################################
-
-    # Store the result you want to query in a npz file.
 
     def query_potential(self, dim1=0, dim2=1, filename=None):
         """Check the output from demo shaping potential function

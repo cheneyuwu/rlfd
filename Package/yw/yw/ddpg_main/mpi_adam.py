@@ -67,5 +67,6 @@ class MpiAdam(object):
 def test_MpiAdam():
     pass
 
+
 if __name__ == "__main__":
     test_MpiAdam()

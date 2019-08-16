@@ -11,8 +11,9 @@ import tensorflow as tf
 
 class Normalizer:
     def __init__(self, size, eps=1e-2, default_clip_range=np.inf, sess=None, comm=None):
-        """A normalizer that ensures that observations are approximately distributed according to
-        a standard Normal distribution (i.e. have mean zero and variance one).
+        """
+        A normalizer that ensures that observations are approximately distributed according to a standard Normal
+        distribution (i.e. have mean zero and variance one).
 
         Args:
             size               (int)    - the size of the observation to be normalized
@@ -107,22 +108,18 @@ class Normalizer:
 
     def recompute_stats(self):
         with self.lock:
-            # Copy over results.
+            # copy over results.
             local_count = self.local_count.copy()
             local_sum = self.local_sum.copy()
             local_sumsq = self.local_sumsq.copy()
-
-            # Reset.
+            # reset.
             self.local_count[...] = 0
             self.local_sum[...] = 0
             self.local_sumsq[...] = 0
-
-        # We perform the synchronization outside of the lock to keep the critical section as short
-        # as possible.
+        # we perform the synchronization outside of the lock to keep the critical section as short as possible.
         synced_sum, synced_sumsq, synced_count = self.synchronize(
             local_sum=local_sum, local_sumsq=local_sumsq, local_count=local_count
         )
-
         self.sess.run(
             self.update_op,
             feed_dict={self.count_pl: synced_count, self.sum_pl: synced_sum, self.sumsq_pl: synced_sumsq},
@@ -139,8 +136,8 @@ class Normalizer:
 
     @staticmethod
     def reshape_for_broadcasting(source, target):
-        """Reshapes a tensor (source) to have the correct shape and dtype of the target
-        before broadcasting it with MPI.
+        """
+        Reshapes a tensor (source) to have the correct shape and dtype of the target before broadcasting it with MPI.
         """
         dim = len(target.get_shape())
         shape = ([1] * (dim - 1)) + [-1]
