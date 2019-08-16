@@ -49,6 +49,7 @@ params_config = {
                 "potential_weight": 5.0,
             },
             "gan": {
+                "num_ens": 1,
                 "layer_sizes": [256, 256, 256],
                 "initializer_type": "glorot",  # ["zero", "glorot"]
                 "latent_dim": 6,

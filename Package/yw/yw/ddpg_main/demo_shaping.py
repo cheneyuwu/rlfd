@@ -1,8 +1,9 @@
+import itertools
+
 import tensorflow as tf
 import tensorflow_probability as tfp
 
 tfd = tfp.distributions
-tfb = tfp.bijectors
 
 from yw.util.tf_util import MAF, RealNVP, MLP
 
@@ -315,17 +316,17 @@ class GANDemoShaping(DemoShaping):
         self.gen_cost = -tf.reduce_mean(disc_fake)
 
         # Training
-        disc_vars = tf.get_collection(
+        self.disc_vars = tf.get_collection(
             tf.GraphKeys.TRAINABLE_VARIABLES, scope=tf.get_variable_scope().name + "/" + "discriminator"
         )
-        gen_vars = tf.get_collection(
+        self.gen_vars = tf.get_collection(
             tf.GraphKeys.TRAINABLE_VARIABLES, scope=tf.get_variable_scope().name + "/" + "generator"
         )
         self.disc_train_op = tf.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
-            self.disc_cost, var_list=disc_vars
+            self.disc_cost, var_list=self.disc_vars
         )
         self.gen_train_op = tf.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
-            self.gen_cost, var_list=gen_vars
+            self.gen_cost, var_list=self.gen_vars
         )
 
         super().__init__(gamma)
@@ -348,6 +349,83 @@ class GANDemoShaping(DemoShaping):
         self.train_gen = np.mod(self.train_gen + 1, self.critic_iter)
 
         return disc_cost
+
+class EnsGANDemoShaping(DemoShaping):
+    def __init__(
+        self,
+        num_ens,
+        gamma,
+        demo_inputs_tf,
+        layer_sizes,
+        initializer_type,
+        latent_dim,
+        gp_lambda,
+        critic_iter,        
+        potential_weight,
+    ):
+        """
+        Args:
+            gamma
+            demo_inputs_tf - demo_inputs that contains all the transitons from demonstration
+            prm_loss_weight
+            reg_loss_weight
+            potential_weight
+        """
+        self.critic_iter = critic_iter
+        self.train_gen = 0  # counter
+
+        # setup ensemble
+        self.gans = []
+        for i in range(num_ens):
+            with tf.variable_scope("ens_" + str(i)):
+                self.gans.append(
+                    GANDemoShaping(
+                        gamma=gamma,
+                        demo_inputs_tf=demo_inputs_tf,
+                        layer_sizes=layer_sizes,
+                        initializer_type=initializer_type,
+                        latent_dim=latent_dim,
+                        gp_lambda=gp_lambda,
+                        critic_iter=critic_iter,
+                        potential_weight=potential_weight,
+                    )
+                )
+
+        # Loss functions
+        self.disc_cost = tf.reduce_sum([ens.disc_cost for ens in self.gans], axis=0)
+        self.gen_cost = tf.reduce_sum([ens.gen_cost for ens in self.gans], axis=0)
+
+        # Training
+        self.disc_vars = list(itertools.chain(*[ens.disc_vars for ens in self.gans]))
+        self.gen_vars = list(itertools.chain(*[ens.gen_vars for ens in self.gans]))
+        self.disc_train_op = tf.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
+            self.disc_cost, var_list=self.disc_vars
+        )
+        self.gen_train_op = tf.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
+            self.gen_cost, var_list=self.gen_vars
+        )
+
+        super().__init__(gamma)
+
+    def potential(self, o, g, u):
+        """
+        Just return negative value of distance between current state and goal state
+        """
+        # return the mean potential of all ens
+        potential = tf.reduce_mean([ens.potential(o=o, g=g, u=u) for ens in self.gans], axis=0)
+        assert potential.shape[1] == 1
+        return potential
+
+    def train(self, sess, feed_dict={}):
+        # train critic
+        disc_cost, _ = sess.run([self.disc_cost, self.disc_train_op], feed_dict=feed_dict)
+        # train generator
+        if self.train_gen == 0:
+            sess.run(self.gen_train_op)
+        self.train_gen = np.mod(self.train_gen + 1, self.critic_iter)
+
+        return disc_cost
+    
 
 
 # Testing

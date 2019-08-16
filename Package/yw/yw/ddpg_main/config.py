@@ -59,12 +59,13 @@ DEFAULT_PARAMS = {
                 "potential_weight": 5.0,
             },
             "gan": {
-                "potential_weight": 3.0,
+                "num_ens": 1,
                 "layer_sizes": [256, 256],
                 "initializer_type": "glorot",  # choose between ["zero", "glorot"]
                 "latent_dim": 6,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
+                "potential_weight": 3.0,
             },
         },
         # normalization

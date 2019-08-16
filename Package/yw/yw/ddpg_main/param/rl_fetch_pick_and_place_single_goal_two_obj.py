@@ -49,12 +49,13 @@ params_config = {
                 "potential_weight": 3.0,
             },
             "gan": {
-                "potential_weight": 5.0,
+                "num_ens": 1,
                 "layer_sizes": [256, 256, 256],
                 "initializer_type": "glorot", # ["zero", "glorot"]
                 "latent_dim": 40, # use the same number of dims as obs
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
+                "potential_weight": 5.0,
             },
         },
         # normalization

@@ -7,7 +7,13 @@ from yw.ddpg_main.mpi_adam import MpiAdam
 from yw.ddpg_main.normalizer import Normalizer
 from yw.ddpg_main.actor_critic import ActorCritic
 from yw.ddpg_main.replay_buffer import HERReplayBuffer, UniformReplayBuffer, RingReplayBuffer
-from yw.ddpg_main.demo_shaping import GaussianDemoShaping, NFDemoShaping, EnsNFDemoShaping, GANDemoShaping
+from yw.ddpg_main.demo_shaping import (
+    GaussianDemoShaping,
+    NFDemoShaping,
+    EnsNFDemoShaping,
+    GANDemoShaping,
+    EnsGANDemoShaping,
+)
 from yw.util.tf_util import flatten_grads
 
 # for query
@@ -511,7 +517,10 @@ class DDPG(object):
                         gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params["nf"]
                     )
                 elif self.demo_strategy == "gan":
-                    self.demo_shaping = GANDemoShaping(
+                    # self.demo_shaping = GANDemoShaping(
+                    #     gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params["gan"]
+                    # )
+                    self.demo_shaping = EnsGANDemoShaping(
                         gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params["gan"]
                     )
                 else:
