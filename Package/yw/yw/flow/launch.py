@@ -7,7 +7,7 @@ import importlib
 from shutil import copyfile
 
 # must include gym before loading mpi, for compute canada cluster
-import gym
+import mujoco_py
 
 try:
     from mpi4py import MPI
