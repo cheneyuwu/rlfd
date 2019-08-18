@@ -145,7 +145,7 @@ class RolloutWorkerBase:
         u += np.random.binomial(1, self.random_eps, u.shape[0]).reshape(-1, 1) * (
             self._random_action(u.shape[0]) - u
         )  # eps-greedy
-        assert u.shape[0] != 1, "the output is 1, make sure that the code behaves correctly (u = u[0]?)"
+        # assert u.shape[0] != 1, "the output is 1, make sure that the code behaves correctly (u = u[0]?)"
         return u
 
     def _clear_noise_history(self):
