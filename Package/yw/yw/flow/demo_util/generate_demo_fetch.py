@@ -13,11 +13,34 @@ class FetchPickAndPlaceDemoGenerator:
         self.system_noise_scale = system_noise_scale
         self.render = render
         self.num_itr = 0
-    
+
     def reset(self):
         self.num_itr = 0
 
     def generate_move(self):
+        self._reset()
+        for i in range(self.num_object):
+            goal_dim = 3 * i
+            obj_pos_dim = 10 + 15 * i
+            obj_rel_pos_dim = 10 + 15 * i + 3
+            # move to the above of the object
+            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.05, gripper_open=True)
+            # grab the object
+            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.0, gripper_open=False)
+            # move to the goal
+            self._move_to_goal(obj_pos_dim, goal_dim)
+            # open the gripper
+            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.05, gripper_open=True)
+            # # move back to initial state
+            # self._move_back()
+        # stay until the end
+        self._stay()
+
+        self.num_itr += 1
+        assert self.episode_info[-1]["is_success"]
+        return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
+
+    def generate_move_auto_place(self):
         self._reset()
         for i in range(self.num_object):
             goal_dim = 3 * i
@@ -41,7 +64,7 @@ class FetchPickAndPlaceDemoGenerator:
         return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
 
     def generate_pick_place(self):
-        
+
         goal_dim = 0
         obj_pos_dim = 10
         obj_rel_pos_dim = 13
@@ -131,12 +154,12 @@ class FetchPickAndPlaceDemoGenerator:
             self._step(action)
 
             object_pos = self.last_obs["observation"][obj_pos_dim : obj_pos_dim + 3]
-    
+
     def _move_to_interm_goal(self, obj_pos_dim, goal_dim, weight):
 
         goal = self.last_obs["desired_goal"][goal_dim : goal_dim + 3]
         object_pos = self.last_obs["observation"][obj_pos_dim : obj_pos_dim + 3]
-        
+
         interm_goal = object_pos * weight + goal * (1 - weight)
 
         while np.linalg.norm(interm_goal - object_pos) >= 0.01 and self.time_step <= self.env._max_episode_steps:
@@ -149,7 +172,7 @@ class FetchPickAndPlaceDemoGenerator:
             self._step(action)
 
             object_pos = self.last_obs["observation"][obj_pos_dim : obj_pos_dim + 3]
-        
+
     def _move_back(self):
         goal = self.init_obs["observation"][0:3]
         grip_pos = self.last_obs["observation"][0:3]
@@ -180,10 +203,13 @@ def main():
     # Change the following parameters
     num_itr = 5
     render = True
-    env_name = "FetchPickAndPlace-v1"
-    env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=50).get_env()
+    env_name = "FetchMove-v1"
+    env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=70).get_env()
     system_noise_scale = 0.03
-    # note: use eps_length=80 for 2 objects, 130 for 3 objects, 50 for pick and place
+    # Eps length to use:
+    #   FetchPickAndPlace: eps = 50
+    #   FetchMoveAutoPlace: 2 objects eps = 80
+    #   FetchMove: 2 objects eps = 70
     # End
 
     generator = FetchPickAndPlaceDemoGenerator(env=env, system_noise_scale=system_noise_scale, render=render)
@@ -196,6 +222,8 @@ def main():
         print("Iteration number: ", i)
         if env_name == "FetchMove-v1":
             episode_obs, episode_act, episode_rwd, episode_info = generator.generate_move()
+        elif env_name == "FetchMoveAutoPlace-v1":
+            episode_obs, episode_act, episode_rwd, episode_info = generator.generate_move_auto_place()
         elif env_name == "FetchPickAndPlace-v1":
             episode_obs, episode_act, episode_rwd, episode_info = generator.generate_pick_place()
         else:
