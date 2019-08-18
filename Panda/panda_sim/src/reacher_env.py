@@ -81,7 +81,7 @@ class PandaReacherEnv(object):
         print(robot.get_current_state())
         print("")
 
-        self.object_name = ''
+        self.box_name = ''
         self.robot = robot
         self.scene = scene
         self.group = group
@@ -118,14 +118,58 @@ class PandaReacherEnv(object):
         current_joints = self.group.get_current_joint_values()
         return all_close(joint_goal, current_joints, 0.01)
 
+    def place_table_and_object(self, timeout=4):
+        """Sets up the object reaching envvironment.
+        """
+        box = geometry_msgs.msg.PoseStamped()
+
+        box.header.frame_id = self.robot.get_planning_frame()
+        box.pose.position.x = 0.5
+        box.pose.position.y = 0.
+        box.pose.position.z = 0.05
+
+        self.scene.add_box("table", box, (0.1, 0.1, 0.1))
+
+        return self.wait_for_state_update(box_is_known=True, timeout=timeout)
+
+    def wait_for_state_update(self, box_is_known=False,
+                              box_is_attached=False, timeout=4):
+
+        # If the Python node dies before publishing a collision object update message, the message
+        # could get lost and the box will not appear. To ensure that the updates are
+        # made, we wait until we see the changes reflected in the
+        # ``get_attached_objects()`` and ``get_known_object_names()`` lists.
+        # Call this function after adding,
+        # removing, attaching or detaching an object in the planning scene. We then wait
+        # until the updates have been made or ``timeout`` seconds have passed
+        start = rospy.get_time()
+        seconds = rospy.get_time()
+        while (seconds - start < timeout) and not rospy.is_shutdown():
+            # Test if the box is in attached objects
+            attached_objects = self.scene.get_attached_objects([self.box_name])
+            is_attached = len(attached_objects.keys()) > 0
+
+            # Test if the box is in the scene.
+            # Note that attaching the box will remove it from known_objects
+            is_known = self.box_name in self.scene.get_known_object_names()
+
+            # Test if we are in the expected state
+            if (box_is_attached == is_attached) and (box_is_known == is_known):
+                return True
+
+            # Sleep so that we give other threads time on the processor
+            rospy.sleep(0.1)
+            seconds = rospy.get_time()
+
+        # If we exited the while loop without returning then we timed out
+        return False
+
 
 def main():
     try:
         panda = PandaReacherEnv()
-        print(
-            "============ Press `Enter` to execute a movement using a joint state goal ...")
-        raw_input()
         panda.go_to_joint_state()
+        panda.place_table_and_object()
 
     except rospy.ROSInterruptException:
         return
