@@ -69,7 +69,7 @@ params_config = {
     # HER config
     "her": {"k": 4},
     # rollouts config
-    "rollout": {"rollout_batch_size": 4, "noise_eps": 0.2, "polyak_noise": 0.0, "random_eps": 0.2, "compute_Q": False},
+    "rollout": {"rollout_batch_size": 4, "noise_eps": 0.2, "polyak_noise": 0.0, "random_eps": 0.1, "compute_Q": False},
     "evaluator": {
         "rollout_batch_size": 20,
         "noise_eps": 0.05,
