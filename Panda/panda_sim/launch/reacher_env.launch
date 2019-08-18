@@ -1,0 +1,6 @@
+<launch>
+
+  <node name="panda_reacher_env" pkg="panda_sim" type="reacher_env.py" respawn="false" output="screen">
+  </node>
+
+</launch>
