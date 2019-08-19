@@ -36,5 +36,25 @@ You can also visualize the robot arm in rviz. Run `rviz rviz`, add `Robotmodel`,
 - Only one instance of a `franka::Robot` can connect to the robot. This means, that for example the `franka_joint_state_publisher` cannot run in parallel to the `franka_control_node`. This also implies that you cannot execute the visualization example alongside a separate program running a controller.
 
 
+## Joystick control
+```
+roslaunch franka_example_controllers cartesian_velocity_example_controller.launch robot_ip:=192.168.131.40 load_gripper:=false
+```
+
+From Panda/input_devices launch - This starts the Joy node:
+```
+roslaunch logitech.launch
+```
+
+Do a `rostopic` to make sure `/joy` messages are coming through. If not, either restart the nodes, or take a look at the `logitech.launch` to make sure all parameters are correct.
+
+The velocity controller is subscribed to `/franka_control/target_velocity`. Now run the Joy to Twist node mapper which will be publishing `Twist` messages to this topic.
+
+```
+python input_devices/remap_joy_to_twist.py
+```
+
+Do a `rostopic echo /franka_control/target_velocity` to make sure the messages are coming in, this should now move the arm, using the following buttons: with D-pad, up/down moves the arm along the `x-axis`, left/right moves along `y-axis`. Suppress `A` and then up/down moves the arm along the `z-axis`.
+
 
 
