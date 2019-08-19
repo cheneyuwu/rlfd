@@ -41,12 +41,12 @@ params_config = {
                 "nf_type": "maf",  # ["maf", "realnvp"]
                 "lr": 5e-4,
                 "num_masked": 4,
-                "num_bijectors": 6,
-                "layer_sizes": [512, 512],
+                "num_bijectors": 4,
+                "layer_sizes": [256, 256],
                 "initializer_type": "glorot",  # ["zero", "glorot"]
                 "prm_loss_weight": 1.0,
-                "reg_loss_weight": 2200.0,
-                "potential_weight": 2.0,
+                "reg_loss_weight": 1000.0,
+                "potential_weight": 3.0,
             },
             "gan": {
                 "num_ens": 1,

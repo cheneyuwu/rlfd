@@ -55,7 +55,7 @@ params_config = {
                 "latent_dim": 6,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
-                "potential_weight": 5.0,
+                "potential_weight": 4.0,
             },
         },
         # normalize observation
