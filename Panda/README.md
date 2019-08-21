@@ -37,6 +37,12 @@ You can also visualize the robot arm in rviz. Run `rviz rviz`, add `Robotmodel`,
 
 
 ## Joystick control
+Here we assume, we have franka_ros, and running the example controllers. But you need to actually copy the modified controller from the folder on this repo, `franka_controllers/` and overwrite the existing controller inside the franka_example_controllers you are trying to run.
+
+```
+cp franka_controllers/cartesian_velocity_example_controller.cpp /path/to/franka_ros/franka_example_controllers/src/
+```
+
 ```
 roslaunch franka_example_controllers cartesian_velocity_example_controller.launch robot_ip:=192.168.131.40 load_gripper:=false
 ```
