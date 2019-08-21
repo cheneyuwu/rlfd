@@ -92,6 +92,22 @@ class FetchPickAndPlaceDemoGenerator:
         assert self.episode_info[-1]["is_success"]
         return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
 
+    def generate_peg_in_hole(self):
+
+        goal_dim = 0
+        obj_pos_dim = 0
+
+        self._reset()
+        # move to the goal
+        self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0,0.0,0.1)))
+        self._move_to_goal(obj_pos_dim, goal_dim)
+        # stay until the end
+        self._stay()
+
+        self.num_itr += 1
+        assert self.episode_info[-1]["is_success"]
+        return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
+
     def _reset(self):
         # store return from 1 episode
         self.episode_act = []
@@ -140,8 +156,8 @@ class FetchPickAndPlaceDemoGenerator:
             object_oriented_goal = object_rel_pos.copy()
             object_oriented_goal[2] += offset
 
-    def _move_to_goal(self, obj_pos_dim, goal_dim):
-        goal = self.last_obs["desired_goal"][goal_dim : goal_dim + 3]
+    def _move_to_goal(self, obj_pos_dim, goal_dim, gripper=-1.0, offset=np.array((0.0, 0.0, 0.0))):
+        goal = self.last_obs["desired_goal"][goal_dim : goal_dim + 3] + offset
         object_pos = self.last_obs["observation"][obj_pos_dim : obj_pos_dim + 3]
 
         while np.linalg.norm(goal - object_pos) >= 0.01 and self.time_step <= self.env._max_episode_steps:
@@ -149,7 +165,7 @@ class FetchPickAndPlaceDemoGenerator:
             action = [0, 0, 0, 0]
             for i in range(len(goal - object_pos)):
                 action[i] = (goal - object_pos)[i] * 10 + self.system_noise_scale * np.random.normal()
-            action[-1] = -0.05
+            action[-1] = gripper
 
             self._step(action)
 
@@ -203,7 +219,8 @@ def main():
     # Change the following parameters
     num_itr = 5
     render = True
-    env_name = "FetchMove-v1"
+    env_name = "FetchPegInHole-v1"
+    env=gym.make(env_name)
     env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=70).get_env()
     system_noise_scale = 0.03
     # Eps length to use:
@@ -222,6 +239,8 @@ def main():
         print("Iteration number: ", i)
         if env_name == "FetchMove-v1":
             episode_obs, episode_act, episode_rwd, episode_info = generator.generate_move()
+        elif env_name == "FetchPegInHole-v1":
+            episode_obs, episode_act, episode_rwd, episode_info = generator.generate_peg_in_hole()
         elif env_name == "FetchMoveAutoPlace-v1":
             episode_obs, episode_act, episode_rwd, episode_info = generator.generate_move_auto_place()
         elif env_name == "FetchPickAndPlace-v1":
