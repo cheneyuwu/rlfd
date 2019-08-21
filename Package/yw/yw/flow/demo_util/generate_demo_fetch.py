@@ -99,7 +99,7 @@ class FetchPickAndPlaceDemoGenerator:
 
         self._reset()
         # move to the goal
-        self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0,0.0,0.1)))
+        self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0,0.0,np.random.uniform(0.15, 0.2))))
         self._move_to_goal(obj_pos_dim, goal_dim)
         # stay until the end
         self._stay()
