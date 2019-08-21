@@ -262,6 +262,8 @@ class DDPG(object):
         if update_stats:
             logger.info("Updating stats using data from demostration buffer.")
             self._update_stats(episode_batch)
+        # TODO figure out when to normalize the input to shaping
+        self._update_demo_stats(episode_batch)
 
     def store_episode(self, episode_batch, update_stats=True):
         """
@@ -438,6 +440,17 @@ class DDPG(object):
 
         # Add shaping reward
         with tf.variable_scope("shaping"):
+
+            # Normalizer for goal and observation.
+            with tf.variable_scope("demo_o_stats"):
+                self.demo_o_stats = Normalizer(
+                    self.dimo, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm
+                )
+            with tf.variable_scope("demo_g_stats"):
+                self.demo_g_stats = Normalizer(
+                    self.dimg, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm
+                )
+
             if self.demo_strategy == "norm":
                 # note that you can not use this to train with non-fixed T TODO: fix it!!
                 assert self.fix_T
@@ -495,17 +508,33 @@ class DDPG(object):
                 # potential function approximator, nf or gan
                 if self.demo_strategy == "nf":
                     # self.demo_shaping = MAFDemoShaping(
-                    #     gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params["nf"]
+                    #     gamma=self.gamma,
+                    #     demo_inputs_tf=self.demo_inputs_tf,
+                    #     o_stats=self.demo_o_stats,
+                    #     g_stats=self.demo_g_stats,
+                    #     **self.shaping_params["nf"]
                     # )
                     self.demo_shaping = EnsNFDemoShaping(
-                        gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params["nf"]
+                        gamma=self.gamma,
+                        demo_inputs_tf=self.demo_inputs_tf,
+                        o_stats=self.demo_o_stats,
+                        g_stats=self.demo_g_stats,
+                        **self.shaping_params["nf"]
                     )
                 elif self.demo_strategy == "gan":
                     # self.demo_shaping = GANDemoShaping(
-                    #     gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params["gan"]
+                    #     gamma=self.gamma,
+                    #     demo_inputs_tf=self.demo_inputs_tf,
+                    #     o_stats=self.demo_o_stats,
+                    #     g_stats=self.demo_g_stats,
+                    #     **self.shaping_params["gan"]
                     # )
                     self.demo_shaping = EnsGANDemoShaping(
-                        gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf, **self.shaping_params["gan"]
+                        gamma=self.gamma,
+                        demo_inputs_tf=self.demo_inputs_tf,
+                        o_stats=self.demo_o_stats,
+                        g_stats=self.demo_g_stats,
+                        **self.shaping_params["gan"]
                     )
                 else:
                     assert False
@@ -639,6 +668,24 @@ class DDPG(object):
         if self.dimg != 0:
             self.g_stats.update(self._preprocess_state(transitions["g"]))
             self.g_stats.recompute_stats()
+
+    def _update_demo_stats(self, episode_batch):
+        # add transitions to normalizer
+        if self.fix_T:
+            episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
+            if self.dimg != 0:
+                episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
+                episode_batch["g_2"] = episode_batch["g"][:, :, :]
+            num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
+            transitions = self.demo_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
+        else:
+            transitions = episode_batch.copy()
+
+        self.demo_o_stats.update(transitions["o"])
+        self.demo_o_stats.recompute_stats()
+        if self.dimg != 0:
+            self.demo_g_stats.update(transitions["g"])
+            self.demo_g_stats.recompute_stats()
 
     def __getstate__(self):
         """

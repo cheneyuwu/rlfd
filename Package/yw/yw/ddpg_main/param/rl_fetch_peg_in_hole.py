@@ -82,7 +82,7 @@ params_config = {
         "n_epochs": int(4e3),
         "n_cycles": 10,
         "n_batches": 40,
-        "shaping_n_epochs": int(1e4),
+        "shaping_n_epochs": int(5e3),
         "save_interval": 10,
         "shaping_policy": 0,
     },

@@ -44,6 +44,16 @@ class DemoShaping:
         if self.saver:
             self.saver.restore(sess, path)
 
+    def _concat_inputs_normalize(self, o, g, u):
+        # concat demonstration inputs
+        state_tf = self.o_stats.normalize(o)
+        if g != None:
+            # for multigoal environments, we have goal as another states
+            state_tf = tf.concat(axis=1, values=[state_tf, self.g_stats.normalize(g)])
+        state_tf = tf.concat(axis=1, values=[state_tf, u])
+        # note: shape of state_tf is (num_demo, k), where k is sum of dim o g u
+        return state_tf
+
     def _concat_inputs(self, o, g, u):
         # concat demonstration inputs
         state_tf = o
@@ -51,6 +61,16 @@ class DemoShaping:
             # for multigoal environments, we have goal as another states
             state_tf = tf.concat(axis=1, values=[state_tf, g])
         state_tf = tf.concat(axis=1, values=[state_tf, u])
+        # note: shape of state_tf is (num_demo, k), where k is sum of dim o g u
+        return state_tf
+
+    def _cast_concat_inputs_normalize(self, o, g, u):
+        # concat demonstration inputs
+        state_tf = tf.cast(self.o_stats.normalize(o), tf.float64)
+        if g != None:
+            # for multigoal environments, we have goal as another states
+            state_tf = tf.concat(axis=1, values=[state_tf, tf.cast(self.g_stats.normalize(g), tf.float64)])
+        state_tf = tf.concat(axis=1, values=[state_tf, tf.cast(u, tf.float64)])
         # note: shape of state_tf is (num_demo, k), where k is sum of dim o g u
         return state_tf
 
@@ -107,6 +127,8 @@ class NFDemoShaping(DemoShaping):
         self,
         gamma,
         demo_inputs_tf,
+        o_stats,
+        g_stats,
         nf_type,
         lr,
         num_masked,
@@ -125,8 +147,10 @@ class NFDemoShaping(DemoShaping):
             reg_loss_weight  (float)
             potential_weight (float)
         """
+        self.o_stats = o_stats
+        self.g_stats = g_stats
         self.demo_inputs_tf = demo_inputs_tf
-        demo_state_tf = self._cast_concat_inputs(
+        demo_state_tf = self._cast_concat_inputs_normalize(
             self.demo_inputs_tf["o"],
             self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
             self.demo_inputs_tf["u"],
@@ -170,7 +194,7 @@ class NFDemoShaping(DemoShaping):
         super().__init__(gamma)
 
     def potential(self, o, g, u):
-        state_tf = self._cast_concat_inputs(o, g, u)
+        state_tf = self._cast_concat_inputs_normalize(o, g, u)
 
         potential = tf.reshape(self.nf.prob(state_tf), (-1, 1))
         potential = tf.log(potential + tf.exp(-self.scale))
@@ -189,6 +213,8 @@ class EnsNFDemoShaping(DemoShaping):
         num_ens,
         gamma,
         demo_inputs_tf,
+        o_stats,
+        g_stats,
         nf_type,
         lr,
         num_masked,
@@ -216,12 +242,14 @@ class EnsNFDemoShaping(DemoShaping):
                     NFDemoShaping(
                         nf_type=nf_type,
                         gamma=gamma,
+                        demo_inputs_tf=demo_inputs_tf,
+                        o_stats=o_stats,
+                        g_stats=g_stats,
                         lr=lr,
                         num_masked=num_masked,
                         num_bijectors=num_bijectors,
                         layer_sizes=layer_sizes,
                         initializer_type=initializer_type,
-                        demo_inputs_tf=demo_inputs_tf,
                         prm_loss_weight=prm_loss_weight,
                         reg_loss_weight=reg_loss_weight,
                         potential_weight=potential_weight,
@@ -250,6 +278,8 @@ class GANDemoShaping(DemoShaping):
         self,
         gamma,
         demo_inputs_tf,
+        o_stats,
+        g_stats,
         potential_weight,
         layer_sizes,
         initializer_type,
@@ -265,8 +295,10 @@ class GANDemoShaping(DemoShaping):
             potential_weight (float)
         """
         # Parameters
+        self.o_stats = o_stats
+        self.g_stats = g_stats
         self.demo_inputs_tf = demo_inputs_tf
-        demo_state_tf = self._concat_inputs(
+        demo_state_tf = self._concat_inputs_normalize( # remove _normalize to not normalize the inputs
             self.demo_inputs_tf["o"],
             self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
             self.demo_inputs_tf["u"],
@@ -327,7 +359,7 @@ class GANDemoShaping(DemoShaping):
         """
         Use the output of the GAN's discriminator as potential.
         """
-        state_tf = self._concat_inputs(o, g, u)
+        state_tf = self._concat_inputs_normalize(o, g, u) # remove _normalize to not normalize the inputs
         potential = self.discriminator(state_tf)
         potential = potential * self.potential_weight
         return potential
@@ -348,6 +380,8 @@ class EnsGANDemoShaping(DemoShaping):
         num_ens,
         gamma,
         demo_inputs_tf,
+        o_stats,
+        g_stats,
         layer_sizes,
         initializer_type,
         latent_dim,
@@ -365,7 +399,6 @@ class EnsGANDemoShaping(DemoShaping):
         # Parameters for training
         self.critic_iter = critic_iter
         self.train_gen = 0  # counter
-
         # Setup ensemble
         self.gans = []
         for i in range(num_ens):
@@ -374,6 +407,8 @@ class EnsGANDemoShaping(DemoShaping):
                     GANDemoShaping(
                         gamma=gamma,
                         demo_inputs_tf=demo_inputs_tf,
+                        o_stats=o_stats,
+                        g_stats=g_stats,
                         layer_sizes=layer_sizes,
                         initializer_type=initializer_type,
                         latent_dim=latent_dim,
