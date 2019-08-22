@@ -85,43 +85,6 @@ class DemoShaping:
         return state_tf
 
 
-class GaussianDemoShaping(DemoShaping):
-    def __init__(self, gamma, demo_inputs_tf):
-        """
-        Implement the state, action based potential function and corresponding actions
-        """
-        self.demo_inputs_tf = demo_inputs_tf
-        self.demo_state_tf = self._concat_inputs(
-            self.demo_inputs_tf["o"],
-            self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
-            self.demo_inputs_tf["u"],
-        )
-        self.sigma = 1.0  # hyperparam to be tuned
-        self.scale = 1.0  # hyperparam to be tuned
-        super().__init__(gamma)
-
-    def potential(self, o, g, u):
-        """
-        Just return negative value of distance between current state and goal state
-        """
-        state_tf = self._concat_inputs(o, g, u)
-
-        # Calculate the potential
-        # expand dimension of demo_state and state so that they have the same shape: (batch_size, num_demo, k)
-        expanded_demo_state_tf = tf.tile(tf.expand_dims(self.demo_state_tf, 0), [tf.shape(state_tf)[0], 1, 1])
-        expanded_state_tf = tf.tile(tf.expand_dims(state_tf, 1), [1, tf.shape(self.demo_state_tf)[0], 1])
-        # calculate distance, result shape is (batch_size, num_demo, k)
-        distance_tf = expanded_state_tf - expanded_demo_state_tf
-        # calculate L2 Norm square, result shape is (batch_size, num_demo)
-        norm_tf = tf.norm(distance_tf, ord=2, axis=-1)
-        # cauculate multi var gaussian, result shape is (batch_size, num_demo)
-        gaussian_tf = tf.exp(-0.5 * self.sigma * norm_tf * norm_tf)  # let sigma be 5
-        # sum the result from all demo transitions and get the final result, shape is (batch_size, 1)
-        potential = self.scale * tf.reduce_max(gaussian_tf, axis=-1, keepdims=True)
-
-        return potential
-
-
 class NFDemoShaping(DemoShaping):
     def __init__(
         self,

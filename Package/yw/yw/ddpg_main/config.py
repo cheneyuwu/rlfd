@@ -36,7 +36,7 @@ DEFAULT_PARAMS = {
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
         # use demonstrations
-        "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "nf", "gan"]
+        "demo_strategy": "none",  # choose between ["none", "bc", "nf", "gan"]
         "sample_demo_buffer": 0,  # whether or not to sample from demonstration buffer
         "use_demo_reward": 0,  # whether or not to assume that demonstrations have rewards, and train it on the critic
         "num_demo": 0,  # number of expert demo episodes

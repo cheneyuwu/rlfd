@@ -8,7 +8,6 @@ from yw.ddpg_main.normalizer import Normalizer
 from yw.ddpg_main.actor_critic import ActorCritic
 from yw.ddpg_main.replay_buffer import HERReplayBuffer, UniformReplayBuffer, RingReplayBuffer
 from yw.ddpg_main.demo_shaping import (
-    GaussianDemoShaping,
     NFDemoShaping,
     EnsNFDemoShaping,
     GANDemoShaping,
@@ -251,19 +250,11 @@ class DDPG(object):
                 episode_batch[key] = episode_batch[key][: last_idx + 1]
         # the demo buffer should already have: o, u, r, ag, g and necessary infos.
         self.demo_buffer.store_episode(episode_batch)
-        # feed demonstration data for norm shaping
-        if self.demo_strategy == "norm":
-            demo_data = self.demo_buffer.sample_all()
-            demo_data["o"] = self._preprocess_state(demo_data["o"])
-            if self.dimg != 0:
-                demo_data["g"] = self._preprocess_state(demo_data["g"])
-            for k in self.demo_inputs_tf.keys():  # o g u
-                self.sess.run(tf.assign(self.demo_inputs_tf[k], demo_data[k]))
+        # TODO figure out when to normalize the input to shaping
+        self._update_demo_stats(episode_batch)
         if update_stats:
             logger.info("Updating stats using data from demostration buffer.")
             self._update_stats(episode_batch)
-        # TODO figure out when to normalize the input to shaping
-        self._update_demo_stats(episode_batch)
 
     def store_episode(self, episode_batch, update_stats=True):
         """
@@ -294,18 +285,18 @@ class DDPG(object):
         return transitions
 
     def train_shaping(self):
-        # train normalizing flow
+        assert self.demo_strategy in ["nf", "gan"]
+        # train normalizing flow or gan for 1 epoch
         loss = 0
-        if self.demo_strategy in ["nf", "gan"]:
-            self.sess.run(self.demo_iter_tf.initializer)
-            losses = np.empty(0)
-            while True:
-                try:
-                    loss = self.demo_shaping.train(sess=self.sess)
-                    losses = np.append(losses, loss)
-                except tf.errors.OutOfRangeError:
-                    loss = np.mean(losses)
-                    break
+        self.sess.run(self.demo_iter_tf.initializer)
+        losses = np.empty(0)
+        while True:
+            try:
+                loss = self.demo_shaping.train(sess=self.sess)
+                losses = np.append(losses, loss)
+            except tf.errors.OutOfRangeError:
+                loss = np.mean(losses)
+                break
         return loss
 
     def save_shaping_weights(self, path):
@@ -440,8 +431,7 @@ class DDPG(object):
 
         # Add shaping reward
         with tf.variable_scope("shaping"):
-
-            # Normalizer for goal and observation.
+            # normalizer for goal and observation.
             with tf.variable_scope("demo_o_stats"):
                 self.demo_o_stats = Normalizer(
                     self.dimo, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm
@@ -450,94 +440,68 @@ class DDPG(object):
                 self.demo_g_stats = Normalizer(
                     self.dimg, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm
                 )
+            # input dataset that loads from demo_buffer
+            demo_shapes = {}
+            demo_shapes["o"] = (self.dimo,)
+            if self.dimg != 0:
+                demo_shapes["g"] = (self.dimg,)
+            demo_shapes["u"] = (self.dimu,)
+            max_num_transitions = self.num_demo * self.T
 
-            if self.demo_strategy == "norm":
-                # note that you can not use this to train with non-fixed T TODO: fix it!!
-                assert self.fix_T
-                max_num_transitions = self.num_demo * self.T
-                self.demo_inputs_tf = {}
-                self.demo_inputs_tf["o"] = tf.Variable(
-                    initial_value=tf.zeros((max_num_transitions, self.dimo), dtype=tf.float32),
-                    trainable=False,
-                    dtype=tf.float32,
-                )
+            def generate_demo_data():
+                demo_data = self.demo_buffer.sample_all()
+                num_transitions = demo_data["u"].shape[0]
+                demo_data["o"] = self._preprocess_state(demo_data["o"])
                 if self.dimg != 0:
-                    self.demo_inputs_tf["g"] = tf.Variable(
-                        initial_value=tf.zeros((max_num_transitions, self.dimg), dtype=tf.float32),
-                        trainable=False,
-                        dtype=tf.float32,
-                    )
-                self.demo_inputs_tf["u"] = tf.Variable(
-                    initial_value=tf.zeros((max_num_transitions, self.dimu), dtype=tf.float32),
-                    trainable=False,
-                    dtype=tf.float32,
-                )
-                self.demo_shaping = GaussianDemoShaping(gamma=self.gamma, demo_inputs_tf=self.demo_inputs_tf)
-            elif self.demo_strategy in ["nf", "gan"]:
-                # input dataset that loads from demo_buffer
-                demo_shapes = {}
-                demo_shapes["o"] = (self.dimo,)
-                if self.dimg != 0:
-                    demo_shapes["g"] = (self.dimg,)
-                demo_shapes["u"] = (self.dimu,)
-                max_num_transitions = self.num_demo * self.T
+                    demo_data["g"] = self._preprocess_state(demo_data["g"])
+                assert all([demo_data[k].shape[0] == num_transitions for k in demo_data.keys()])
+                for i in range(num_transitions):
+                    yield {k: demo_data[k][i] for k in demo_shapes.keys()}
 
-                def generate_demo_data():
-                    demo_data = self.demo_buffer.sample_all()
-                    num_transitions = demo_data["u"].shape[0]
-                    demo_data["o"] = self._preprocess_state(demo_data["o"])
-                    if self.dimg != 0:
-                        demo_data["g"] = self._preprocess_state(demo_data["g"])
-                    assert all([demo_data[k].shape[0] == num_transitions for k in demo_data.keys()])
-                    for i in range(num_transitions):
-                        yield {k: demo_data[k][i] for k in demo_shapes.keys()}
-
-                demo_dataset = (
-                    tf.data.Dataset.from_generator(
-                        generate_demo_data,
-                        output_types={k: tf.float32 for k in demo_shapes.keys()},
-                        output_shapes=demo_shapes,
-                    )
-                    .take(max_num_transitions)
-                    .shuffle(max_num_transitions)
-                    .repeat(1)
-                    .batch(self.shaping_params["batch_size"])
+            demo_dataset = (
+                tf.data.Dataset.from_generator(
+                    generate_demo_data,
+                    output_types={k: tf.float32 for k in demo_shapes.keys()},
+                    output_shapes=demo_shapes,
                 )
-                self.demo_iter_tf = demo_dataset.make_initializable_iterator()
-                self.demo_inputs_tf = self.demo_iter_tf.get_next()
-                # potential function approximator, nf or gan
-                if self.demo_strategy == "nf":
-                    # self.demo_shaping = MAFDemoShaping(
-                    #     gamma=self.gamma,
-                    #     demo_inputs_tf=self.demo_inputs_tf,
-                    #     o_stats=self.demo_o_stats,
-                    #     g_stats=self.demo_g_stats,
-                    #     **self.shaping_params["nf"]
-                    # )
-                    self.demo_shaping = EnsNFDemoShaping(
-                        gamma=self.gamma,
-                        demo_inputs_tf=self.demo_inputs_tf,
-                        o_stats=self.demo_o_stats,
-                        g_stats=self.demo_g_stats,
-                        **self.shaping_params["nf"]
-                    )
-                elif self.demo_strategy == "gan":
-                    # self.demo_shaping = GANDemoShaping(
-                    #     gamma=self.gamma,
-                    #     demo_inputs_tf=self.demo_inputs_tf,
-                    #     o_stats=self.demo_o_stats,
-                    #     g_stats=self.demo_g_stats,
-                    #     **self.shaping_params["gan"]
-                    # )
-                    self.demo_shaping = EnsGANDemoShaping(
-                        gamma=self.gamma,
-                        demo_inputs_tf=self.demo_inputs_tf,
-                        o_stats=self.demo_o_stats,
-                        g_stats=self.demo_g_stats,
-                        **self.shaping_params["gan"]
-                    )
-                else:
-                    assert False
+                .take(max_num_transitions)
+                .shuffle(max_num_transitions)
+                .repeat(1)
+                .batch(self.shaping_params["batch_size"])
+            )
+            self.demo_iter_tf = demo_dataset.make_initializable_iterator()
+            self.demo_inputs_tf = self.demo_iter_tf.get_next()
+            # potential function approximator, nf or gan
+            if self.demo_strategy == "nf":
+                # self.demo_shaping = MAFDemoShaping(
+                #     gamma=self.gamma,
+                #     demo_inputs_tf=self.demo_inputs_tf,
+                #     o_stats=self.demo_o_stats,
+                #     g_stats=self.demo_g_stats,
+                #     **self.shaping_params["nf"]
+                # )
+                self.demo_shaping = EnsNFDemoShaping(
+                    gamma=self.gamma,
+                    demo_inputs_tf=self.demo_inputs_tf,
+                    o_stats=self.demo_o_stats,
+                    g_stats=self.demo_g_stats,
+                    **self.shaping_params["nf"]
+                )
+            elif self.demo_strategy == "gan":
+                # self.demo_shaping = GANDemoShaping(
+                #     gamma=self.gamma,
+                #     demo_inputs_tf=self.demo_inputs_tf,
+                #     o_stats=self.demo_o_stats,
+                #     g_stats=self.demo_g_stats,
+                #     **self.shaping_params["gan"]
+                # )
+                self.demo_shaping = EnsGANDemoShaping(
+                    gamma=self.gamma,
+                    demo_inputs_tf=self.demo_inputs_tf,
+                    o_stats=self.demo_o_stats,
+                    g_stats=self.demo_g_stats,
+                    **self.shaping_params["gan"]
+                )
             else:
                 self.demo_shaping = None
 
