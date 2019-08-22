@@ -16,7 +16,8 @@ class FrankaPandaRobot:
         roslaunch.configure_logging(uuid)
         self.position_control_launcher = roslaunch.parent.ROSLaunchParent(
                 uuid, ["/home/florian/code/RLProject/Panda/panda_real/launch/panda_moveit.launch"])
-
+        uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+        roslaunch.configure_logging(uuid)
         self.velocity_control_launcher = roslaunch.parent.ROSLaunchParent(
                 uuid, ["/home/florian/code/RLProject/Panda/panda_real/launch/franka_arm_vel_controller.launch"])
 
@@ -32,7 +33,7 @@ class FrankaPandaRobot:
             self.position_control_launcher.start()
 
             moveit_commander.roscpp_initialize(sys.argv)
-            rospy.init_node('panda_experiment', anonymous=True)
+            #rospy.init_node('panda_experiment', anonymous=True)
 
             scene = moveit_commander.PlanningSceneInterface()
 
