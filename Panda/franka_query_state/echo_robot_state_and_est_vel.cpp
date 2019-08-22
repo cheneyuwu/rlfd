@@ -58,8 +58,8 @@ int main(int argc, char** argv) {
     
     robot.setGuidingMode(guiding_mode, elbow);
 
-	// Read state once to initialize variables
-	franka::RobotState state = robot.readOnce();
+    // Read state once to initialize variables
+    franka::RobotState state = robot.readOnce();
 
     std::array<double, 3> old_O_P_EE;
 
@@ -107,9 +107,9 @@ int main(int argc, char** argv) {
 
 	time_count = robot_state.time.toMSec();
 
-    old_O_P_EE[0] = O_P_EE[0];
-    old_O_P_EE[1] = O_P_EE[1];
-    old_O_P_EE[2] = O_P_EE[2];
+    	old_O_P_EE[0] = O_P_EE[0];
+    	old_O_P_EE[1] = O_P_EE[1];
+    	old_O_P_EE[2] = O_P_EE[2];
 
 	return true;
       });
