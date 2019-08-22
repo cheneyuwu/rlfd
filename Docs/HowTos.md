@@ -8,7 +8,7 @@
   - `git submodule init`
   - `git submodule sync`
   - `git submodule update --remote`
-3. enter virtual env and install packages: gym, yw, etc
+3. enter virtual env and install packages: gym, yw, tensorflow, tensorflow_probability, etc
   - note: you need to manually install mujoco_py
   - note: on compute canada cluster you need to manually install tensorflow and use `module load mpi4py` to get the mpi python package
 

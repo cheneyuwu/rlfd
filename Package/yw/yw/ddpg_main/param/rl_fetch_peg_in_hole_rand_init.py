@@ -1,12 +1,12 @@
-# Params from the original td3 paper
+# Best parameters found so far to be used for the Open AI fetch pick and place environment with a single goal.
 params_config = {
     # config summary
     "config": "default",
     # environment config
-    "env_name": "FetchPickAndPlace-v1",
+    "env_name": "FetchPegInHoleRandInit-v1",
     "r_scale": 1.0,
     "r_shift": 0.0,
-    "eps_length": 0,
+    "eps_length": 25,
     "env_args": {},
     "fix_T": True,
     # DDPG config
@@ -17,45 +17,45 @@ params_config = {
         # actor critic networks
         "scope": "ddpg",
         "use_td3": 1,
-        "layer_sizes": [400, 300],
+        "layer_sizes": [256, 256, 256],
         "initializer_type": "glorot",  # ["zero", "glorot"]
         "Q_lr": 0.001,
         "pi_lr": 0.001,
-        "action_l2": 1.0,
-        "batch_size": 100,
+        "action_l2": 0.4,
+        "batch_size": 256,
         # double q learning
-        "polyak": 0.995,
+        "polyak": 0.95,
         # use demonstrations
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         "sample_demo_buffer": 0,
         "use_demo_reward": 0,
-        "num_demo": 0,
-        "batch_size_demo": 50,
+        "num_demo": 40,
+        "batch_size_demo": 128,
         "q_filter": 1,
-        "prm_loss_weight": 0.001,
-        "aux_loss_weight": 0.0078,
+        "prm_loss_weight": 1.0,
+        "aux_loss_weight": 10.0,
         "shaping_params": {
             "batch_size": 128,
             "nf": {
                 "num_ens": 1,
                 "nf_type": "maf",  # ["maf", "realnvp"]
-                "lr": 1e-4,
-                "num_masked": 2,
-                "num_bijectors": 6,
-                "layer_sizes": [512, 512],
+                "lr": 2e-4,
+                "num_masked": 4,
+                "num_bijectors": 4,
+                "layer_sizes": [256, 256],
                 "initializer_type": "glorot",  # ["zero", "glorot"]
                 "prm_loss_weight": 1.0,
-                "reg_loss_weight": 800.0,
-                "potential_weight": 5.0,
+                "reg_loss_weight": 1000.0,
+                "potential_weight": 3.0,
             },
             "gan": {
                 "num_ens": 1,
-                "layer_sizes": [256, 256],
+                "layer_sizes": [256, 256, 256],
                 "initializer_type": "glorot",  # ["zero", "glorot"]
-                "latent_dim": 2,
+                "latent_dim": 6,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
-                "potential_weight": 3.0,
+                "potential_weight": 5.0,
             },
         },
         # normalize observation
@@ -69,22 +69,22 @@ params_config = {
     # HER config
     "her": {"k": 4},
     # rollouts config
-    "rollout": {"rollout_batch_size": 4, "noise_eps": 0.1, "polyak_noise": 0.0, "random_eps": 0.1, "compute_Q": False},
+    "rollout": {"rollout_batch_size": 4, "noise_eps": 0.2, "polyak_noise": 0.0, "random_eps": 0.2, "compute_Q": False},
     "evaluator": {
         "rollout_batch_size": 20,
-        "noise_eps": 0.0,
+        "noise_eps": 0.05,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
         "compute_Q": True,
     },
     # training config
     "train": {
-        "n_epochs": 5000,
+        "n_epochs": int(4e3),
         "n_cycles": 10,
         "n_batches": 40,
-        "shaping_n_epochs": 5000,
-        "save_interval": 2,
+        "shaping_n_epochs": int(8e3),
+        "save_interval": 10,
         "shaping_policy": 0,
     },
-    "seed": 0,
+    "seed": tuple(range(2)),
 }

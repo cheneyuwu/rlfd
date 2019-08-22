@@ -10,21 +10,21 @@ from yw.env.env_manager import EnvManager
 
 
 DEFAULT_PARAMS = {
-    # Config Summary
+    # config summary
     "config": "default",
-    # Environment Config
+    # environment config
     "env_name": "FetchReach-v1",
     "r_scale": 1.0,  # scale the reward of the environment down
     "r_shift": 0.0,  # shift the reward of the environment up
-    "eps_length": 0,  # overwrite the default length of the episode
+    "eps_length": 0,  # overwrite the default length of the episode provided in _max_episode_steps
     "env_args": {},  # extra arguments passed to the environment
-    "fix_T": True,  # whether or not to fix episode length for all rollouts. (if false, then use the ring buffer)
-    # DDPG Config
+    "fix_T": True,  # whether or not to fix episode length for all rollouts (if false, then use the ring buffer)
+    # DDPG config
     "ddpg": {
         # replay buffer setup
         "buffer_size": int(1e6),
         "replay_strategy": "none",  # choose between ["her", "none"] (her for hindsight exp replay)
-        # networks
+        # actor critic networks
         "scope": "ddpg",
         "use_td3": 1,  # whether or not to use td3
         "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layer
@@ -36,49 +36,49 @@ DEFAULT_PARAMS = {
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
         # use demonstrations
-        "demo_strategy": "none",  # choose between ["none", "bc", "norm", "manual", "nf", "gan"]
+        "demo_strategy": "none",  # choose between ["none", "bc", "nf", "gan"]
         "sample_demo_buffer": 0,  # whether or not to sample from demonstration buffer
-        "use_demo_reward": 0,  # whether or not to assume that demonstrations also have rewards, and train it on the critic
+        "use_demo_reward": 0,  # whether or not to assume that demonstrations have rewards, and train it on the critic
         "num_demo": 0,  # number of expert demo episodes
-        "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
+        "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread
         "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
         "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
-        "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss also called the cloning loss
+        "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss (also called the cloning loss)
         "shaping_params": {
-            "batch_size": 128,
+            "batch_size": 128,  # batch size for training the potential function (gan and nf)
             "nf": {
-                "num_ens": 1,
+                "num_ens": 1,  # number of nf ensembles
                 "nf_type": "maf",  # choose between ["maf", "realnvp"]
                 "lr": 1e-4,
                 "num_masked": 2,  # used only when nf_type is set to realnvp
-                "num_bijectors": 6,
-                "layer_sizes": [512, 512],
+                "num_bijectors": 6,  # number of bijectors in the normalizing flow
+                "layer_sizes": [512, 512],  # number of neurons in each hidden layer
                 "initializer_type": "glorot",  # choose between ["zero", "glorot"]
                 "prm_loss_weight": 1.0,
                 "reg_loss_weight": 500.0,
                 "potential_weight": 5.0,
             },
             "gan": {
-                "num_ens": 1,
-                "layer_sizes": [256, 256],
+                "num_ens": 1,  # number of gan ensembles
+                "layer_sizes": [256, 256],  # number of neurons in each hidden layer (both generator and discriminator)
                 "initializer_type": "glorot",  # choose between ["zero", "glorot"]
-                "latent_dim": 6,
-                "gp_lambda": 0.1,
+                "latent_dim": 6,  # generator latent space dimension
+                "gp_lambda": 0.1,  # weight on gradient penalty (refer to WGAN-GP)
                 "critic_iter": 5,
                 "potential_weight": 3.0,
             },
         },
-        # normalization
+        # normalize observation
         "norm_eps": 0.01,  # epsilon used for observation normalization
         "norm_clip": 5,  # normalized observations are cropped to this values
         # i/o clippings
         "clip_obs": 200.0,
-        "clip_pos_returns": False,  # Whether or not this environment has positive return or not.
+        "clip_pos_returns": False,  # whether or not this environment has positive return.
         "clip_return": False,
     },
-    # HER Config
+    # HER config
     "her": {"k": 4},  # number of additional goals used for replay
-    # Rollouts Config
+    # rollouts config
     "rollout": {
         "rollout_batch_size": 4,
         "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
@@ -93,14 +93,14 @@ DEFAULT_PARAMS = {
         "random_eps": 0.0,
         "compute_Q": True,
     },
-    # Training Config
+    # training config
     "train": {
         "n_epochs": 10,
         "n_cycles": 10,  # per epoch
         "n_batches": 40,  # training batches per cycle
         "shaping_n_epochs": 100,
         "save_interval": 2,
-        "shaping_policy": 0,  # whether or not to use a pretrained shaping policy
+        "shaping_policy": 0,  # whether or not to use a pre-trained shaping policy
     },
     "seed": 0,
 }
@@ -219,15 +219,15 @@ def configure_ddpg(params, comm=None):
             "fix_T": params["fix_T"],
             "clip_return": (1.0 / (1.0 - params["gamma"])) if params["ddpg"]["clip_return"] else np.inf,
             "gamma": params["gamma"],
+            "info": {
+                "env_name": params["env_name"],
+                "r_scale": params["r_scale"],
+                "r_shift": params["r_shift"],
+                "eps_length": params["eps_length"],
+                "env_args": params["env_args"],
+            },
         }
     )
-    ddpg_params["info"] = {
-        "env_name": params["env_name"],
-        "r_scale": params["r_scale"],
-        "r_shift": params["r_shift"],
-        "eps_length": params["eps_length"],
-        "env_args": params["env_args"],
-    }
 
     logger.info("*** ddpg_params ***")
     log_params(ddpg_params)
@@ -245,7 +245,7 @@ def config_rollout(params, policy):
     log_params(rollout_params)
     logger.info("*** rollout_params ***")
 
-    if params["fix_T"]:
+    if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
         rollout_worker = RolloutWorker(params["make_env"], policy, **rollout_params)
     else:
         rollout_worker = SerialRolloutWorker(params["make_env"], policy, **rollout_params)

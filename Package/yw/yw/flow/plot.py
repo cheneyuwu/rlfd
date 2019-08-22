@@ -74,8 +74,9 @@ def load_results(root_dir_or_dirs):
                 result["progress"] = load_csv(progcsv)
                 if result["progress"] is None:
                     continue
-                paramsjson = os.path.join(dirname, "params.json")
-                # paramsjson = os.path.join(dirname, "params_renamed.json") # put here for the rename in launch.py
+                paramsjson = os.path.join(dirname, "params_renamed.json") # search for the renamed file first
+                if not os.path.exists(paramsjson):
+                    paramsjson = os.path.join(dirname, "params.json")
                 with open(paramsjson, "r") as f:
                     result["params"] = json.load(f)
                 allresults.append(result)
@@ -134,11 +135,11 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 # ax.fill_between(xs[0], np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25)
                 # ours
                 mean_y = np.nanmean(ys, axis=0)
-                var_y = np.nanstd(ys, axis=0)
+                stddev_y = np.nanstd(ys, axis=0)
                 ax.plot(xs[0], mean_y, label=config, color=colors[j % len(colors)])
-                # ax.fill_between(xs[0], mean_y - var_y, mean_y + var_y, alpha=0.5, color=colors[j % len(colors)])
+                # ax.fill_between(xs[0], mean_y - stddev_y, mean_y + stddev_y, alpha=0.5, color=colors[j % len(colors)])
                 # ax.fill_between(
-                #     xs[0], mean_y - 3 * var_y, mean_y + 3 * var_y, alpha=0.25, color=colors[j % len(colors)]
+                #     xs[0], mean_y - 3 * stddev_y, mean_y + 3 * stddev_y, alpha=0.25, color=colors[j % len(colors)]
                 # )
 
                 ax.set_xlabel(x_label)
@@ -160,13 +161,19 @@ def main(dirs, xys, save_path=None, smooth=0, **kwargs):
 
 
 ap = ArgParser()
-ap.parser.add_argument("--dir", help="result directory", type=str, action="append", dest="dirs")
-ap.parser.add_argument("--save_path", help="plot saving directory", type=str, default=None)
+ap.parser.add_argument("--dirs", help="target or list of dirs", type=str, nargs="+", default=[os.getcwd()])
+ap.parser.add_argument("--save_path", help="plot saving directory", type=str, default=os.getcwd())
 ap.parser.add_argument(
     "--xy",
     help="value on x and y axis, splitted by :",
     type=str,
-    # default=["epoch:test/success_rate"],
+    default=[
+        "epoch:test/success_rate",
+        "epoch:test/total_shaping_reward",
+        "epoch:test/total_reward",
+        "epoch:test/mean_Q",
+        "epoch:test/mean_Q_plus_P",
+    ],
     action="append",
     dest="xys",
 )

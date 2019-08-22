@@ -119,15 +119,15 @@ if __name__ == "__main__":
     import numpy as np
 
     # For a robosuite env
-    env_manager = EnvManager(
-        "SawyerLift", env_args={"has_renderer": True, "ignore_done": True, "use_camera_obs": False, "control_freq": 50}
-    )
-    env = env_manager.get_env()
-    env.reset()
-    for i in range(100):
-        action = np.random.randn(env.action_space.shape[0])  # sample random action
-        state, r, extra, info = env.step(action)
-        env.render()
+    # env_manager = EnvManager(
+    #     "SawyerLift", env_args={"has_renderer": True, "ignore_done": True, "use_camera_obs": False, "control_freq": 50}
+    # )
+    # env = env_manager.get_env()
+    # env.reset()
+    # for i in range(100):
+    #     action = np.random.randn(env.action_space.shape[0])  # sample random action
+    #     state, r, extra, info = env.step(action)
+    #     env.render()
 
     # For a openai env
     env_manager = EnvManager("FetchReach-v1")

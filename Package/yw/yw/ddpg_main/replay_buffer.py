@@ -3,7 +3,7 @@ import numpy as np
 
 class ReplayBufferBase:
     def __init__(self, buffer_shapes, size):
-        """Creates a replay buffer.
+        """ Creates a replay buffer.
 
         Args:
             buffer_shapes       (dict of float) - the shape for all buffers that are used in the replay buffer
@@ -15,17 +15,17 @@ class ReplayBufferBase:
         self.current_size = 0
 
     def sample_all(self):
-        """Returns all the transitions currently stored in the replay buffer.
+        """ Returns all the transitions currently stored in the replay buffer.
         """
         raise NotImplementedError
 
     def sample(self, batch_size):
-        """Returns a dict {key: array(batch_size x shapes[key])}
+        """ Returns a dict {key: array(batch_size x shapes[key])}
         """
         raise NotImplementedError
 
     def store_episode(self, episode_batch):
-        """API for storing episodes. Including memory management.
+        """ API for storing episodes. Including memory management.
             episode_batch: array(batch_size x (T or T+1) x dim_key)
         """
         batch_sizes = [len(episode_batch[key]) for key in episode_batch.keys()]
@@ -59,7 +59,7 @@ class ReplayBufferBase:
 
 class RingReplayBuffer(ReplayBufferBase):
     def __init__(self, buffer_shapes, size_in_transitions):
-        """Creates a replay buffer.
+        """ Creates a replay buffer.
 
         Args:
             buffer_shapes       (dict of float) - the shape for all buffers that are used in the replay buffer
@@ -72,7 +72,7 @@ class RingReplayBuffer(ReplayBufferBase):
         self.pointer = 0
 
     def sample_all(self):
-        """Returns all the transitions currently stored in the replay buffer.
+        """ Returns all the transitions currently stored in the replay buffer.
         """
         transitions = {}  # make a copy of the stored data in case it gets changed
         assert self.current_size > 0
@@ -84,14 +84,12 @@ class RingReplayBuffer(ReplayBufferBase):
         return transitions
 
     def sample(self, batch_size):
-        """Returns a dict {key: array(batch_size x shapes[key])}
+        """ Returns a dict {key: array(batch_size x shapes[key])}
         """
-        # Select which episodes and time steps to use.
+        # select which episodes and time steps to use.
         idxs = np.random.randint(0, self.current_size, batch_size)
         transitions = {key: self.buffers[key][idxs].copy() for key in self.buffers.keys()}
-
         transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:]) for k in transitions.keys()}
-
         assert all([transitions[k].shape[0] == batch_size for k in transitions.keys()])
 
         return transitions
@@ -120,7 +118,7 @@ class RingReplayBuffer(ReplayBufferBase):
 
 class ReplayBuffer(ReplayBufferBase):
     def __init__(self, buffer_shapes, size_in_transitions, T):
-        """Creates a replay buffer.
+        """ Creates a replay buffer.
 
         Args:
             buffer_shapes       (dict of int) - the shape for all buffers that are used in the replay buffer
@@ -135,7 +133,7 @@ class ReplayBuffer(ReplayBufferBase):
         self.T = T
 
     def sample_all(self):
-        """Returns all the transitions currently stored in the replay buffer.
+        """ Returns all the transitions currently stored in the replay buffer.
         """
         buffers = {}
         assert self.current_size > 0
@@ -159,7 +157,7 @@ class ReplayBuffer(ReplayBufferBase):
         return transitions
 
     def sample(self, batch_size):
-        """Returns a dict {key: array(batch_size x shapes[key])}
+        """ Returns a dict {key: array(batch_size x shapes[key])}
         """
         buffers = {}
 
