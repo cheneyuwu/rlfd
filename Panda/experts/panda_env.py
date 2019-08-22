@@ -7,9 +7,19 @@ import moveit_commander
 import panda_client as panda
 from geometry_msgs.msg import Twist
 
+
 class FrankaPandaRobot:
 
     def __init__(self):
+
+        uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+        roslaunch.configure_logging(uuid)
+        self.position_control_launcher = roslaunch.parent.ROSLaunchParent(
+                uuid, ["/home/florian/code/RLProject/Panda/panda_real/launch/panda_moveit.launch"])
+
+        self.velocity_control_launcher = roslaunch.parent.ROSLaunchParent(
+                uuid, ["/home/florian/code/RLProject/Panda/panda_real/launch/franka_arm_vel_controller.launch"])
+
         self.velocity_publisher = rospy.Publisher(
             "/franka_control/target_velocity", Twist, queue_size=1)
 
@@ -19,10 +29,7 @@ class FrankaPandaRobot:
     def reset(self):
 
         try:
-            uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-            roslaunch.configure_logging(uuid)
-            launch = roslaunch.parent.ROSLaunchParent(uuid,["/home/florian/code/RLProject/Panda/panda_real/launch/panda_moveit.launch"])
-            launch.start()
+            self.position_control_launcher.start()
 
             moveit_commander.roscpp_initialize(sys.argv)
             rospy.init_node('panda_experiment', anonymous=True)
@@ -31,34 +38,30 @@ class FrankaPandaRobot:
 
             panda_robot = panda.PandaClient()
             panda_robot.go_home()
-			# May or may not need to sleep - really depends how long it takes
-			# to finish execution before shutting down panda moveit!
-            #rospy.sleep(3)
-            launch.shutdown()
+            # May or may not need to sleep - really depends how long it takes
+            # to finish execution before shutting down panda moveit!
+            # rospy.sleep(3)
+            self.position_control_launcher.shutdown()
 
         except rospy.ROSInterruptException:
             return
-
-
 
     def enable_vel_control(self):
         try:
-            uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-            roslaunch.configure_logging(uuid)
-            launch = roslaunch.parent.ROSLaunchParent(uuid,["/home/florian/code/RLProject/Panda/panda_real/launch/franka_arm_vel_controller.launch"])
-            launch.start()
+            #uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+            #roslaunch.configure_logging(uuid)
+            self.velocity_control_launcher.start()
 
-			# May or may not need to sleep - really depends how long it takes
-			# to finish execution before shutting down panda moveit!
-            #rospy.sleep(3)
-            #launch.shutdown()
+            # May or may not need to sleep - really depends how long it takes
+            # to finish execution before shutting down panda moveit!
+            # rospy.sleep(3)
+            # launch.shutdown()
 
         except rospy.ROSInterruptException:
             return
 
-
     def disable_vel_control(self):
-        pass
+        self.velocity_control_launcher.shutdown()
 
     def enable_grip(self):
         pass
@@ -78,9 +81,9 @@ class FrankaPandaRobot:
 if __name__ == '__main__':
     rospy.init_node("panda_arm_env")
     panda_robo = FrankaPandaRobot()
-    #panda_robo.reset()
+    panda_robo.reset()
     panda_robo.enable_vel_control()
 
     while not rospy.is_shutdown():
-    	panda_robo.step([0.5, 0.0, 0.0])
+        panda_robo.step([0.5, 0.0, 0.0])
         rospy.sleep(0.1)
