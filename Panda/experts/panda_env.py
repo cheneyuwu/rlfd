@@ -9,8 +9,6 @@ import panda_client as panda
 
 class FrankaPandaRobot:
 
-    def __init__(self):
-		pass
 
     def step(self, action):
         self.panda.apply_velocity_action(action)
@@ -18,7 +16,7 @@ class FrankaPandaRobot:
     def reset(self):
 
         try:
-			uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+            uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
             roslaunch.configure_logging(uuid)
             launch = roslaunch.parent.ROSLaunchParent(uuid,["/home/florian/code/RLProject/Panda/panda_real/launch/panda_moveit.launch"])
             launch.start()
@@ -28,10 +26,10 @@ class FrankaPandaRobot:
 
             scene = moveit_commander.PlanningSceneInterface()
 
-            panda = panda.PandaClient()
-            panda.go_home()
-	    	#rospy.sleep(3)
-	    	#launch.shutdown()
+            panda_robot = panda.PandaClient()
+            panda_robot.go_home()
+            # rospy.sleep(3)
+            # launch.shutdown()
 
         except rospy.ROSInterruptException:
             return
@@ -39,7 +37,7 @@ class FrankaPandaRobot:
 
 
     def enable_vel_control(self):
-		pass
+        pass
 
     def enable_grip(self):
         pass
@@ -52,6 +50,6 @@ if __name__ == '__main__':
     panda_robo = FrankaPandaRobot()
     panda_robo.reset()
 
-    #while not rospy.is_shutdown():
+    # while not rospy.is_shutdown():
     #	panda_robo.step([0.0, 0.0, 0.0])
     #    rospy.sleep(0.1)
