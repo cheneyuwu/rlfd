@@ -89,6 +89,8 @@ def main(targets, exp_dir, policy_file, **kwargs):
             logger.info("\n\n=================================================")
             logger.info("Renaming the config to params_renamed.json!")
             logger.info("=================================================")
+            # excluded params
+            exc_params = ["seed"]  # CHANGE this!
             # adding checking
             config_file = target.replace("rename:", "")
             params_configs = import_param_config(config_file)
@@ -98,9 +100,11 @@ def main(targets, exp_dir, policy_file, **kwargs):
             if rank == 0:
                 for k, v in dir_param_dict.items():
                     assert os.path.exists(k)
+                    assert v["config"] == "default"
                     # copy params.json file, rename the config entry
-                    v["config"] = "default"  # CHANGE this name to reflect the test config!
-                    # v["config"] = str(v["ddpg"]["shaping_params"]["reg_loss_weight"]) + ":" + str(v["ddpg"]["shaping_params"]["potential_weight"])
+                    varied_params = k.strip(exp_dir).split("/")
+                    config_name = [x for x in varied_params if not any([x.startswith(y) for y in exc_params])]
+                    v["config"] = "-".join(config_name)
                     with open(os.path.join(k, "params_renamed.json"), "w") as f:
                         json.dump(v, f)
 
@@ -244,7 +248,7 @@ if __name__ == "__main__":
        in the same directory as launch.py. The output is TempResult/Temp
     4. (mpirun -np 1) python launch.py --targets train:rldense plot
        In addition to 1, also collects result in TempResult/Temp and generates plots
-    
+
     Note:
     1. In the params config file (e.g. rldense.py), if the val of any key is a list, this script will create a
        sub-folder named "key-val" and put the exp result there.

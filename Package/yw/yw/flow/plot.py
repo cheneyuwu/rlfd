@@ -74,8 +74,9 @@ def load_results(root_dir_or_dirs):
                 result["progress"] = load_csv(progcsv)
                 if result["progress"] is None:
                     continue
-                paramsjson = os.path.join(dirname, "params.json")
-                # paramsjson = os.path.join(dirname, "params_renamed.json") # put here for the rename in launch.py
+                paramsjson = os.path.join(dirname, "params_renamed.json") # search for the renamed file first
+                if not os.path.exists(paramsjson):
+                    paramsjson = os.path.join(dirname, "params.json")
                 with open(paramsjson, "r") as f:
                     result["params"] = json.load(f)
                 allresults.append(result)
