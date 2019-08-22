@@ -102,7 +102,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     assert os.path.exists(k)
                     assert v["config"] == "default"
                     # copy params.json file, rename the config entry
-                    varied_params = k.strip(exp_dir).split("/")
+                    varied_params = k[len(exp_dir) + 1 :].split("/")
                     config_name = [x for x in varied_params if not any([x.startswith(y) for y in exc_params])]
                     v["config"] = "-".join(config_name)
                     with open(os.path.join(k, "params_renamed.json"), "w") as f:
