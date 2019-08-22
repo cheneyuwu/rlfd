@@ -220,8 +220,7 @@ def main():
     num_itr = 5
     render = True
     env_name = "FetchPegInHole-v1"
-    env=gym.make(env_name)
-    env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=70).get_env()
+    env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=25).get_env()
     system_noise_scale = 0.03
     # Eps length to use:
     #   FetchPickAndPlace: eps = 50
