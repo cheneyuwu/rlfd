@@ -124,7 +124,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
                 for k, v in dir_param_dict.items():
                     if os.path.exists(k):
                         logger.info("Directory {} already exists!".format(k))
-                        mpi_exit(1)
+                        mpi_exit(1, comm=comm)
                     os.makedirs(k, exist_ok=False)
                     # copy params.json file
                     with open(os.path.join(k, "copied_params.json"), "w") as f:
