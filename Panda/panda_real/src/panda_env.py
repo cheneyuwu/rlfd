@@ -15,11 +15,11 @@ class FrankaPandaRobot:
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid)
         self.position_control_launcher = roslaunch.parent.ROSLaunchParent(
-                uuid, ["/home/florian/code/RLProject/Panda/panda_real/launch/panda_moveit.launch"])
+                uuid, ["/home/melissa/Workspace/RLProject/Panda/panda_real/launch/panda_moveit.launch"])
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid)
         self.velocity_control_launcher = roslaunch.parent.ROSLaunchParent(
-                uuid, ["/home/florian/code/RLProject/Panda/panda_real/launch/franka_arm_vel_controller.launch"])
+                uuid, ["/home/melissa/Workspace/RLProject/Panda/panda_real/launch/franka_arm_vel_controller.launch"])
 
         self.velocity_publisher = rospy.Publisher(
             "/franka_control/target_velocity", Twist, queue_size=1)
