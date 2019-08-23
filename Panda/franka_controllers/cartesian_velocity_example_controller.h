@@ -34,6 +34,8 @@ class CartesianVelocityExampleController : public controller_interface::MultiInt
   geometry_msgs::Twist current_velocity;
   
   ros::Subscriber target_velocity_subscriber;
+
+  ros::Publisher current_velocity_publisher;
   
 };
 

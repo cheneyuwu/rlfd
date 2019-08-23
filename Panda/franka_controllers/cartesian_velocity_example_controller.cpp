@@ -81,6 +81,7 @@ bool CartesianVelocityExampleController::init(hardware_interface::RobotHW* robot
   this->target_velocity_subscriber =
     node_handle.subscribe("/franka_control/target_velocity", 1, &CartesianVelocityExampleController::target_velocity_callback, this);
   
+  this->current_velocity_publisher = node_handle.advertise<geometry_msgs::Twist>("/franka_control/current_velocity", 1000);
   return true;
 }
 
@@ -147,6 +148,13 @@ void CartesianVelocityExampleController::update(const ros::Time&,
   
   std::array<double, 6> command = {{v_x, v_y, v_z, 0.0, 0.0, 0.0}};
   velocity_cartesian_handle_->setCommand(command);
+
+  geometry_msgs::Twist vel_msg;
+  vel_msg.linear.x = v_x;
+  vel_msg.angular.y = v_y;
+  vel_msg.angular.z = v_z;
+
+  current_velocity_publisher.publish(vel_msg);
 }
   
   
