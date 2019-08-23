@@ -31,12 +31,8 @@ class FrankaPandaRobot:
 
         try:
             self.position_control_launcher.start()
-
             moveit_commander.roscpp_initialize(sys.argv)
-            #rospy.init_node('panda_experiment', anonymous=True)
-
             scene = moveit_commander.PlanningSceneInterface()
-
             panda_robot = panda.PandaClient()
             panda_robot.go_home()
             # May or may not need to sleep - really depends how long it takes
@@ -45,20 +41,14 @@ class FrankaPandaRobot:
             self.position_control_launcher.shutdown()
 
         except rospy.ROSInterruptException:
+            print('Interrupted before completion during reset.')
             return
 
     def enable_vel_control(self):
         try:
-            #uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-            #roslaunch.configure_logging(uuid)
             self.velocity_control_launcher.start()
-
-            # May or may not need to sleep - really depends how long it takes
-            # to finish execution before shutting down panda moveit!
-            # rospy.sleep(3)
-            # launch.shutdown()
-
         except rospy.ROSInterruptException:
+            print('Enable velocity launch failed.')
             return
 
     def disable_vel_control(self):
@@ -83,8 +73,19 @@ if __name__ == '__main__':
     rospy.init_node("panda_arm_env")
     panda_robo = FrankaPandaRobot()
     panda_robo.reset()
+    print('Env reset.')
     panda_robo.enable_vel_control()
+    print('Enable vel control')
+    counter = 0
+    rate = rospy.Rate(2) # 10hz
+    # Don't send full-speed commands too fast
+    # as it drives the controller into a lock state
+    x_pos = 1.0
+    x_decay = 0.9
 
-    while not rospy.is_shutdown():
-        panda_robo.step([0.5, 0.0, 0.0])
-        rospy.sleep(0.1)
+    while not rospy.is_shutdown() and counter < 50:
+        panda_robo.step([x_pos, 0.0, 0.0])
+        counter += 1
+        x_pos *= x_decay
+        rate.sleep()
+    panda_robo.disable_vel_control()
