@@ -261,7 +261,7 @@ class GANDemoShaping(DemoShaping):
         self.o_stats = o_stats
         self.g_stats = g_stats
         self.demo_inputs_tf = demo_inputs_tf
-        demo_state_tf = self._concat_inputs_normalize( # remove _normalize to not normalize the inputs
+        demo_state_tf = self._concat_inputs_normalize(  # remove _normalize to not normalize the inputs
             self.demo_inputs_tf["o"],
             self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
             self.demo_inputs_tf["u"],
@@ -273,7 +273,6 @@ class GANDemoShaping(DemoShaping):
         # Generator & Discriminator
         with tf.variable_scope("generator"):
             input_shape = (None, latent_dim)  # latent space dimensions
-            gen_output_dim = demo_state_tf.shape[-1]
             self.generator = MLP(
                 input_shape=input_shape,
                 layers_sizes=layer_sizes + [demo_state_tf.shape[-1]],
@@ -322,7 +321,7 @@ class GANDemoShaping(DemoShaping):
         """
         Use the output of the GAN's discriminator as potential.
         """
-        state_tf = self._concat_inputs_normalize(o, g, u) # remove _normalize to not normalize the inputs
+        state_tf = self._concat_inputs_normalize(o, g, u)  # remove _normalize to not normalize the inputs
         potential = self.discriminator(state_tf)
         potential = potential * self.potential_weight
         return potential
