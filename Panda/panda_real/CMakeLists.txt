@@ -39,6 +39,8 @@ include_directories(${THIS_PACKAGE_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} ${Boost_
 
 install(PROGRAMS
   src/remap_joy_to_twist.py
+  src/panda_env.py
+  src/panda_client.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
