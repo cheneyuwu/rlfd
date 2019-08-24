@@ -239,13 +239,5 @@ class PandaClient(object):
     def go_home(self):
         """Move the arm to a fixed valid position.
         """
-        pose_goal = geometry_msgs.msg.Pose()
-        pose_goal.orientation.x = 1.0
-        pose_goal.orientation.y = 0.0
-        pose_goal.orientation.z = 0.0
-        pose_goal.orientation.w = 0.0
-        pose_goal.position.x = 0.36
-        pose_goal.position.y = 0.0
-        pose_goal.position.z = 0.37
-
-        self.move_ee_to(pose_goal)
+        self.move_joints_to(self.home_pose_joint_values, wait_to_finish=True)
+        

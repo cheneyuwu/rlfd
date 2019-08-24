@@ -11,29 +11,32 @@ from geometry_msgs.msg import Twist
 from franka_msgs.msg import FrankaState
 
 import numpy as np
+import os
+import signal
 
+PANDA_REAL='/home/florian/code/catkin_ws/src/panda_real/launch'
+#PANDA_REAL='/home/melissa/Workspace/RLProject/Panda/panda_real/launch'
 
 class FrankaPandaRobotBase(object):
 
     def __init__(self):
-
         
-        uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-        roslaunch.configure_logging(uuid)
-        self.position_control_launcher = roslaunch.parent.ROSLaunchParent(
-                uuid, ["/home/melissa/Workspace/RLProject/Panda/panda_real/launch/panda_moveit.launch"])
+        self.dt = 5.0
+        self.rate = rospy.Rate(1.0 / self.dt) # 2hz
+        
+        self.cur_pos = None
+        self.last_pos = None
 
-
-        uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-        roslaunch.configure_logging(uuid)
-        self.velocity_control_launcher = None#subprocess.Popen(["roslaunch"]+ "/home/melissa/Workspace/RLProject/Panda/panda_real/launch/panda_moveit.launch")
-
-
-        self.velocity_control_launcher = roslaunch.parent.ROSLaunchParent(
-                uuid, ["/home/melissa/Workspace/RLProject/Panda/panda_real/launch/franka_arm_vel_controller.launch"])
-
-        self.velocity_publisher = rospy.Publisher(
-            "/franka_control/target_velocity", Twist, queue_size=1)
+        self.enable_pos_control()
+        moveit_commander.roscpp_initialize(sys.argv)
+        self.scene = moveit_commander.PlanningSceneInterface()
+        self.panda_client = panda.PandaClient()
+        self.panda_client.go_home()
+        self.disable_pos_control()
+        
+        self.enable_vel_control()
+        
+        self.velocity_publisher = rospy.Publisher("/franka_control/target_velocity", Twist, queue_size=1)
 
         self.panda_arm_state_sub =  rospy.Subscriber(
             "/franka_state_controller/franka_states",
@@ -44,16 +47,9 @@ class FrankaPandaRobotBase(object):
             "/franka_control/current_velocity",
             Twist,
             self.velocity_callback)
-
-        self.dt = 5.0
-        self.rate = rospy.Rate(1.0 / self.dt) # 2hz
-
-        self.cur_pos = None
-        self.last_pos = None
-
-        #self.enable_vel_control()
-        #self.rate.sleep()
-
+        
+        
+        
     class ActionSpace:
         def __init__(self, seed=0):
             self.random = np.random.RandomState(seed)
@@ -71,57 +67,76 @@ class FrankaPandaRobotBase(object):
     def render(self):
         return
 
-    def close(self):
-        self.disable_enable_vel_controlvel_control()
-
+    def stop(self):
+        self.apply_velocity_action((0,0,0))
+        rospy.sleep(5)
+        
     def step(self, action):
         action = np.clip(action, -1.0, 1.0)
         self.apply_velocity_action(action)
         self.rate.sleep()
-        #return self._get_obs()
+        return self._get_obs()
 
     def reset(self):
-
+        self.stop()
         self.disable_vel_control()
-        self.rate.sleep()
-
+        
         try:
-            self.position_control_launcher.start()
-            moveit_commander.roscpp_initialize(sys.argv)
-            scene = moveit_commander.PlanningSceneInterface()
-            panda_robot = panda.PandaClient()
-            panda_robot.go_home()
-            # May or may not need to sleep - really depends how long it takes
-            # to finish execution before shutting down panda moveit!
-            # rospy.sleep(3)
-            self.position_control_launcher.shutdown()
-
+            self.enable_pos_control()
+            self.panda_client.go_home()
+            self.disable_pos_control()
+            
         except rospy.ROSInterruptException:
             print('Interrupted before completion during reset.')
             return
 
         self.enable_vel_control()
-
+        
         self.last_pos = self.cur_pos
         return self._get_obs()
 
     def enable_vel_control(self):
         try:
-            #self.velocity_control_launcher.start()
-            self.velocity_control_launcher = \
-            subprocess.Popen(["roslaunch"]+ ["/home/melissa/Workspace/RLProject/Panda/panda_real/launch/panda_moveit.launch"])
-
+            uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+            roslaunch.configure_logging(uuid)
+            self.velocity_control_launcher = roslaunch.parent.ROSLaunchParent(
+                uuid, [os.path.join(PANDA_REAL, "franka_arm_vel_controller.launch")])
+            
+            self.velocity_control_launcher.start()
+            self.rate.sleep()
+            rospy.loginfo("STARTED VELOCITY CONTROL")
 
         except rospy.ROSInterruptException:
             print('Enable velocity launch failed.')
             return
 
     def disable_vel_control(self):
-        #self.velocity_control_launcher.shutdown()
-        self.velocity_control_launcher.terminate()
-        #self.velocity_control_launcher.wait()
+        self.velocity_control_launcher.shutdown()
+        self.rate.sleep()
+        rospy.loginfo("SHUT DOWN VELOCITY CONTROL")
 
 
+    def enable_pos_control(self):
+        try:
+            uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+            roslaunch.configure_logging(uuid)
+            
+            self.position_control_launcher = roslaunch.parent.ROSLaunchParent(
+                uuid, [os.path.join(PANDA_REAL, "panda_moveit.launch")])
+            
+            self.position_control_launcher.start()
+            self.rate.sleep()
+            rospy.loginfo("STARTED POSITION CONTROL")
+            
+        except rospy.ROSInterruptException:
+            print('Enable position launch file failed.')
+            return
+
+    def disable_pos_control(self):
+        self.position_control_launcher.shutdown()
+        self.rate.sleep()
+        rospy.loginfo("SHUT DOWN POSITION CONTROL")
+        
     def enable_grip(self):
         pass
 
@@ -129,7 +144,6 @@ class FrankaPandaRobotBase(object):
         pass
 
     def apply_velocity_action(self, action):
-
         twist = Twist()
         twist.linear.x = action[0]
         twist.linear.y = action[1]
@@ -190,32 +204,32 @@ class FrankaPegInHole(FrankaPandaRobotBase):
             {"is_success": is_success, "shaping_reward": -distance},
         )   
 
-if __name__ == '__main__':
-    rospy.init_node("panda_arm_env")
-    velocity_publisher = rospy.Publisher(
-            "/franka_control/target_velocity", Twist, queue_size=1)
-    panda_robo = FrankaPegInHole()
-    #panda_robo.reset()
-    print('Env reset.')
-    panda_robo.enable_vel_control()
-    #print('Enable vel control')
-    counter = 0
-    # Don't send full-speed commands too fast
-    # as it drives the controller into a lock state
-    x_pos = 1.0
-    x_decay = 0.9
 
-    rate = rospy.Rate(5)
-
-    while not rospy.is_shutdown() and counter < 50:
-        twist = Twist()
-        twist.linear.x = x_pos
-        twist.linear.y = 0
-        twist.linear.z = 0
-        velocity_publisher.publish(twist)
-
-        counter += 1
-        x_pos *= x_decay
-        rate.sleep()
+def signal_handler(sig, frame, panda_robot):
+    print ("FINISHED EXPERIMENT")
+    panda_robot.stop()
+    sys.exit(0)
     
-    # panda_robo.close()
+if __name__ == '__main__':
+    rospy.init_node("panda_arm_env", disable_signals=True)
+    panda_robot = FrankaPegInHole()
+    signal.signal(signal.SIGINT, lambda sig, frame: signal_handler(sig, frame, panda_robot) )
+    
+    action = [0.8, 0.0, 0.0]
+
+    counter = 0
+    while not rospy.is_shutdown():
+
+        if counter % 100 == 0:
+            action[0] = -action[0]
+            
+        panda_robot.apply_velocity_action(action)
+        
+        counter += 1
+        rospy.sleep(0.033)
+
+        if counter % 300 == 0 and counter >= 300:
+            panda_robot.reset()
+            action[0] = -action[0]
+        
+    
