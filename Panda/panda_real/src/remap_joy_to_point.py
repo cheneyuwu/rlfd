@@ -47,9 +47,9 @@ class JoyToPose:
         # X - Forward/Backward
         # Y - Left/Right
         # Z - Up/Down
-	pose.x = data.axes[1]
-	pose.y = data.axes[0]
-	pose.z = data.axes[4]
+        pose.x = data.axes[1]
+        pose.y = data.axes[0]
+        pose.z = data.axes[4]
 
         # Note: pose.y is ignored?
         self.cmd_pos_pub.publish(pose)

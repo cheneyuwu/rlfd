@@ -41,6 +41,7 @@ install(PROGRAMS
   src/remap_joy_to_twist.py
   src/panda_env.py
   src/panda_client.py
+  src/panda_launcher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
