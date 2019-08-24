@@ -1,5 +1,3 @@
-import threading
-
 try:
     from mpi4py import MPI
 except ImportError:
@@ -25,11 +23,15 @@ class Normalizer:
         self.eps = eps
         self.default_clip_range = default_clip_range
         self.sess = sess if sess is not None else tf.get_default_session()
-        self.comm = MPI.COMM_WORLD if comm is None and MPI is not None else comm
+        self.comm = comm
 
         self.local_sum = np.zeros(self.size, np.float32)
         self.local_sumsq = np.zeros(self.size, np.float32)
         self.local_count = np.zeros(1, np.float32)
+
+        self.count_pl = tf.placeholder(name="count_pl", shape=(1,), dtype=tf.float32)
+        self.sum_pl = tf.placeholder(name="sum_pl", shape=(self.size,), dtype=tf.float32)
+        self.sumsq_pl = tf.placeholder(name="sumsq_pl", shape=(self.size,), dtype=tf.float32)
 
         self.sum_tf = tf.get_variable(
             initializer=tf.zeros_initializer(),
@@ -58,9 +60,6 @@ class Normalizer:
         self.std = tf.get_variable(
             initializer=tf.ones_initializer(), shape=(self.size,), name="std", trainable=False, dtype=tf.float32
         )
-        self.count_pl = tf.placeholder(name="count_pl", shape=(1,), dtype=tf.float32)
-        self.sum_pl = tf.placeholder(name="sum_pl", shape=(self.size,), dtype=tf.float32)
-        self.sumsq_pl = tf.placeholder(name="sumsq_pl", shape=(self.size,), dtype=tf.float32)
 
         self.update_op = tf.group(
             self.count_tf.assign_add(self.count_pl),
@@ -78,15 +77,13 @@ class Normalizer:
                 ),
             ),
         )
-        self.lock = threading.Lock()
 
     def update(self, v):
         v = v.reshape(-1, self.size)
-
-        with self.lock:
-            self.local_sum += v.sum(axis=0)
-            self.local_sumsq += (np.square(v)).sum(axis=0)
-            self.local_count[0] += v.shape[0]
+        self.local_sum += v.sum(axis=0)
+        self.local_sumsq += (np.square(v)).sum(axis=0)
+        self.local_count[0] += v.shape[0]
+        self._recompute_stats()
 
     def normalize(self, v, clip_range=None):
         if clip_range is None:
@@ -100,24 +97,23 @@ class Normalizer:
         std = Normalizer.reshape_for_broadcasting(self.std, v)
         return mean + v * std
 
-    def synchronize(self, local_sum, local_sumsq, local_count, root=None):
+    def _synchronize(self, local_sum, local_sumsq, local_count, root=None):
         local_sum[...] = self._mpi_average(local_sum)
         local_sumsq[...] = self._mpi_average(local_sumsq)
         local_count[...] = self._mpi_average(local_count)
         return local_sum, local_sumsq, local_count
 
-    def recompute_stats(self):
-        with self.lock:
-            # copy over results.
-            local_count = self.local_count.copy()
-            local_sum = self.local_sum.copy()
-            local_sumsq = self.local_sumsq.copy()
-            # reset.
-            self.local_count[...] = 0
-            self.local_sum[...] = 0
-            self.local_sumsq[...] = 0
+    def _recompute_stats(self):
+        # copy over results.
+        local_count = self.local_count.copy()
+        local_sum = self.local_sum.copy()
+        local_sumsq = self.local_sumsq.copy()
+        # reset.
+        self.local_count[...] = 0
+        self.local_sum[...] = 0
+        self.local_sumsq[...] = 0
         # we perform the synchronization outside of the lock to keep the critical section as short as possible.
-        synced_sum, synced_sumsq, synced_count = self.synchronize(
+        synced_sum, synced_sumsq, synced_count = self._synchronize(
             local_sum=local_sum, local_sumsq=local_sumsq, local_count=local_count
         )
         self.sess.run(
@@ -129,6 +125,7 @@ class Normalizer:
     def _mpi_average(self, x):
         if self.comm is None:
             return x
+        assert MPI != None
         buf = np.zeros_like(x)
         self.comm.Allreduce(x, buf, op=MPI.SUM)
         buf /= self.comm.Get_size()

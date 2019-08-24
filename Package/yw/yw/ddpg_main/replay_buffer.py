@@ -90,6 +90,7 @@ class RingReplayBuffer(ReplayBufferBase):
             assert len(episode_batch[key].shape) == 2 if key != "done" else 1  # (transitions x dim)
             episode_batch[key] = episode_batch[key][: last_idx + 1]
         self.store_episode(episode_batch)
+        return episode_batch
 
     def sample_all(self):
         """ Returns all the transitions currently stored in the replay buffer.
@@ -159,6 +160,7 @@ class ReplayBuffer(ReplayBufferBase):
             assert num_demo is None or num_demo <= episode_batch[key].shape[0], "No enough demonstration data!"
             episode_batch[key] = episode_batch[key][:num_demo]
         self.store_episode(episode_batch)
+        return episode_batch
 
     def sample_all(self):
         """ Returns all the transitions currently stored in the replay buffer.

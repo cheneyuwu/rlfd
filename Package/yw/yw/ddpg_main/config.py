@@ -100,7 +100,6 @@ DEFAULT_PARAMS = {
         "n_batches": 40,  # training batches per cycle
         "shaping_n_epochs": 100,
         "save_interval": 2,
-        "shaping_policy": 0,  # whether or not to use a pre-trained shaping policy
     },
     "seed": 0,
 }

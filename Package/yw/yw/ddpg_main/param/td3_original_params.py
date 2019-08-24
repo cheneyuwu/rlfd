@@ -84,7 +84,6 @@ params_config = {
         "n_batches": 40,
         "shaping_n_epochs": 5000,
         "save_interval": 2,
-        "shaping_policy": 0,
     },
     "seed": 0,
 }
