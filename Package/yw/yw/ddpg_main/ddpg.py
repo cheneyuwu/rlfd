@@ -40,14 +40,12 @@ class DDPG(object):
         fix_T,
         clip_pos_returns,
         clip_return,
-        demo_strategy,
         sample_demo_buffer,
+        batch_size_demo,
         use_demo_reward,
         num_demo,
-        q_filter,
-        batch_size_demo,
-        prm_loss_weight,
-        aux_loss_weight,
+        demo_strategy,
+        bc_params,
         shaping_params,
         replay_strategy,
         gamma,
@@ -89,15 +87,13 @@ class DDPG(object):
             action_l2          (float)        - coefficient for L2 penalty on the actions
             gamma              (float)        - gamma used for Q learning updates
             # Use demonstration to shape critic or actor
-            demo_strategy      (str)          - whether or not to use demonstration with different strategies
             sample_demo_buffer (int)          - whether or not to sample from demonstration buffer
+            batch_size_demo    (int)          - number of samples to be used from the demonstrations buffer, per mpi thread
             use_demo_reward    (int)          - whether or not to assue that demonstration dataset has rewards
             num_demo           (int)          - number of episodes in to be used in the demonstration buffer
-            batch_size_demo    (int)          - number of samples to be used from the demonstrations buffer, per mpi thread
-            q_filter           (boolean)      - whether or not a filter on the q value update should be used when training with demonstartions
-            prm_loss_weight    (float)        - weight corresponding to the primary loss
-            aux_loss_weight    (float)        - weight corresponding to the auxilliary loss also called the cloning loss
-
+            demo_strategy      (str)          - whether or not to use demonstration with different strategies
+            bc_params          (dict)
+            shaping_params     (dict)
         """
         # Store initial args passed into the function
         self.init_args = locals()
@@ -121,16 +117,15 @@ class DDPG(object):
         self.fix_T = fix_T
         self.clip_pos_returns = clip_pos_returns
         self.clip_return = clip_return
-        self.demo_strategy = demo_strategy
         self.sample_demo_buffer = sample_demo_buffer
+        self.batch_size_demo = batch_size_demo
         self.use_demo_reward = use_demo_reward
         self.num_demo = num_demo
-        self.q_filter = q_filter
-        self.batch_size_demo = batch_size_demo
-        self.prm_loss_weight = prm_loss_weight
-        self.aux_loss_weight = aux_loss_weight
-        self.replay_strategy = replay_strategy
+        self.demo_strategy = demo_strategy
+        assert self.demo_strategy in ["none", "bc", "gan", "nf"]
+        self.bc_params = bc_params
         self.shaping_params = shaping_params
+        self.replay_strategy = replay_strategy
         self.gamma = gamma
         self.info = info
         self.comm = comm
@@ -249,14 +244,6 @@ class DDPG(object):
     def load_weights(self, path):
         assert self.comm is None, "MPI adam does not support weight loading."
         self.saver.restore(self.sess, path)
-
-    def save_shaping_weights(self, path):
-        # save the weights of the potential function
-        self.demo_shaping.save_weights(self.sess, path)
-
-    def load_shaping_weights(self, path):
-        # save the weights of the potential function
-        self.demo_shaping.load_weights(self.sess, path)
 
     def train(self):
         batch = self.sample_batch()
@@ -551,17 +538,22 @@ class DDPG(object):
         # Actor Loss
         if self.demo_strategy == "bc":
             assert self.sample_demo_buffer, "must sample from the demonstration buffer to use behavior cloning"
-            # primary loss scaled by it's respective weight prm_loss_weight
-            pi_loss_tf = -self.prm_loss_weight * tf.reduce_mean(self.main_q_pi_tf)
             # L2 loss on action values scaled by the same weight prm_loss_weight
-            pi_loss_tf += (
-                self.prm_loss_weight * self.action_l2 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
+            pi_loss_tf = (
+                self.bc_params["prm_loss_weight"]
+                * self.action_l2
+                * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
             )
+            # primary loss scaled by it's respective weight prm_loss_weight
+            if self.bc_params["pure_bc"]:
+                assert not self.bc_params["q_filter"]
+            else:
+                pi_loss_tf += -self.bc_params["prm_loss_weight"] * tf.reduce_mean(self.main_q_pi_tf)
             # define the cloning loss on the actor's actions only on the samples which adhere to the above masks
             mask = np.concatenate((np.zeros(self.batch_size), np.ones(self.batch_size_demo)), axis=0)
             actor_pi_tf = tf.boolean_mask((self.main_pi_tf), mask)
             demo_pi_tf = tf.boolean_mask((input_u_tf), mask)
-            if self.q_filter:
+            if self.bc_params["q_filter"]:
                 q_filter_mask = tf.reshape(tf.boolean_mask(self.main_q_tf > self.main_q_pi_tf, mask), [-1])
                 # use to be tf.reduce_sum, however, use tf.reduce_mean makes the loss function independent from number
                 # of demonstrations
@@ -576,7 +568,7 @@ class DDPG(object):
                 # of demonstrations
                 cloning_loss_tf = tf.reduce_mean(tf.square(actor_pi_tf - demo_pi_tf))
             # adding the cloning loss to the actor loss as an auxilliary loss scaled by its weight aux_loss_weight
-            pi_loss_tf += self.aux_loss_weight * cloning_loss_tf
+            pi_loss_tf += self.bc_params["aux_loss_weight"] * cloning_loss_tf
         elif self.demo_shaping != None:  # any type of shaping method
             pi_loss_tf = -tf.reduce_mean(self.main_q_pi_tf)
             pi_loss_tf += -tf.reduce_mean(self.demo_actor_shaping)

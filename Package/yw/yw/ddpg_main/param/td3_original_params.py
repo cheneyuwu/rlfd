@@ -26,14 +26,17 @@ params_config = {
         # double q learning
         "polyak": 0.995,
         # use demonstrations
-        "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         "sample_demo_buffer": 0,
+        "batch_size_demo": 50,
         "use_demo_reward": 0,
         "num_demo": 0,
-        "batch_size_demo": 50,
-        "q_filter": 1,
-        "prm_loss_weight": 0.001,
-        "aux_loss_weight": 0.0078,
+        "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
+        "bc_params": {
+            "pure_bc": False,
+            "q_filter": 1,
+            "prm_loss_weight": 0.001,
+            "aux_loss_weight": 0.0078,
+        },
         "shaping_params": {
             "batch_size": 128,
             "nf": {

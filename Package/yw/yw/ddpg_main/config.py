@@ -36,14 +36,17 @@ DEFAULT_PARAMS = {
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
         # use demonstrations
-        "demo_strategy": "none",  # choose between ["none", "bc", "nf", "gan"]
         "sample_demo_buffer": 0,  # whether or not to sample from demonstration buffer
+        "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread
         "use_demo_reward": 0,  # whether or not to assume that demonstrations have rewards, and train it on the critic
         "num_demo": 0,  # number of expert demo episodes
-        "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread
-        "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
-        "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
-        "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss (also called the cloning loss)
+        "demo_strategy": "none",  # choose between ["none", "bc", "nf", "gan"]
+        "bc_params": {
+            "pure_bc": False,
+            "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
+            "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
+            "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss (also called the cloning loss)
+        },
         "shaping_params": {
             "batch_size": 128,  # batch size for training the potential function (gan and nf)
             "nf": {
