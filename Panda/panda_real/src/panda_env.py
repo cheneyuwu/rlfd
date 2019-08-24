@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 
+import os
 import sys
 import subprocess
+import signal
+
+import numpy as np
 
 import rospy
 import roslaunch
@@ -11,11 +15,8 @@ from geometry_msgs.msg import Twist
 from franka_msgs.msg import FrankaState
 from franka_control.msg import ErrorRecoveryActionGoal
 
-import numpy as np
-import os
-import signal
 
-#PANDA_REAL='/home/florian/code/catkin_ws/src/panda_real/launch'
+# PANDA_REAL='/home/florian/code/catkin_ws/src/panda_real/launch'
 PANDA_REAL='/home/melissa/Workspace/RLProject/Panda/panda_real/launch'
 
 class FrankaPandaRobotBase(object):
@@ -39,7 +40,6 @@ class FrankaPandaRobotBase(object):
         self.panda_client = panda.PandaClient()
         self.panda_client.go_home()
         self.disable_pos_control()
-        
         self.enable_vel_control()
         
         self.velocity_publisher = rospy.Publisher("/franka_control/target_velocity", Twist, queue_size=1)
@@ -59,11 +59,8 @@ class FrankaPandaRobotBase(object):
         # Forward/Backward [0.33, 0.7]
         # Left/Right [-0.4, 0.35]
         # Up/Down [0.005, 0.32]
-        self.safety_region = np.array(
-            [[0.33, 0.7], [-0.4, 0.35], [0.005, 0.41]])
+        self.safety_region = np.array([[0.4, 0.5], [-0.2, 0.2], [0.2, 0.4]])
         self.enable_safe_zone = True
-
-        self.reset_required = False
 
         # rostopic pub -1 /franka_control/error_recovery/goal franka_control/ErrorRecoveryActionGoal "{}"
         self.error_recovery_pub = rospy.Publisher("/franka_control/error_recovery/goal",
@@ -88,11 +85,7 @@ class FrankaPandaRobotBase(object):
         return
         
     def step(self, action):
-        action = np.clip(action, -1.0, 1.0)
-        action = action[:3]
-
-        if not self.valid_act_pose_based():
-            action = self.action_overwrite(action)
+        action = self._process_action(action)
 
         self.apply_velocity_action(action)
         self.rate.sleep()
@@ -187,95 +180,20 @@ class FrankaPandaRobotBase(object):
         twist.linear.z = action[2]
         self.velocity_publisher.publish(twist)
 
-    def valid_act_pose_based(self):
-        """If the robot is in invalid zone, disallow applying
-        non-zero actions.
-        """
-        action_valid = True
-        if self.enable_safe_zone:
-            ############
-            # Linear.x
-            ############
-            if self.cur_pos[0] < self.safety_region[0][0] or \
-                    self.cur_pos[0] > self.safety_region[0][1]:
-                print('Entered invalid x zone.')
-                action_valid = False
-
-            ############
-            # Linear.y
-            ############
-            if self.cur_pos[1] < self.safety_region[1][0] or \
-                    self.cur_pos[1] > self.safety_region[1][1]:
-                print('Entered invalid y zone.')
-                action_valid = False
-
-            ############
-            # Linear.z
-            ############
-            if self.cur_pos[2] < self.safety_region[2][0] or \
-                    self.cur_pos[2] > self.safety_region[2][1]:
-                print('Entered invalid z zone.')
-                action_valid = False
-        return action_valid
-
-
-    def action_overwrite(self, action):
-        """ Disallow actions that take the robot into unsafe zones,
-        by overwriting them to be zero.
-        """
-        ##############################
-        # Linear.x allow forward move
-        ##############################
-        if self.cur_pos[0] < self.safety_region[0][0]:
-            # Accept forward/positive command only.
-            if action[0] < 0:
-                action[0] = 0.0
-        ##############################
-        # Linear.x allow backward move
-        ##############################
-        if self.cur_pos[0] > self.safety_region[0][1]:
-            # Accept backward/negative command
-            if action[0] > 0:
-                action[0] = 0.0              
-
-        ##############################
-        # Linear.y allow right move
-        ##############################
-        if self.cur_pos[1] < self.safety_region[1][0]:
-            # Accept right/negative command
-            if action[1] > 0:
-                action[1] = 0.0
-        ##############################
-        # Linear.y allow left move
-        ##############################
-        if self.cur_pos[1] > self.safety_region[1][1]:
-            # Accept left/positive command
-            if action[1] < 0:
-                action[1] = 0.0
-
-        ##############################
-        # Linear.z allow down move
-        ##############################
-        if self.cur_pos[2] < self.safety_region[2][0]:
-            # Accept down command
-            if action[2] < 0:
-                action[2] = 0.0
-        ##############################
-        # Linear.z allow up move
-        ##############################
-        if self.cur_pos[2] > self.safety_region[2][1]:
-            # Accept up command
-            if action[2] > 0:
-                action[2] = 0.0
+    def _process_action(self, action):
+        cur_pos = self.cur_pos
+        clip_min = np.where(cur_pos > self.safety_region[:, 0], -1.0, 0.0)
+        clip_max = np.where(cur_pos < self.safety_region[:, 1], 1.0, 0.0)
+        action = action[:3]
+        action = np.clip(action, clip_min, clip_max)
         return action
-
+        
     def _get_obs(self):
         raise NotImplementedError
 
     def _stop(self):
         self.apply_velocity_action((0,0,0))
         rospy.sleep(5)
-
 
     def _state_callback(self, data):
         self.cur_pos = np.asarray(data.O_T_EE[12:15])
@@ -331,26 +249,27 @@ class FrankaPegInHole(FrankaPandaRobotBase):
 
 def signal_handler(sig, frame, panda_robot):
     print ("FINISHED EXPERIMENT")
-    panda_robot.stop()
+    panda_robot._stop()
     sys.exit(0)
     
 if __name__ == '__main__':
     panda_robot = FrankaPegInHole()    
-    action = [0.8, 0.0, 0.0]
+    actions = (
+        [-1.0, -1.0, -1.0],
+        [+1.0, -1.0, -1.0],
+        [+1.0, +1.0, -1.0],
+        [-1.0, +1.0, -1.0],
+        [-1.0, -1.0, +1.0],
+        [+1.0, -1.0, +1.0],
+        [+1.0, +1.0, +1.0],
+        [-1.0, +1.0, +1.0],
+    )
 
     counter = 0
+    panda_robot.reset()
     while not rospy.is_shutdown():
-
-        if counter % 100 == 0:
-            action[0] = -action[0]
-            
-        panda_robot.apply_velocity_action(action)
-        
-        counter += 1
-        rospy.sleep(0.033)
-
-        if counter % 300 == 0 and counter >= 300:
-            panda_robot.reset()
-            action[0] = -action[0]
+        for action in actions:
+            for _ in range(50):
+                panda_robot.step(action)
         
     
