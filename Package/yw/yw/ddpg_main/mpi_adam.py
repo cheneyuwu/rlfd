@@ -22,19 +22,20 @@ class MpiAdam(object):
         self.t = 0
         self.setfromflat = U.SetFromFlat(var_list)
         self.getflat = U.GetFlat(var_list)
-        self.comm = MPI.COMM_WORLD if comm is None and MPI is not None else comm
+        self.comm = comm
 
     def update(self, localg, stepsize):
         if self.t % 100 == 0:
             self.check_synced()
         localg = localg.astype("float32")
-        if self.comm is not None:
+        if self.comm is None:
+            globalg = np.copy(localg)
+        else:
+            assert MPI is not None
             globalg = np.zeros_like(localg)
             self.comm.Allreduce(localg, globalg, op=MPI.SUM)
             if self.scale_grad_by_procs:
                 globalg /= self.comm.Get_size()
-        else:
-            globalg = np.copy(localg)
 
         self.t += 1
         a = stepsize * np.sqrt(1 - self.beta2 ** self.t) / (1 - self.beta1 ** self.t)
