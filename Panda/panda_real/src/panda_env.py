@@ -27,9 +27,13 @@ class FrankaPandaRobotBase(object):
         # Ctrl/C keyboard node exit handler.
         signal.signal(signal.SIGINT, lambda sig, frame: signal_handler(sig, frame, self) )
         
+        # Ros sleep rate. This ensures there is enough delay in between
+        # controller switch calls. If not set appropriately, it can cause
+        # undesirable behaviour during controller switch.
+        self.rate = rospy.Rate(1.0 / 5.0) # 0.2hz
         self.dt = 0.2
-        self.rate = rospy.Rate(1.0 / self.dt) # 5hz
-        
+        self.step_size = rospy.Rate(1.0 / self.dt) # 5hz
+
         self.cur_pos = None
         self.last_pos = None
         self.action_space = self.ActionSpace()
@@ -57,7 +61,6 @@ class FrankaPandaRobotBase(object):
             Twist,
             self._velocity_callback)
         
-
         # Safety zone constraint based on joint positions published on
         # /franka_state_controller/franka_states. Order is x,y,z.
         # Forward/Backward [0.33, 0.7]
@@ -70,10 +73,43 @@ class FrankaPandaRobotBase(object):
         self.error_recovery_pub = rospy.Publisher("/franka_control/error_recovery/goal",
             ErrorRecoveryActionGoal, queue_size=1)
 
-        self._stop()
-        self._go_to_est_home()
+    def run_go_to_boundary_test(self):
+        actions = (
+            [-1.0, -1.0, -1.0],
+            [+1.0, -1.0, -1.0],
+            [+1.0, +1.0, -1.0],
+            [-1.0, +1.0, -1.0],
+            [-1.0, -1.0, +1.0],
+            [+1.0, -1.0, +1.0],
+            [+1.0, +1.0, +1.0],
+            [-1.0, +1.0, +1.0],
+        )
 
-        
+        counter = 0
+        self.reset()
+        while not rospy.is_shutdown():
+            for action in actions:
+                for _ in range(50):
+                    self.step(action)
+
+    def run_controller_switch_test(self):
+        action = [0.8, 0.0, 0.0]
+
+        counter = 0
+        while not rospy.is_shutdown():
+
+            if counter % 100 == 0:
+                action[0] = -action[0]
+                
+            self.apply_velocity_action(action)
+            
+            counter += 1
+            rospy.sleep(0.033)
+
+            if counter % 300 == 0 and counter >= 300:
+                self.reset()
+                action[0] = -action[0]
+
     class ActionSpace:
         def __init__(self, seed=0):
             self.random = np.random.RandomState(seed)
@@ -95,52 +131,53 @@ class FrankaPandaRobotBase(object):
         action = self._process_action(action)
 
         self.apply_velocity_action(action)
-        self.rate.sleep()
+        self.step_size.sleep()
 
         return self._get_obs()
 
     def reset(self):
+        self._move_up()
         self._stop()
+        self.disable_vel_control()
+        
+        try:
+            self.enable_pos_control()
+            self.panda_client.go_home()
+            self.disable_pos_control()
+            
+        except rospy.ROSInterruptException:
+            print('Interrupted before completion during reset.')
+            return
 
-        # use vel controller to go home
-        self._go_to_est_home()
-        self._stop()
-
-        # use position controller to go home 
-        # self.disable_vel_control()
-        # # try:
-        # self.enable_pos_control()
-        # self.panda_client.go_home()
-        # self.disable_pos_control()
-        # # except rospy.ROSInterruptException:
-        # #     print('Interrupted before completion during reset.')
-        # #     return
-        # self.enable_vel_control()
+        self.enable_vel_control()
         
         self.last_pos = self.cur_pos
         return self._get_obs()[0]
     
-    def _go_to_est_home(self):
+    def _move_up(self):
+        """If too close to the boundaries of the hole,
+        move up slightly, before returning home.
+        """
+        if not self.cur_pos[2] < 0.15:
+            return
         max_u = self.max_u
         self.max_u = 4.0
-        goals = [np.array((0.5, 0.0, 0.4))]
-        if self.cur_pos[2] < 0.15:
-            goals.append(np.array(self.cur_pos) + np.array([0.0, 0.0, 0.1]))
-        goals.reverse()
-        for goal in goals:
+        goal = (np.array(self.cur_pos) + np.array([0.0, 0.0, 0.1]))
+        last_pos = self.cur_pos
+        while ((np.linalg.norm(goal - self.cur_pos) >= 0.01) or (np.linalg.norm(last_pos - self.cur_pos) >= 0.01)) :
+            action = (goal - self.cur_pos) * 10.0
+            action = self._process_action(action)
             last_pos = self.cur_pos
-            while ((np.linalg.norm(goal - self.cur_pos) >= 0.01) or (np.linalg.norm(last_pos - self.cur_pos) >= 0.01)) :
-                action = (goal - self.cur_pos) * 10.0
-                action = self._process_action(action)
-                last_pos = self.cur_pos
-                self.apply_velocity_action(action)
-                self.rate.sleep()
+            self.apply_velocity_action(action)
+            self.step_size.sleep()
         self.max_u = max_u
 
     def send_control_recovery_message(self):
-         # Same as posting :
-         # 'rostopic pub -1 /franka_control/error_recovery/goal 
-         #  franka_control/ErrorRecoveryActionGoal "{}"'
+        """Publish an empty `ErrorRecoveryActionGoal`
+        to the topic `/franka_control/error_recovery/goal`.
+        This ensures all previous exceptions occured controller
+        are cleared.
+        """
         empty_recovery_msg = ErrorRecoveryActionGoal()
         self.error_recovery_pub.publish(empty_recovery_msg)
 
@@ -219,7 +256,7 @@ class FrankaPandaRobotBase(object):
 
     def _stop(self):
         self.apply_velocity_action((0,0,0))
-        rospy.sleep(2)
+        rospy.sleep(5)
 
     def _state_callback(self, data):
         self.cur_pos = np.asarray(data.O_T_EE[12:15])
@@ -231,7 +268,7 @@ class FrankaPegInHole(FrankaPandaRobotBase):
     
     def __init__(self):
         super(FrankaPegInHole, self).__init__()
-        self.goal = np.array((0.475, -0.005, 0.1))
+        self.goal = np.array((0.455, -0.005, 0.1))
         self.threshold = 0.05
         self.sparse = False
         self._max_episode_steps = 50
@@ -279,23 +316,9 @@ def signal_handler(sig, frame, panda_robot):
     sys.exit(0)
     
 if __name__ == '__main__':
-    panda_robot = FrankaPegInHole()    
-    actions = (
-        [-1.0, -1.0, -1.0],
-        [+1.0, -1.0, -1.0],
-        [+1.0, +1.0, -1.0],
-        [-1.0, +1.0, -1.0],
-        [-1.0, -1.0, +1.0],
-        [+1.0, -1.0, +1.0],
-        [+1.0, +1.0, +1.0],
-        [-1.0, +1.0, +1.0],
-    )
-
-    counter = 0
-    panda_robot.reset()
-    while not rospy.is_shutdown():
-        for action in actions:
-            for _ in range(50):
-                panda_robot.step(action)
+    panda_robot = FrankaPegInHole()
+    panda_robot.run_controller_switch_test()
+    #panda_robot.run_go_to_boundary_test()
         
+
     
