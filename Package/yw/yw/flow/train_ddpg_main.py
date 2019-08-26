@@ -19,139 +19,178 @@ from yw.util.mpi_util import mpi_average
 from itertools import combinations  # for dimension projection
 
 
-def train(
-    comm,
-    root_dir,
-    save_interval,
-    policy,
-    rollout_worker,
-    evaluator,
-    shaping_n_epochs,
-    n_epochs,
-    n_batches,
-    n_cycles,
-    shaping_policy,
-    **kwargs
-):
-    logger.info(
-        "Training the RL agent with n_epochs: {:d}, n_cycles: {:d}, n_batches: {:d}.".format(
-            n_epochs, n_cycles, n_batches
-        )
-    )
+class Trainer:
+    def __init__(
+        self,
+        comm,
+        root_dir,
+        save_interval,
+        policy,
+        rollout_worker,
+        evaluator,
+        shaping_n_epochs,
+        n_epochs,
+        n_batches,
+        n_cycles,
+        **kwargs
+    ):
+        # Params
+        self.comm = comm
+        self.rank = comm.Get_rank() if comm is not None else 0
+        self.root_dir = root_dir
+        self.save_interval = save_interval
+        self.policy = policy
+        self.rollout_worker = rollout_worker
+        self.evaluator = evaluator
+        self.shaping_n_epochs = shaping_n_epochs
+        self.n_epochs = n_epochs
+        self.n_batches = n_batches
+        self.n_cycles = n_cycles
 
-    rank = comm.Get_rank() if comm != None else 0
+        # Setup paths
+        # checkpoint files
+        self.ckpt_save_path = os.path.join(self.root_dir, "rl_ckpt")
+        os.makedirs(self.ckpt_save_path, exist_ok=True)
+        self.ckpt_weight_path = os.path.join(self.ckpt_save_path, "rl_weights.ckpt")
+        self.ckpt_rb_path = os.path.join(self.ckpt_save_path, "rb_data.npz")
+        self.ckpt_rollout_path = os.path.join(self.ckpt_save_path, "rollout_history.pkl")
+        self.ckpt_evaluator_path = os.path.join(self.ckpt_save_path, "evaluator_history.pkl")
+        self.ckpt_trainer_path = os.path.join(self.ckpt_save_path, "trainer.pkl")
+        # rl (cannot restart training)
+        policy_save_path = os.path.join(self.root_dir, "rl")
+        os.makedirs(policy_save_path, exist_ok=True)
+        best_policy_path = os.path.join(policy_save_path, "policy_best.pkl")
+        latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
+        periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")
+        # queries
+        query_shaping_save_path = os.path.join(self.root_dir, "query_shaping")
+        os.makedirs(query_shaping_save_path, exist_ok=True)
+        query_policy_save_path = os.path.join(self.root_dir, "query_policy")
+        os.makedirs(query_policy_save_path, exist_ok=True)
 
-    assert root_dir != None
-    # rl
-    policy_save_path = os.path.join(root_dir, "rl")
-    os.makedirs(policy_save_path, exist_ok=True)
-    latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
-    best_policy_path = os.path.join(policy_save_path, "policy_best.pkl")
-    periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")
-    # shaping
-    shaping_save_path = os.path.join(root_dir, "shaping")
-    os.makedirs(shaping_save_path, exist_ok=True)
-    latest_shaping_path = os.path.join(shaping_save_path, "shaping_latest.ckpt")
-    # queries
-    query_shaping_save_path = os.path.join(root_dir, "query_shaping")
-    os.makedirs(query_shaping_save_path, exist_ok=True)
-    query_policy_save_path = os.path.join(root_dir, "query_policy")
-    os.makedirs(query_policy_save_path, exist_ok=True)
+        # Adding demonstration data to the demonstration buffer
+        if self.policy.demo_strategy != "none" or self.policy.sample_demo_buffer:
+            demo_file = os.path.join(self.root_dir, "demo_data.npz")
+            assert os.path.isfile(demo_file), "demonstration training set does not exist"
+            self.policy.init_demo_buffer(demo_file, update_stats=self.policy.sample_demo_buffer)
 
-    # Adding demonstration data to the demonstration buffer
-    if policy.demo_strategy != "none" or policy.sample_demo_buffer:
-        demo_file = os.path.join(root_dir, "demo_data.npz")
-        assert os.path.isfile(demo_file), "demonstration training set does not exist"
-        policy.init_demo_buffer(demo_file, update_stats=policy.sample_demo_buffer)
+        # Restart-training
+        self.best_success_rate = -1
+        self.epoch = 0
+        self.restart = self._load_states()
 
-    # Pre-Training a potential function
-    if policy.demo_strategy in ["nf", "gan"]:
-        if not shaping_policy:
-            logger.info("Training the policy for reward shaping.")
-            for epoch in range(shaping_n_epochs):
-                loss = policy.train_shaping()
+        # Pre-Training a potential function (currently we do not support restarting from this state)
+        if not self.restart:
+            self._train_potential()
+            self._store_states()
 
-                if rank == 0 and epoch % (shaping_n_epochs / 100) == (shaping_n_epochs / 100 - 1):
-                    logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
+        # Train the rl agent
+        for epoch in range(self.epoch, self.n_epochs):
+            # store anything we need into a numpyz file.
+            self.policy.query_policy(
+                filename=os.path.join(
+                    query_policy_save_path, "query_{:03d}.npz".format(epoch)
+                ),  # comment to show plot
+                fid=3,
+            )
+            # train
+            self.rollout_worker.clear_history()
+            for _ in range(self.n_cycles):
+                episode = self.rollout_worker.generate_rollouts()
+                self.policy.store_episode(episode)
+                for _ in range(self.n_batches):
+                    self.policy.train()
+                self.policy.check_train()
+                self.policy.update_target_net()
+            self.epoch = epoch + 1
+            # test
+            self.evaluator.clear_history()
+            self.evaluator.generate_rollouts()
+            # log
+            self._log(epoch)
+            # save the policy
+            save_msg = ""
+            success_rate = mpi_average(self.evaluator.current_success_rate(), comm=self.comm)
+            if self.rank == 0 and success_rate >= self.best_success_rate:
+                self.best_success_rate = success_rate
+                logger.info("New best success rate: {}.".format(self.best_success_rate))
+                self.policy.save_policy(best_policy_path)
+                save_msg += "best, "
+            if self.rank == 0 and self.save_interval > 0 and epoch % self.save_interval == (self.save_interval - 1):
+                policy_path = periodic_policy_path.format(epoch)
+                self.policy.save_policy(policy_path)
+                self._store_states()
+                save_msg += "periodic, "
+            if self.rank == 0:
+                self.policy.save_policy(latest_policy_path)
+                save_msg += "latest"
+            logger.info("Saving", save_msg, "policy.")
 
-                if rank == 0 and epoch % 100 == 0:
-                    logger.info("Saving latest policy to {}.".format(latest_shaping_path))
-                    policy.save_shaping_weights(latest_shaping_path)
-            # UNCOMMENT to save trained potential functions
-            # if rank == 0:
-            #     logger.info("Saving latest policy to {}.".format(latest_shaping_path))
-            #     policy.save_shaping_weights(latest_shaping_path)
-        else:
-            logger.info("Using the provided policy weights: {}".format(latest_shaping_path))
-            policy.load_shaping_weights(latest_shaping_path)
-            # query
-            # dims = list(range(policy.dimo + policy.dimg))
-            # for dim1, dim2 in combinations(dims, 2):
-            #     policy.query_potential(
-            #         dim1=dim1,
-            #         dim2=dim2,
-            #         filename=os.path.join(
-            #             query_shaping_save_path, "dim_{}_{}_{:04d}.jpg".format(dim1, dim2, epoch)
-            #         ),
-            #     )
+        self._mpi_sanity_check()
 
-    best_success_rate = -1
+    def _train_potential(self):
+        if not self.policy.demo_strategy in ["nf", "gan"]:
+            return
+        logger.info("Training the policy for reward shaping.")
+        for epoch in range(self.shaping_n_epochs):
+            loss = self.policy.train_shaping()
+            if self.rank == 0 and epoch % (self.shaping_n_epochs / 100) == (self.shaping_n_epochs / 100 - 1):
+                logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
 
-    for epoch in range(n_epochs):
-
-        # Store anything we need into a numpyz file.
-        policy.query_policy(
-            filename=os.path.join(query_policy_save_path, "query_{:03d}.npz".format(epoch)),  # comment to show plot
-            fid=3,
-        )
-
-        # Train
-        rollout_worker.clear_history()
-        for cycle in range(n_cycles):
-            episode = rollout_worker.generate_rollouts()
-            policy.store_episode(episode)
-            for batch in range(n_batches):
-                policy.train()
-            policy.check_train()
-            policy.update_target_net()
-
-        # Test
-        evaluator.clear_history()
-        evaluator.generate_rollouts()
-
-        # Log
+    def _log(self, epoch):
         logger.record_tabular("epoch", epoch)
-        for key, val in evaluator.logs("test"):
-            logger.record_tabular(key, mpi_average(val, comm=comm))
-        for key, val in rollout_worker.logs("train"):
-            logger.record_tabular(key, mpi_average(val, comm=comm))
-        for key, val in policy.logs():
-            logger.record_tabular(key, mpi_average(val, comm=comm))
-        if rank == 0:
+        for key, val in self.evaluator.logs("test"):
+            logger.record_tabular(key, mpi_average(val, comm=self.comm))
+        for key, val in self.rollout_worker.logs("train"):
+            logger.record_tabular(key, mpi_average(val, comm=self.comm))
+        for key, val in self.policy.logs():
+            logger.record_tabular(key, mpi_average(val, comm=self.comm))
+        if self.rank == 0:
             logger.dump_tabular()
 
-        # Save the policy if it's better than the previous ones
-        success_rate = mpi_average(evaluator.current_success_rate(), comm=comm)
-        if rank == 0 and success_rate >= best_success_rate:
-            best_success_rate = success_rate
-            logger.info("New best success rate: {}.".format(best_success_rate))
-            logger.info("Saving policy to {}.".format(best_policy_path))
-            evaluator.save_policy(best_policy_path)
-        if rank == 0 and save_interval > 0 and epoch % save_interval == 0:
-            policy_path = periodic_policy_path.format(epoch)
-            logger.info("Saving periodic policy to {}.".format(policy_path))
-            evaluator.save_policy(policy_path)
-        if rank == 0:
-            logger.info("Saving latest policy to {}.".format(latest_policy_path))
-            evaluator.save_policy(latest_policy_path)
+    def _store_states(self):
+        if self.comm is not None:
+            return
+        self.policy.save_weights(self.ckpt_weight_path)
+        self.policy.save_replay_buffer(self.ckpt_rb_path)
+        self.rollout_worker.dump_history_to_file(self.ckpt_rollout_path)
+        self.evaluator.dump_history_to_file(self.ckpt_evaluator_path)
+        with open(self.ckpt_trainer_path, "wb") as f:
+            pickle.dump([self.epoch, self.best_success_rate], f)
+        logger.info("Saving periodic check point.")
 
-        # Make sure that different threads have different seeds
-        if comm != None:
-            local_uniform = np.random.uniform(size=(1,))
-            root_uniform = local_uniform.copy()
-            comm.Bcast(root_uniform, root=0)
-            if rank != 0:
-                assert local_uniform[0] != root_uniform[0]
+    def _load_states(self):
+        restart = False
+        restart_msg = ""
+        if os.path.exists(os.path.join(self.ckpt_save_path, "checkpoint")):
+            self.policy.load_weights(self.ckpt_weight_path)
+            restart = True
+            restart_msg += "rl weights, "
+        if os.path.exists(self.ckpt_rb_path):
+            self.policy.load_replay_buffer(self.ckpt_rb_path)
+            restart_msg += "replay buffer, "
+        if os.path.exists(self.ckpt_rollout_path):
+            self.rollout_worker.load_history_from_file(self.ckpt_rollout_path)
+            restart_msg += "rollout history, "
+        if os.path.exists(self.ckpt_evaluator_path):
+            self.evaluator.load_history_from_file(self.ckpt_evaluator_path)
+            restart_msg += "evaluator history, "
+        if os.path.exists(self.ckpt_trainer_path):
+            with open(self.ckpt_trainer_path, "rb") as f:
+                self.epoch, self.best_success_rate = pickle.load(f)
+            restart_msg += "weight"
+        if restart_msg != "":
+            logger.info("Loading", restart_msg, "and restarting the training process.")
+        return restart
+
+    def _mpi_sanity_check(self):
+        if self.comm is None:
+            return
+        local_uniform = np.random.uniform(size=(1,))
+        root_uniform = local_uniform.copy()
+        self.comm.Bcast(root_uniform, root=0)
+        if self.rank != 0:
+            assert local_uniform[0] != root_uniform[0]
 
 
 def main(root_dir, comm=None, **kwargs):
@@ -164,7 +203,7 @@ def main(root_dir, comm=None, **kwargs):
     num_cpu = comm.Get_size() if comm is not None else 1
     rank = comm.Get_rank() if comm is not None else 0
 
-    if MPI.COMM_WORLD.Get_rank() == 0 and rank == 0:
+    if (MPI is None or MPI.COMM_WORLD.Get_rank() == 0) and rank == 0:
         logger.configure(dir=root_dir, format_strs=["stdout", "log", "csv"], log_suffix="")
     elif rank == 0:
         logger.configure(dir=root_dir, format_strs=["log", "csv"], log_suffix="")
@@ -174,8 +213,14 @@ def main(root_dir, comm=None, **kwargs):
 
     log_level = 2  # 1 for debugging, 2 for info
     logger.set_level(log_level)
-    logger.info("Launching the training process with {} cpu core(s).".format(num_cpu))
     logger.info("Setting log level to {}.".format(log_level))
+    logger.info("Launching the training process with {} cpu core(s).".format(num_cpu))
+
+    # since mpi_adam does not support restarting, we set comm to None is only 1 cpu core so policy is trained with the
+    # default adam optimizer
+    if num_cpu == 1:
+        comm = None  # set comm to None so that we can restart training
+        logger.info("Changing comm to None since single thread.")
 
     # Get default params from config and update params.
     param_file = os.path.join(root_dir, "copied_params.json")
@@ -207,7 +252,7 @@ def main(root_dir, comm=None, **kwargs):
     evaluator = config.config_evaluator(params=params, policy=policy)
 
     # Launch the training script
-    train(
+    Trainer(
         comm=comm,
         root_dir=root_dir,
         policy=policy,

@@ -81,7 +81,7 @@ class FetchPickAndPlaceDemoGenerator:
             weight = np.array((0.2, 0.8, 0.5)) + np.random.normal(scale=0.05, size=3)
         else:
             assert False
-        self._move_to_interm_goal(obj_pos_dim, goal_dim,weight)
+        self._move_to_interm_goal(obj_pos_dim, goal_dim, weight)
         self._move_to_goal(obj_pos_dim, goal_dim)
         # open the gripper
         self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.03, gripper_open=True)
@@ -99,7 +99,7 @@ class FetchPickAndPlaceDemoGenerator:
 
         self._reset()
         # move to the goal
-        self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0,0.0,np.random.uniform(0.15, 0.2))))
+        self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0, 0.0, np.random.uniform(0.15, 0.2))))
         self._move_to_goal(obj_pos_dim, goal_dim)
         # stay until the end
         self._stay()
@@ -214,6 +214,7 @@ class FetchPickAndPlaceDemoGenerator:
 
             self._step(action)
 
+
 def main():
 
     # Change the following parameters
@@ -226,6 +227,7 @@ def main():
     #   FetchPickAndPlace: eps = 50
     #   FetchMoveAutoPlace: 2 objects eps = 80
     #   FetchMove: 2 objects eps = 70
+    #   FetchPegInHole: eps = 25
     # End
 
     generator = FetchPickAndPlaceDemoGenerator(env=env, system_noise_scale=system_noise_scale, render=render)
@@ -236,13 +238,13 @@ def main():
 
     for i in range(num_itr):
         print("Iteration number: ", i)
-        if env_name == "FetchMove-v1":
-            episode_obs, episode_act, episode_rwd, episode_info = generator.generate_move()
-        elif env_name == "FetchPegInHole-v1":
-            episode_obs, episode_act, episode_rwd, episode_info = generator.generate_peg_in_hole()
-        elif env_name == "FetchMoveAutoPlace-v1":
+        if env_name.startswith("FetchMoveAutoPlace"):
             episode_obs, episode_act, episode_rwd, episode_info = generator.generate_move_auto_place()
-        elif env_name == "FetchPickAndPlace-v1":
+        elif env_name.startswith("FetchMove"):
+            episode_obs, episode_act, episode_rwd, episode_info = generator.generate_move()
+        elif env_name.startswith("FetchPegInHole"):
+            episode_obs, episode_act, episode_rwd, episode_info = generator.generate_peg_in_hole()
+        elif env_name.startswith("FetchPickAndPlace"):
             episode_obs, episode_act, episode_rwd, episode_info = generator.generate_pick_place()
         else:
             assert False

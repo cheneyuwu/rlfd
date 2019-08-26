@@ -15,9 +15,7 @@ import random
 
 
 def install_mpi_excepthook():
-    import sys
-    from mpi4py import MPI
-
+    assert MPI != None
     old_hook = sys.excepthook
 
     def new_hook(a, b, c):
@@ -30,10 +28,8 @@ def install_mpi_excepthook():
 
 
 def mpi_input(msg, comm=None):
-    if MPI is None:
-        return input(msg)
     if comm is None:
-        comm = MPI.COMM_WORLD
+        return input(msg)
     if comm.Get_rank() == 0:
         ret = input(msg)
     else:
@@ -45,18 +41,14 @@ def mpi_input(msg, comm=None):
 def mpi_exit(code=0, comm=None):
     """Allow 1 process to terminate other processes
     """
-    if MPI is None:
-        exit(code)
     if comm is None:
-        comm = MPI.COMM_WORLD
+        exit(code)
     comm.Abort(code)
 
 
 def mpi_average(value, comm=None):
-    if MPI is None:
-        return value
     if comm is None:
-        comm = MPI.COMM_WORLD
+        return value
     if not isinstance(value, list):
         value = [value]
     elif len(value) == 0:
@@ -64,11 +56,9 @@ def mpi_average(value, comm=None):
     return mpi_moments(np.array(value), comm=comm)[0]
 
 
-def mpi_mean(x, axis=0, comm=None, keepdims=False):
+def mpi_mean(x, comm, axis=0, keepdims=False):
     x = np.asarray(x)
     assert x.ndim > 0
-    if comm is None:
-        comm = MPI.COMM_WORLD
     xsum = x.sum(axis=axis, keepdims=keepdims)
     n = xsum.size
     localsum = np.zeros(n + 1, x.dtype)
@@ -79,7 +69,7 @@ def mpi_mean(x, axis=0, comm=None, keepdims=False):
     return globalsum[:n].reshape(xsum.shape) / globalsum[n], globalsum[n]
 
 
-def mpi_moments(x, axis=0, comm=None, keepdims=False):
+def mpi_moments(x, comm, axis=0, keepdims=False):
     x = np.asarray(x)
     assert x.ndim > 0
     mean, count = mpi_mean(x, axis=axis, comm=comm, keepdims=True)

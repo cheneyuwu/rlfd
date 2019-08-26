@@ -60,12 +60,28 @@ class RolloutWorkerBase:
         assert self.T > 0
         self.info_keys = [key.replace("info_", "") for key in dims.keys() if key.startswith("info_")]
 
-        self.success_history = deque(maxlen=history_len)
-        self.total_reward_history = deque(maxlen=history_len)
-        self.total_shaping_reward_history = deque(maxlen=history_len)
-        self.Q_history = deque(maxlen=history_len)
-        self.QP_history = deque(maxlen=history_len)
-        self.n_episodes = 0
+        self.history = {
+            "success_history": deque(maxlen=history_len),
+            "total_reward_history": deque(maxlen=history_len),
+            "total_shaping_reward_history": deque(maxlen=history_len),
+            "Q_history": deque(maxlen=history_len),
+            "QP_history": deque(maxlen=history_len),
+            "n_episodes": 0,
+        }
+
+    def load_history_from_file(self, path):
+        """
+        store the history into a npz file
+        """
+        with open(path, "rb") as f:
+            self.history = pickle.load(f)
+
+    def dump_history_to_file(self, path):
+        """
+        store the history into a npz file
+        """
+        with open(path, "wb") as f:
+            pickle.dump(self.history, f)
 
     def seed(self, seed):
         """set seed for environment
@@ -86,48 +102,41 @@ class RolloutWorkerBase:
         """Generates a dictionary that contains all collected statistics.
         """
         logs = []
-        logs += [("total_reward", np.mean(self.total_reward_history))]
-        logs += [("total_shaping_reward", np.mean(self.total_shaping_reward_history))]
-        logs += [("success_rate", np.mean(self.success_history))]
+        logs += [("total_reward", np.mean(self.history["total_reward_history"]))]
+        logs += [("total_shaping_reward", np.mean(self.history["total_shaping_reward_history"]))]
+        logs += [("success_rate", np.mean(self.history["success_history"]))]
         if self.compute_Q:
-            logs += [("mean_Q", np.mean(self.Q_history))]
-            logs += [("mean_Q_plus_P", np.mean(self.QP_history))]
-        logs += [("episode", self.n_episodes)]
+            logs += [("mean_Q", np.mean(self.history["Q_history"]))]
+            logs += [("mean_Q_plus_P", np.mean(self.history["QP_history"]))]
+        logs += [("episode", self.history["n_episodes"])]
 
         if prefix is not "" and not prefix.endswith("/"):
             return [(prefix + "/" + key, val) for key, val in logs]
         else:
             return logs
 
-    def save_policy(self, path):
-        """Pickles the current policy for later inspection.
-        """
-        with open(path, "wb") as f:
-            pickle.dump(self.policy, f)
-
     def clear_history(self):
         """Clears all histories that are used for statistics
         """
-        self.total_reward_history.clear()
-        self.total_shaping_reward_history.clear()
-        self.success_history.clear()
-        self.Q_history.clear()
-        self.QP_history.clear()
+        for k, v in self.history.items():
+            if k == "n_episodes":
+                continue
+            v.clear()
 
     def current_total_reward(self):
-        return np.mean(self.total_reward_history)
+        return np.mean(self.history["total_reward_history"])
 
     def current_total_shaping_reward(self):
-        return np.mean(self.total_shaping_reward_history)
+        return np.mean(self.history["total_shaping_reward_history"])
 
     def current_success_rate(self):
-        return np.mean(self.success_history)
+        return np.mean(self.history["success_history"])
 
     def current_mean_Q(self):
-        return np.mean(self.Q_history)
+        return np.mean(self.history["Q_history"])
 
     def current_mean_QP(self):
-        return np.mean(self.QP_history)
+        return np.mean(self.history["QP_history"])
 
     def _add_noise_to_action(self, u):
         # update noise
@@ -306,22 +315,22 @@ class RolloutWorker(RolloutWorkerBase):
         successful = np.array(successes)[-1, :]
         assert successful.shape == (self.rollout_batch_size,)
         success_rate = np.mean(successful)
-        self.success_history.append(success_rate)
+        self.history["success_history"].append(success_rate)
         # shaping reward
         total_shaping_rewards = np.sum(np.array(shaping_rewards), axis=0).reshape(-1)
         assert total_shaping_rewards.shape == (self.rollout_batch_size,), total_shaping_rewards.shape
         total_shaping_reward = np.mean(total_shaping_rewards)
-        self.total_shaping_reward_history.append(total_shaping_reward)
+        self.history["total_shaping_reward_history"].append(total_shaping_reward)
         # total reward
         total_rewards = np.sum(np.array(rewards), axis=0).reshape(-1)
         assert total_rewards.shape == (self.rollout_batch_size,), total_rewards.shape
         total_reward = np.mean(total_rewards)
-        self.total_reward_history.append(total_reward)
+        self.history["total_reward_history"].append(total_reward)
         # Q output from critic networks
         if self.compute_Q:
-            self.Q_history.append(np.mean(Qs))
-            self.QP_history.append(np.mean(QPs))
-        self.n_episodes += self.rollout_batch_size
+            self.history["Q_history"].append(np.mean(Qs))
+            self.history["QP_history"].append(np.mean(QPs))
+        self.history["n_episodes"] += self.rollout_batch_size
 
         return episode
 
@@ -519,18 +528,18 @@ class SerialRolloutWorker(RolloutWorkerBase):
         # Store stats
         # success rate
         success_rate = np.sum(np.array(successes)) / self.rollout_batch_size
-        self.success_history.append(success_rate)
+        self.history["success_history"].append(success_rate)
         # shaping reward
         total_shaping_reward = np.sum(np.array(shaping_rewards)) / self.rollout_batch_size
-        self.total_shaping_reward_history.append(total_shaping_reward)
+        self.history["total_shaping_reward_history"].append(total_shaping_reward)
         # total reward
         total_reward = np.sum(np.array(rewards)) / self.rollout_batch_size
-        self.total_reward_history.append(total_reward)
+        self.history["total_reward_history"].append(total_reward)
         # Q output from critic networks
         if self.compute_Q:
-            self.Q_history.append(np.mean(Qs))
-            self.QP_history.append(np.mean(QPs))
-        self.n_episodes += self.rollout_batch_size
+            self.history["Q_history"].append(np.mean(Qs))
+            self.history["QP_history"].append(np.mean(QPs))
+        self.history["n_episodes"] += self.rollout_batch_size
 
         return episode
 

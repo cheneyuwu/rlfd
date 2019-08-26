@@ -24,6 +24,15 @@ class ReplayBufferBase:
         """
         raise NotImplementedError
 
+    def load_from_file(self, data_file, num_demo=None):
+        raise NotImplementedError
+
+    def dump_to_file(self, path):
+        if self.current_size == 0:
+            return
+        buffers = {k: v[: self.current_size] for k, v in self.buffers.items()}
+        np.savez_compressed(path, **buffers)  # save the file
+
     def store_episode(self, episode_batch):
         """ API for storing episodes. Including memory management.
             episode_batch: array(batch_size x (T or T+1) x dim_key)
@@ -70,6 +79,18 @@ class RingReplayBuffer(ReplayBufferBase):
         # contains {key: array(transitions x dim_key)}
         self.buffers = {key: np.empty([self.size, *shape], dtype=np.float32) for key, shape in buffer_shapes.items()}
         self.pointer = 0
+
+    def load_from_file(self, data_file, num_demo=None):
+        episode_batch = {**np.load(data_file)}
+        assert "done" in episode_batch.keys()
+        dones = np.nonzero(episode_batch["done"])[0]
+        assert num_demo is None or num_demo <= len(dones)
+        last_idx = dones[num_demo - 1] if num_demo is not None else dones[-1]
+        for key in episode_batch.keys():
+            assert len(episode_batch[key].shape) == 2 if key != "done" else 1  # (transitions x dim)
+            episode_batch[key] = episode_batch[key][: last_idx + 1]
+        self.store_episode(episode_batch)
+        return episode_batch
 
     def sample_all(self):
         """ Returns all the transitions currently stored in the replay buffer.
@@ -131,6 +152,15 @@ class ReplayBuffer(ReplayBufferBase):
         # self.buffers is {key: array(size_in_episodes x T or T+1 x dim_key)}
         self.buffers = {key: np.empty([self.size, *shape], dtype=np.float32) for key, shape in buffer_shapes.items()}
         self.T = T
+
+    def load_from_file(self, data_file, num_demo=None):
+        episode_batch = {**np.load(data_file)}
+        for key in episode_batch.keys():
+            assert len(episode_batch[key].shape) == 3  # (eps x T x dim)
+            assert num_demo is None or num_demo <= episode_batch[key].shape[0], "No enough demonstration data!"
+            episode_batch[key] = episode_batch[key][:num_demo]
+        self.store_episode(episode_batch)
+        return episode_batch
 
     def sample_all(self):
         """ Returns all the transitions currently stored in the replay buffer.

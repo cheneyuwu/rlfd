@@ -122,10 +122,10 @@ def main(targets, exp_dir, policy_file, **kwargs):
             # store json config file to the target directory
             if rank == 0:
                 for k, v in dir_param_dict.items():
-                    if os.path.exists(k):
+                    if os.path.exists(k):  # COMMENT out this check for restarting
                         logger.info("Directory {} already exists!".format(k))
-                        mpi_exit(1)
-                    os.makedirs(k, exist_ok=False)
+                        mpi_exit(1, comm=comm)
+                    os.makedirs(k, exist_ok=True)
                     # copy params.json file
                     with open(os.path.join(k, "copied_params.json"), "w") as f:
                         json.dump(v, f)
