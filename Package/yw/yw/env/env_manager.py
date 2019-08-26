@@ -1,6 +1,16 @@
 from yw.env import point_reach
-import gym
-import yw.env.suite_wrapper as suite
+try 
+    from yw.env.franka_env import panda_env
+except:
+    panda_env=None
+try:
+    import gym
+except:
+    gym = None
+try:
+    import yw.env.suite_wrapper as suite
+except:
+    suite = None
 
 
 class EnvManager:
@@ -53,16 +63,21 @@ class EnvManager:
             env_args["order"] = 1
             env_args["block"] = True
             self.make_env = lambda: point_reach.make("Reacher", **env_args)
+        
+        # Franka environment
+        if self.make_env is None and panda_env is not None:
+            # TODO add a make function
+            self.make_env = panda_env.FrankaPegInHole
 
         # Search from openai gym
-        if self.make_env == None:
+        if self.make_env is None and gym is not None:
             try:
                 _ = gym.make(env_name, **env_args)
                 self.make_env = lambda: gym.make(env_name, **env_args)
             except:
                 pass
 
-        if self.make_env == None:
+        if self.make_env is None and suite is not None:
             try:
                 tmp = suite.make(env_name, **env_args)
                 tmp.close()

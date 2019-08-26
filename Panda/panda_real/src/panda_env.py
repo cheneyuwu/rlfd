@@ -33,13 +33,16 @@ class FrankaPandaRobotBase(object):
         self.cur_pos = None
         self.last_pos = None
         self.action_space = self.ActionSpace()
+        self.max_u = 2.0
 
+        # use position control to recover
         self.enable_pos_control()
         moveit_commander.roscpp_initialize(sys.argv)
         self.scene = moveit_commander.PlanningSceneInterface()
         self.panda_client = panda.PandaClient()
         self.panda_client.go_home()
         self.disable_pos_control()
+
         self.enable_vel_control()
         
         self.velocity_publisher = rospy.Publisher("/franka_control/target_velocity", Twist, queue_size=1)
@@ -53,18 +56,22 @@ class FrankaPandaRobotBase(object):
             "/franka_control/current_velocity",
             Twist,
             self._velocity_callback)
+        
 
         # Safety zone constraint based on joint positions published on
         # /franka_state_controller/franka_states. Order is x,y,z.
         # Forward/Backward [0.33, 0.7]
         # Left/Right [-0.4, 0.35]
         # Up/Down [0.005, 0.32]
-        self.safety_region = np.array([[0.4, 0.5], [-0.2, 0.2], [0.2, 0.4]])
+        self.safety_region = np.array([[0.3, 0.5], [-0.2, 0.2], [0.1, 0.4]])
         self.enable_safe_zone = True
 
         # rostopic pub -1 /franka_control/error_recovery/goal franka_control/ErrorRecoveryActionGoal "{}"
         self.error_recovery_pub = rospy.Publisher("/franka_control/error_recovery/goal",
             ErrorRecoveryActionGoal, queue_size=1)
+
+        self._stop()
+        self._go_to_est_home()
 
         
     class ActionSpace:
@@ -90,32 +97,45 @@ class FrankaPandaRobotBase(object):
         self.apply_velocity_action(action)
         self.rate.sleep()
 
-        # Call as appropriate - Ideally this should be
-        # called when we have determined the controller
-        # is stuck due to robot being in an invalid pose
-        # or due to collisions that can be recovered by
-        # the agent.
-        # self.send_control_recovery_message()
-
         return self._get_obs()
 
     def reset(self):
         self._stop()
-        self.disable_vel_control()
-        
-        try:
-            self.enable_pos_control()
-            self.panda_client.go_home()
-            self.disable_pos_control()
-            
-        except rospy.ROSInterruptException:
-            print('Interrupted before completion during reset.')
-            return
 
-        self.enable_vel_control()
+        # use vel controller to go home
+        self._go_to_est_home()
+        self._stop()
+
+        # use position controller to go home 
+        # self.disable_vel_control()
+        # # try:
+        # self.enable_pos_control()
+        # self.panda_client.go_home()
+        # self.disable_pos_control()
+        # # except rospy.ROSInterruptException:
+        # #     print('Interrupted before completion during reset.')
+        # #     return
+        # self.enable_vel_control()
         
         self.last_pos = self.cur_pos
-        return self._get_obs()
+        return self._get_obs()[0]
+    
+    def _go_to_est_home(self):
+        max_u = self.max_u
+        self.max_u = 4.0
+        goals = [np.array((0.5, 0.0, 0.4))]
+        if self.cur_pos[2] < 0.15:
+            goals.append(np.array(self.cur_pos) + np.array([0.0, 0.0, 0.1]))
+        goals.reverse()
+        for goal in goals:
+            last_pos = self.cur_pos
+            while ((np.linalg.norm(goal - self.cur_pos) >= 0.01) or (np.linalg.norm(last_pos - self.cur_pos) >= 0.01)) :
+                action = (goal - self.cur_pos) * 10.0
+                action = self._process_action(action)
+                last_pos = self.cur_pos
+                self.apply_velocity_action(action)
+                self.rate.sleep()
+        self.max_u = max_u
 
     def send_control_recovery_message(self):
          # Same as posting :
@@ -178,12 +198,18 @@ class FrankaPandaRobotBase(object):
         twist.linear.x = action[0]
         twist.linear.y = action[1]
         twist.linear.z = action[2]
+        # Call as appropriate - Ideally this should be
+        # called when we have determined the controller
+        # is stuck due to robot being in an invalid pose
+        # or due to collisions that can be recovered by
+        # the agent.
+        self.send_control_recovery_message()
         self.velocity_publisher.publish(twist)
 
     def _process_action(self, action):
         cur_pos = self.cur_pos
-        clip_min = np.where(cur_pos > self.safety_region[:, 0], -1.0, 0.0)
-        clip_max = np.where(cur_pos < self.safety_region[:, 1], 1.0, 0.0)
+        clip_min = np.where(cur_pos > self.safety_region[:, 0], -self.max_u, 0.0)
+        clip_max = np.where(cur_pos < self.safety_region[:, 1], self.max_u, 0.0)
         action = action[:3]
         action = np.clip(action, clip_min, clip_max)
         return action
@@ -193,7 +219,7 @@ class FrankaPandaRobotBase(object):
 
     def _stop(self):
         self.apply_velocity_action((0,0,0))
-        rospy.sleep(5)
+        rospy.sleep(2)
 
     def _state_callback(self, data):
         self.cur_pos = np.asarray(data.O_T_EE[12:15])
@@ -205,7 +231,7 @@ class FrankaPegInHole(FrankaPandaRobotBase):
     
     def __init__(self):
         super(FrankaPegInHole, self).__init__()
-        self.goal = np.array((0.5, 0.0, 0.36))
+        self.goal = np.array((0.475, -0.005, 0.1))
         self.threshold = 0.05
         self.sparse = False
         self._max_episode_steps = 50

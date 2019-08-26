@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from copy import copy  # for python2
+from copy import copy
 import numpy as np
 
 from yw.env.env_manager import EnvManager
