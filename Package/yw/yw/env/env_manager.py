@@ -1,5 +1,5 @@
 from yw.env import point_reach
-try 
+try:
     from yw.env.franka_env import panda_env
 except:
     panda_env=None
