@@ -501,11 +501,11 @@ class SerialRolloutWorker(RolloutWorkerBase):
                 ag[...] = ag_new  # ag_2 -> ag
 
                 # end this episode if succeeded
-                if success:
-                    if t == 0:
-                        logger.warn("Starting with a success, this may be an indication of error!")
-                    dones.append(1)
-                    break
+                # if success:
+                #     if t == 0:
+                #         logger.warn("Starting with a success, this may be an indication of error!")
+                #     dones.append(1)
+                #     break
                 dones.append(int(t == self.T - 1))
 
         # Store all information into an episode dict
