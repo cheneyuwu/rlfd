@@ -73,6 +73,10 @@ class FrankaPandaRobotBase(object):
         self.error_recovery_pub = rospy.Publisher("/franka_control/error_recovery/goal",
             ErrorRecoveryActionGoal, queue_size=1)
 
+        # Sleep to give the publishers above a chance to run.
+        self.ros_sleep = 5
+        rospy.sleep(self.ros_sleep)
+
     def run_go_to_boundary_test(self):
         actions = (
             [-1.0, -1.0, -1.0],
@@ -256,7 +260,7 @@ class FrankaPandaRobotBase(object):
 
     def _stop(self):
         self.apply_velocity_action((0,0,0))
-        rospy.sleep(5)
+        rospy.sleep(self.ros_sleep)
 
     def _state_callback(self, data):
         self.cur_pos = np.asarray(data.O_T_EE[12:15])
