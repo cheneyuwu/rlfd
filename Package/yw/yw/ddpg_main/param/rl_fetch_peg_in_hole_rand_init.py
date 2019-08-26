@@ -12,7 +12,7 @@ params_config = {
     # DDPG config
     "ddpg": {
         # replay buffer setup
-        "buffer_size": int(1e6),
+        "buffer_size": int(1e5),
         "replay_strategy": "none",  # ["her", "none"] (her for hindsight exp replay)
         # actor critic networks
         "scope": "ddpg",
@@ -31,12 +31,7 @@ params_config = {
         "use_demo_reward": 0,
         "num_demo": 40,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
-        "bc_params": {
-            "pure_bc": False,
-            "q_filter": 1,
-            "prm_loss_weight": 1.0,
-            "aux_loss_weight": 10.0,
-        },
+        "bc_params": {"pure_bc": False, "q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 10.0},
         "shaping_params": {
             "batch_size": 128,
             "nf": {
@@ -58,7 +53,7 @@ params_config = {
                 "latent_dim": 6,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
-                "potential_weight": 5.0,
+                "potential_weight": 8.0,
             },
         },
         # normalize observation
@@ -85,7 +80,7 @@ params_config = {
         "n_epochs": int(4e3),
         "n_cycles": 10,
         "n_batches": 40,
-        "shaping_n_epochs": int(8e3),
+        "shaping_n_epochs": int(1e4),
         "save_interval": 10,
     },
     "seed": tuple(range(2)),
