@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class ReplayBufferBase:
+class ReplayBufferBase(object):
     def __init__(self, buffer_shapes, size):
         """ Creates a replay buffer.
 
@@ -74,14 +74,16 @@ class RingReplayBuffer(ReplayBufferBase):
             buffer_shapes       (dict of float) - the shape for all buffers that are used in the replay buffer
             size_in_transitions (int)           - the size of the buffer, measured in transitions
         """
-        super().__init__(buffer_shapes=buffer_shapes, size=size_in_transitions)
+        super(RingReplayBuffer, self).__init__(buffer_shapes=buffer_shapes, size=size_in_transitions)
 
         # contains {key: array(transitions x dim_key)}
-        self.buffers = {key: np.empty([self.size, *shape], dtype=np.float32) for key, shape in buffer_shapes.items()}
+        self.buffers = {
+            key: np.empty(tuple([self.size]) + shape, dtype=np.float32) for key, shape in buffer_shapes.items()
+        }
         self.pointer = 0
 
     def load_from_file(self, data_file, num_demo=None):
-        episode_batch = {**np.load(data_file)}
+        episode_batch = dict(np.load(data_file))
         assert "done" in episode_batch.keys()
         dones = np.nonzero(episode_batch["done"])[0]
         assert num_demo is None or num_demo <= len(dones)
@@ -147,14 +149,16 @@ class ReplayBuffer(ReplayBufferBase):
             T                   (int)         - the time horizon for episodes
         """
 
-        super().__init__(buffer_shapes=buffer_shapes, size=size_in_transitions // T)
+        super(ReplayBuffer, self).__init__(buffer_shapes=buffer_shapes, size=size_in_transitions // T)
 
         # self.buffers is {key: array(size_in_episodes x T or T+1 x dim_key)}
-        self.buffers = {key: np.empty([self.size, *shape], dtype=np.float32) for key, shape in buffer_shapes.items()}
+        self.buffers = {
+            key: np.empty(tuple([self.size]) + shape, dtype=np.float32) for key, shape in buffer_shapes.items()
+        }
         self.T = T
 
     def load_from_file(self, data_file, num_demo=None):
-        episode_batch = {**np.load(data_file)}
+        episode_batch = dict(np.load(data_file))
         for key in episode_batch.keys():
             assert len(episode_batch[key].shape) == 3  # (eps x T x dim)
             assert num_demo is None or num_demo <= episode_batch[key].shape[0], "No enough demonstration data!"
@@ -237,7 +241,7 @@ class ReplayBuffer(ReplayBufferBase):
 
 class UniformReplayBuffer(ReplayBuffer):
     def __init__(self, buffer_shapes, size_in_transitions, T):
-        super().__init__(buffer_shapes, size_in_transitions, T)
+        super(UniformReplayBuffer, self).__init__(buffer_shapes, size_in_transitions, T)
 
     def sample_transitions(self, buffers, batch_size):
         """Sample transitions of size batch_size randomly from episode_batch.

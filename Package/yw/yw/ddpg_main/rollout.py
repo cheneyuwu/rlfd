@@ -13,7 +13,7 @@ from yw.tool import logger
 from yw.util.util import store_args
 
 
-class RolloutWorkerBase:
+class RolloutWorkerBase(object):
     def __init__(
         self,
         make_env,
@@ -195,7 +195,7 @@ class RolloutWorker(RolloutWorkerBase):
             history_len        (int)         - length of history for statistics smoothing
             render             (bool)        - whether or not to render the rollouts
         """
-        super().__init__(
+        super(RolloutWorker, self).__init__(
             make_env=make_env,
             policy=policy,
             dims=dims,
@@ -386,7 +386,7 @@ class SerialRolloutWorker(RolloutWorkerBase):
             history_len        (int)         - length of history for statistics smoothing
             render             (bool)        - whether or not to render the rollouts
         """
-        super().__init__(
+        super(SerialRolloutWorker, self).__init__(
             make_env=make_env,
             policy=policy,
             dims=dims,
@@ -501,11 +501,11 @@ class SerialRolloutWorker(RolloutWorkerBase):
                 ag[...] = ag_new  # ag_2 -> ag
 
                 # end this episode if succeeded
-                if success:
-                    if t == 0:
-                        logger.warn("Starting with a success, this may be an indication of error!")
-                    dones.append(1)
-                    break
+                # if success:
+                #     if t == 0:
+                #         logger.warn("Starting with a success, this may be an indication of error!")
+                #     dones.append(1)
+                #     break
                 dones.append(int(t == self.T - 1))
 
         # Store all information into an episode dict

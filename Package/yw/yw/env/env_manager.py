@@ -1,8 +1,9 @@
 from yw.env import point_reach
+
 try:
     from yw.env.franka_env import panda_env
 except:
-    panda_env=None
+    panda_env = None
 try:
     import gym
 except:
@@ -63,7 +64,7 @@ class EnvManager:
             env_args["order"] = 1
             env_args["block"] = True
             self.make_env = lambda: point_reach.make("Reacher", **env_args)
-        
+
         # Franka environment
         if self.make_env is None and panda_env is not None:
             # TODO add a make function
