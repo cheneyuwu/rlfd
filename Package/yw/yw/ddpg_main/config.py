@@ -235,7 +235,7 @@ def configure_ddpg(params, comm=None):
     log_params(ddpg_params)
     logger.info("*** ddpg_params ***")
 
-    policy = DDPG(**ddpg_params, comm=comm)
+    policy = DDPG(comm=comm, **ddpg_params)
     return policy
 
 
