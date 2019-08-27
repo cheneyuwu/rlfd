@@ -177,8 +177,8 @@ class FrankaEnvDemoGenerator:
 def main(path):
 
     # Change the following parameters
-    num_itr = 2
-    render = True
+    num_itr = 20
+    render = False
     env_name = "FrankaPegInHole"
     env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=50).get_env()
     system_noise_scale = 0.00
