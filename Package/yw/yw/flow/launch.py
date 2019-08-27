@@ -4,10 +4,14 @@ import sys
 import json
 import copy
 import importlib
+import imp
 from shutil import copyfile
 
 # must include gym before loading mpi, for compute canada cluster
-import mujoco_py
+try:
+    import mujoco_py
+except ImportError:
+    pass
 
 try:
     from mpi4py import MPI
@@ -29,9 +33,11 @@ def import_param_config(load_dir):
     """
     # get the full path of the load directory
     abs_load_dir = os.path.abspath(os.path.expanduser(load_dir))
-    spec = importlib.util.spec_from_file_location("module.name", abs_load_dir)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+
+    module = imp.load_source("module.name", abs_load_dir)
+    # spec = importlib.util.spec_from_file_location("module.name", abs_load_dir)
+    # module = importlib.util.module_from_spec(spec)
+    # spec.loader.exec_module(module)
     params_configs = [
         getattr(module, params_config) for params_config in dir(module) if params_config.startswith("params_config")
     ]
@@ -122,10 +128,10 @@ def main(targets, exp_dir, policy_file, **kwargs):
             # store json config file to the target directory
             if rank == 0:
                 for k, v in dir_param_dict.items():
-                    if os.path.exists(k):  # COMMENT out this check for restarting
-                        logger.info("Directory {} already exists!".format(k))
-                        mpi_exit(1, comm=comm)
-                    os.makedirs(k, exist_ok=True)
+                    # if os.path.exists(k):  # COMMENT out this check for restarting
+                    #     logger.info("Directory {} already exists!".format(k))
+                    #     mpi_exit(1, comm=comm)
+                    os.makedirs(k)
                     # copy params.json file
                     with open(os.path.join(k, "copied_params.json"), "w") as f:
                         json.dump(v, f)
@@ -143,7 +149,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
                 logger.info("Setting policy_file to {}".format(policy_file))
 
             # run experiments
-            parallel = 1  # CHANGE this number to allow launching in serial
+            parallel = 0  # CHANGE this number to allow launching in serial
             num_cpu = 1  # CHANGE this number to allow multiple processes
             # total num exps
             num_exp = len(dir_param_dict.keys())

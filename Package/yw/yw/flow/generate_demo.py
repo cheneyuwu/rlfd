@@ -116,7 +116,8 @@ def main(policy_file, root_dir, **kwargs):
 
     # store demonstration data (only the main thread)
     if rank == 0:
-        os.makedirs(root_dir, exist_ok=True)
+        if not os.path.exists(root_dir):
+            os.makedirs(root_dir)
         file_name = os.path.join(root_dir, "demo_data.npz")
         # array(batch_size x (T or T+1) x dim_key), we only need the first one!
         np.savez_compressed(file_name, **episode)  # save the file
