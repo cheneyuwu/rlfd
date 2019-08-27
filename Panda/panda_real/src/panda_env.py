@@ -34,20 +34,11 @@ class FrankaPandaRobotBase(object):
         self.dt = 0.2
         self.step_size = rospy.Rate(1.0 / self.dt) # 5hz
 
+        self.home_pose = None
         self.cur_pos = None
         self.last_pos = None
         self.action_space = self.ActionSpace()
         self.max_u = 2.0
-
-        # use position control to recover
-        self.enable_pos_control()
-        moveit_commander.roscpp_initialize(sys.argv)
-        self.scene = moveit_commander.PlanningSceneInterface()
-        self.panda_client = panda.PandaClient()
-        self.panda_client.go_home()
-        self.disable_pos_control()
-
-        self.enable_vel_control()
         
         self.velocity_publisher = rospy.Publisher("/franka_control/target_velocity", Twist, queue_size=1)
 
@@ -66,16 +57,31 @@ class FrankaPandaRobotBase(object):
         # Forward/Backward [0.33, 0.7]
         # Left/Right [-0.4, 0.35]
         # Up/Down [0.005, 0.32]
-        self.safety_region = np.array([[0.3, 0.5], [-0.2, 0.2], [0.1, 0.4]])
-        self.enable_safe_zone = True
+        self.safety_region = np.array([[0.4, 0.6], [-0.2, 0.2], [0.15, 0.4]])
 
-        # rostopic pub -1 /franka_control/error_recovery/goal franka_control/ErrorRecoveryActionGoal "{}"
+        self.use_home_estimate = True
+
         self.error_recovery_pub = rospy.Publisher("/franka_control/error_recovery/goal",
             ErrorRecoveryActionGoal, queue_size=1)
 
         # Sleep to give the publishers above a chance to run.
-        self.ros_sleep = 5
+        self.ros_sleep = 1.0
         rospy.sleep(self.ros_sleep)
+
+
+        # use position control to recover
+        self.enable_pos_control()
+        moveit_commander.roscpp_initialize(sys.argv)
+        #self.scene = moveit_commander.PlanningSceneInterface()
+        self.panda_client = panda.PandaClient()
+        self.panda_client.go_home()
+        self.disable_pos_control()
+        self.enable_vel_control()
+
+        # Store the initial home pose
+        self.home_pose = self.cur_pos
+        print("Home Position is: ", self.home_pose)
+
 
     def run_go_to_boundary_test(self):
         actions = (
@@ -140,20 +146,25 @@ class FrankaPandaRobotBase(object):
         return self._get_obs()
 
     def reset(self):
-        self._move_up()
-        self._stop()
-        self.disable_vel_control()
         
-        try:
-            self.enable_pos_control()
-            self.panda_client.go_home()
-            self.disable_pos_control()
-            
-        except rospy.ROSInterruptException:
-            print('Interrupted before completion during reset.')
-            return
+        self._move_up()
 
-        self.enable_vel_control()
+        if self.use_home_estimate:
+            self._go_to_est_home()
+            self._stop()
+        else:
+            self._stop()
+            self.disable_vel_control()
+            try:
+                self.enable_pos_control()
+                self.panda_client.go_home()
+                self.disable_pos_control()
+                
+            except rospy.ROSInterruptException:
+                print('Interrupted before completion during reset.')
+                return
+
+            self.enable_vel_control()
         
         self.last_pos = self.cur_pos
         return self._get_obs()[0]
@@ -164,9 +175,15 @@ class FrankaPandaRobotBase(object):
         """
         if not self.cur_pos[2] < 0.15:
             return
+        goal = (np.array(self.cur_pos) + np.array([0.0, 0.0, 0.1]))
+        self._go_to_goal(goal)
+    
+    def _go_to_est_home(self):
+        self._go_to_goal(self.home_pose)
+    
+    def _go_to_goal(self, goal):
         max_u = self.max_u
         self.max_u = 4.0
-        goal = (np.array(self.cur_pos) + np.array([0.0, 0.0, 0.1]))
         last_pos = self.cur_pos
         while ((np.linalg.norm(goal - self.cur_pos) >= 0.01) or (np.linalg.norm(last_pos - self.cur_pos) >= 0.01)) :
             action = (goal - self.cur_pos) * 10.0
@@ -174,7 +191,7 @@ class FrankaPandaRobotBase(object):
             last_pos = self.cur_pos
             self.apply_velocity_action(action)
             self.step_size.sleep()
-        self.max_u = max_u
+        self.max_u = max_u        
 
     def send_control_recovery_message(self):
         """Publish an empty `ErrorRecoveryActionGoal`
@@ -272,7 +289,7 @@ class FrankaPegInHole(FrankaPandaRobotBase):
     
     def __init__(self):
         super(FrankaPegInHole, self).__init__()
-        self.goal = np.array((0.455, -0.005, 0.1))
+        self.goal = np.array((0.455, -0.005, 0.15))
         self.threshold = 0.05
         self.sparse = False
         self._max_episode_steps = 50
@@ -321,8 +338,8 @@ def signal_handler(sig, frame, panda_robot):
     
 if __name__ == '__main__':
     panda_robot = FrankaPegInHole()
-    panda_robot.run_controller_switch_test()
-    #panda_robot.run_go_to_boundary_test()
+    #panda_robot.run_controller_switch_test()
+    panda_robot.run_go_to_boundary_test()
         
 
     

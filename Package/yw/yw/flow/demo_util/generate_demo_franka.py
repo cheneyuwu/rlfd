@@ -5,7 +5,7 @@ import numpy as np
 from yw.env.env_manager import EnvManager
 
 
-class FetchPickAndPlaceDemoGenerator:
+class FrankaEnvDemoGenerator:
     """
     Provide an easier way to control the gripper for pick and place task
     """
@@ -230,7 +230,7 @@ def main():
     #   FetchMove: 2 objects eps = 70
     # End
 
-    generator = FetchPickAndPlaceDemoGenerator(env=env, system_noise_scale=system_noise_scale, render=render)
+    generator = FrankaEnvDemoGenerator(env=env, system_noise_scale=system_noise_scale, render=render)
     demo_data_obs = []
     demo_data_acs = []
     demo_data_rewards = []
