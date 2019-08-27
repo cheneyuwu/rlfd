@@ -275,6 +275,17 @@ def main():
             episode_batch[key] = val.swapaxes(0, 1)
         episode = episode_batch
 
+        # UNCOMMENT to use the ring replay buffer! convert to (T x dims and add done signal)
+        episode = {k: v.reshape((-1, v.shape[-1])) for k, v in episode.items()}
+        episode["o_2"] = episode["o"][1:, ...]
+        episode["o"] = episode["o"][:-1, ...]
+        episode["ag_2"] = episode["ag"][1:, ...]
+        episode["ag"] = episode["ag"][:-1, ...]
+        episode["g_2"] = episode["g"][...]
+        done = np.zeros(T)
+        done[-1] = 1.0
+        episode["done"] = done
+
         if result == None:
             result = episode
         else:
@@ -293,7 +304,7 @@ if __name__ == "__main__":
 # env_manager = EnvManager("FrankaPegInHole")
 # panda_robot = env_manager.get_env()
 
-# # panda_robot = FrankaPegInHole()    
+# # panda_robot = FrankaPegInHole()
 # actions = (
 #     [-1.0, -1.0, -1.0],
 #     [+1.0, -1.0, -1.0],
