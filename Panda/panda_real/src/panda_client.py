@@ -236,8 +236,21 @@ class PandaClient(object):
         return all_close(pose_goal, current_pose, 0.01)
 
 
-    def go_home(self):
+    def go_home(self, joint_based=True):
         """Move the arm to a fixed valid position.
         """
-        self.move_joints_to(self.home_pose_joint_values, wait_to_finish=True)
+        if joint_based:
+            self.move_joints_to(self.home_pose_joint_values, wait_to_finish=True)
+        else:
+            pose_goal = geometry_msgs.msg.Pose()
+            pose_goal.orientation.x = 1.0
+            pose_goal.orientation.y = 0.0
+            pose_goal.orientation.z = 0.0
+            pose_goal.orientation.w = 0.0
+            pose_goal.position.x = 0.36
+            pose_goal.position.y = 0.0
+            pose_goal.position.z = 0.37
+
+            self.move_ee_to(pose_goal)
+
         

@@ -57,7 +57,7 @@ class FrankaPandaRobotBase(object):
         # Forward/Backward [0.33, 0.7]
         # Left/Right [-0.4, 0.35]
         # Up/Down [0.005, 0.32]
-        self.safety_region = np.array([[0.4, 0.6], [-0.2, 0.2], [0.15, 0.4]])
+        self.safety_region = np.array([[0.42, 0.6], [-0.05, 0.05], [0.15, 0.25]])
 
         self.use_home_estimate = True
 
