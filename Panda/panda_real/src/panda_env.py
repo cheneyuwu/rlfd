@@ -57,7 +57,7 @@ class FrankaPandaRobotBase(object):
         # Forward/Backward [0.33, 0.7]
         # Left/Right [-0.4, 0.35]
         # Up/Down [0.005, 0.32]
-        self.safety_region = np.array([[0.42, 0.6], [-0.05, 0.05], [0.12, 0.25]])
+        self.safety_region = np.array([[0.42, 0.6], [-0.05, 0.05], [0.07, 0.25]])
 
         self.use_home_estimate = True
 
@@ -175,7 +175,7 @@ class FrankaPandaRobotBase(object):
         """
         if not self.cur_pos[2] < 0.15:
             return
-        goal = (np.array(self.cur_pos) + np.array([0.0, 0.0, 0.1]))
+        goal = (np.array(self.cur_pos) + np.array([0.0, 0.0, 0.06]))
         self._go_to_goal(goal)
     
     def _go_to_est_home(self):
@@ -289,8 +289,8 @@ class FrankaPegInHole(FrankaPandaRobotBase):
     
     def __init__(self):
         super(FrankaPegInHole, self).__init__()
-        self.goal = np.array((0.455, -0.005, 0.15))
-        self.threshold = 0.05
+        self.goal = np.array((0.46, -0.0, 0.08))
+        self.threshold = 0.02
         self.sparse = False
         self._max_episode_steps = 50
     

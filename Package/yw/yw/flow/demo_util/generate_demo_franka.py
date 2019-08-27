@@ -48,6 +48,9 @@ class FrankaEnvDemoGenerator:
         assert self.episode_info[-1]["is_success"]
         return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
 
+    def reset(self):
+        self._reset()
+
     def generate_peg_in_hole(self):
 
         goal_dim = 0
@@ -174,7 +177,7 @@ class FrankaEnvDemoGenerator:
 def main(path):
 
     # Change the following parameters
-    num_itr = 10
+    num_itr = 2
     render = True
     env_name = "FrankaPegInHole"
     env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=50).get_env()
@@ -249,6 +252,10 @@ def main(path):
 
     # array(batch_size x (T or T+1) x dim_key), we only need the first one!
     np.savez_compressed(path, **result)  # save the file
+
+    # clean up
+    generator.reset()
+
 
 if __name__ == "__main__":
     main("demo_data.npz")

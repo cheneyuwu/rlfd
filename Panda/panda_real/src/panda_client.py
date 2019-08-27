@@ -249,7 +249,7 @@ class PandaClient(object):
             pose_goal.orientation.w = 0.0
             pose_goal.position.x = 0.58
             pose_goal.position.y = 0.0
-            pose_goal.position.z = 0.15
+            pose_goal.position.z = 0.125
 
             self.move_ee_to(pose_goal)
 
