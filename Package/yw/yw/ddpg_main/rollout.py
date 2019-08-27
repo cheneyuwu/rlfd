@@ -489,10 +489,11 @@ class SerialRolloutWorker(RolloutWorkerBase):
                 acts.append(u.copy())
                 goals.append(self.g.copy())
                 rewards.append(r.copy())
-                successes.append(success.copy())
-                shaping_rewards.append(shaping_reward.copy())
                 for key in self.info_keys:
                     info_values["info_" + key].append(iv["info_" + key].copy())
+
+                # extra plotting info recorded per step
+                shaping_rewards.append(shaping_reward.copy())
                 if self.compute_Q:
                     Qs.append(Q.copy())
                     QPs.append(QP.copy())
@@ -500,13 +501,17 @@ class SerialRolloutWorker(RolloutWorkerBase):
                 o[...] = o_new  # o_2 -> o
                 ag[...] = ag_new  # ag_2 -> ag
 
-                # end this episode if succeeded
+                # UNCOMMENT this to end this episode if succeeded
                 if success:
                     if t == 0:
                         logger.warn("Starting with a success, this may be an indication of error!")
                     dones.append(1)
                     break
+
                 dones.append(int(t == self.T - 1))
+
+            # extra plotting into recorded per episode
+            successes.append(success.copy())
 
         # Store all information into an episode dict
         episode = dict(
