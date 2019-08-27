@@ -15,11 +15,12 @@
 
 ## Idea 1: Learning from demonstrations through shaping
 - Use a potential function, which is a maf trained on masked auto regressive flow
+- The demonstration data is considered to have no reward signal
 - Environments to Test
     -  Currently we focus on single goal environment. Lower number of dimensions so that the potential function is more accurate.
-    1. Reach (Current)
+    1. Reach
         The initial state of the arm is fixed. The target position is also fixed.
-    2. Pick and Place
+    2. Pick and Place (Current)
         The initial state of the arm, initial location of the object to be picked and the target position are fixed.
     3. Peg in Hole
         The arm always holds the object.
