@@ -126,6 +126,7 @@ class FrankaEnvDemoGenerator:
         self.last_obs = copy(obs)
 
     def _step(self, action):
+        action = action[0:3]
         obs, reward, done, info = self.env.step(action)
         self.time_step += 1
         if self.render:
@@ -216,7 +217,7 @@ class FrankaEnvDemoGenerator:
 
             self._step(action)
 
-def main():
+def main(path):
 
     # Change the following parameters
     num_itr = 10
@@ -293,40 +294,7 @@ def main():
                 result[k] = np.concatenate((result[k], episode[k]), axis=0)
 
     # array(batch_size x (T or T+1) x dim_key), we only need the first one!
-    np.savez_compressed("/home/melissa/Workspace/RLProject/Experiment/ExpData/FrankaPegInHoleDemoData/demo_data.npz", **result)  # save the file
-
+    np.savez_compressed(path, **result)  # save the file
 
 if __name__ == "__main__":
-    main()
-
-# Franka env
-
-# env_manager = EnvManager("FrankaPegInHole")
-# panda_robot = env_manager.get_env()
-
-# # panda_robot = FrankaPegInHole()
-# actions = (
-#     [-1.0, -1.0, -1.0],
-#     [+1.0, -1.0, -1.0],
-#     [+1.0, +1.0, -1.0],
-#     [-1.0, +1.0, -1.0],
-#     [-1.0, -1.0, +1.0],
-#     [+1.0, -1.0, +1.0],
-#     [+1.0, +1.0, +1.0],
-#     [-1.0, +1.0, +1.0],
-# )
-
-# counter = 0
-# panda_robot.reset()
-# while not rospy.is_shutdown():
-#     for action in actions:
-#         for _ in range(50):
-#             obs = panda_robot.step(action)
-#             # print(obs)
-#         panda_robot.reset()
-
-# panda_robot.env.disable_vel_control()
-# panda_robot.env.enable_pos_control()
-# panda_robot.env.panda_client.go_home()
-# panda_robot.env.disable_pos_control()
-# panda_robot.env.enable_vel_control()
+    main("demo_data.npz")

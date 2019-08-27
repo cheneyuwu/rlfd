@@ -93,9 +93,11 @@ class EnvManager:
         self.r_scale = r_scale
         self.r_shift = r_shift
         self.eps_length = eps_length
+        # single instantiation of the environment
+        self.env = EnvManager.EnvWrapper(self.make_env, self.r_scale, self.r_shift, self.eps_length)
 
     def get_env(self):
-        return EnvManager.EnvWrapper(self.make_env, self.r_scale, self.r_shift, self.eps_length)
+        return self.env
 
     class EnvWrapper:
         def __init__(self, make_env, r_scale, r_shift, eps_length):
