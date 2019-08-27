@@ -8,7 +8,7 @@ from yw.flow.demo_util.generate_demo_franka import main as gen_demo
 from yw.flow.launch import main as train
 
 # Collect data
-# gen_demo()
+# gen_demo("/home/melissa/Workspace/RLProject/Experiment/ExpData/Aug26FrankaPegInHole/demo_data.npz")
 
 # Run the rl training
 # kwargs = {
