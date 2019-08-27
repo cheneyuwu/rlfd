@@ -88,6 +88,7 @@ DEFAULT_PARAMS = {
         "polyak_noise": 0.0,  # use polyak_noise * last_noise + (1 - polyak_noise) * curr_noise
         "random_eps": 0.3,  # percentage of time a random action is taken
         "compute_Q": False,
+        "history_len": 10,  # make sure that this is same as number of cycles
     },
     "evaluator": {
         "rollout_batch_size": 20,
@@ -95,6 +96,7 @@ DEFAULT_PARAMS = {
         "polyak_noise": 0.0,
         "random_eps": 0.0,
         "compute_Q": True,
+        "history_len": 1,
     },
     # training config
     "train": {

@@ -31,12 +31,7 @@ params_config = {
         "use_demo_reward": 0,
         "num_demo": 0,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
-        "bc_params": {
-            "pure_bc": False,
-            "q_filter": 1,
-            "prm_loss_weight": 0.001,
-            "aux_loss_weight": 0.0078,
-        },
+        "bc_params": {"pure_bc": False, "q_filter": 1, "prm_loss_weight": 0.001, "aux_loss_weight": 0.0078},
         "shaping_params": {
             "batch_size": 128,
             "nf": {
@@ -72,21 +67,23 @@ params_config = {
     # HER config
     "her": {"k": 4},
     # rollouts config
-    "rollout": {"rollout_batch_size": 4, "noise_eps": 0.1, "polyak_noise": 0.0, "random_eps": 0.1, "compute_Q": False},
+    "rollout": {
+        "rollout_batch_size": 4,
+        "noise_eps": 0.1,
+        "polyak_noise": 0.0,
+        "random_eps": 0.1,
+        "compute_Q": False,
+        "history_len": 10,
+    },
     "evaluator": {
         "rollout_batch_size": 20,
         "noise_eps": 0.0,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
         "compute_Q": True,
+        "history_len": 1,
     },
     # training config
-    "train": {
-        "n_epochs": 5000,
-        "n_cycles": 10,
-        "n_batches": 40,
-        "shaping_n_epochs": 5000,
-        "save_interval": 2,
-    },
+    "train": {"n_epochs": 5000, "n_cycles": 10, "n_batches": 40, "shaping_n_epochs": 5000, "save_interval": 2},
     "seed": 0,
 }
