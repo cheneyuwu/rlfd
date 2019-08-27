@@ -19,28 +19,26 @@ from yw.flow.plot import load_results
 
 
 def visualize_potential_surface(ax, res):
-    assert False, "python 2"
-    # ct = ax.contour(*res["o"], res["surf"])
-    # try:  # in case of nan
-    #     plt.colorbar(ct, ax=ax)
-    # except:
-    #     pass
-    # # ax.axis([-1, 0, -1, 0])
-    # ax.set_xlabel("s1")
-    # ax.set_ylabel("s2")
-    # for item in [ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels():
-    #     item.set_fontsize(6)
+    ct = ax.contour(*res["o"], res["surf"])
+    try: # in case of nan
+        plt.colorbar(ct, ax=ax)
+    except:
+        pass
+    # ax.axis([-1, 0, -1, 0])
+    ax.set_xlabel("s1")
+    ax.set_ylabel("s2")
+    for item in [ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels():
+        item.set_fontsize(6)
 
 
 def visualize_action(ax, res, plot_opts={}):
-    assert False, "python 2"
-    # for i in range(res["o"].shape[0]):
-    #     ax.arrow(*res["o"][i], *(res["u"][i] * 0.05), head_width=0.01, **plot_opts)
-    # ax.axis([-1, 0, -1, 0])
-    # ax.set_xlabel("s1")
-    # ax.set_ylabel("s2")
-    # for item in [ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels():
-    #     item.set_fontsize(6)
+    for i in range(res["o"].shape[0]):
+        ax.arrow(*res["o"][i], *(res["u"][i] * 0.05), head_width=0.01, **plot_opts)
+    ax.axis([-1, 0, -1, 0])
+    ax.set_xlabel("s1")
+    ax.set_ylabel("s2")
+    for item in [ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels():
+        item.set_fontsize(6)
 
 
 def create_animate(frame, data):
@@ -57,65 +55,65 @@ def create_animate(frame, data):
 
 
 def create_plot(frame, fig, all_results, query_ls):
-    assert False, "python 2"
-    # # Plot frame
-    # fig.text(0.01, 0.01, "frame: {}".format(frame), ha="left", va="bottom", fontsize=10, color="r")
 
-    # # Load data
-    # data = {}
-    # for result in all_results:
-    #     exp_name = result["params"]["config"]
-    #     load_dir = result["dirname"]
-    #     queries = {}
-    #     for q_k in query_ls:
-    #         if q_k in os.listdir(load_dir):
-    #             q = os.path.join(load_dir, q_k)
-    #             result_files = os.listdir(q)
-    #             result_files.sort()
-    #             if result_files != []:
-    #                 queries[q_k] = {
-    #                     **np.load(os.path.join(q, result_files[frame if frame < len(result_files) else -1]))
-    #                 }
-    #     if queries != {}:
-    #         data[exp_name] = queries
+    # Plot frame
+    fig.text(0.01, 0.01, "frame: {}".format(frame), ha="left", va="bottom", fontsize=10, color="r")
 
-    # # Initialization
-    # num_rows = len(data.keys())
-    # num_cols = len(query_ls)
-    # gs = gridspec.GridSpec(num_rows, num_cols)
-    # col = cm.jet(np.linspace(0, 1.0, num_rows))
+    # Load data
+    data = {}
+    for result in all_results:
+        exp_name = result["params"]["config"]
+        load_dir = result["dirname"]
+        queries = {}
+        for q_k in query_ls:
+            if q_k in os.listdir(load_dir):
+                q = os.path.join(load_dir, q_k)
+                result_files = os.listdir(q)
+                result_files.sort()
+                if result_files != []:
+                    queries[q_k] = {
+                        **np.load(os.path.join(q, result_files[frame if frame < len(result_files) else -1]))
+                    }
+        if queries != {}:
+            data[exp_name] = queries
 
-    # for i, exp in enumerate(data.keys()):
-    #     for j, query in enumerate(query_ls):
+    # Initialization
+    num_rows = len(data.keys())
+    num_cols = len(query_ls)
+    gs = gridspec.GridSpec(num_rows, num_cols)
+    col = cm.jet(np.linspace(0, 1.0, num_rows))
 
-    #         if query not in data[exp].keys():
-    #             continue
+    for i, exp in enumerate(data.keys()):
+        for j, query in enumerate(query_ls):
 
-    #         ax = plt.subplot(gs[i, j])
-    #         ax.clear()
+            if query not in data[exp].keys():
+                continue
 
-    #         if query in [
-    #             "query_policy",
-    #             "query_optimized_p_only",
-    #             "query_optimized_q_only",
-    #             "query_optimized_p_plus_q",
-    #         ]:
-    #             visualize_action(ax, data[exp][query], plot_opts={"color": col[i]})
-    #             ax.legend(handles=[mpatches.Patch(color=col[i], label=exp)], loc="lower left")
+            ax = plt.subplot(gs[i, j])
+            ax.clear()
 
-    #         if query in ["query_surface_p_only", "query_surface_q_only", "query_surface_p_plus_q"]:
-    #             visualize_potential_surface(ax, data[exp][query])
+            if query in [
+                "query_policy",
+                "query_optimized_p_only",
+                "query_optimized_q_only",
+                "query_optimized_p_plus_q",
+            ]:
+                visualize_action(ax, data[exp][query], plot_opts={"color": col[i]})
+                ax.legend(handles=[mpatches.Patch(color=col[i], label=exp)], loc="lower left")
 
-    #         fig.text(
-    #             0.02,
-    #             1.0 - (1.0 / (2 * num_rows) + i / num_rows),
-    #             exp,
-    #             ha="center",
-    #             va="center",
-    #             fontsize=10,
-    #             color="r",
-    #             rotation="vertical",
-    #         )
+            if query in ["query_surface_p_only", "query_surface_q_only", "query_surface_p_plus_q"]:
+                visualize_potential_surface(ax, data[exp][query])
+
+            fig.text(
+                0.02,
+                1.0 - (1.0 / (2 * num_rows) + i / num_rows),
+                exp,
+                ha="center",
+                va="center",
+                fontsize=10,
+                color="r",
+                rotation="vertical",
+            )
 
 
 def main(directories, save, mode="plot", **kwargs):

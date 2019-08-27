@@ -13,7 +13,7 @@ from yw.tool import logger
 from yw.util.util import store_args
 
 
-class RolloutWorkerBase(object):
+class RolloutWorkerBase:
     def __init__(
         self,
         make_env,
@@ -195,7 +195,7 @@ class RolloutWorker(RolloutWorkerBase):
             history_len        (int)         - length of history for statistics smoothing
             render             (bool)        - whether or not to render the rollouts
         """
-        super(RolloutWorker, self).__init__(
+        super().__init__(
             make_env=make_env,
             policy=policy,
             dims=dims,
@@ -386,7 +386,7 @@ class SerialRolloutWorker(RolloutWorkerBase):
             history_len        (int)         - length of history for statistics smoothing
             render             (bool)        - whether or not to render the rollouts
         """
-        super(SerialRolloutWorker, self).__init__(
+        super().__init__(
             make_env=make_env,
             policy=policy,
             dims=dims,
