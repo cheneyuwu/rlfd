@@ -331,7 +331,9 @@ class DDPG(object):
                 if key.startswith("info"):
                     buffer_shapes[key] = tuple([val]) if val > 0 else tuple()
         # initialize replay buffer(s)
-        if self.replay_strategy["strategy"] == "her":
+        if self.replay_strategy is None:
+            pass
+        elif self.replay_strategy["strategy"] == "her":
             assert self.fix_T
             self.replay_buffer = HERReplayBuffer(
                 buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
@@ -662,7 +664,8 @@ class DDPG(object):
         """
         Our policies can be loaded from pkl, but after unpickling you cannot continue training.
         """
-        excluded_names = ["self", "comm"]
+        # replay_strategy may contain the compute reward function
+        excluded_names = ["self", "comm", "replay_strategy"]
 
         state = {k: v for k, v in self.init_args.items() if not k in excluded_names}
         state["tf"] = self.sess.run([x for x in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)])
@@ -670,6 +673,7 @@ class DDPG(object):
 
     def __setstate__(self, state):
         state["comm"] = None
+        state["replay_strategy"] = None
         kwargs = state["kwargs"]
         del state["kwargs"]
 
