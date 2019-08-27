@@ -87,7 +87,7 @@ class RingReplayBuffer(ReplayBufferBase):
         assert num_demo is None or num_demo <= len(dones)
         last_idx = dones[num_demo - 1] if num_demo is not None else dones[-1]
         for key in episode_batch.keys():
-            assert len(episode_batch[key].shape) == 2 if key != "done" else 1  # (transitions x dim)
+            assert len(episode_batch[key].shape) == 2
             episode_batch[key] = episode_batch[key][: last_idx + 1]
         self.store_episode(episode_batch)
         return episode_batch

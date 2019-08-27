@@ -292,7 +292,7 @@ def main():
         # episode["g_2"] = episode["g"][...]
         # done = np.zeros(T)
         # done[-1] = 1.0
-        # episode["done"] = done
+        # episode["done"] = done.reshape(-1, 1)
 
         if result == None:
             result = episode

@@ -330,6 +330,8 @@ class DDPG(object):
             for key, val in self.input_dims.items():
                 if key.startswith("info"):
                     buffer_shapes[key] = tuple([val]) if val > 0 else tuple()
+            # need the "done" signal for restarting from training
+            buffer_shapes["done"] = (1,)
         # initialize replay buffer(s)
         if self.replay_strategy is None:
             pass

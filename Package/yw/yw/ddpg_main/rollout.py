@@ -505,10 +505,10 @@ class SerialRolloutWorker(RolloutWorkerBase):
                 if success:
                     if t == 0:
                         logger.warn("Starting with a success, this may be an indication of error!")
-                    dones.append(1)
+                    dones.append(np.ones(1))
                     break
 
-                dones.append(int(t == self.T - 1))
+                dones.append(np.array((float(t == self.T - 1),)))
 
             # extra plotting into recorded per episode
             successes.append(success.copy())
