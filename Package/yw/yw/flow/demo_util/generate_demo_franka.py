@@ -19,52 +19,6 @@ class FrankaEnvDemoGenerator:
     def reset(self):
         self.num_itr = 0
 
-    def generate_move(self):
-        self._reset()
-        for i in range(self.num_object):
-            goal_dim = 3 * i
-            obj_pos_dim = 10 + 15 * i
-            obj_rel_pos_dim = 10 + 15 * i + 3
-            # move to the above of the object
-            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.05, gripper_open=True)
-            # grab the object
-            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.0, gripper_open=False)
-            # move to the goal
-            self._move_to_goal(obj_pos_dim, goal_dim)
-            # open the gripper
-            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.05, gripper_open=True)
-            # # move back to initial state
-            # self._move_back()
-        # stay until the end
-        self._stay()
-
-        self.num_itr += 1
-        assert self.episode_info[-1]["is_success"]
-        return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
-
-    def generate_move_auto_place(self):
-        self._reset()
-        for i in range(self.num_object):
-            goal_dim = 3 * i
-            obj_pos_dim = 10 + 15 * i
-            obj_rel_pos_dim = 10 + 15 * i + 3
-            # move to the above of the object
-            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.05, gripper_open=True)
-            # grab the object
-            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.0, gripper_open=False)
-            # move to the goal
-            self._move_to_goal(obj_pos_dim, goal_dim)
-            # open the gripper
-            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.05, gripper_open=True)
-            # move back to initial state
-            self._move_back()
-        # stay until the end
-        self._stay()
-
-        self.num_itr += 1
-        assert self.episode_info[-1]["is_success"]
-        return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
-
     def generate_pick_place(self):
 
         goal_dim = 0
@@ -101,7 +55,7 @@ class FrankaEnvDemoGenerator:
 
         self._reset()
         # move to the goal
-        self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0,0.0,np.random.uniform(0.15, 0.2))))
+        self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0,0.0,np.random.uniform(0.05, 0.1))))
         self._move_to_goal(obj_pos_dim, goal_dim)
         # stay until the end
         self._stay()
