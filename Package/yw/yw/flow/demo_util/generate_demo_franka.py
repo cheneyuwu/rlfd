@@ -275,8 +275,6 @@ def main():
             episode_batch[key] = val.swapaxes(0, 1)
         episode = episode_batch
 
-        # TODO: use the ring replay buffer! convert to (T x dims and add done signal)
-
         if result == None:
             result = episode
         else:
@@ -295,7 +293,7 @@ if __name__ == "__main__":
 # env_manager = EnvManager("FrankaPegInHole")
 # panda_robot = env_manager.get_env()
 
-# # panda_robot = FrankaPegInHole()
+# # panda_robot = FrankaPegInHole()    
 # actions = (
 #     [-1.0, -1.0, -1.0],
 #     [+1.0, -1.0, -1.0],
