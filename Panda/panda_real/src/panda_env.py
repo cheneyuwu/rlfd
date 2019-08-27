@@ -324,6 +324,7 @@ class FrankaPegInHole(FrankaPandaRobotBase):
         # is_success or not
         is_success = distance < self.threshold
         return (
+            # {"observation": obs, "desired_goal": np.zeros(0), "achieved_goal": np.zeros(0)},
             {"observation": obs, "desired_goal": self.goal, "achieved_goal": ag},
             r,
             0,

@@ -502,11 +502,11 @@ class SerialRolloutWorker(RolloutWorkerBase):
                 ag[...] = ag_new  # ag_2 -> ag
 
                 # UNCOMMENT this to end this episode if succeeded
-                if success:
-                    if t == 0:
-                        logger.warn("Starting with a success, this may be an indication of error!")
-                    dones.append(np.ones(1))
-                    break
+                # if success:
+                #     if t == 0:
+                #         logger.warn("Starting with a success, this may be an indication of error!")
+                #     dones.append(np.ones(1))
+                #     break
 
                 dones.append(np.array((float(t == self.T - 1),)))
 
