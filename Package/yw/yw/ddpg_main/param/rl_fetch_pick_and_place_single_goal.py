@@ -47,7 +47,7 @@ params_config = {
                 "potential_weight": 3.0,
             },
             "gan": {
-                "num_ens": 1,
+                "num_ens": 4,
                 "layer_sizes": [256, 256, 256],
                 "initializer_type": "glorot",  # ["zero", "glorot"]
                 "latent_dim": 25,
@@ -88,7 +88,7 @@ params_config = {
         "n_epochs": int(4e3),
         "n_cycles": 10,
         "n_batches": 40,
-        "shaping_n_epochs": int(1e4),
+        "shaping_n_epochs": int(2e4),
         "save_interval": 10,
     },
     "seed": tuple(range(2)),
