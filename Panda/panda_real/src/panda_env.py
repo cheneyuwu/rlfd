@@ -52,7 +52,7 @@ class FrankaPandaRobotBase(object):
         self.last_pos = None
         self.action_space = self.ActionSpace()
         self.max_u = 2.0
-        self.threshold = 0.04
+        self.threshold = 0.03
         self._max_episode_steps = 50
         
         
@@ -163,8 +163,8 @@ class FrankaPandaRobotBase(object):
         is_success = distance < self.threshold
         return (
             # CHANGE THIS
-            # {"observation": obs, "desired_goal": np.zeros(0), "achieved_goal": np.zeros(0)},
-            {"observation": obs, "desired_goal": self.goal, "achieved_goal": ag},
+            {"observation": obs, "desired_goal": np.zeros(0), "achieved_goal": np.zeros(0)},
+            # {"observation": obs, "desired_goal": self.goal, "achieved_goal": ag},
             r,
             0,
             {"is_success": is_success, "shaping_reward": -distance},
@@ -333,9 +333,8 @@ def make(env_name, **env_args):
 
 class FrankaPegInHole(FrankaPandaRobotBase):
     
-    def __init__(self, sparse=False):
+    def __init__(self, sparse=True):
         safety_region = np.array([[0.42, 0.6], [-0.05, 0.05], [0.1, 0.25]])
-        sparse = sparse
         goal = np.array((0.455, -0.0, 0.1))
         home_pos = [0.58,0.0,0.125]
 
@@ -343,10 +342,9 @@ class FrankaPegInHole(FrankaPandaRobotBase):
 
 class FrankaReacher(FrankaPandaRobotBase):
     
-    def __init__(self, sparse=False, rand_init=False):
+    def __init__(self, sparse=True, rand_init=False):
         self.rand_init = rand_init
         safety_region = np.array([[0.45, 0.6], [-0.13, 0.13], [0.2, 0.3]])
-        sparse = sparse
         goal = np.array((0.59, 0.0, 0.25))
         home_pos = [0.46, 0.0,0.25]
 
