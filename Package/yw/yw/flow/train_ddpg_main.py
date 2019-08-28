@@ -50,7 +50,8 @@ class Trainer:
         # Setup paths
         # checkpoint files
         self.ckpt_save_path = os.path.join(self.root_dir, "rl_ckpt")
-        os.makedirs(self.ckpt_save_path)
+        if not os.path.exists(self.ckpt_save_path):
+            os.makedirs(self.ckpt_save_path)
         self.ckpt_weight_path = os.path.join(self.ckpt_save_path, "rl_weights.ckpt")
         self.ckpt_rb_path = os.path.join(self.ckpt_save_path, "rb_data.npz")
         self.ckpt_rollout_path = os.path.join(self.ckpt_save_path, "rollout_history.pkl")
@@ -58,15 +59,18 @@ class Trainer:
         self.ckpt_trainer_path = os.path.join(self.ckpt_save_path, "trainer.pkl")
         # rl (cannot restart training)
         policy_save_path = os.path.join(self.root_dir, "rl")
-        os.makedirs(policy_save_path)
+        if not os.path.exists(policy_save_path):
+            os.makedirs(policy_save_path)
         best_policy_path = os.path.join(policy_save_path, "policy_best.pkl")
         latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
         periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")
         # queries
         query_shaping_save_path = os.path.join(self.root_dir, "query_shaping")
-        os.makedirs(query_shaping_save_path)
+        if not os.path.exists(query_shaping_save_path):
+            os.makedirs(query_shaping_save_path)
         query_policy_save_path = os.path.join(self.root_dir, "query_policy")
-        os.makedirs(query_policy_save_path)
+        if not os.path.exists(query_policy_save_path):
+            os.makedirs(query_policy_save_path)
 
         # Adding demonstration data to the demonstration buffer
         if self.policy.demo_strategy != "none" or self.policy.sample_demo_buffer:

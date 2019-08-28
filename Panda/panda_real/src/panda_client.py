@@ -252,5 +252,19 @@ class PandaClient(object):
             pose_goal.position.z = 0.125
 
             self.move_ee_to(pose_goal)
+    
+    def go_to(self, desired_pos):
+        pose_goal = geometry_msgs.msg.Pose()
+        pose_goal.orientation.x = 1.0
+        pose_goal.orientation.y = 0.0
+        pose_goal.orientation.z = 0.0
+        pose_goal.orientation.w = 0.0
+        pose_goal.position.x = desired_pos[0]
+        pose_goal.position.y = desired_pos[1]
+        pose_goal.position.z = desired_pos[2]
+
+        self.move_ee_to(pose_goal)        
+
+
 
         
