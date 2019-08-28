@@ -26,7 +26,7 @@ class FrankaEnvDemoGenerator:
 
         self.reset_robot()
         # move to the goal
-        self._move_to_goal(obj_pos_dim, goal_dim)
+        self._move_to_goal(obj_pos_dim, goal_dim, stay=True)
         # stay until the end
         self._stay()
 
@@ -42,7 +42,7 @@ class FrankaEnvDemoGenerator:
         self.reset_robot()
         # move to the goal
         self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0,0.0,np.random.uniform(0.05, 0.1))))
-        self._move_to_goal(obj_pos_dim, goal_dim)
+        self._move_to_goal(obj_pos_dim, goal_dim, stay=True)
         # stay until the end
         self._stay()
 
@@ -99,17 +99,17 @@ class FrankaEnvDemoGenerator:
             object_oriented_goal = copy(object_rel_pos)
             object_oriented_goal[2] += offset
 
-    def _move_to_goal(self, obj_pos_dim, goal_dim, gripper=-1.0, offset=np.array((0.0, 0.0, 0.0))):
+    def _move_to_goal(self, obj_pos_dim, goal_dim, gripper=-1.0, offset=np.array((0.0, 0.0, 0.0)), stay=False):
         goal = self.last_obs["desired_goal"][goal_dim : goal_dim + 3] + offset
         object_pos = self.last_obs["observation"][obj_pos_dim : obj_pos_dim + 3]
 
-        while np.linalg.norm(goal - object_pos) >= 0.01 and self.time_step <= self.env._max_episode_steps:
-
+        while self.time_step <= self.env._max_episode_steps:
+            if (not stay) and np.linalg.norm(goal - object_pos) < 0.01:
+                break
             action = [0, 0, 0, 0]
             for i in range(len(goal - object_pos)):
                 action[i] = (goal - object_pos)[i] * 10 + self.system_noise_scale * np.random.normal()
             action[-1] = gripper
-
             self._step(action)
 
             object_pos = self.last_obs["observation"][obj_pos_dim : obj_pos_dim + 3]

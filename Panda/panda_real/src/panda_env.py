@@ -332,10 +332,10 @@ class FrankaPegInHole(FrankaPandaRobotBase):
 class FrankaReacher(FrankaPandaRobotBase):
     
     def __init__(self, sparse=False):
-        safety_region = np.array([[0.4, 0.6], [-0.2, 0.2], [0.1, 0.25]])
+        safety_region = np.array([[0.4, 0.6], [-0.22, 0.22], [0.12, 0.28]])
         sparse = sparse
-        goal = np.array((0.6, 0.2, 0.25))
-        home_pos = [0.4,-0.2,0.12]
+        goal = np.array((0.55, 0.2, 0.25))
+        home_pos = [0.45,-0.2,0.15]
 
         super(FrankaReacher, self).__init__(home_pos=home_pos, safety_region=safety_region, sparse=sparse, goal=goal)
 
