@@ -107,7 +107,7 @@ class FetchPickAndPlaceDemoGenerator:
         # move to the goal
         assert self.sub_opt_level <= 0.2
         assert self.variance_level <= 0.1
-        interm_goal = 0.1 + self.sub_opt_level + np.random.uniform(-self.variance_level, self.variance_level)
+        interm_goal = 0.12 + self.sub_opt_level + np.random.uniform(-self.variance_level, self.variance_level)
         self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0, 0.0, interm_goal)))
         self._move_to_goal(obj_pos_dim, goal_dim)
         # stay until the end
