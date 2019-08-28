@@ -89,6 +89,15 @@ class FrankaPandaRobotBase(object):
 
         def sample(self):
             return self.random.rand(3)
+    
+    def dump(self):
+        info = {
+            "safety_region": self.safety_region,
+            "sparse": self.sparse,
+            "goal": self.goal,
+            "home_pos": self.home_pos,
+        }
+        return info
 
     def seed(self, seed):
         return

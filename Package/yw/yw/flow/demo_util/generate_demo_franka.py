@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from copy import copy
+import os
 import numpy as np
 
 from yw.env.env_manager import EnvManager
@@ -232,11 +233,19 @@ def main(env_name, path, num_itr=20, render=False):
                 result[k] = np.concatenate((result[k], episode[k]), axis=0)
 
     # array(batch_size x (T or T+1) x dim_key), we only need the first one!
-    np.savez_compressed(path, **result)  # save the file
+    np.savez_compressed(os.path.join(path, "demo_data.npz"), **result)  # save the file
+    with open(os.path.join(path, "env_info.log"), "w+") as f:
+        f.write(env_name + "\n")
+        for k, v in result.items():
+            f.write(k + ":" + str(v.shape) + "\n")
+        info = env.dump()
+        for k, v in info.items():
+            f.write(k + ":" + str(v) + "\n")
+        f.write("num_itr:"+str(num_itr) + "\n")
 
     # clean up
     generator.reset_robot()
 
 
 if __name__ == "__main__":
-    main("demo_data.npz")
+    main(env_name="FrankaPegInHole", path="demo_data.npz")

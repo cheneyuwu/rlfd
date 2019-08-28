@@ -134,6 +134,9 @@ class EnvManager:
 
         def close(self):
             return self.env.close()
+        
+        def dump(self):
+            return self.env.dump()
 
 
 if __name__ == "__main__":

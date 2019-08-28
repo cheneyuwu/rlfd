@@ -9,9 +9,9 @@ from yw.flow.demo_util.generate_demo_franka import main as gen_demo
 from yw.flow.launch import main as train
 
 env_name = "FrankaReacher"
-exp_dir = "/home/melissa/Workspace/RLProject/Experiment/ExpData/Aug27" + env_name
+exp_dir = "/home/melissa/Workspace/RLProject/Experiment/ExpData/Aug28" + env_name
 # Collect data
-gen_demo(env_name=env_name, path=os.path.join(exp_dir, "demo_data.npz"), num_itr=2)
+gen_demo(env_name=env_name, path=exp_dir, num_itr=1)
 
 # Run the rl training
 # kwargs = {
