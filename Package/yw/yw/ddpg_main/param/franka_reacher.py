@@ -3,7 +3,7 @@ params_config = {
     # config summary
     "config": "default",
     # environment config
-    "env_name": "FrankaPegInHole",  # Important: make sure that you have 2 objects
+    "env_name": "FrankaReacher",  # Important: make sure that you have 2 objects
     "r_scale": 0.2,
     "r_shift": 0.0,
     "eps_length": 50,
@@ -29,7 +29,7 @@ params_config = {
         "sample_demo_buffer": 0,
         "batch_size_demo": 128,
         "use_demo_reward": 0,
-        "num_demo": 20,
+        "num_demo": 10,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         "bc_params": {"pure_bc": False, "q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 10.0},
         "shaping_params": {
