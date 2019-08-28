@@ -8,7 +8,7 @@ tfd = tfp.distributions
 from yw.util.tf_util import MAF, RealNVP, MLP
 
 
-class DemoShaping:
+class DemoShaping(object):
     def __init__(self, gamma):
         """
         Implement the state, action based potential function and corresponding actions
