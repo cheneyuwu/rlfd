@@ -8,9 +8,11 @@ class FetchPickAndPlaceDemoGenerator:
     Provide an easier way to control the gripper for pick and place task
     """
 
-    def __init__(self, env, system_noise_scale, render):
+    def __init__(self, env, system_noise_level, variance_level, sub_opt_level, render):
         self.env = env
-        self.system_noise_scale = system_noise_scale
+        self.system_noise_level = system_noise_level
+        self.sub_opt_level = sub_opt_level
+        self.variance_level = variance_level
         self.render = render
         self.num_itr = 0
 
@@ -75,10 +77,14 @@ class FetchPickAndPlaceDemoGenerator:
         # grab the object
         self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.0, gripper_open=False)
         # move to the goal
+        sub1 = 0.5 + self.sub_opt_level
+        sub2 = 0.5 - self.sub_opt_level
+        assert self.sub_opt_level <= 0.5
+        assert self.variance_level <= 0.2
         if self.num_itr % 2 == 0:
-            weight = np.array((0.8, 0.2, 0.5)) + np.random.normal(scale=0.05, size=3)
+            weight = np.array((sub1, sub2, 0.0)) + np.random.normal(scale=self.variance_level, size=3)
         elif self.num_itr % 2 == 1:
-            weight = np.array((0.2, 0.8, 0.5)) + np.random.normal(scale=0.05, size=3)
+            weight = np.array((sub2, sub1, 0.0)) + np.random.normal(scale=self.variance_level, size=3)
         else:
             assert False
         self._move_to_interm_goal(obj_pos_dim, goal_dim, weight)
@@ -99,7 +105,10 @@ class FetchPickAndPlaceDemoGenerator:
 
         self._reset()
         # move to the goal
-        self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0, 0.0, np.random.uniform(0.15, 0.2))))
+        assert self.sub_opt_level <= 0.2
+        assert self.variance_level <= 0.1
+        interm_goal = 0.1 + self.sub_opt_level + np.random.uniform(-self.variance_level, self.variance_level)
+        self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0, 0.0, interm_goal)))
         self._move_to_goal(obj_pos_dim, goal_dim)
         # stay until the end
         self._stay()
@@ -146,7 +155,7 @@ class FetchPickAndPlaceDemoGenerator:
 
             action = [0, 0, 0, 0]
             for i in range(len(object_oriented_goal)):
-                action[i] = object_oriented_goal[i] * 10 + self.system_noise_scale * np.random.normal()
+                action[i] = object_oriented_goal[i] * 10 + self.system_noise_level * np.random.normal()
             action[-1] = 0.05 if gripper_open else -0.05  # open
 
             self._step(action)
@@ -164,7 +173,7 @@ class FetchPickAndPlaceDemoGenerator:
 
             action = [0, 0, 0, 0]
             for i in range(len(goal - object_pos)):
-                action[i] = (goal - object_pos)[i] * 10 + self.system_noise_scale * np.random.normal()
+                action[i] = (goal - object_pos)[i] * 10 + self.system_noise_level * np.random.normal()
             action[-1] = gripper
 
             self._step(action)
@@ -182,7 +191,7 @@ class FetchPickAndPlaceDemoGenerator:
 
             action = [0, 0, 0, 0]
             for i in range(len(interm_goal - object_pos)):
-                action[i] = (interm_goal - object_pos)[i] * 10 + self.system_noise_scale * np.random.normal()
+                action[i] = (interm_goal - object_pos)[i] * 10 + self.system_noise_level * np.random.normal()
             action[-1] = -0.05
 
             self._step(action)
@@ -197,7 +206,7 @@ class FetchPickAndPlaceDemoGenerator:
 
             action = [0, 0, 0, 0]
             for i in range(len(goal - grip_pos)):
-                action[i] = (goal - grip_pos)[i] * 10 + self.system_noise_scale * np.random.normal()
+                action[i] = (goal - grip_pos)[i] * 10 + self.system_noise_level * np.random.normal()
             action[-1] = 0.05
 
             self._step(action)
@@ -209,7 +218,7 @@ class FetchPickAndPlaceDemoGenerator:
 
             action = [0, 0, 0, 0]
             for i in range(3):
-                action[i] = self.system_noise_scale * np.random.normal()
+                action[i] = self.system_noise_level * np.random.normal()
             action[-1] = 0.05  # keep the gripper open
 
             self._step(action)
@@ -222,7 +231,9 @@ def main():
     render = True
     env_name = "FetchPegInHole-v1"
     env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=25).get_env()
-    system_noise_scale = 0.03
+    sub_opt_level = 0.0
+    variance_level = 0.0
+    system_noise_level = 0.0
     # Eps length to use:
     #   FetchPickAndPlace: eps = 50
     #   FetchMoveAutoPlace: 2 objects eps = 80
@@ -230,7 +241,13 @@ def main():
     #   FetchPegInHole: eps = 25
     # End
 
-    generator = FetchPickAndPlaceDemoGenerator(env=env, system_noise_scale=system_noise_scale, render=render)
+    generator = FetchPickAndPlaceDemoGenerator(
+        env=env,
+        system_noise_level=system_noise_level,
+        sub_opt_level=sub_opt_level,
+        variance_level=variance_level,
+        render=render,
+    )
     demo_data_obs = []
     demo_data_acs = []
     demo_data_rewards = []
