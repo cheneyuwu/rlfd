@@ -112,7 +112,7 @@ class FrankaPandaRobotBase(object):
 
         return self._get_obs()
 
-    def reset(self, use_home_estimate=False):
+    def reset(self, use_home_estimate=True):
         if use_home_estimate:
             self._move_up()
             self._go_to_est_home()
@@ -243,10 +243,10 @@ class FrankaPandaRobotBase(object):
     def _stop(self):
         self.apply_velocity_action((0,0,0))
         last_pos = self.cur_pos
-        rospy.sleep(1.0)
+        rospy.sleep(0.5)
         while np.linalg.norm(np.array(last_pos) - np.array(self.cur_pos)) >= 0.01:
             last_pos = self.cur_pos
-            rospy.sleep(1.0)
+            rospy.sleep(0.5)
 
     def _state_callback(self, data):
         self.cur_pos = np.asarray(data.O_T_EE[12:15])
