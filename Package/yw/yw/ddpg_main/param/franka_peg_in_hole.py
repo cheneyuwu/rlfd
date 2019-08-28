@@ -4,7 +4,7 @@ params_config = {
     "config": "default",
     # environment config
     "env_name": "FrankaPegInHole",  # Important: make sure that you have 2 objects
-    "r_scale": 0.2,
+    "r_scale": 1.0,
     "r_shift": 0.0,
     "eps_length": 50,
     "env_args": {},
