@@ -22,7 +22,18 @@ PANDA_REAL='/home/melissa/Workspace/RLProject/Panda/panda_real/launch'
 
 class FrankaPandaRobotBase(object):
 
-    def __init__(self):
+    def __init__(self, safety_region,home_pos, goal, sparse=False):
+
+        # Safety zone constraint based on joint positions published on
+        # /franka_state_controller/franka_states. Order is x,y,z.
+        # Forward/Backward [0.33, 0.7]
+        # Left/Right [-0.4, 0.35]
+        # Up/Down [0.005, 0.32]
+        self.safety_region = safety_region
+        self.sparse = sparse
+        self.goal = goal
+        self.home_pos = home_pos
+
         # Initialize ROS node.
         rospy.init_node("panda_arm_env", disable_signals=True)
         # Ctrl/C keyboard node exit handler.
@@ -37,18 +48,13 @@ class FrankaPandaRobotBase(object):
         self.dt = 0.2
         self.step_size = rospy.Rate(1.0 / self.dt) # 5hz
         # positions
-        self.home_pose = None
         self.cur_pos = None
         self.last_pos = None
         self.action_space = self.ActionSpace()
         self.max_u = 2.0
+        self.threshold = 0.02
+        self._max_episode_steps = 50
         
-        # Safety zone constraint based on joint positions published on
-        # /franka_state_controller/franka_states. Order is x,y,z.
-        # Forward/Backward [0.33, 0.7]
-        # Left/Right [-0.4, 0.35]
-        # Up/Down [0.005, 0.32]
-        self.safety_region = np.array([[0.42, 0.6], [-0.05, 0.05], [0.1, 0.25]])
         
         self.velocity_publisher = rospy.Publisher("/franka_control/target_velocity", Twist, queue_size=1)
 
@@ -69,15 +75,12 @@ class FrankaPandaRobotBase(object):
         self.enable_pos_control()
         moveit_commander.roscpp_initialize(sys.argv)
         #self.scene = moveit_commander.PlanningSceneInterface()
-        self.panda_client = panda.PandaClient()
+        self.panda_client = panda.PandaClient(home_pos=self.home_pos)
         self.disable_pos_control()
         self.enable_vel_control()
 
         # Reset to home position
         self.reset(use_home_estimate=False)
-
-        # Store the initial home pose
-        self.home_pose = self.cur_pos
 
     class ActionSpace:
         def __init__(self, seed=0):
@@ -86,9 +89,6 @@ class FrankaPandaRobotBase(object):
 
         def sample(self):
             return self.random.rand(3)
-
-    def compute_reward(self, achieved_goal, desired_goal, info=0):
-        raise NotImplementedError
 
     def seed(self, seed):
         return
@@ -103,7 +103,7 @@ class FrankaPandaRobotBase(object):
 
         return self._get_obs()
 
-    def reset(self, use_home_estimate=True):
+    def reset(self, use_home_estimate=False):
         if use_home_estimate:
             self._move_up()
             self._go_to_est_home()
@@ -115,11 +115,51 @@ class FrankaPandaRobotBase(object):
                 up_goal = copy.copy(self.cur_pos)
                 up_goal[2] += 0.1
                 self.panda_client.go_to(up_goal)
-            self.panda_client.go_home(joint_based=False)
+            while np.linalg.norm(np.array(self.cur_pos) - np.array(self.home_pos)) >= 0.01:
+                self.panda_client.go_home(joint_based=False)
             self.disable_pos_control()
             self.enable_vel_control()
         self.last_pos = self.cur_pos
         return self._get_obs()[0]     
+
+    def compute_reward(self, achieved_goal, desired_goal, info=0):
+        distance = self._compute_distance(achieved_goal, desired_goal)
+        if self.sparse == False:
+            return -distance
+            # return np.maximum(-0.5, -distance)
+            # return 0.05 / (0.05 + distance)
+        else:  # self.sparse == True
+            return -(distance >= self.threshold).astype(np.int64)
+
+    def _compute_distance(self, achieved_goal, desired_goal):
+        achieved_goal = achieved_goal.reshape(-1, 3)
+        desired_goal = desired_goal.reshape(-1, 3)
+        distance = np.sqrt(np.sum(np.square(achieved_goal - desired_goal), axis=1))
+        return distance
+
+    def _get_obs(self):
+        """
+        Get observations
+        """
+        pos = self.cur_pos
+        vel = (pos - self.last_pos) / self.dt
+        self.last_pos = pos
+        obs = np.concatenate((pos, vel), axis=0)
+        ag = obs[:3].copy()
+        r = self.compute_reward(ag, self.goal)
+        # return distance as metric to measure performance
+        distance = self._compute_distance(ag, self.goal)
+        # is_success or not
+        is_success = distance < self.threshold
+        return (
+            # CHANGE THIS!
+            # {"observation": obs, "desired_goal": np.zeros(0), "achieved_goal": np.zeros(0)},
+            {"observation": obs, "desired_goal": self.goal, "achieved_goal": ag},
+            r,
+            0,
+            {"is_success": is_success, "shaping_reward": -distance},
+        )   
+
 
     def send_control_recovery_message(self):
         """Publish an empty `ErrorRecoveryActionGoal`
@@ -199,9 +239,6 @@ class FrankaPandaRobotBase(object):
             last_pos = self.cur_pos
             rospy.sleep(1.0)
 
-    def _get_obs(self):
-        raise NotImplementedError
-
     def _state_callback(self, data):
         self.cur_pos = np.asarray(data.O_T_EE[12:15])
     
@@ -217,13 +254,13 @@ class FrankaPandaRobotBase(object):
         """If too close to the boundaries of the hole,
         move up slightly, before returning home.
         """
-        if not self.cur_pos[2] < 0.15:
+        if not self.cur_pos[2] < 0.1:
             return
         goal = (np.array(self.cur_pos) + np.array([0.0, 0.0, 0.06]))
         self._go_to_goal(goal)
     
     def _go_to_est_home(self):
-        self._go_to_goal(self.home_pose)
+        self._go_to_goal(self.home_pos)
     
     def _go_to_goal(self, goal):
         max_u = self.max_u
@@ -272,52 +309,35 @@ class FrankaPandaRobotBase(object):
                 self.reset()
                 action[0] = -action[0]
 
+
+def make(env_name, **env_args):
+    # note: we only have one environment
+    try:
+        _ = eval(env_name)(**env_args)
+    except:
+        raise NotImplementedError
+    return eval(env_name)(**env_args)
+
+
 class FrankaPegInHole(FrankaPandaRobotBase):
     
-    def __init__(self):
-        self.goal = np.array((0.455, -0.0, 0.1))
-        self.threshold = 0.02
-        self.sparse = False
-        self._max_episode_steps = 50
-        super(FrankaPegInHole, self).__init__()
+    def __init__(self, sparse=False):
+        safety_region = np.array([[0.42, 0.6], [-0.05, 0.05], [0.1, 0.25]])
+        sparse = sparse
+        goal = np.array((0.455, -0.0, 0.1))
+        home_pos = [0.58,0.0,0.125]
+
+        super(FrankaPegInHole, self).__init__(home_pos=home_pos, safety_region=safety_region, sparse=sparse, goal=goal)
+
+class FrankaReacher(FrankaPandaRobotBase):
     
-    def compute_reward(self, achieved_goal, desired_goal, info=0):
-        distance = self._compute_distance(achieved_goal, desired_goal)
-        if self.sparse == False:
-            return -distance
-            # return np.maximum(-0.5, -distance)
-            # return 0.05 / (0.05 + distance)
-        else:  # self.sparse == True
-            return -(distance >= self.threshold).astype(np.int64)
+    def __init__(self, sparse=False):
+        safety_region = np.array([[0.4, 0.6], [-0.2, 0.2], [0.1, 0.25]])
+        sparse = sparse
+        goal = np.array((0.6, 0.2, 0.25))
+        home_pos = [0.4,-0.2,0.12]
 
-    def _compute_distance(self, achieved_goal, desired_goal):
-        achieved_goal = achieved_goal.reshape(-1, 3)
-        desired_goal = desired_goal.reshape(-1, 3)
-        distance = np.sqrt(np.sum(np.square(achieved_goal - desired_goal), axis=1))
-        return distance
-
-    def _get_obs(self):
-        """
-        Get observation
-        """
-        pos = self.cur_pos
-        vel = (pos - self.last_pos) / self.dt
-        self.last_pos = pos
-        obs = np.concatenate((pos, vel), axis=0)
-        ag = obs[:3].copy()
-        r = self.compute_reward(ag, self.goal)
-        # return distance as metric to measure performance
-        distance = self._compute_distance(ag, self.goal)
-        # is_success or not
-        is_success = distance < self.threshold
-        return (
-            # modify this
-            {"observation": obs, "desired_goal": np.zeros(0), "achieved_goal": np.zeros(0)},
-            # {"observation": obs, "desired_goal": self.goal, "achieved_goal": ag},
-            r,
-            0,
-            {"is_success": is_success, "shaping_reward": -distance},
-        )   
+        super(FrankaReacher, self).__init__(home_pos=home_pos, safety_region=safety_region, sparse=sparse, goal=goal)
 
     
 if __name__ == '__main__':

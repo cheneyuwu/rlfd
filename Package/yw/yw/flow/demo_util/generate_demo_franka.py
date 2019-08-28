@@ -19,28 +19,14 @@ class FrankaEnvDemoGenerator:
     def reset(self):
         self.num_itr = 0
 
-    def generate_pick_place(self):
+    def generate_reacher(self):
 
         goal_dim = 0
-        obj_pos_dim = 10
-        obj_rel_pos_dim = 13
+        obj_pos_dim = 0
 
-        self._reset()
-        # move to the above of the object
-        self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.05, gripper_open=True)
-        # grab the object
-        self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.0, gripper_open=False)
+        self.reset_robot()
         # move to the goal
-        if self.num_itr % 2 == 0:
-            weight = np.array((0.8, 0.2, 0.5)) + np.random.normal(scale=0.05, size=3)
-        elif self.num_itr % 2 == 1:
-            weight = np.array((0.2, 0.8, 0.5)) + np.random.normal(scale=0.05, size=3)
-        else:
-            assert False
-        self._move_to_interm_goal(obj_pos_dim, goal_dim,weight)
         self._move_to_goal(obj_pos_dim, goal_dim)
-        # open the gripper
-        self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.03, gripper_open=True)
         # stay until the end
         self._stay()
 
@@ -48,15 +34,12 @@ class FrankaEnvDemoGenerator:
         assert self.episode_info[-1]["is_success"]
         return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
 
-    def reset(self):
-        self._reset()
-
     def generate_peg_in_hole(self):
 
         goal_dim = 0
         obj_pos_dim = 0
 
-        self._reset()
+        self.reset_robot()
         # move to the goal
         self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0,0.0,np.random.uniform(0.05, 0.1))))
         self._move_to_goal(obj_pos_dim, goal_dim)
@@ -67,7 +50,7 @@ class FrankaEnvDemoGenerator:
         assert self.episode_info[-1]["is_success"]
         return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
 
-    def _reset(self):
+    def reset_robot(self):
         # store return from 1 episode
         self.episode_act = []
         self.episode_obs = []
@@ -174,12 +157,9 @@ class FrankaEnvDemoGenerator:
 
             self._step(action)
 
-def main(path):
+def main(env_name, path, num_itr=20, render=False):
 
     # Change the following parameters
-    num_itr = 20
-    render = False
-    env_name = "FrankaPegInHole"
     env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=50).get_env()
     system_noise_scale = 0.00
     # Eps length to use:
@@ -187,7 +167,6 @@ def main(path):
     #   FetchMoveAutoPlace: 2 objects eps = 80
     #   FetchMove: 2 objects eps = 70
     # End
-
     generator = FrankaEnvDemoGenerator(env=env, system_noise_scale=system_noise_scale, render=render)
     demo_data_obs = []
     demo_data_acs = []
@@ -196,8 +175,10 @@ def main(path):
 
     for i in range(num_itr):
         print("Iteration number: ", i)
-
-        episode_obs, episode_act, episode_rwd, episode_info = generator.generate_peg_in_hole()
+        if env_name == "FrankaPegInHole":
+            episode_obs, episode_act, episode_rwd, episode_info = generator.generate_peg_in_hole()
+        elif env_name == "FrankaReacher":
+            episode_obs, episode_act, episode_rwd, episode_info = generator.generate_reacher()        
         demo_data_obs.append(episode_obs)
         demo_data_acs.append(episode_act)
         demo_data_rewards.append(episode_rwd)
@@ -254,7 +235,7 @@ def main(path):
     np.savez_compressed(path, **result)  # save the file
 
     # clean up
-    generator.reset()
+    generator.reset_robot()
 
 
 if __name__ == "__main__":

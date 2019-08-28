@@ -68,7 +68,10 @@ class EnvManager:
         # Franka environment
         if self.make_env is None and panda_env is not None:
             # TODO add a make function
-            self.make_env = panda_env.FrankaPegInHole
+            if env_name == "FrankaPegInHole":                
+                self.make_env = lambda: panda_env.make("FrankaPegInHole")
+            elif env_name == "FrankaReacher":
+                self.make_env = lambda: panda_env.make("FrankaReacher")
 
         # Search from openai gym
         if self.make_env is None and gym is not None:

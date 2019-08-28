@@ -8,18 +8,18 @@ from yw.env.env_manager import EnvManager
 from yw.flow.demo_util.generate_demo_franka import main as gen_demo
 from yw.flow.launch import main as train
 
-exp_dir = "/home/melissa/Workspace/RLProject/Experiment/ExpData/Aug27FrankaPegInHole"
-
+env_name = "FrankaReacher"
+exp_dir = "/home/melissa/Workspace/RLProject/Experiment/ExpData/Aug27" + env_name
 # Collect data
-# gen_demo(os.path.join(exp_dir, "demo_data.npz"))
+gen_demo(env_name=env_name, path=os.path.join(exp_dir, "demo_data.npz"), num_itr=2)
 
 # Run the rl training
-kwargs = {
-    "exp_dir": exp_dir,
-    "targets": ["train:" + os.path.join(exp_dir, "training_config.py")],
-    "policy_file": None,
-}
-train(**kwargs)
+# kwargs = {
+#     "exp_dir": exp_dir,
+#     "targets": ["train:" + os.path.join(exp_dir, "training_config.py")],
+#     "policy_file": None,
+# }
+# train(**kwargs)
 
 # Franka env testing
 # env_manager = EnvManager("FrankaPegInHole")
