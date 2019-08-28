@@ -29,8 +29,8 @@ class FrankaPandaRobotBase(object):
         # Forward/Backward [0.33, 0.7]
         # Left/Right [-0.4, 0.35]
         # Up/Down [0.005, 0.32]
-        self.safety_region = safety_region
         self.sparse = sparse
+        self.safety_region = safety_region
         self.goal = goal
         self.home_pos = home_pos
 
@@ -52,7 +52,7 @@ class FrankaPandaRobotBase(object):
         self.last_pos = None
         self.action_space = self.ActionSpace()
         self.max_u = 2.0
-        self.threshold = 0.02
+        self.threshold = 0.04
         self._max_episode_steps = 50
         
         
@@ -75,7 +75,7 @@ class FrankaPandaRobotBase(object):
         self.enable_pos_control()
         moveit_commander.roscpp_initialize(sys.argv)
         #self.scene = moveit_commander.PlanningSceneInterface()
-        self.panda_client = panda.PandaClient(home_pos=self.home_pos)
+        self.panda_client = panda.PandaClient()
         self.disable_pos_control()
         self.enable_vel_control()
 
@@ -125,10 +125,11 @@ class FrankaPandaRobotBase(object):
                 up_goal[2] += 0.1
                 self.panda_client.go_to(up_goal)
             while np.linalg.norm(np.array(self.cur_pos) - np.array(self.home_pos)) >= 0.01:
-                self.panda_client.go_home(joint_based=False)
+                self.panda_client.go_to(self.home_pos)
             self.disable_pos_control()
             self.enable_vel_control()
         self.last_pos = self.cur_pos
+        self._reset_callback()
         return self._get_obs()[0]     
 
     def compute_reward(self, achieved_goal, desired_goal, info=0):
@@ -161,7 +162,7 @@ class FrankaPandaRobotBase(object):
         # is_success or not
         is_success = distance < self.threshold
         return (
-            # CHANGE THIS!
+            # CHANGE THIS
             # {"observation": obs, "desired_goal": np.zeros(0), "achieved_goal": np.zeros(0)},
             {"observation": obs, "desired_goal": self.goal, "achieved_goal": ag},
             r,
@@ -169,6 +170,8 @@ class FrankaPandaRobotBase(object):
             {"is_success": is_success, "shaping_reward": -distance},
         )   
 
+    def _reset_callback(self):
+        pass
 
     def send_control_recovery_message(self):
         """Publish an empty `ErrorRecoveryActionGoal`
@@ -340,13 +343,18 @@ class FrankaPegInHole(FrankaPandaRobotBase):
 
 class FrankaReacher(FrankaPandaRobotBase):
     
-    def __init__(self, sparse=False):
-        safety_region = np.array([[0.4, 0.6], [-0.22, 0.22], [0.12, 0.28]])
+    def __init__(self, sparse=False, rand_init=False):
+        self.rand_init = rand_init
+        safety_region = np.array([[0.45, 0.6], [-0.13, 0.13], [0.2, 0.3]])
         sparse = sparse
-        goal = np.array((0.55, 0.2, 0.25))
-        home_pos = [0.45,-0.2,0.15]
+        goal = np.array((0.59, 0.0, 0.25))
+        home_pos = [0.46, 0.0,0.25]
 
         super(FrankaReacher, self).__init__(home_pos=home_pos, safety_region=safety_region, sparse=sparse, goal=goal)
+
+    def _reset_callback(self):
+        if self.rand_init:
+            self.home_pos = [0.46, np.random.uniform(-0.12, 0.12), np.random.uniform(0.21, 0.29)]
 
     
 if __name__ == '__main__':

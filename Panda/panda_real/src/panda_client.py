@@ -40,7 +40,7 @@ def all_close(goal, actual, tolerance):
 
 
 class PandaClient(object):
-    def __init__(self, home_pos):
+    def __init__(self):
         super(PandaClient, self).__init__()
 
         # This is the outer-level interface to the robot:
@@ -129,7 +129,6 @@ class PandaClient(object):
                                        -0.0055149872866853454,
                                        1.8590480223894117,
                                        0.7852137811630965]
-        self.home_pos = home_pos
 
         self.state_subscriber = rospy.Subscriber(
             '/franka_state_controller/franka_states',
@@ -248,9 +247,9 @@ class PandaClient(object):
             pose_goal.orientation.y = 0.0
             pose_goal.orientation.z = 0.0
             pose_goal.orientation.w = 0.0
-            pose_goal.position.x = self.home_pos[0]
-            pose_goal.position.y = self.home_pos[1]
-            pose_goal.position.z = self.home_pos[2]
+            pose_goal.position.x = 0.5
+            pose_goal.position.y = 0.0
+            pose_goal.position.z = 0.2
 
             self.move_ee_to(pose_goal)
     
@@ -265,7 +264,3 @@ class PandaClient(object):
         pose_goal.position.z = desired_pos[2]
 
         self.move_ee_to(pose_goal)        
-
-
-
-        

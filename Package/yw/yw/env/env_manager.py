@@ -72,6 +72,9 @@ class EnvManager:
                 self.make_env = lambda: panda_env.make("FrankaPegInHole")
             elif env_name == "FrankaReacher":
                 self.make_env = lambda: panda_env.make("FrankaReacher")
+            elif env_name == "FrankaReacherRandInit":
+                env_args["rand_init"] = True
+                self.make_env = lambda: panda_env.make("FrankaReacher", **env_args)
 
         # Search from openai gym
         if self.make_env is None and gym is not None:

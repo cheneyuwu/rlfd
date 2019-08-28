@@ -178,8 +178,10 @@ def main(env_name, path, num_itr=20, render=False):
         print("Iteration number: ", i)
         if env_name == "FrankaPegInHole":
             episode_obs, episode_act, episode_rwd, episode_info = generator.generate_peg_in_hole()
-        elif env_name == "FrankaReacher":
+        elif env_name == "FrankaReacher" or env_name=="FrankaReacherRandInit":
             episode_obs, episode_act, episode_rwd, episode_info = generator.generate_reacher()        
+        else:
+            assert False
         demo_data_obs.append(episode_obs)
         demo_data_acs.append(episode_act)
         demo_data_rewards.append(episode_rwd)
