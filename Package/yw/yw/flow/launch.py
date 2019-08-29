@@ -4,7 +4,7 @@ import sys
 import json
 import copy
 import importlib
-from shutil import copyfile
+import shutil
 
 # must include gym before loading mpi, for compute canada cluster
 import mujoco_py
@@ -154,7 +154,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     demo_file = os.path.join(exp_dir, "demo_data.npz")
                     demo_dest = os.path.join(k, "demo_data.npz")
                     if os.path.isfile(demo_file):
-                        copyfile(demo_file, demo_dest)
+                        shutil.copyfile(demo_file, demo_dest)
 
             # sync the process
             comm.Barrier()
@@ -243,6 +243,30 @@ def main(targets, exp_dir, policy_file, **kwargs):
             # currently assume only 1 level of subdir
             visualize_query_entry(directories=[exp_dir], save=1)
 
+        elif target == "cp_result":
+            expdata_dir = os.environ["EXPDATA"]
+            print("Experiment directory:", expdata_dir)
+            assert os.path.exists(expdata_dir)
+            exprun_dir = os.environ["EXPRUN"]
+            print("Experiment running direcory:", exprun_dir)
+            assert os.path.exists(exprun_dir)
+            rel_exp_dir = os.path.relpath(exp_dir, exprun_dir)
+            assert not rel_exp_dir.startswith("..")
+            # copy files
+            for dirname, _, files in os.walk(exp_dir):
+                if not "log.txt" in files:
+                    continue
+                # copy files
+                rel_dir_name = os.path.relpath(dirname, exprun_dir)
+                target_dir_name = os.path.join(expdata_dir, rel_dir_name)
+                os.makedirs(target_dir_name, exist_ok=True)
+                print("Found results:", rel_dir_name)
+
+                for file in ["log.txt", "params.json", "params_renamed.json", "progress.csv", "rl/policy_latest.pkl"]:
+                    src = os.path.join(dirname, file)
+                    if not os.path.exists(src):
+                        continue
+                    shutil.copy2(src, target_dir_name)
         else:
             assert 0, "unknown target: {}".format(target)
 
