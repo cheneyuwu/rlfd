@@ -68,6 +68,7 @@ class FrankaPandaRobotBase(object):
             Twist,
             self._velocity_callback)
 
+        # rostopic pub -1 /franka_control/error_recovery/goal franka_control/ErrorRecoveryActionGoal "{}"
         self.error_recovery_pub = rospy.Publisher("/franka_control/error_recovery/goal",
             ErrorRecoveryActionGoal, queue_size=1)
 
@@ -81,6 +82,8 @@ class FrankaPandaRobotBase(object):
 
         # Reset to home position
         self.reset(use_home_estimate=False)
+        # Indicates the robot is stuck due to undesirable collisions.
+        self.robot_stuck = False
 
     class ActionSpace:
         def __init__(self, seed=0):
@@ -106,6 +109,16 @@ class FrankaPandaRobotBase(object):
         return
         
     def step(self, action):
+
+        if self.robot_stuck:   
+            print('Robot stuck! Trying to recover.')
+            # In this case, the controller does not respond
+            # to ErrorRecoveryActionGoal.
+            # Just disable and re-enable the controller.
+            self.disable_vel_control(recovery_mode=True)
+            self.enable_vel_control(recovery_mode=True)
+            self.robot_stuck = False
+
         action = self._process_action(action)
         self.apply_velocity_action(action)
         self.step_size.sleep()
@@ -182,20 +195,25 @@ class FrankaPandaRobotBase(object):
         empty_recovery_msg = ErrorRecoveryActionGoal()
         self.error_recovery_pub.publish(empty_recovery_msg)
 
-    def enable_vel_control(self):
+    def enable_vel_control(self, recovery_mode=False):
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid)
         self.velocity_control_launcher = roslaunch.parent.ROSLaunchParent(
             uuid, [os.path.join(PANDA_REAL, "franka_arm_vel_controller.launch")])
         
         self.velocity_control_launcher.start()
-        self.rate.sleep()
+        if not recovery_mode:
+            # In recovery mode, since we are not switching between controllers
+            # and only resetting the velocity controller, sleep is not needed.
+            self.rate.sleep()
         rospy.loginfo("STARTED VELOCITY CONTROL")
 
-    def disable_vel_control(self):
-        self._stop()
+    def disable_vel_control(self, recovery_mode=False):
+        if not recovery_mode:
+            self._stop()
         self.velocity_control_launcher.shutdown()
-        self.rate.sleep()
+        if not recovery_mode:
+            self.rate.sleep()
         rospy.loginfo("SHUT DOWN VELOCITY CONTROL")
 
     def enable_pos_control(self):
@@ -226,6 +244,7 @@ class FrankaPandaRobotBase(object):
         twist.linear.x = action[0]
         twist.linear.y = action[1]
         twist.linear.z = action[2]
+
         # Call as appropriate - Ideally this should be
         # called when we have determined the controller
         # is stuck due to robot being in an invalid pose
@@ -253,6 +272,11 @@ class FrankaPandaRobotBase(object):
 
     def _state_callback(self, data):
         self.cur_pos = np.asarray(data.O_T_EE[12:15])
+        # Robot states - See franka_msgs/msg/FrankaState.msg
+        robot_state_id = data.robot_mode
+        if robot_state_id == 4:
+            # 4 is ROBOT_MODE_REFLEX which means collision has been detected.
+            self.robot_stuck = True
     
     def _velocity_callback(self, data):
         pass
