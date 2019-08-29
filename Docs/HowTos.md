@@ -3,13 +3,13 @@
 ## Install this package
 1. setup Mujoco
   - On cluster: https://docs.computecanada.ca/wiki/MuJoCo
+  - note: you need to manually install mujoco_py
 2. download the repo
   - `git clone git@github.com:cheneyuwu/RLProject`
   - `git submodule init`
   - `git submodule sync`
   - `git submodule update --remote`
-3. enter virtual env and install packages: gym, yw, tensorflow, tensorflow_probability, etc
-  - note: you need to manually install mujoco_py
+3. enter virtual env and install packages: gym, yw, tensorflow, tensorflow_probability
   - note: on compute canada cluster you need to manually install tensorflow and use `module load mpi4py` to get the mpi python package
 
 ## Compute Canada Cluster
