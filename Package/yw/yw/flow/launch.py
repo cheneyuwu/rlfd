@@ -68,21 +68,28 @@ def generate_params(root_dir, param_config):
 
 def transform_config_name(config_name):
     """ Transfer the legend names"""
+    print(config_name)
     for i in range(len(config_name)):
         if config_name[i].startswith("demo_strategy"):
             if config_name[i].endswith("nf"):
-                config_name[i] = "maf shaping"
+                if "potential_weight_1.0" in config_name:
+                    config_name[i] = "maf shaping"
+                else:
+                    config_name = ["default"]
+                    return config_name
             elif config_name[i].endswith("gan"):
-                config_name[i] = "gan shaping"
+                if "potential_weight_1.0" in config_name:
+                    config_name[i] = "gan shaping"
+                else:
+                    config_name = ["default"]
+                    return config_name
             elif config_name[i].endswith("bc"):
                 if "pure_bc_True" in config_name:
                     config_name[i] = "behavior clone"
-                elif "pure_bc_False" in config_name:
-                    config_name[i] = "ddpg w/ behavior clone"
                 else:
-                    assert False
-            else:
-                assert False
+                    config_name[i] = "ddpg w/ behavior clone"
+            elif config_name[i].endswith("none"):
+                config_name[i] = "ddpg"
     return config_name
 
 
@@ -222,7 +229,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     dirs=[exp_dir],
                     xys=[
                         "epoch:test/success_rate",
-                        # "epoch:test/total_shaping_reward",
+                        "epoch:test/total_shaping_reward",
                         "epoch:test/total_reward",
                         "epoch:test/mean_Q",
                         "epoch:test/mean_Q_plus_P",
