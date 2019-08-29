@@ -35,7 +35,7 @@ params_config = {
         "shaping_params": {
             "batch_size": 128,
             "nf": {
-                "num_ens": 1,
+                "num_ens": 2,
                 "nf_type": "maf",  # ["maf", "realnvp"]
                 "lr": 2e-4,
                 "num_masked": 4,
