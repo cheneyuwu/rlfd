@@ -244,10 +244,10 @@ def main(targets, exp_dir, policy_file, **kwargs):
             visualize_query_entry(directories=[exp_dir], save=1)
 
         elif target == "cp_result":
-            expdata_dir = os.environ["EXPDATA"]
+            expdata_dir = os.path.abspath(os.path.expanduser(os.environ["EXPDATA"]))
             print("Experiment directory:", expdata_dir)
             assert os.path.exists(expdata_dir)
-            exprun_dir = os.environ["EXPRUN"]
+            exprun_dir = os.path.abspath(os.path.expanduser(os.environ["EXPRUN"]))
             print("Experiment running direcory:", exprun_dir)
             assert os.path.exists(exprun_dir)
             rel_exp_dir = os.path.relpath(exp_dir, exprun_dir)
