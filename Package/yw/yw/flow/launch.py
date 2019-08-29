@@ -66,6 +66,26 @@ def generate_params(root_dir, param_config):
     return res
 
 
+def transform_config_name(config_name):
+    """ Transfer the legend names"""
+    for i in range(len(config_name)):
+        if config_name[i].startswith("demo_strategy"):
+            if config_name[i].endswith("nf"):
+                config_name[i] = "maf shaping"
+            elif config_name[i].endswith("gan"):
+                config_name[i] = "gan shaping"
+            elif config_name[i].endswith("bc"):
+                if "pure_bc_True" in config_name:
+                    config_name[i] = "behavior clone"
+                elif "pure_bc_False" in config_name:
+                    config_name[i] = "ddpg w/ behavior clone"
+                else:
+                    assert False
+            else:
+                assert False
+    return config_name
+
+
 def main(targets, exp_dir, policy_file, **kwargs):
 
     # Consider rank as pid.
@@ -99,11 +119,12 @@ def main(targets, exp_dir, policy_file, **kwargs):
                 dir_param_dict.update(generate_params(exp_dir, params_config))
             if rank == 0:
                 for k, v in dir_param_dict.items():
-                    assert os.path.exists(k)
+                    assert os.path.exists(k), k
                     assert v["config"] == "default"
                     # copy params.json file, rename the config entry
                     varied_params = k[len(exp_dir) + 1 :].split("/")
                     config_name = [x for x in varied_params if not any([x.startswith(y) for y in exc_params])]
+                    config_name = transform_config_name(config_name)
                     v["config"] = "-".join(config_name)
                     with open(os.path.join(k, "params_renamed.json"), "w") as f:
                         json.dump(v, f)
@@ -201,7 +222,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     dirs=[exp_dir],
                     xys=[
                         "epoch:test/success_rate",
-                        "epoch:test/total_shaping_reward",
+                        # "epoch:test/total_shaping_reward",
                         "epoch:test/total_reward",
                         "epoch:test/mean_Q",
                         "epoch:test/mean_Q_plus_P",
