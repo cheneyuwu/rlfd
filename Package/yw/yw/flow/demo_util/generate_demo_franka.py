@@ -42,7 +42,7 @@ class FrankaEnvDemoGenerator:
 
         self.reset_robot()
         # move to the goal
-        self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0,0.0,np.random.uniform(0.05, 0.1))))
+        self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0,0.0,np.random.uniform(0.1, 0.15))))
         self._move_to_goal(obj_pos_dim, goal_dim, stay=True)
         # stay until the end
         self._stay()

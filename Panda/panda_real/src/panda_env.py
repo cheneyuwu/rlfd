@@ -109,7 +109,6 @@ class FrankaPandaRobotBase(object):
         return
         
     def step(self, action):
-
         if self.robot_stuck:   
             print('Robot stuck! Trying to recover.')
             # In this case, the controller does not respond
@@ -125,15 +124,18 @@ class FrankaPandaRobotBase(object):
 
         return self._get_obs()
 
-    def reset(self, use_home_estimate=True):
+    def reset(self, use_home_estimate=False):
+        # Move up if neccessary.
         if use_home_estimate:
             self._move_up()
             self._go_to_est_home()
             self._stop()
         else:
             self.disable_vel_control()
+            self.enable_vel_control(recovery_mode=False)
+            self.disable_vel_control(recovery_mode=False)
             self.enable_pos_control()
-            if self.cur_pos[2] < 0.09:
+            if self.cur_pos[2] < 0.12:
                 up_goal = copy.copy(self.cur_pos)
                 up_goal[2] += 0.1
                 self.panda_client.go_to(up_goal)
@@ -176,8 +178,10 @@ class FrankaPandaRobotBase(object):
         is_success = distance < self.threshold
         return (
             # CHANGE THIS
-            {"observation": obs, "desired_goal": np.zeros(0), "achieved_goal": np.zeros(0)},
-            # {"observation": obs, "desired_goal": self.goal, "achieved_goal": ag},
+            # use this for training
+            # {"observation": obs, "desired_goal": np.zeros(0), "achieved_goal": np.zeros(0)},
+            # use this for demo
+            {"observation": obs, "desired_goal": self.goal, "achieved_goal": ag},
             r,
             0,
             {"is_success": is_success, "shaping_reward": -distance},
@@ -209,8 +213,7 @@ class FrankaPandaRobotBase(object):
         rospy.loginfo("STARTED VELOCITY CONTROL")
 
     def disable_vel_control(self, recovery_mode=False):
-        if not recovery_mode:
-            self._stop()
+        self._stop()
         self.velocity_control_launcher.shutdown()
         if not recovery_mode:
             self.rate.sleep()
@@ -290,9 +293,9 @@ class FrankaPandaRobotBase(object):
         """If too close to the boundaries of the hole,
         move up slightly, before returning home.
         """
-        if not self.cur_pos[2] < 0.1:
+        if not self.cur_pos[2] < 0.12:
             return
-        goal = (np.array(self.cur_pos) + np.array([0.0, 0.0, 0.06]))
+        goal = (np.array(self.cur_pos) + np.array([0.0, 0.0, 0.1]))
         self._go_to_goal(goal)
     
     def _go_to_est_home(self):
@@ -358,8 +361,8 @@ def make(env_name, **env_args):
 class FrankaPegInHole(FrankaPandaRobotBase):
     
     def __init__(self, sparse=True):
-        safety_region = np.array([[0.42, 0.6], [-0.05, 0.05], [0.1, 0.25]])
-        goal = np.array((0.455, -0.0, 0.1))
+        safety_region = np.array([[0.45, 0.6], [-0.05, 0.05], [0.08, 0.25]])
+        goal = np.array((0.458, -0.0, 0.05))
         home_pos = [0.58,0.0,0.125]
 
         super(FrankaPegInHole, self).__init__(home_pos=home_pos, safety_region=safety_region, sparse=sparse, goal=goal)
