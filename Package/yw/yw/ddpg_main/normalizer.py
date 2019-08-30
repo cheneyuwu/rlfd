@@ -48,7 +48,7 @@ class Normalizer:
             dtype=tf.float32,
         )
         self.count_tf = tf.get_variable(
-            initializer=tf.ones_initializer(),
+            initializer=tf.zeros_initializer(),
             shape=self.local_count.shape,
             name="count",
             trainable=False,
