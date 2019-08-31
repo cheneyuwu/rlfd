@@ -4,7 +4,7 @@ import sys
 import json
 import copy
 import importlib
-from shutil import copyfile
+import shutil
 
 # must include gym before loading mpi, for compute canada cluster
 import mujoco_py
@@ -66,6 +66,25 @@ def generate_params(root_dir, param_config):
     return res
 
 
+def transform_config_name(config_name):
+    """ Transfer the legend names"""
+    print(config_name)
+    for i in range(len(config_name)):
+        if config_name[i].startswith("demo_strategy"):
+            if config_name[i].endswith("nf"):
+                config_name[i] = "maf shaping"
+            elif config_name[i].endswith("gan"):
+                config_name[i] = "gan shaping"
+            elif config_name[i].endswith("bc"):
+                if "pure_bc_True" in config_name:
+                    config_name[i] = "behavior clone"
+                else:
+                    config_name[i] = "ddpg w/ behavior clone"
+            elif config_name[i].endswith("none"):
+                config_name[i] = "ddpg"
+    return config_name
+
+
 def main(targets, exp_dir, policy_file, **kwargs):
 
     # Consider rank as pid.
@@ -99,11 +118,12 @@ def main(targets, exp_dir, policy_file, **kwargs):
                 dir_param_dict.update(generate_params(exp_dir, params_config))
             if rank == 0:
                 for k, v in dir_param_dict.items():
-                    assert os.path.exists(k)
+                    assert os.path.exists(k), k
                     assert v["config"] == "default"
                     # copy params.json file, rename the config entry
                     varied_params = k[len(exp_dir) + 1 :].split("/")
                     config_name = [x for x in varied_params if not any([x.startswith(y) for y in exc_params])]
+                    config_name = transform_config_name(config_name)
                     v["config"] = "-".join(config_name)
                     with open(os.path.join(k, "params_renamed.json"), "w") as f:
                         json.dump(v, f)
@@ -133,7 +153,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     demo_file = os.path.join(exp_dir, "demo_data.npz")
                     demo_dest = os.path.join(k, "demo_data.npz")
                     if os.path.isfile(demo_file):
-                        copyfile(demo_file, demo_dest)
+                        shutil.copyfile(demo_file, demo_dest)
 
             # sync the process
             comm.Barrier()
@@ -222,6 +242,30 @@ def main(targets, exp_dir, policy_file, **kwargs):
             # currently assume only 1 level of subdir
             visualize_query_entry(directories=[exp_dir], save=1)
 
+        elif target == "cp_result":
+            expdata_dir = os.path.abspath(os.path.expanduser(os.environ["EXPDATA"]))
+            print("Experiment directory:", expdata_dir)
+            assert os.path.exists(expdata_dir)
+            exprun_dir = os.path.abspath(os.path.expanduser(os.environ["EXPRUN"]))
+            print("Experiment running direcory:", exprun_dir)
+            assert os.path.exists(exprun_dir)
+            rel_exp_dir = os.path.relpath(exp_dir, exprun_dir)
+            assert not rel_exp_dir.startswith("..")
+            # copy files
+            for dirname, _, files in os.walk(exp_dir):
+                if not "log.txt" in files:
+                    continue
+                # copy files
+                rel_dir_name = os.path.relpath(dirname, exprun_dir)
+                target_dir_name = os.path.join(expdata_dir, rel_dir_name)
+                os.makedirs(target_dir_name, exist_ok=True)
+                print("Found results:", rel_dir_name)
+
+                for file in ["log.txt", "params.json", "params_renamed.json", "progress.csv", "rl/policy_latest.pkl"]:
+                    src = os.path.join(dirname, file)
+                    if not os.path.exists(src):
+                        continue
+                    shutil.copy2(src, target_dir_name)
         else:
             assert 0, "unknown target: {}".format(target)
 
