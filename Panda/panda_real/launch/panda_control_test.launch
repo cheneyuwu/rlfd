@@ -1,0 +1,6 @@
+<?xml version="1.0" ?>
+<launch>
+
+  <node name="panda_arm_env" pkg="panda_arm" type="panda_controller_switch.py" output="screen" />
+
+</launch>

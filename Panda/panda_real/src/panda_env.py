@@ -42,7 +42,7 @@ class FrankaPandaRobotBase(object):
         # Ros sleep rate. This ensures there is enough delay in between
         # controller switch calls. If not set appropriately, it can cause
         # undesirable behaviour during controller switch.
-        self.rate = rospy.Rate(0.5) # hz
+        self.rate = rospy.Rate(0.2) # hz
         
         # Simulation step size
         self.dt = 0.2
@@ -80,10 +80,11 @@ class FrankaPandaRobotBase(object):
         self.disable_pos_control()
         self.enable_vel_control()
 
-        # Reset to home position
-        self.reset(use_home_estimate=False)
         # Indicates the robot is stuck due to undesirable collisions.
         self.robot_stuck = False
+
+        # Reset to home position
+        self.reset(use_home_estimate=False)
 
     class ActionSpace:
         def __init__(self, seed=0):
@@ -126,35 +127,28 @@ class FrankaPandaRobotBase(object):
 
     def reset(self, use_home_estimate=False):
         # Move up if neccessary.
+        self.last_pos = self.cur_pos
+        self._move_up()
         if use_home_estimate:
-            self._move_up()
             self._go_to_est_home()
             self._stop()
         else:
             self.disable_vel_control()
-            self.enable_vel_control(recovery_mode=False)
-            self.disable_vel_control(recovery_mode=False)
-            self.enable_pos_control()
-            if self.cur_pos[2] < 0.12:
-                up_goal = copy.copy(self.cur_pos)
-                up_goal[2] += 0.1
-                self.panda_client.go_to(up_goal)
             while np.linalg.norm(np.array(self.cur_pos) - np.array(self.home_pos)) >= 0.01:
+                # These enable/disable calls, give us the correct delay and clears
+                # the controller states. There must be a better way to handle this.
+                self.enable_vel_control()
+                self.disable_vel_control()
+                self.enable_pos_control()
                 self.panda_client.go_to(self.home_pos)
-            self.disable_pos_control()
+                self.disable_pos_control()
             self.enable_vel_control()
         self.last_pos = self.cur_pos
         self._reset_callback()
         return self._get_obs()[0]     
 
     def compute_reward(self, achieved_goal, desired_goal, info=0):
-        distance = self._compute_distance(achieved_goal, desired_goal)
-        if self.sparse == False:
-            return -distance
-            # return np.maximum(-0.5, -distance)
-            # return 0.05 / (0.05 + distance)
-        else:  # self.sparse == True
-            return -(distance >= self.threshold).astype(np.int64)
+        raise NotImplementedError
 
     def _compute_distance(self, achieved_goal, desired_goal):
         achieved_goal = achieved_goal.reshape(-1, 3)
@@ -362,10 +356,26 @@ class FrankaPegInHole(FrankaPandaRobotBase):
     
     def __init__(self, sparse=True):
         safety_region = np.array([[0.45, 0.6], [-0.05, 0.05], [0.08, 0.25]])
-        goal = np.array((0.458, -0.0, 0.05))
+        goal = np.array((0.456, -0.01, 0.07))
         home_pos = [0.58,0.0,0.125]
 
         super(FrankaPegInHole, self).__init__(home_pos=home_pos, safety_region=safety_region, sparse=sparse, goal=goal)
+
+    def compute_reward(self, achieved_goal, desired_goal, info=0):
+        distance = self._compute_distance(achieved_goal, desired_goal)
+        distance_xy = self._compute_distance_xy(achieved_goal, desired_goal)
+        if self.sparse == False:
+            return -distance
+        else:  # self.sparse == True
+            rwd1 = -(distance >= self.threshold).astype(np.float32)
+            rwd2 = -0.5 * (distance_xy >= (self.threshold / 2.0)).astype(np.float32) - 0.5
+            return np.maximum(rwd1, rwd2)
+        
+    def _compute_distance_xy(self, achieved_goal, desired_goal):
+        achieved_goal = achieved_goal.reshape(-1, 3)[..., :2]
+        desired_goal = desired_goal.reshape(-1, 3)[...,:2]
+        distance = np.sqrt(np.sum(np.square(achieved_goal - desired_goal), axis=1))
+        return distance
 
 class FrankaReacher(FrankaPandaRobotBase):
     
@@ -376,6 +386,15 @@ class FrankaReacher(FrankaPandaRobotBase):
         home_pos = [0.46, 0.0,0.25]
 
         super(FrankaReacher, self).__init__(home_pos=home_pos, safety_region=safety_region, sparse=sparse, goal=goal)
+
+    def compute_reward(self, achieved_goal, desired_goal, info=0):
+        distance = self._compute_distance(achieved_goal, desired_goal)
+        if self.sparse == False:
+            return -distance
+            # return np.maximum(-0.5, -distance)
+            # return 0.05 / (0.05 + distance)
+        else:  # self.sparse == True
+            return -(distance >= self.threshold).astype(np.int64)
 
     def _reset_callback(self):
         if self.rand_init:
