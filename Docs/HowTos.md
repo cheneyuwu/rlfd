@@ -26,6 +26,7 @@
     - `chmod 700 /home/USERNAME/.ssh`
   2. generate ssh on the server and add it to the github account
     - https://help.github.com/en/enterprise/2.15/user/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent
+    - For multiple ssh keys: https://gist.github.com/jexchan/2351996
   3. clone github repository and setup bash, vim, tmux, etc
     - note that compute canada's bashrc is not empty, do not overwrite the original content
   4. build virtual env
