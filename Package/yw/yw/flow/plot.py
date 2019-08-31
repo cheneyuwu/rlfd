@@ -125,6 +125,9 @@ def plot_results(allresults, xys, target_dir, smooth=0):
             y_label = xy.split(":")[1]
             for j, config in enumerate(sorted(data[env_id][xy].keys())):
                 xs, ys = zip(*data[env_id][xy][config])
+                if config == "default":
+                    continue
+
                 # either pad with nan or strip to the minimum length
                 # xs, ys = pad(xs), pad(ys)
                 xs, ys = strip(xs), strip(ys)

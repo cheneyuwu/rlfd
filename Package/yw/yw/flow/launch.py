@@ -72,17 +72,9 @@ def transform_config_name(config_name):
     for i in range(len(config_name)):
         if config_name[i].startswith("demo_strategy"):
             if config_name[i].endswith("nf"):
-                if "potential_weight_1.0" in config_name:
-                    config_name[i] = "maf shaping"
-                else:
-                    config_name = ["default"]
-                    return config_name
+                config_name[i] = "maf shaping"
             elif config_name[i].endswith("gan"):
-                if "potential_weight_1.0" in config_name:
-                    config_name[i] = "gan shaping"
-                else:
-                    config_name = ["default"]
-                    return config_name
+                config_name[i] = "gan shaping"
             elif config_name[i].endswith("bc"):
                 if "pure_bc_True" in config_name:
                     config_name[i] = "behavior clone"
