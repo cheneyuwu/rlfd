@@ -42,6 +42,7 @@ install(PROGRAMS
   src/panda_env.py
   src/panda_client.py
   src/panda_launcher.py
+  src/panda_controller_switch.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

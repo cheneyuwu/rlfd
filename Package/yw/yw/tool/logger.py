@@ -104,7 +104,7 @@ class CSVOutputFormat(KVWriter):
 
     def writekvs(self, kvs):
         # Add our current row to the history
-        extra_keys = list(kvs.keys() - self.keys)
+        extra_keys = [k for k in kvs.keys() if k not in self.keys]
         extra_keys.sort()
         if extra_keys:
             self.keys.extend(extra_keys)
@@ -134,7 +134,8 @@ class CSVOutputFormat(KVWriter):
 
 
 def make_output_format(format, ev_dir, log_suffix=""):
-    os.makedirs(ev_dir, exist_ok=True)
+    if not os.path.exists(ev_dir):
+        os.makedirs(ev_dir)
     if format == "stdout":
         return HumanOutputFormat(sys.stdout)
     elif format == "log":
@@ -163,7 +164,7 @@ class Logger(object):
 
     # Logging API, forwarded
     # ----------------------------------------
-    def log(self, *args, level=INFO):
+    def log(self, level=INFO, *args):
         if self.level <= level:
             self._do_log(args)
 
@@ -216,7 +217,8 @@ def configure(dir=None, format_strs=None, log_suffix=None):
     # Use LOGDIR as the default logging directory
     dir = os.getenv("LOGDIR") if dir is None else dir
     assert isinstance(dir, str), 'Provide default logging directory by setting environment variable "LOGDIR"!'
-    os.makedirs(dir, exist_ok=True)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
 
     # Decide what fomat to log, by default, COMM_WORLD rank 0 log to stdout and txt, others to txt
     # check environment variables here instead of importing mpi4py to avoid calling MPI_Init() when this module is
@@ -237,7 +239,7 @@ def configure(dir=None, format_strs=None, log_suffix=None):
     output_formats = [make_output_format(f, dir, log_suffix) for f in format_strs]
 
     Logger.CURRENT = Logger(dir=dir, output_formats=output_formats)
-    log("Logging to %s" % dir)
+    log(INFO, "Logging to %s" % dir)
 
 
 def dumpkvs():
@@ -262,11 +264,11 @@ def get_dir():
     return Logger.CURRENT.get_dir()
 
 
-def log(*args, level=INFO):
+def log(level=INFO, *args):
     """
     Write the sequence of args, with no separators, to the console and output files (if you've configured an output file).
     """
-    Logger.CURRENT.log(*args, level=level)
+    Logger.CURRENT.log(level, *args)
 
 
 def logkvs(d):
@@ -301,26 +303,26 @@ def set_level(level):
 
 
 def debug(*args):
-    log(*args, level=DEBUG)
+    log(DEBUG, *args)
 
 
 def info(*args):
-    log(*args, level=INFO)
+    log(INFO, *args)
 
 
 def warn(*args):
-    log(*args, level=WARN)
+    log(WARN, *args)
 
 
 def error(*args):
-    log(*args, level=ERROR)
+    log(ERROR, *args)
 
 
 def reset():
     if Logger.CURRENT is not Logger.DEFAULT:
         Logger.CURRENT.close()
         Logger.CURRENT = Logger.DEFAULT
-        log("Reset logger")
+        log(INFO, "Reset logger")
 
 
 # Initial Configuration

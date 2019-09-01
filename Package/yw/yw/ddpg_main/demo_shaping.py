@@ -8,7 +8,7 @@ tfd = tfp.distributions
 from yw.util.tf_util import MAF, RealNVP, MLP
 
 
-class DemoShaping:
+class DemoShaping(object):
     def __init__(self, gamma):
         """
         Implement the state, action based potential function and corresponding actions
@@ -149,7 +149,7 @@ class NFDemoShaping(DemoShaping):
         # optimizers
         self.train_op = tf.train.AdamOptimizer(learning_rate=lr).minimize(self.loss)
 
-        super().__init__(gamma)
+        super(NFDemoShaping, self).__init__(gamma)
 
     def potential(self, o, g, u):
         state_tf = self._cast_concat_inputs_normalize(o, g, u)
@@ -218,7 +218,7 @@ class EnsNFDemoShaping(DemoShaping):
         # optimizers
         self.train_op = tf.train.AdamOptimizer(learning_rate=lr).minimize(self.loss)
 
-        super().__init__(gamma)
+        super(EnsNFDemoShaping, self).__init__(gamma)
 
     def potential(self, o, g, u):
         # return the mean potential of all ens
@@ -310,7 +310,7 @@ class GANDemoShaping(DemoShaping):
             self.gen_cost, var_list=self.gen_vars
         )
 
-        super().__init__(gamma)
+        super(GANDemoShaping, self).__init__(gamma)
 
     def potential(self, o, g, u):
         """
@@ -389,7 +389,7 @@ class EnsGANDemoShaping(DemoShaping):
             self.gen_cost, var_list=self.gen_vars
         )
 
-        super().__init__(gamma)
+        super(EnsGANDemoShaping, self).__init__(gamma)
 
     def potential(self, o, g, u):
         # return the mean potential of all ens

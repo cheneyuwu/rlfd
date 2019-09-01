@@ -316,7 +316,7 @@ class DDPG(object):
                 buffer_shapes["g"] = (self.T, self.dimg)
             for key, val in self.input_dims.items():
                 if key.startswith("info"):
-                    buffer_shapes[key] = (self.T, *(tuple([val]) if val > 0 else tuple()))
+                    buffer_shapes[key] = tuple([self.T]) + (tuple([val]) if val > 0 else tuple())
         else:
             buffer_shapes["o"] = (self.dimo,)
             buffer_shapes["o_2"] = (self.dimo,)
@@ -678,8 +678,8 @@ class DDPG(object):
         state["replay_strategy"] = None
         kwargs = state["kwargs"]
         del state["kwargs"]
-
-        self.__init__(**state, **kwargs)
+        state.update(kwargs)
+        self.__init__(**state)
         vars = [x for x in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)]
         assert len(vars) == len(state["tf"])
         node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]

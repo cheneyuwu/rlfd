@@ -68,7 +68,17 @@ class EnvManager:
         # Franka environment
         if self.make_env is None and panda_env is not None:
             # TODO add a make function
-            self.make_env = panda_env.FrankaPegInHole
+            if env_name == "FrankaPegInHole":                
+                self.make_env = lambda: panda_env.make("FrankaPegInHole")
+            elif env_name == "FrankaReacher":
+                self.make_env = lambda: panda_env.make("FrankaReacher")
+            elif env_name == "FrankaReacherRandInit":
+                env_args["rand_init"] = True
+                self.make_env = lambda: panda_env.make("FrankaReacher", **env_args)
+            elif env_name == "FrankaReacherRandInitDense":
+                env_args["sparse"] = False
+                env_args["rand_init"] = True
+                self.make_env = lambda: panda_env.make("FrankaReacher", **env_args)                
 
         # Search from openai gym
         if self.make_env is None and gym is not None:
@@ -93,9 +103,11 @@ class EnvManager:
         self.r_scale = r_scale
         self.r_shift = r_shift
         self.eps_length = eps_length
+        # single instantiation of the environment
+        self.env = EnvManager.EnvWrapper(self.make_env, self.r_scale, self.r_shift, self.eps_length)
 
     def get_env(self):
-        return EnvManager.EnvWrapper(self.make_env, self.r_scale, self.r_shift, self.eps_length)
+        return self.env
 
     class EnvWrapper:
         def __init__(self, make_env, r_scale, r_shift, eps_length):
@@ -129,6 +141,9 @@ class EnvManager:
 
         def close(self):
             return self.env.close()
+        
+        def dump(self):
+            return self.env.dump()
 
 
 if __name__ == "__main__":
