@@ -31,8 +31,8 @@ def pad(xs, value=np.nan):
     return np.array(padded_xs)
 
 
-def strip(xs):
-    minlen = np.min([len(x) for x in xs])
+def strip(xs, length=0):
+    minlen = length if length != 0 else np.min([len(x) for x in xs])
     stripped_xs = []
     for x in xs:
         assert x.shape[0] >= minlen
@@ -41,13 +41,24 @@ def strip(xs):
 
 
 def smooth_reward_curve(x, y):
-    halfwidth = int(np.ceil(len(x) / 60))  # Halfwidth of our smoothing convolution
+    halfwidth = int(np.ceil(len(x) / 200))  # Halfwidth of our smoothing convolution
     k = halfwidth
     xsmoo = x
     ysmoo = np.convolve(y, np.ones(2 * k + 1), mode="same") / np.convolve(
         np.ones_like(y), np.ones(2 * k + 1), mode="same"
     )
     return xsmoo, ysmoo
+
+
+def transform_label(label):
+    # For final result only
+    if label == "epoch":
+        return "Number of Epoch"
+    elif label == "test/success_rate":
+        return "Average Success Rate"
+    elif label == "test/total_reward":
+        return "Average Return"
+    return label
 
 
 def load_results(root_dir_or_dirs):
@@ -74,7 +85,7 @@ def load_results(root_dir_or_dirs):
                 result["progress"] = load_csv(progcsv)
                 if result["progress"] is None:
                     continue
-                paramsjson = os.path.join(dirname, "params_renamed.json") # search for the renamed file first
+                paramsjson = os.path.join(dirname, "params_renamed.json")  # search for the renamed file first
                 if not os.path.exists(paramsjson):
                     paramsjson = os.path.join(dirname, "params.json")
                 with open(paramsjson, "r") as f:
@@ -112,25 +123,28 @@ def plot_results(allresults, xys, target_dir, smooth=0):
 
     # each environment goes to one image
     fig = plt.figure()
-    fig.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9, wspace=0.25, hspace=0.25)
+    fig.subplots_adjust(left=0.05, right=0.95, bottom=0.15, top=0.9, wspace=0.25, hspace=0.25)
     for env_id in sorted(data.keys()):
         print("Creating plots for environment: {}".format(env_id))
 
         fig.clf()
         for i, xy in enumerate(data[env_id].keys(), 1):
-            # colors = ["r", "g", "b", "c", "m", "y", "k"]
-            colors = cm.jet(np.linspace(0, 1.0, len(data[env_id][xy].keys())))
+            colors = ["r", "g", "b", "c", "m", "y", "k"]
+            # colors = cm.jet(np.linspace(0, 1.0, len(data[env_id][xy].keys())))
             ax = fig.add_subplot(1, len(xys), i)
             x_label = xy.split(":")[0]
             y_label = xy.split(":")[1]
+            x_label = transform_label(x_label)
+            y_label = transform_label(y_label)
             for j, config in enumerate(sorted(data[env_id][xy].keys())):
                 xs, ys = zip(*data[env_id][xy][config])
                 if config == "default":
                     continue
 
                 # either pad with nan or strip to the minimum length
+                required_length = 0
                 # xs, ys = pad(xs), pad(ys)
-                xs, ys = strip(xs), strip(ys)
+                xs, ys = strip(xs, required_length), strip(ys, required_length)
                 assert xs.shape == ys.shape
 
                 # from openai spinning up
@@ -140,15 +154,20 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 mean_y = np.nanmean(ys, axis=0)
                 stddev_y = np.nanstd(ys, axis=0)
                 ax.plot(xs[0], mean_y, label=config, color=colors[j % len(colors)])
-                # ax.fill_between(xs[0], mean_y - stddev_y, mean_y + stddev_y, alpha=0.5, color=colors[j % len(colors)])
+                ax.fill_between(xs[0], mean_y - 1.0 * stddev_y, mean_y + 1.0 * stddev_y, alpha=0.2, color=colors[j % len(colors)])
                 # ax.fill_between(
                 #     xs[0], mean_y - 3 * stddev_y, mean_y + 3 * stddev_y, alpha=0.25, color=colors[j % len(colors)]
                 # )
 
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_label)
-                ax.legend(fontsize=5)
-        fig.set_size_inches(4 * len(xys), 4)
+                # use ax level legend
+                # ax.legend(fontsize=5)
+            num_lines = len(data[env_id][xy].keys())
+        # use fig level legend
+        handles, labels = ax.get_legend_handles_labels()
+        fig.legend(handles, labels, loc="lower center", ncol=num_lines)
+        fig.set_size_inches(5 * len(xys), 5.5)
         fig.suptitle(env_id)
         save_path = os.path.join(target_dir, "fig_{}.png".format(env_id))
         print("Saving image to " + save_path)
