@@ -72,17 +72,37 @@ def transform_config_name(config_name):
     for i in range(len(config_name)):
         if config_name[i].startswith("demo_strategy"):
             if config_name[i].endswith("nf"):
-                config_name[i] = "maf shaping"
+                config_name[i] = "MAF Shaping"
             elif config_name[i].endswith("gan"):
-                config_name[i] = "gan shaping"
+                config_name[i] = "GAN Shaping"
             elif config_name[i].endswith("bc"):
                 if "pure_bc_True" in config_name:
-                    config_name[i] = "behavior clone"
+                    config_name[i] = "BC"
                 else:
-                    config_name[i] = "ddpg w/ behavior clone"
+                    config_name[i] = "TD3+BC"
             elif config_name[i].endswith("none"):
-                config_name[i] = "ddpg"
+                config_name[i] = "TD3"
     return config_name
+
+# def transform_config_name(config_name):
+#     """ Transfer the legend names"""
+#     print(config_name)
+#     for i in range(len(config_name)):
+#         if config_name[i].startswith("demo_strategy"):
+#             if config_name[i].endswith("nf"):
+#                 return ["MAF Shaping"]
+#             elif config_name[i].endswith("gan"):
+#                 return ["GAN Shaping"]
+#             elif config_name[i].endswith("bc"):
+#                 if "pure_bc_True" in config_name:
+#                     return ["BC"]
+#                 elif "q_filter_1" in config_name:
+#                     return ["TD3+BC+Q Filter"]
+#                 else:
+#                     return ["TD3+BC"]
+#             elif config_name[i].endswith("none"):
+#                 return ["TD3"]
+#     return config_name
 
 
 def main(targets, exp_dir, policy_file, **kwargs):
@@ -221,11 +241,12 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     dirs=[exp_dir],
                     xys=[
                         "epoch:test/success_rate",
-                        "epoch:test/total_shaping_reward",
+                        # "epoch:test/total_shaping_reward",
                         "epoch:test/total_reward",
-                        "epoch:test/mean_Q",
-                        "epoch:test/mean_Q_plus_P",
+                        # "epoch:test/mean_Q",
+                        # "epoch:test/mean_Q_plus_P",
                     ],
+                    smooth=True,
                 )
 
         elif target == "gen_query":
