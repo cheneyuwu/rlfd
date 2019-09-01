@@ -141,7 +141,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 if config == "default":
                     continue
 
-                # either pad with nan or strip to the minimum length
+                # CHANGE! either pad with nan or strip to the minimum length
                 required_length = 0
                 # xs, ys = pad(xs), pad(ys)
                 xs, ys = strip(xs, required_length), strip(ys, required_length)
@@ -154,7 +154,9 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 mean_y = np.nanmean(ys, axis=0)
                 stddev_y = np.nanstd(ys, axis=0)
                 ax.plot(xs[0], mean_y, label=config, color=colors[j % len(colors)])
-                ax.fill_between(xs[0], mean_y - 1.0 * stddev_y, mean_y + 1.0 * stddev_y, alpha=0.2, color=colors[j % len(colors)])
+                ax.fill_between(
+                    xs[0], mean_y - 1.0 * stddev_y, mean_y + 1.0 * stddev_y, alpha=0.2, color=colors[j % len(colors)]
+                )
                 # ax.fill_between(
                 #     xs[0], mean_y - 3 * stddev_y, mean_y + 3 * stddev_y, alpha=0.25, color=colors[j % len(colors)]
                 # )
