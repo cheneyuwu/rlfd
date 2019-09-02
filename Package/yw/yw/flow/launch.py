@@ -71,36 +71,39 @@ def transform_config_name(config_name):
     print(config_name)
     for i in range(len(config_name)):
         if config_name[i].startswith("demo_strategy"):
-            if config_name[i].endswith("nf"):
+            if config_name[i] == "demo_strategy_nf":
                 config_name[i] = "MAF Shaping"
-            elif config_name[i].endswith("gan"):
+            elif config_name[i] == "demo_strategy_gan":
                 config_name[i] = "GAN Shaping"
-            elif config_name[i].endswith("bc"):
-                if "pure_bc_True" in config_name:
-                    config_name[i] = "BC"
+            elif config_name[i] == "demo_strategy_pure_bc":
+                config_name[i] = "BC"
+            elif config_name[i] == "demo_strategy_bc":
+                if "q_filter_1" in config_name:
+                    config_name[i] = "TD3+BC+Q Filter"
                 else:
                     config_name[i] = "TD3+BC"
-            elif config_name[i].endswith("none"):
+            elif config_name[i] == "demo_strategy_none":
                 config_name[i] = "TD3"
     return config_name
+
 
 # def transform_config_name(config_name):
 #     """ Transfer the legend names"""
 #     print(config_name)
 #     for i in range(len(config_name)):
 #         if config_name[i].startswith("demo_strategy"):
-#             if config_name[i].endswith("nf"):
+#             if config_name[i] == "demo_strategy_nf":
 #                 return ["MAF Shaping"]
-#             elif config_name[i].endswith("gan"):
+#             elif config_name[i] == "demo_strategy_gan":
 #                 return ["GAN Shaping"]
-#             elif config_name[i].endswith("bc"):
-#                 if "pure_bc_True" in config_name:
-#                     return ["BC"]
-#                 elif "q_filter_1" in config_name:
+#             elif config_name[i] == "demo_strategy_pure_bc":
+#                 return ["BC"]
+#             elif config_name[i] == "demo_strategy_bc":
+#                 if "q_filter_1" in config_name:
 #                     return ["TD3+BC+Q Filter"]
 #                 else:
 #                     return ["TD3+BC"]
-#             elif config_name[i].endswith("none"):
+#             elif config_name[i] == "demo_strategy_none":
 #                 return ["TD3"]
 #     return config_name
 
