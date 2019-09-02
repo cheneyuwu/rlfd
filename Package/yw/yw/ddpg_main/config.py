@@ -40,9 +40,8 @@ DEFAULT_PARAMS = {
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread
         "use_demo_reward": 0,  # whether or not to assume that demonstrations have rewards, and train it on the critic
         "num_demo": 0,  # number of expert demo episodes
-        "demo_strategy": "none",  # choose between ["none", "bc", "nf", "gan"]
+        "demo_strategy": "none",  # choose between ["none", "pure_bc", "bc", "nf", "gan"]
         "bc_params": {
-            "pure_bc": False,
             "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
             "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
             "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss (also called the cloning loss)
@@ -104,6 +103,7 @@ DEFAULT_PARAMS = {
         "n_cycles": 10,  # per epoch
         "n_batches": 40,  # training batches per cycle
         "shaping_n_epochs": 100,
+        "pure_bc_n_epochs": 100,
         "save_interval": 2,
     },
     "seed": 0,
