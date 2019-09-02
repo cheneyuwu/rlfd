@@ -155,7 +155,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 stddev_y = np.nanstd(ys, axis=0)
                 ax.plot(xs[0], mean_y, label=config, color=colors[j % len(colors)])
                 ax.fill_between(
-                    xs[0], mean_y - 1.0 * stddev_y, mean_y + 1.0 * stddev_y, alpha=0.2, color=colors[j % len(colors)]
+                    xs[0], mean_y - 0.5 * stddev_y, mean_y + 0.5 * stddev_y, alpha=0.2, color=colors[j % len(colors)]
                 )
                 # ax.fill_between(
                 #     xs[0], mean_y - 3 * stddev_y, mean_y + 3 * stddev_y, alpha=0.25, color=colors[j % len(colors)]
