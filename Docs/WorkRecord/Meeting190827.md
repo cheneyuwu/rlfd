@@ -37,43 +37,47 @@ Aug 27th, 2019
 
 - Peg In Hole Rand Init
     - S0.0V0.02G0.0
-        - no_shaping **run on beluga-yuchen**
-        - gan        **run on beluga-yuchen**
+        - no_shaping **running on beluga-melissa** (done)
+        - gan        **running on florian's lab** (done)
             - with weight = 3.0?
-        - maf        **run on beluga-yuchen**
+        - maf        **running on florian's lab** (done)
     
     - S0.1V0.02G0.0
-        - no_shaping **run on beluga-yuchen**
-        - gan        **running on graham-melissa**
-        - maf        **running on graham-melissa**
+        - no_shaping **running on beluga-melissa** (done)
+        - gan        **running on graham-melissa** (done)
+        - maf        **running on graham-melissa** (done)
 
-    - We probabily need a larger noise level?
+    - We probabily need a larger noise level for this run? (The current looks good enough)
 
 - Pick And Place
     - S0.0V0.0G0.0
-        - no_shaping **run on beluga-yuchen**
-        - gan        **run on beluga-yuchen**
-        - maf        **running on graham-melissa**
+        - no_shaping **running on beluga-melissa** (done)
+        - gan        **running on beluga-melissa** (done)
+        - maf        **running on graham-melissa** (running)
 
     - S0.1V0.1G0.0
-        - no_shaping **run on beluga-yuchen**
-        - gan        **run on beluga-yuchen**
+        - no_shaping **running on beluga-melissa** (done)
+        - gan        **running on beluga-melissa** (done)
         - maf        **running on graham-florian**
 
     - S0.3V0.2G0.0
-        - no_shaping **run on beluga-yuchen**
-        - gan        **run on beluga-yuchen**    
-        - maf
+        - no_shaping **running on beluga-melissa** (done)
+        - gan        **running on beluga-melissa** (done)
+        - maf        **running on beluga-florian** (running)
 
     - S0.3V0.2G0.0Tree
-        - no_shaping **running on graham-yuchen**
-        - gan        **running on graham-yuchen**
-        - maf
+        - no_shaping **running on graham-yuchen** (done)
+        - gan        **running on graham-yuchen** (done)
+        - maf        **running on beluga-florian** (running)
 
 - Pick And Place Rand Init
-    - S0.0V0.1G0.0
-        - no_shaping **running on beluga-florian**
-        - gan        **running on beluga-florian**
+    - S0.0V0.1G0.0long
+        - no_shaping **running on graham-melissa** (running)
+        - gan        **running on graham-melissa** (running)
+        - maf
+    - S0.3V0.2G0.0long
+        - no_shaping **running on graham-melissa** (running)
+        - gan        **running on graham-melissa** (running)
         - maf
 
 # Lunch and Uber cost
