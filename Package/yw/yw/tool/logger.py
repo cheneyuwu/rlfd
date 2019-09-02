@@ -98,9 +98,10 @@ class HumanOutputFormat(KVWriter, SeqWriter):
 
 class CSVOutputFormat(KVWriter):
     def __init__(self, filename):
-        self.file = open(filename, "a+t")
         self.keys = []
         self.sep = ","
+        self.file = open(filename, "a+t")
+        self._get_current_keys()
 
     def writekvs(self, kvs):
         # Add our current row to the history
@@ -131,6 +132,15 @@ class CSVOutputFormat(KVWriter):
 
     def close(self):
         self.file.close()
+
+    def _get_current_keys(self):
+        self.file.seek(0)
+        lines = self.file.read().splitlines()
+        if not lines:
+            return
+        keys = lines[0].split(",")
+        assert not "" in keys
+        self.keys.extend(keys)
 
 
 def make_output_format(format, ev_dir, log_suffix=""):

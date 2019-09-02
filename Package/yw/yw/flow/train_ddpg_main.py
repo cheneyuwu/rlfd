@@ -194,9 +194,32 @@ class Trainer:
             with open(self.ckpt_trainer_path, "rb") as f:
                 self.epoch, self.best_success_rate = pickle.load(f)
             restart_msg += "weight"
+        # rewrite the progress.csv if necessary
+        progress = os.path.join(self.root_dir, "progress.csv")
+        self._handle_progress(progress)
         if restart_msg != "":
             logger.info("Loading", restart_msg, "and restarting the training process.")
         return restart
+
+    def _handle_progress(self, progress):
+        if not os.path.exists(progress):
+            return
+        with open(progress, "r") as f:
+            f.seek(0)
+            lines = f.read().splitlines()
+            if not lines:
+                return
+            keys = lines[0].split(",")
+            assert not "" in keys
+            f.seek(0)
+            lines = f.readlines()
+        with open(progress, "w") as f:
+            epoch_idx = keys.index("epoch")
+            f.write(lines[0])
+            for line in lines[1:]:
+                if int(line.split(",")[0]) < self.epoch:
+                    f.write(line)
+            f.flush()
 
     def _mpi_sanity_check(self):
         if self.comm is None:
