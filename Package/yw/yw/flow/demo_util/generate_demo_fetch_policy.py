@@ -1,10 +1,11 @@
-import numpy as np
-import sys
 import pickle
+import sys
+
+import numpy as np
 import tensorflow as tf
-from yw.util.util import set_global_seeds
 
 from yw.env.env_manager import EnvManager
+from yw.util.cmd_util import ArgParser
 
 
 class FetchPickAndPlaceDemoGenerator:
@@ -26,9 +27,7 @@ class FetchPickAndPlaceDemoGenerator:
 
     def generate_using_policy(self):
         self._reset()
-
         self._use_policy()
-
         self.num_itr += 1
         return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
 
@@ -272,14 +271,10 @@ def main(policy_file=None, **kwargs):
     # Load policy.
     policy = None
     if policy_file is not None:
-
         # reset default graph every time this function is called.
         tf.reset_default_graph()
-        # Set random seed for the current graph
-        set_global_seeds(0)
         # get a default session for the current graph
         tf.InteractiveSession()
-
         with open(policy_file, "rb") as f:
             policy = pickle.load(f)
     sub_opt_level = 0.0
@@ -375,29 +370,6 @@ def main(policy_file=None, **kwargs):
 
 
 if __name__ == "__main__":
-
-    from yw.util.cmd_util import ArgParser
-
-    """
-    Example flow:
-    1. (mpirun -np 1) python launch.py --targets train:rldense
-       Train a rl agent with config defined in rldense.py located in the same directory as launch.py. The output is in
-       TempResult/Temp by default (you can overwrite this default using --exp_dir <overwrite directory>).
-    2. (mpirun -np 1) python launch.py --targets train:rldense demo
-       In addition to 1, also generate demo_data using the trained rl agent and store the demo file as demo_data.py in
-       TempResult/Temp by default.
-    3. (mpirun -np 1) python launch.py --targets train:rldense demo train:rlnorm
-       In addition to 2, also use the generated demo file to train an rl agent with config defined in rlnorm.py located
-       in the same directory as launch.py. The output is TempResult/Temp
-    4. (mpirun -np 1) python launch.py --targets train:rldense plot
-       In addition to 1, also collects result in TempResult/Temp and generates plots
-
-    Note:
-    1. In the params config file (e.g. rldense.py), if the val of any key is a list, this script will create a
-       sub-folder named "key-val" and put the exp result there.
-
-    Run this script with different chain of targets and see what happens! I hope the flow makes sense:)
-    """
     exp_parser = ArgParser(allow_unknown_args=False)
     exp_parser.parser.add_argument(
         "--policy_file", help="top level directory to store experiment results", type=str, default=None
