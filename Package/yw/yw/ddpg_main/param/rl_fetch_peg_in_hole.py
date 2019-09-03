@@ -6,7 +6,7 @@ params_config = {
     "env_name": "FetchPegInHole-v1",
     "r_scale": 1.0,
     "r_shift": 0.0,
-    "eps_length": 25,
+    "eps_length": 30,
     "env_args": {},
     "fix_T": True,
     # DDPG config
