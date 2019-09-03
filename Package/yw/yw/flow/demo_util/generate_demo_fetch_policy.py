@@ -8,17 +8,15 @@ from yw.env.env_manager import EnvManager
 from yw.util.cmd_util import ArgParser
 
 
-class FetchPickAndPlaceDemoGenerator:
+class FetchDemoGenerator:
     """
     Provide an easier way to control the gripper for pick and place task
     """
 
-    def __init__(self, env, policy, system_noise_level, variance_level, sub_opt_level, render):
+    def __init__(self, env, policy, system_noise_level, render):
         self.env = env
         self.policy = policy
         self.system_noise_level = system_noise_level
-        self.sub_opt_level = sub_opt_level
-        self.variance_level = variance_level
         self.render = render
         self.num_itr = 0
 
@@ -29,123 +27,6 @@ class FetchPickAndPlaceDemoGenerator:
         self._reset()
         self._use_policy()
         self.num_itr += 1
-        return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
-
-    def generate_peg_in_hole_with_policy(self):
-
-        goal_dim = 0
-        obj_pos_dim = 0
-
-        self._reset()
-        # move to the goal
-        assert self.sub_opt_level <= 0.2
-        assert self.variance_level <= 0.1
-        interm_goal = 0.12 + self.sub_opt_level + np.random.uniform(-self.variance_level, self.variance_level)
-        self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0, 0.0, interm_goal)))
-        self._move_to_goal(obj_pos_dim, goal_dim)
-        # stay until the end
-        self._stay()
-
-        self.num_itr += 1
-        assert self.episode_info[-1]["is_success"]
-        return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
-
-    def generate_move(self):
-        self._reset()
-        for i in range(self.num_object):
-            goal_dim = 3 * i
-            obj_pos_dim = 10 + 15 * i
-            obj_rel_pos_dim = 10 + 15 * i + 3
-            # move to the above of the object
-            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.05, gripper_open=True)
-            # grab the object
-            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.0, gripper_open=False)
-            # move to the goal
-            self._move_to_goal(obj_pos_dim, goal_dim)
-            # open the gripper
-            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.05, gripper_open=True)
-            # # move back to initial state
-            # self._move_back()
-        # stay until the end
-        self._stay()
-
-        self.num_itr += 1
-        assert self.episode_info[-1]["is_success"]
-        return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
-
-    def generate_move_auto_place(self):
-        self._reset()
-        for i in range(self.num_object):
-            goal_dim = 3 * i
-            obj_pos_dim = 10 + 15 * i
-            obj_rel_pos_dim = 10 + 15 * i + 3
-            # move to the above of the object
-            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.05, gripper_open=True)
-            # grab the object
-            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.0, gripper_open=False)
-            # move to the goal
-            self._move_to_goal(obj_pos_dim, goal_dim)
-            # open the gripper
-            self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.05, gripper_open=True)
-            # move back to initial state
-            self._move_back()
-        # stay until the end
-        self._stay()
-
-        self.num_itr += 1
-        assert self.episode_info[-1]["is_success"]
-        return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
-
-    def generate_pick_place(self):
-
-        goal_dim = 0
-        obj_pos_dim = 10
-        obj_rel_pos_dim = 13
-
-        self._reset()
-        # move to the above of the object
-        self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.05, gripper_open=True)
-        # grab the object
-        self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.0, gripper_open=False)
-        # move to the goal
-        sub1 = 0.5 + self.sub_opt_level
-        sub2 = 0.5 - self.sub_opt_level
-        assert self.sub_opt_level <= 0.5
-        assert self.variance_level <= 0.2
-        if self.num_itr % 2 == 0:
-            weight = np.array((sub1, sub2, 0.0)) + np.random.normal(scale=self.variance_level, size=3)
-        elif self.num_itr % 2 == 1:
-            weight = np.array((sub2, sub1, 0.0)) + np.random.normal(scale=self.variance_level, size=3)
-        else:
-            assert False
-        self._move_to_interm_goal(obj_pos_dim, goal_dim, weight)
-        self._move_to_goal(obj_pos_dim, goal_dim)
-        # open the gripper
-        self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.03, gripper_open=True)
-        # stay until the end
-        self._stay()
-
-        self.num_itr += 1
-        assert self.episode_info[-1]["is_success"]
-        return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
-
-    def generate_peg_in_hole(self):
-
-        goal_dim = 0
-        obj_pos_dim = 0
-
-        self._reset()
-        # move to the goal
-        assert self.sub_opt_level <= 0.2
-        assert self.variance_level <= 0.1
-        interm_goal = 0.12 + self.sub_opt_level + np.random.uniform(-self.variance_level, self.variance_level)
-        self._move_to_goal(obj_pos_dim, goal_dim, offset=np.array((0.0, 0.0, interm_goal)))
-        self._move_to_goal(obj_pos_dim, goal_dim)
-        # stay until the end
-        self._stay()
-
-        self.num_itr += 1
-        assert self.episode_info[-1]["is_success"]
         return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
 
     def _reset(self):
@@ -261,64 +142,7 @@ class FetchPickAndPlaceDemoGenerator:
             self._step(action)
 
 
-def main(policy_file=None, **kwargs):
-
-    # Change the following parameters
-    num_itr = 5
-    render = True
-    env_name = "FetchPegInHole-v1"
-    env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=25).get_env()
-    # Load policy.
-    policy = None
-    if policy_file is not None:
-        # reset default graph every time this function is called.
-        tf.reset_default_graph()
-        # get a default session for the current graph
-        tf.InteractiveSession()
-        with open(policy_file, "rb") as f:
-            policy = pickle.load(f)
-    sub_opt_level = 0.0
-    variance_level = 0.0
-    system_noise_level = 0.0
-    # Eps length to use:
-    #   FetchPickAndPlace: eps = 50
-    #   FetchMoveAutoPlace: 2 objects eps = 80
-    #   FetchMove: 2 objects eps = 70
-    #   FetchPegInHole: eps = 25
-    # End
-
-    generator = FetchPickAndPlaceDemoGenerator(
-        env=env,
-        policy=policy,
-        system_noise_level=system_noise_level,
-        sub_opt_level=sub_opt_level,
-        variance_level=variance_level,
-        render=render,
-    )
-    demo_data_obs = []
-    demo_data_acs = []
-    demo_data_rewards = []
-    demo_data_info = []
-
-    for i in range(num_itr):
-        print("Iteration number: ", i)
-        # if env_name.startswith("FetchMoveAutoPlace"):
-        #     episode_obs, episode_act, episode_rwd, episode_info = generator.generate_move_auto_place()
-        # elif env_name.startswith("FetchMove"):
-        #     episode_obs, episode_act, episode_rwd, episode_info = generator.generate_move()
-        # elif env_name.startswith("FetchPegInHole"):
-        #     episode_obs, episode_act, episode_rwd, episode_info = generator.generate_peg_in_hole()
-        # elif env_name.startswith("FetchPickAndPlace"):
-        #     episode_obs, episode_act, episode_rwd, episode_info = generator.generate_pick_place()
-        # else:
-        #     assert False
-        episode_obs, episode_act, episode_rwd, episode_info = generator.generate_using_policy()
-        demo_data_obs.append(episode_obs)
-        demo_data_acs.append(episode_act)
-        demo_data_rewards.append(episode_rwd)
-        demo_data_info.append(episode_info)
-
-    T = env._max_episode_steps
+def store_demo_data(T, num_itr, demo_data_obs, demo_data_acs, demo_data_rewards, demo_data_info):
     result = None
     for epsd in range(num_itr):  # we initialize the whole demo buffer at the start of the training
         obs, acts, goals, achieved_goals, rs = [], [], [], [], []
@@ -367,12 +191,3 @@ def main(policy_file=None, **kwargs):
 
     # array(batch_size x (T or T+1) x dim_key), we only need the first one!
     np.savez_compressed("demo_data.npz", **result)  # save the file
-
-
-if __name__ == "__main__":
-    exp_parser = ArgParser(allow_unknown_args=False)
-    exp_parser.parser.add_argument(
-        "--policy_file", help="top level directory to store experiment results", type=str, default=None
-    )
-    exp_parser.parse(sys.argv)
-    main(**exp_parser.get_dict())
