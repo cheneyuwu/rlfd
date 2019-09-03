@@ -30,8 +30,8 @@ params_config = {
         "batch_size_demo": 128,
         "use_demo_reward": 0,
         "num_demo": 40,
-        "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
-        "bc_params": {"pure_bc": False, "q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
+        "demo_strategy": "none",  # ["none", "pure_bc", "bc", "nf", "gan"]
+        "bc_params": {"q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
         "shaping_params": {
             "batch_size": 128,
             "nf": {
@@ -53,7 +53,7 @@ params_config = {
                 "latent_dim": 6,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
-                "potential_weight": 5.0,
+                "potential_weight": 3.0,
             },
         },
         # normalize observation
@@ -89,6 +89,7 @@ params_config = {
         "n_cycles": 10,
         "n_batches": 40,
         "shaping_n_epochs": int(7e3),
+        "pure_bc_n_epochs": int(1e3),
         "save_interval": 10,
     },
     "seed": tuple(range(2)),
