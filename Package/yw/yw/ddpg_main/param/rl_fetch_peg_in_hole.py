@@ -6,7 +6,7 @@ params_config = {
     "env_name": "FetchPegInHole-v1",
     "r_scale": 1.0,
     "r_shift": 0.0,
-    "eps_length": 25,
+    "eps_length": 30,
     "env_args": {},
     "fix_T": True,
     # DDPG config
@@ -29,9 +29,9 @@ params_config = {
         "sample_demo_buffer": 0,
         "batch_size_demo": 128,
         "use_demo_reward": 0,
-        "num_demo": 30,
+        "num_demo": 40,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
-        "bc_params": {"pure_bc": False, "q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 10.0},
+        "bc_params": {"pure_bc": False, "q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 100.0},
         "shaping_params": {
             "batch_size": 128,
             "nf": {

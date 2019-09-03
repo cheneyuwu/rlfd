@@ -45,6 +45,7 @@ class FetchDemoGenerator:
         self.last_obs = obs.copy()
 
     def _step(self, action):
+        action = np.clip(action, -1.0, 1.0)  # clip by max_u
         obs, reward, done, info = self.env.step(action)
         self.time_step += 1
         if self.render:
@@ -188,6 +189,9 @@ def store_demo_data(T, num_itr, demo_data_obs, demo_data_acs, demo_data_rewards,
         else:
             for k in result.keys():
                 result[k] = np.concatenate((result[k], episode[k]), axis=0)
+
+    for k, v in result.items():
+        print(k, v.shape)
 
     # array(batch_size x (T or T+1) x dim_key), we only need the first one!
     np.savez_compressed("demo_data.npz", **result)  # save the file
