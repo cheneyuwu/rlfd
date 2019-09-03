@@ -61,7 +61,7 @@ Aug 27th, 2019
     - S0.1V0.1G0.0
         - no_shaping **running on beluga-melissa** (done)
         - gan        **running on beluga-melissa** (done)
-        - maf        **running on graham-florian** (running?)
+        - maf        **running on graham-florian** (running)
         - pure_bc    **running on florian's lab** (running)
 
     - S0.3V0.2G0.0
@@ -80,12 +80,12 @@ Aug 27th, 2019
     - S0.0V0.1G0.0long
         - no_shaping **running on graham-melissa** (running)
         - gan        **running on graham-melissa** (running)
-        - maf
+        - maf        **running on graham-yuchen** (running)
         - pure_bc
     - S0.3V0.2G0.0long
         - no_shaping **running on graham-melissa** (running)
         - gan        **running on graham-melissa** (running)
-        - maf
+        - maf        **running on graham-yuchen** (running)
         - pure_bc
 
 # Lunch and Uber cost
