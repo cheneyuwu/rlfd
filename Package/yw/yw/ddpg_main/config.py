@@ -177,6 +177,8 @@ def add_env_params(params):
         "u": tmp_env.action_space.shape[0],
         "g": obs["desired_goal"].shape[0],  # extra state that does not change within 1 episode
     }
+    # temporarily put here as we never run multigoal jobs
+    assert dims["g"] == 0
     for key, value in info.items():
         value = np.array(value)
         if value.ndim == 0:

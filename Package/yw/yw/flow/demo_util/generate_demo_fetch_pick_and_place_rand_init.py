@@ -25,17 +25,17 @@ class PickAndPlaceDemoGenerator(FetchDemoGenerator):
         # grab the object
         self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.0, gripper_open=False)
         # move to the goal
-        sub1 = 0.5 + sub_opt_level
-        sub2 = 0.5 - sub_opt_level
-        assert sub_opt_level <= 0.5
-        assert variance_level <= 0.2
-        if self.num_itr % 2 == 0:
-            weight = np.array((sub1, sub2, 0.0)) + np.random.normal(scale=variance_level, size=3)
-        elif self.num_itr % 2 == 1:
-            weight = np.array((sub2, sub1, 0.0)) + np.random.normal(scale=variance_level, size=3)
-        else:
-            assert False
-        self._move_to_interm_goal(obj_pos_dim, goal_dim, weight)
+        # sub1 = 0.5 + sub_opt_level
+        # sub2 = 0.5 - sub_opt_level
+        # assert sub_opt_level <= 0.5
+        # assert variance_level <= 0.2
+        # if self.num_itr % 2 == 0:
+        #     weight = np.array((sub1, sub2, 0.0)) + np.random.normal(scale=variance_level, size=3)
+        # elif self.num_itr % 2 == 1:
+        #     weight = np.array((sub2, sub1, 0.0)) + np.random.normal(scale=variance_level, size=3)
+        # else:
+        #     assert False
+        # self._move_to_interm_goal(obj_pos_dim, goal_dim, weight)
         self._move_to_goal(obj_pos_dim, goal_dim)
         # open the gripper
         self._move_to_object(obj_pos_dim, obj_rel_pos_dim, offset=0.03, gripper_open=True)
@@ -50,13 +50,13 @@ class PickAndPlaceDemoGenerator(FetchDemoGenerator):
 def main(policy_file=None, **kwargs):
 
     # Change the following parameters
-    num_itr = 30
-    render = True
-    env_name = "FetchPickAndPlace-v1"
-    env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=50).get_env()
+    num_itr = 50
+    render = False
+    env_name = "FetchPickAndPlaceRandInit-v1"
+    env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=40).get_env()
     system_noise_level = 0.0
-    sub_opt_level = 0.3
-    variance_level = 0.2
+    sub_opt_level = 0.0
+    variance_level = 0.0
 
     # Load policy.
     policy = None

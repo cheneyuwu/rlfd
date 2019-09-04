@@ -41,7 +41,10 @@ def main(policy_file=None, **kwargs):
     num_itr = 10
     render = True
     env_name = "FetchPegInHole-v1"
-    env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=30).get_env()
+    env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=40).get_env()
+    system_noise_level = 0.0
+    sub_opt_level = 0.15
+
     # Load policy.
     policy = None
     if policy_file is not None:
@@ -52,14 +55,6 @@ def main(policy_file=None, **kwargs):
         with open(policy_file, "rb") as f:
             policy = pickle.load(f)
 
-    system_noise_level = 0.0
-    # Eps length to use:
-    #   FetchPickAndPlace: eps = 50
-    #   FetchMoveAutoPlace: 2 objects eps = 80
-    #   FetchMove: 2 objects eps = 70
-    #   FetchPegInHole: eps = 25
-    # End
-
     demo_data_obs = []
     demo_data_acs = []
     demo_data_rewards = []
@@ -67,24 +62,11 @@ def main(policy_file=None, **kwargs):
 
     generator = PegInHoleDemoGenerator(env=env, policy=policy, system_noise_level=system_noise_level, render=render)
 
-    for i in range(5):
+    for i in range(num_itr):
         print("Iteration number: ", i)
         episode_obs, episode_act, episode_rwd, episode_info = generator.generate_peg_in_hole(
-            sub_opt_level=0.1, x_var=0.1, y_var=0.1, z_var=0.05
+            sub_opt_level=sub_opt_level, x_var=0.1, y_var=0.05, z_var=0.05
         )
-        demo_data_obs.append(episode_obs)
-        demo_data_acs.append(episode_act)
-        demo_data_rewards.append(episode_rwd)
-        demo_data_info.append(episode_info)
-
-    for i in range(5):
-        print("Iteration number: ", i)
-        episode_obs, episode_act, episode_rwd, episode_info = generator.generate_peg_in_hole(
-            sub_opt_level=0.0, x_var=0.0, y_var=0.05, z_var=0.05
-        )
-        # change the suggested action!
-        for i in range(10):
-            episode_act[i][2] = np.clip(episode_act[i][2] + 0.8, -1.0, 1.0)
         demo_data_obs.append(episode_obs)
         demo_data_acs.append(episode_act)
         demo_data_rewards.append(episode_rwd)

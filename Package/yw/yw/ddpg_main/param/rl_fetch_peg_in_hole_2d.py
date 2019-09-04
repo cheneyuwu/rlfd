@@ -85,7 +85,7 @@ params_config = {
     },
     # training config
     "train": {
-        "n_epochs": int(4e3),
+        "n_epochs": int(4e2),
         "n_cycles": 10,
         "n_batches": 40,
         "shaping_n_epochs": int(7e3),
