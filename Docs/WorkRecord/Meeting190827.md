@@ -37,44 +37,56 @@ Aug 27th, 2019
 
 - Peg In Hole Rand Init
     - S0.0V0.02G0.0
-        - no_shaping **run on beluga-yuchen**
-        - gan        **run on beluga-yuchen**
+        - no_shaping **running on beluga-melissa** (done)
+        - gan        **running on florian's lab** (done)
             - with weight = 3.0?
-        - maf        **run on beluga-yuchen**
-    
-    - S0.1V0.02G0.0
-        - no_shaping **run on beluga-yuchen**
-        - gan        **running on graham-melissa**
-        - maf        **running on graham-melissa**
+        - maf        **running on florian's lab** (done)
+        - pure_bc    **running on florian's lab** (done)
 
-    - We probabily need a larger noise level?
+    - S0.1V0.02G0.0
+        - no_shaping **running on beluga-melissa** (done)
+        - gan        **running on graham-melissa** (done)
+        - maf        **running on graham-melissa** (done)
+        - pure_bc    **running on florian's lab** (done)
+
+    - We probabily need a larger noise level for this run? (The current looks good enough)
 
 - Pick And Place
     - S0.0V0.0G0.0
-        - no_shaping **run on beluga-yuchen**
-        - gan        **run on beluga-yuchen**
-        - maf        **running on graham-melissa**
+        - no_shaping **running on beluga-melissa** (done)
+        - gan        **running on beluga-melissa** (done)
+        - maf        **running on graham-melissa** (running)
+        - pure_bc    **running on florian's lab** (running)
 
     - S0.1V0.1G0.0
-        - no_shaping **run on beluga-yuchen**
-        - gan        **run on beluga-yuchen**
-        - maf        **running on graham-florian**
+        - no_shaping **running on beluga-melissa** (done)
+        - gan        **running on beluga-melissa** (done)
+        - maf        **running on graham-florian** (running)
+        - pure_bc    **running on florian's lab** (running)
 
     - S0.3V0.2G0.0
-        - no_shaping **run on beluga-yuchen**
-        - gan        **run on beluga-yuchen**    
-        - maf
+        - no_shaping **running on beluga-melissa** (done)
+        - gan        **running on beluga-melissa** (done)
+        - maf        **running on graham-melissa** (running)
+        - pure_bc    **running on florian's lab** (running)
 
     - S0.3V0.2G0.0Tree
-        - no_shaping **running on graham-yuchen**
-        - gan        **running on graham-yuchen**
-        - maf
+        - no_shaping **running on graham-yuchen** (done)
+        - gan        **running on graham-yuchen** (done)
+        - maf        **running on graham-melissa** (running)
+        - pure_bc    **running on florian's lab** (running)
 
 - Pick And Place Rand Init
-    - S0.0V0.1G0.0
-        - no_shaping **running on beluga-florian**
-        - gan        **running on beluga-florian**
-        - maf
+    - S0.0V0.1G0.0long
+        - no_shaping **running on graham-melissa** (running)
+        - gan        **running on graham-melissa** (running)
+        - maf        **running on graham-yuchen** (running)
+        - pure_bc
+    - S0.3V0.2G0.0long
+        - no_shaping **running on graham-melissa** (running)
+        - gan        **running on graham-melissa** (running)
+        - maf        **running on graham-yuchen** (running)
+        - pure_bc
 
 # Lunch and Uber cost
     - Aug 18 Sushi lunch: (13.95 + 5.49[delivery fee] / 2 ) * 1.13[tax] = 18.86

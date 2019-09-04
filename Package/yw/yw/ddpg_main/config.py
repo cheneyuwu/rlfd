@@ -40,9 +40,8 @@ DEFAULT_PARAMS = {
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread
         "use_demo_reward": 0,  # whether or not to assume that demonstrations have rewards, and train it on the critic
         "num_demo": 0,  # number of expert demo episodes
-        "demo_strategy": "none",  # choose between ["none", "bc", "nf", "gan"]
+        "demo_strategy": "none",  # choose between ["none", "pure_bc", "bc", "nf", "gan"]
         "bc_params": {
-            "pure_bc": False,
             "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
             "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
             "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss (also called the cloning loss)
@@ -104,6 +103,7 @@ DEFAULT_PARAMS = {
         "n_cycles": 10,  # per epoch
         "n_batches": 40,  # training batches per cycle
         "shaping_n_epochs": 100,
+        "pure_bc_n_epochs": 100,
         "save_interval": 2,
     },
     "seed": 0,
@@ -177,6 +177,8 @@ def add_env_params(params):
         "u": tmp_env.action_space.shape[0],
         "g": obs["desired_goal"].shape[0],  # extra state that does not change within 1 episode
     }
+    # temporarily put here as we never run multigoal jobs
+    assert dims["g"] == 0
     for key, value in info.items():
         value = np.array(value)
         if value.ndim == 0:

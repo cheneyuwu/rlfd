@@ -30,8 +30,8 @@ params_config = {
         "batch_size_demo": 50,
         "use_demo_reward": 0,
         "num_demo": 0,
-        "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
-        "bc_params": {"pure_bc": False, "q_filter": 1, "prm_loss_weight": 0.001, "aux_loss_weight": 0.0078},
+        "demo_strategy": "none",  # ["none", "pure_bc", "bc", "nf", "gan"]
+        "bc_params": {"q_filter": 1, "prm_loss_weight": 0.001, "aux_loss_weight": 0.0078},
         "shaping_params": {
             "batch_size": 128,
             "nf": {
@@ -84,6 +84,13 @@ params_config = {
         "history_len": 1,
     },
     # training config
-    "train": {"n_epochs": 5000, "n_cycles": 10, "n_batches": 40, "shaping_n_epochs": 5000, "save_interval": 2},
+    "train": {
+        "n_epochs": 5000,
+        "n_cycles": 10,
+        "n_batches": 40,
+        "shaping_n_epochs": 5000,
+        "pure_bc_n_epochs": int(1e3),
+        "save_interval": 2,
+    },
     "seed": 0,
 }

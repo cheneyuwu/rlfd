@@ -4,7 +4,7 @@ import os.path as osp
 
 import matplotlib
 
-matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode
+matplotlib.use("Agg")  # Can change to 'Agg' for non-interactive mode
 import matplotlib.pyplot as plt
 from matplotlib import cm
 

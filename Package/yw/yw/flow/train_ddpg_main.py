@@ -29,6 +29,7 @@ class Trainer:
         rollout_worker,
         evaluator,
         shaping_n_epochs,
+        pure_bc_n_epochs,
         n_epochs,
         n_batches,
         n_cycles,
@@ -43,6 +44,7 @@ class Trainer:
         self.rollout_worker = rollout_worker
         self.evaluator = evaluator
         self.shaping_n_epochs = shaping_n_epochs
+        self.pure_bc_n_epochs = pure_bc_n_epochs
         self.n_epochs = n_epochs
         self.n_batches = n_batches
         self.n_cycles = n_cycles
@@ -82,6 +84,7 @@ class Trainer:
         # Pre-Training a potential function (currently we do not support restarting from this state)
         if not self.restart:
             self._train_potential()
+            self._train_pure_bc()
             self._store_states()
 
         # Train the rl agent
@@ -94,18 +97,20 @@ class Trainer:
                 fid=3,
             )
             # train
-            self.rollout_worker.clear_history()
-            for _ in range(self.n_cycles):
-                episode = self.rollout_worker.generate_rollouts()
-                self.policy.store_episode(episode)
-                for _ in range(self.n_batches):
-                    self.policy.train()
-                self.policy.check_train()
-                self.policy.update_target_net()
-            self.epoch = epoch + 1
+            if self.policy.demo_strategy != "pure_bc":
+                self.rollout_worker.clear_history()
+                for _ in range(self.n_cycles):
+                    episode = self.rollout_worker.generate_rollouts()
+                    self.policy.store_episode(episode)
+                    for _ in range(self.n_batches):
+                        self.policy.train()
+                    self.policy.check_train()
+                    self.policy.update_target_net()
             # test
             self.evaluator.clear_history()
             self.evaluator.generate_rollouts()
+
+            self.epoch = epoch + 1
             # log
             self._log(epoch)
             # save the policy
@@ -136,6 +141,16 @@ class Trainer:
             loss = self.policy.train_shaping()
             if self.rank == 0 and epoch % (self.shaping_n_epochs / 100) == (self.shaping_n_epochs / 100 - 1):
                 logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
+
+    def _train_pure_bc(self):
+        if self.policy.demo_strategy != "pure_bc":
+            return
+        logger.info("Training the policy using pure behavior cloning")
+        for epoch in range(self.pure_bc_n_epochs):
+            loss = self.policy.train_pure_bc()
+            if self.rank == 0 and epoch % (self.pure_bc_n_epochs / 100) == (self.pure_bc_n_epochs / 100 - 1):
+                logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
+        self.policy.init_target_net()
 
     def _log(self, epoch):
         logger.record_tabular("epoch", epoch)

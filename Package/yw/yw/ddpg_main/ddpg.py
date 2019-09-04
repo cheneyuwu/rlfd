@@ -122,7 +122,7 @@ class DDPG(object):
         self.use_demo_reward = use_demo_reward
         self.num_demo = num_demo
         self.demo_strategy = demo_strategy
-        assert self.demo_strategy in ["none", "bc", "gan", "nf"]
+        assert self.demo_strategy in ["none", "pure_bc", "bc", "gan", "nf"]
         self.bc_params = bc_params
         self.shaping_params = shaping_params
         self.replay_strategy = replay_strategy
@@ -210,21 +210,6 @@ class DDPG(object):
 
         return transitions
 
-    def train_shaping(self):
-        assert self.demo_strategy in ["nf", "gan"]
-        # train normalizing flow or gan for 1 epoch
-        loss = 0
-        self.sess.run(self.demo_iter_tf.initializer)
-        losses = np.empty(0)
-        while True:
-            try:
-                loss = self.demo_shaping.train(sess=self.sess)
-                losses = np.append(losses, loss)
-            except tf.errors.OutOfRangeError:
-                loss = np.mean(losses)
-                break
-        return loss
-
     def save_policy(self, path):
         """Pickles the current policy for later inspection.
         """
@@ -244,6 +229,40 @@ class DDPG(object):
     def load_weights(self, path):
         assert self.comm is None, "MPI adam does not support weight loading."
         self.saver.restore(self.sess, path)
+
+    def train_pure_bc(self):
+        assert self.demo_strategy == "pure_bc"
+        # train the policy using behavior cloning loss for 1 epoch
+        loss = 0
+        self.sess.run(self.bc_demo_iter_tf.initializer)
+        losses = np.empty(0)
+        while True:
+            try:
+                if self.comm is None:
+                    loss, _ = self.sess.run([self.bc_loss_tf, self.bc_update_op])
+                else:
+                    loss, grad = self.sess.run([self.bc_loss_tf, self.bc_grad_tf])
+                    self.bc_adam.update(grad, self.pi_lr)
+                losses = np.append(losses, loss)
+            except tf.errors.OutOfRangeError:
+                loss = np.mean(losses)
+                break
+        return loss
+
+    def train_shaping(self):
+        assert self.demo_strategy in ["nf", "gan"]
+        # train normalizing flow or gan for 1 epoch
+        loss = 0
+        self.sess.run(self.potential_demo_iter_tf.initializer)
+        losses = np.empty(0)
+        while True:
+            try:
+                loss = self.demo_shaping.train(sess=self.sess)
+                losses = np.append(losses, loss)
+            except tf.errors.OutOfRangeError:
+                loss = np.mean(losses)
+                break
+        return loss
 
     def train(self):
         batch = self.sample_batch()
@@ -281,6 +300,9 @@ class DDPG(object):
         """ For debugging only
         """
         pass
+
+    def init_target_net(self):
+        self.sess.run(self.init_target_net_op)
 
     def update_target_net(self):
         self.sess.run(self.update_target_net_op)
@@ -360,7 +382,14 @@ class DDPG(object):
             assert False, "unknown replay strategy"
 
     def _create_network(self):
-        # Inputs to ddpg
+
+        # Normalizer for goal and observation.
+        with tf.variable_scope("o_stats"):
+            self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm)
+        with tf.variable_scope("g_stats"):
+            self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm)
+
+        # Inputs to DDPG
         self.inputs_tf = {}
         self.inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
         self.inputs_tf["o_2"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
@@ -376,11 +405,39 @@ class DDPG(object):
         input_g_2_tf = self.inputs_tf["g_2"] if self.dimg != 0 else None
         input_u_tf = self.inputs_tf["u"]
 
-        # Normalizer for goal and observation.
-        with tf.variable_scope("o_stats"):
-            self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm)
-        with tf.variable_scope("g_stats"):
-            self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm)
+        # Input Dataset that loads from demonstration buffer. Used for BC and Potential
+        demo_shapes = {}
+        demo_shapes["o"] = (self.dimo,)
+        if self.dimg != 0:
+            demo_shapes["g"] = (self.dimg,)
+        demo_shapes["u"] = (self.dimu,)
+        max_num_transitions = self.num_demo * self.T
+
+        def generate_demo_data():
+            demo_data = self.demo_buffer.sample_all()
+            num_transitions = demo_data["u"].shape[0]
+            demo_data["o"] = self._preprocess_state(demo_data["o"])
+            if self.dimg != 0:
+                demo_data["g"] = self._preprocess_state(demo_data["g"])
+            assert all([demo_data[k].shape[0] == num_transitions for k in demo_data.keys()])
+            for i in range(num_transitions):
+                yield {k: demo_data[k][i] for k in demo_shapes.keys()}
+
+        demo_dataset = (
+            tf.data.Dataset.from_generator(
+                generate_demo_data, output_types={k: tf.float32 for k in demo_shapes.keys()}, output_shapes=demo_shapes
+            )
+            .take(max_num_transitions)
+            .shuffle(max_num_transitions)
+            .repeat(1)
+        )
+
+        bc_demo_dataset = demo_dataset.batch(self.batch_size_demo)
+        self.bc_demo_iter_tf = bc_demo_dataset.make_initializable_iterator()
+        self.bc_demo_inputs_tf = self.bc_demo_iter_tf.get_next()
+        bc_demo_input_o_tf = self.bc_demo_inputs_tf["o"]
+        bc_demo_input_g_tf = self.bc_demo_inputs_tf["g"] if self.dimg != 0 else None
+        bc_demo_input_u_tf = self.bc_demo_inputs_tf["u"]
 
         # Models
         with tf.variable_scope("main"):
@@ -404,6 +461,8 @@ class DDPG(object):
             if self.use_td3:
                 self.main_q2_tf = self.main.critic2(o=input_o_tf, g=input_g_tf, u=input_u_tf)
                 self.main_q2_pi_tf = self.main.critic2(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
+            # bc actor output
+            self.main_bc_tf = self.main.actor(o=bc_demo_input_o_tf, g=bc_demo_input_g_tf)
         with tf.variable_scope("target"):
             self.target = ActorCritic(
                 dimo=self.dimo,
@@ -438,49 +497,23 @@ class DDPG(object):
                 self.demo_g_stats = Normalizer(
                     self.dimg, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm
                 )
-            # input dataset that loads from demo_buffer
-            demo_shapes = {}
-            demo_shapes["o"] = (self.dimo,)
-            if self.dimg != 0:
-                demo_shapes["g"] = (self.dimg,)
-            demo_shapes["u"] = (self.dimu,)
-            max_num_transitions = self.num_demo * self.T
 
-            def generate_demo_data():
-                demo_data = self.demo_buffer.sample_all()
-                num_transitions = demo_data["u"].shape[0]
-                demo_data["o"] = self._preprocess_state(demo_data["o"])
-                if self.dimg != 0:
-                    demo_data["g"] = self._preprocess_state(demo_data["g"])
-                assert all([demo_data[k].shape[0] == num_transitions for k in demo_data.keys()])
-                for i in range(num_transitions):
-                    yield {k: demo_data[k][i] for k in demo_shapes.keys()}
+            potential_demo_dataset = demo_dataset.batch(self.shaping_params["batch_size"])
+            self.potential_demo_iter_tf = potential_demo_dataset.make_initializable_iterator()
+            self.potential_demo_inputs_tf = self.potential_demo_iter_tf.get_next()
 
-            demo_dataset = (
-                tf.data.Dataset.from_generator(
-                    generate_demo_data,
-                    output_types={k: tf.float32 for k in demo_shapes.keys()},
-                    output_shapes=demo_shapes,
-                )
-                .take(max_num_transitions)
-                .shuffle(max_num_transitions)
-                .repeat(1)
-                .batch(self.shaping_params["batch_size"])
-            )
-            self.demo_iter_tf = demo_dataset.make_initializable_iterator()
-            self.demo_inputs_tf = self.demo_iter_tf.get_next()
             # potential function approximator, nf or gan
             if self.demo_strategy == "nf":
                 # self.demo_shaping = MAFDemoShaping(
                 #     gamma=self.gamma,
-                #     demo_inputs_tf=self.demo_inputs_tf,
+                #     demo_inputs_tf=self.potential_demo_inputs_tf,
                 #     o_stats=self.demo_o_stats,
                 #     g_stats=self.demo_g_stats,
                 #     **self.shaping_params["nf"]
                 # )
                 self.demo_shaping = EnsNFDemoShaping(
                     gamma=self.gamma,
-                    demo_inputs_tf=self.demo_inputs_tf,
+                    demo_inputs_tf=self.potential_demo_inputs_tf,
                     o_stats=self.demo_o_stats,
                     g_stats=self.demo_g_stats,
                     **self.shaping_params["nf"]
@@ -488,14 +521,14 @@ class DDPG(object):
             elif self.demo_strategy == "gan":
                 # self.demo_shaping = GANDemoShaping(
                 #     gamma=self.gamma,
-                #     demo_inputs_tf=self.demo_inputs_tf,
+                #     demo_inputs_tf=self.potential_demo_inputs_tf,
                 #     o_stats=self.demo_o_stats,
                 #     g_stats=self.demo_g_stats,
                 #     **self.shaping_params["gan"]
                 # )
                 self.demo_shaping = EnsGANDemoShaping(
                     gamma=self.gamma,
-                    demo_inputs_tf=self.demo_inputs_tf,
+                    demo_inputs_tf=self.potential_demo_inputs_tf,
                     o_stats=self.demo_o_stats,
                     g_stats=self.demo_g_stats,
                     **self.shaping_params["gan"]
@@ -539,20 +572,20 @@ class DDPG(object):
         rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
         self.Q_loss_tf = rl_loss_tf
 
+        # Behavior Cloning Loss
+        self.bc_loss_tf = tf.reduce_mean(tf.square(self.main_bc_tf - bc_demo_input_u_tf))
+
         # Actor Loss
         if self.demo_strategy == "bc":
             assert self.sample_demo_buffer, "must sample from the demonstration buffer to use behavior cloning"
+            # primary loss scaled by it's respective weight prm_loss_weight
+            pi_loss_tf = -self.bc_params["prm_loss_weight"] * tf.reduce_mean(self.main_q_pi_tf)
             # L2 loss on action values scaled by the same weight prm_loss_weight
-            pi_loss_tf = (
+            pi_loss_tf += (
                 self.bc_params["prm_loss_weight"]
                 * self.action_l2
                 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
             )
-            # primary loss scaled by it's respective weight prm_loss_weight
-            if self.bc_params["pure_bc"]:
-                assert not self.bc_params["q_filter"]
-            else:
-                pi_loss_tf += -self.bc_params["prm_loss_weight"] * tf.reduce_mean(self.main_q_pi_tf)
             # define the cloning loss on the actor's actions only on the samples which adhere to the above masks
             mask = np.concatenate((np.zeros(self.batch_size), np.ones(self.batch_size_demo)), axis=0)
             actor_pi_tf = tf.boolean_mask((self.main_pi_tf), mask)
@@ -590,6 +623,9 @@ class DDPG(object):
             self.pi_update_op = tf.train.AdamOptimizer(learning_rate=self.pi_lr).minimize(
                 self.pi_loss_tf, var_list=self.main.actor_vars
             )
+            self.bc_update_op = tf.train.AdamOptimizer(learning_rate=self.pi_lr).minimize(
+                self.bc_loss_tf, var_list=self.main.actor_vars
+            )
         else:  # use MPI Adam (but then we can not continue training)
             # gradients of Q
             Q_grads_tf = tf.gradients(self.Q_loss_tf, self.main.critic_vars)
@@ -601,9 +637,15 @@ class DDPG(object):
             assert len(self.main.actor_vars) == len(pi_grads_tf)
             self.pi_grads_vars_tf = zip(pi_grads_tf, self.main.actor_vars)
             self.pi_grad_tf = flatten_grads(grads=pi_grads_tf, var_list=self.main.actor_vars)
+            # gradients of bc
+            bc_grads_tf = tf.gradients(self.bc_loss_tf, self.main.actor_vars)
+            assert len(self.main.actor_vars) == len(bc_grads_tf)
+            self.bc_grads_vars_tf = zip(bc_grads_tf, self.main.actor_vars)
+            self.bc_grad_tf = flatten_grads(grads=bc_grads_tf, var_list=self.main.actor_vars)
             # mpi adam
             self.Q_adam = MpiAdam(self.main.critic_vars, scale_grad_by_procs=False, comm=self.comm)
             self.pi_adam = MpiAdam(self.main.actor_vars, scale_grad_by_procs=False, comm=self.comm)
+            self.bc_adam = MpiAdam(self.main.actor_vars, scale_grad_by_procs=False, comm=self.comm)
 
         # Polyak averaging
         self.init_target_net_op = list(map(lambda v: v[0].assign(v[1]), zip(self.target.vars, self.main.vars)))
@@ -623,7 +665,8 @@ class DDPG(object):
         if self.comm is not None:
             self.Q_adam.sync()
             self.pi_adam.sync()
-        self.sess.run(self.init_target_net_op)
+            self.bc_adam.sync()
+        self.init_target_net()
         self.training_step = self.sess.run(self.training_step_tf)
 
     def _preprocess_state(self, state):
