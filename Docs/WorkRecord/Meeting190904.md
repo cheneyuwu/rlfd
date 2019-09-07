@@ -128,8 +128,9 @@ Aug 27th, 2019
         - bc **running on cedar melissa** (done)
         - rlbc **running on cedar melissa** (done)
         - gan **running on cedar melissa** (done)
-        - maf **running on cedar yuchen**
-            - need more tuning for this
+        - maf **running on cedar yuchen**  (done)
+            - (true ensemble) running with more n epochs and tunning **running on cedar melissa** (running)
+            - (true ensemble) running with tunning **running on cedar melissa** (running)
     - #S0.15 (Sub Optimal Policy: goes high and then insert)
 
 - Pick and Place with Random Initial Pose (Robust to Seeds)
@@ -138,10 +139,15 @@ Aug 27th, 2019
         - bc **running on cedar florian** (done)
         - rlbc **running on cedar florian** (done)
         - gan **running on cedar florian**
+            - (true ensemble) more tunning and more epochs **running on graham melissa** (running)
         - maf **running on cedar yuchen**
+            - (true ensemble) running with more n epochs and tunning **running on cedar florian** (running)
+            - (true ensemble) running with tunning **running on cedar melissa** (running)
+            - (true ensemble) try increasing the learning rate **running locally** (running)
 
-- Run
-    - reduce capacity of maf and gan
+- **TODO**
+    - MAF for PegInHole2DVersion (0.2 and 0.5) **running on graham yuchen** (running)
+    - Q filter for Robust to success rate **running on graham florian** (running)
 
 
 # Lunch and Uber cost
