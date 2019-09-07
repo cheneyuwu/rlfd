@@ -7,7 +7,10 @@ import importlib
 import shutil
 
 # must include gym before loading mpi, for compute canada cluster
-import mujoco_py
+try:
+    import mujoco_py
+except:
+    mujoco_py = None
 
 try:
     from mpi4py import MPI
@@ -179,7 +182,8 @@ def main(targets, exp_dir, policy_file, **kwargs):
                         shutil.copyfile(demo_file, demo_dest)
 
             # sync the process
-            comm.Barrier()
+            if comm is not None:
+                comm.Barrier()
 
             if policy_file == None:
                 policy_file = os.path.join(list(dir_param_dict.keys())[0], "rl/policy_latest.pkl")
@@ -219,7 +223,8 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     k = list(dir_param_dict.keys())
                     train_entry(root_dir=k[color_for_each_exp], comm=comm_for_each_exp)
 
-            comm.Barrier()
+            if comm is not None:
+                comm.Barrier()
 
         elif target == "demo":
             assert policy_file != None
@@ -293,7 +298,8 @@ def main(targets, exp_dir, policy_file, **kwargs):
         else:
             assert 0, "unknown target: {}".format(target)
 
-        comm.Barrier()
+        if comm is not None:
+            comm.Barrier()
         logger.reset()
 
     return
