@@ -84,7 +84,10 @@ class NFDemoShaping(DemoShaping):
     def __init__(
         self,
         gamma,
-        demo_inputs_tf,
+        max_num_transitions,
+        batch_size,
+        demo_dataset,
+        # demo_inputs_tf,
         o_stats,
         g_stats,
         nf_type,
@@ -107,7 +110,11 @@ class NFDemoShaping(DemoShaping):
         """
         self.o_stats = o_stats
         self.g_stats = g_stats
-        self.demo_inputs_tf = demo_inputs_tf
+        # self.demo_inputs_tf = demo_inputs_tf
+        demo_dataset = demo_dataset.shuffle(max_num_transitions).batch(batch_size)
+        demo_iter_tf = demo_dataset.make_initializable_iterator()
+        self.demo_iter_init_tf = demo_iter_tf.initializer
+        self.demo_inputs_tf = demo_iter_tf.get_next()
         demo_state_tf = self._cast_concat_inputs_normalize(
             self.demo_inputs_tf["o"],
             self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
@@ -164,13 +171,19 @@ class NFDemoShaping(DemoShaping):
         loss, _ = sess.run([self.loss, self.train_op], feed_dict=feed_dict)
         return loss
 
+    def initialize_dataset(self, sess):
+        sess.run(self.demo_iter_init_tf)
+
 
 class EnsNFDemoShaping(DemoShaping):
     def __init__(
         self,
         num_ens,
         gamma,
-        demo_inputs_tf,
+        max_num_transitions,
+        batch_size,
+        demo_dataset,
+        # demo_inputs_tf,
         o_stats,
         g_stats,
         nf_type,
@@ -200,7 +213,10 @@ class EnsNFDemoShaping(DemoShaping):
                     NFDemoShaping(
                         nf_type=nf_type,
                         gamma=gamma,
-                        demo_inputs_tf=demo_inputs_tf,
+                        max_num_transitions=max_num_transitions,
+                        batch_size=batch_size,
+                        demo_dataset=demo_dataset,
+                        # demo_inputs_tf=demo_inputs_tf,
                         o_stats=o_stats,
                         g_stats=g_stats,
                         lr=lr,
@@ -217,6 +233,8 @@ class EnsNFDemoShaping(DemoShaping):
         self.loss = tf.reduce_sum([ens.loss for ens in self.nfs], axis=0)
         # optimizers
         self.train_op = tf.train.AdamOptimizer(learning_rate=lr).minimize(self.loss)
+        # dataset initializer
+        self.demo_iter_init_tf = [ens.demo_iter_init_tf for ens in self.nfs]
 
         super().__init__(gamma)
 
@@ -230,12 +248,18 @@ class EnsNFDemoShaping(DemoShaping):
         loss, _ = sess.run([self.loss, self.train_op], feed_dict=feed_dict)
         return loss
 
+    def initialize_dataset(self, sess):
+        sess.run(self.demo_iter_init_tf)
+
 
 class GANDemoShaping(DemoShaping):
     def __init__(
         self,
         gamma,
-        demo_inputs_tf,
+        max_num_transitions,
+        batch_size,
+        demo_dataset,
+        # demo_inputs_tf,
         o_stats,
         g_stats,
         potential_weight,
@@ -255,7 +279,11 @@ class GANDemoShaping(DemoShaping):
         # Parameters
         self.o_stats = o_stats
         self.g_stats = g_stats
-        self.demo_inputs_tf = demo_inputs_tf
+        # self.demo_inputs_tf = demo_inputs_tf
+        demo_dataset = demo_dataset.shuffle(max_num_transitions).batch(batch_size)
+        demo_iter_tf = demo_dataset.make_initializable_iterator()
+        self.demo_iter_init_tf = demo_iter_tf.initializer
+        self.demo_inputs_tf = demo_iter_tf.get_next()
         demo_state_tf = self._concat_inputs_normalize(  # remove _normalize to not normalize the inputs
             self.demo_inputs_tf["o"],
             self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
@@ -330,13 +358,19 @@ class GANDemoShaping(DemoShaping):
         self.train_gen = np.mod(self.train_gen + 1, self.critic_iter)
         return disc_cost
 
+    def initialize_dataset(self, sess):
+        sess.run(self.demo_iter_init_tf)
+
 
 class EnsGANDemoShaping(DemoShaping):
     def __init__(
         self,
         num_ens,
         gamma,
-        demo_inputs_tf,
+        max_num_transitions,
+        batch_size,
+        demo_dataset,
+        # demo_inputs_tf,
         o_stats,
         g_stats,
         layer_sizes,
@@ -363,7 +397,10 @@ class EnsGANDemoShaping(DemoShaping):
                 self.gans.append(
                     GANDemoShaping(
                         gamma=gamma,
-                        demo_inputs_tf=demo_inputs_tf,
+                        max_num_transitions=max_num_transitions,
+                        batch_size=batch_size,
+                        demo_dataset=demo_dataset,
+                        # demo_inputs_tf=demo_inputs_tf,
                         o_stats=o_stats,
                         g_stats=g_stats,
                         layer_sizes=layer_sizes,
@@ -389,6 +426,9 @@ class EnsGANDemoShaping(DemoShaping):
             self.gen_cost, var_list=self.gen_vars
         )
 
+        # dataset initializer
+        self.demo_iter_init_tf = [ens.demo_iter_init_tf for ens in self.gans]
+
         super().__init__(gamma)
 
     def potential(self, o, g, u):
@@ -405,6 +445,9 @@ class EnsGANDemoShaping(DemoShaping):
             sess.run(self.gen_train_op)
         self.train_gen = np.mod(self.train_gen + 1, self.critic_iter)
         return disc_cost
+
+    def initialize_dataset(self, sess):
+        sess.run(self.demo_iter_init_tf)
 
 
 # Testing

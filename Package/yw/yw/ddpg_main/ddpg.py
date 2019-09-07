@@ -253,7 +253,8 @@ class DDPG(object):
         assert self.demo_strategy in ["nf", "gan"]
         # train normalizing flow or gan for 1 epoch
         loss = 0
-        self.sess.run(self.potential_demo_iter_tf.initializer)
+        # self.sess.run(self.potential_demo_iter_tf.initializer)
+        self.demo_shaping.initialize_dataset(sess=self.sess)
         losses = np.empty(0)
         while True:
             try:
@@ -498,22 +499,28 @@ class DDPG(object):
                     self.dimg, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm
                 )
 
-            potential_demo_dataset = demo_dataset.batch(self.shaping_params["batch_size"])
-            self.potential_demo_iter_tf = potential_demo_dataset.make_initializable_iterator()
-            self.potential_demo_inputs_tf = self.potential_demo_iter_tf.get_next()
+            # potential_demo_dataset = demo_dataset.batch(self.shaping_params["batch_size"])
+            # self.potential_demo_iter_tf = potential_demo_dataset.make_initializable_iterator()
+            # self.potential_demo_inputs_tf = self.potential_demo_iter_tf.get_next()
 
             # potential function approximator, nf or gan
             if self.demo_strategy == "nf":
                 # self.demo_shaping = MAFDemoShaping(
                 #     gamma=self.gamma,
-                #     demo_inputs_tf=self.potential_demo_inputs_tf,
+                #     max_num_transitions=max_num_transitions,
+                #     batch_size=self.shaping_params["batch_size"],
+                #     demo_dataset=demo_dataset,                
+                #     # demo_inputs_tf=self.potential_demo_inputs_tf,
                 #     o_stats=self.demo_o_stats,
                 #     g_stats=self.demo_g_stats,
                 #     **self.shaping_params["nf"]
                 # )
                 self.demo_shaping = EnsNFDemoShaping(
                     gamma=self.gamma,
-                    demo_inputs_tf=self.potential_demo_inputs_tf,
+                    max_num_transitions=max_num_transitions,
+                    batch_size=self.shaping_params["batch_size"],
+                    demo_dataset=demo_dataset,
+                    # demo_inputs_tf=self.potential_demo_inputs_tf,
                     o_stats=self.demo_o_stats,
                     g_stats=self.demo_g_stats,
                     **self.shaping_params["nf"]
@@ -521,14 +528,20 @@ class DDPG(object):
             elif self.demo_strategy == "gan":
                 # self.demo_shaping = GANDemoShaping(
                 #     gamma=self.gamma,
-                #     demo_inputs_tf=self.potential_demo_inputs_tf,
+                #     max_num_transitions=max_num_transitions,
+                #     batch_size=self.shaping_params["batch_size"],
+                #     demo_dataset=demo_dataset,                
+                #     # demo_inputs_tf=self.potential_demo_inputs_tf,
                 #     o_stats=self.demo_o_stats,
                 #     g_stats=self.demo_g_stats,
                 #     **self.shaping_params["gan"]
                 # )
                 self.demo_shaping = EnsGANDemoShaping(
                     gamma=self.gamma,
-                    demo_inputs_tf=self.potential_demo_inputs_tf,
+                    max_num_transitions=max_num_transitions,
+                    batch_size=self.shaping_params["batch_size"],
+                    demo_dataset=demo_dataset,
+                    # demo_inputs_tf=self.potential_demo_inputs_tf,
                     o_stats=self.demo_o_stats,
                     g_stats=self.demo_g_stats,
                     **self.shaping_params["gan"]
