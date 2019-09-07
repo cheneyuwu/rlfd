@@ -54,6 +54,8 @@ def transform_label(label):
     # For final result only
     if label == "epoch":
         return "Number of Epoch"
+    elif label == "train/episode":
+        return "Number of Episodes (x10^3)"
     elif label == "test/success_rate":
         return "Average Success Rate"
     elif label == "test/total_reward":
@@ -123,7 +125,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
 
     # each environment goes to one image
     fig = plt.figure()
-    fig.subplots_adjust(left=0.05, right=0.95, bottom=0.15, top=0.9, wspace=0.25, hspace=0.25)
+    fig.subplots_adjust(left=0.05, right=0.95, bottom=0.3, top=0.9, wspace=0.25, hspace=0.25)
     for env_id in sorted(data.keys()):
         print("Creating plots for environment: {}".format(env_id))
 
@@ -147,18 +149,19 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 xs, ys = strip(xs, required_length), strip(ys, required_length)
                 assert xs.shape == ys.shape
 
+                x = xs[0]
                 # from openai spinning up
-                # ax.plot(xs[0], np.nanmedian(ys, axis=0), label=config)
-                # ax.fill_between(xs[0], np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25)
+                # ax.plot(x, np.nanmedian(ys, axis=0), label=config)
+                # ax.fill_between(x, np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25)
                 # ours
                 mean_y = np.nanmean(ys, axis=0)
                 stddev_y = np.nanstd(ys, axis=0)
-                ax.plot(xs[0], mean_y, label=config, color=colors[j % len(colors)])
+                ax.plot(x, mean_y, label=config, color=colors[j % len(colors)])
                 ax.fill_between(
-                    xs[0], mean_y - 0.5 * stddev_y, mean_y + 0.5 * stddev_y, alpha=0.2, color=colors[j % len(colors)]
+                    x, mean_y - 0.5 * stddev_y, mean_y + 0.5 * stddev_y, alpha=0.2, color=colors[j % len(colors)]
                 )
                 # ax.fill_between(
-                #     xs[0], mean_y - 3 * stddev_y, mean_y + 3 * stddev_y, alpha=0.25, color=colors[j % len(colors)]
+                #     x, mean_y - 3 * stddev_y, mean_y + 3 * stddev_y, alpha=0.25, color=colors[j % len(colors)]
                 # )
 
                 ax.set_xlabel(x_label)
@@ -168,8 +171,8 @@ def plot_results(allresults, xys, target_dir, smooth=0):
             num_lines = len(data[env_id][xy].keys())
         # use fig level legend
         handles, labels = ax.get_legend_handles_labels()
-        fig.legend(handles, labels, loc="lower center", ncol=num_lines)
-        fig.set_size_inches(5 * len(xys), 5.5)
+        fig.legend(handles, labels, loc="lower center", ncol=1)
+        fig.set_size_inches(5 * len(xys), 8)
         fig.suptitle(env_id)
         save_path = os.path.join(target_dir, "fig_{}.png".format(env_id))
         print("Saving image to " + save_path)

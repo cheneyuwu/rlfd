@@ -249,10 +249,11 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     dirs=[exp_dir],
                     xys=[
                         "epoch:test/success_rate",
-                        # "epoch:test/total_shaping_reward",
+                        "epoch:test/total_shaping_reward",
                         "epoch:test/total_reward",
-                        # "epoch:test/mean_Q",
-                        # "epoch:test/mean_Q_plus_P",
+                        "epoch:test/mean_Q",
+                        "epoch:test/mean_Q_plus_P",
+                        # "train/episode:test/total_reward"
                     ],
                     smooth=True,
                 )
