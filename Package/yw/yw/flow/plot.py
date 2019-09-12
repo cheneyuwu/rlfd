@@ -1,18 +1,19 @@
+import json
 import os
-import sys
 import os.path as osp
+import sys
 
 import matplotlib
-
-matplotlib.use("Agg")  # Can change to 'Agg' for non-interactive mode
 import matplotlib.pyplot as plt
-from matplotlib import cm
-
 import numpy as np
-import json
+from matplotlib import cm
 
 from yw.util.cmd_util import ArgParser
 from yw.util.reader_util import load_csv
+
+matplotlib.use("Agg")  # Can change to 'Agg' for non-interactive mode
+matplotlib.rcParams["pdf.fonttype"] = 42
+matplotlib.rcParams["ps.fonttype"] = 42
 
 
 def pad(xs, value=np.nan):
@@ -40,27 +41,14 @@ def strip(xs, length=0):
     return np.array(stripped_xs)
 
 
-def smooth_reward_curve(x, y):
-    halfwidth = int(np.ceil(len(x) / 200))  # Halfwidth of our smoothing convolution
+def smooth_reward_curve(x, y, size=50):
+    halfwidth = int(np.ceil(len(x) / size))
     k = halfwidth
     xsmoo = x
     ysmoo = np.convolve(y, np.ones(2 * k + 1), mode="same") / np.convolve(
         np.ones_like(y), np.ones(2 * k + 1), mode="same"
     )
     return xsmoo, ysmoo
-
-
-def transform_label(label):
-    # For final result only
-    if label == "epoch":
-        return "Number of Epoch"
-    elif label == "train/episode":
-        return "Number of Episodes (x10^3)"
-    elif label == "test/success_rate":
-        return "Average Success Rate"
-    elif label == "test/total_reward":
-        return "Average Return"
-    return label
 
 
 def load_results(root_dir_or_dirs):
@@ -123,21 +111,30 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 data[env_id][xy][config] = []
             data[env_id][xy][config].append((x, y))
 
-    # each environment goes to one image
     fig = plt.figure()
-    fig.subplots_adjust(left=0.05, right=0.95, bottom=0.3, top=0.9, wspace=0.25, hspace=0.25)
-    for env_id in sorted(data.keys()):
-        print("Creating plots for environment: {}".format(env_id))
+    fig.subplots_adjust(left=0.15, right=0.98, bottom=0.27, top=0.9, wspace=0.25, hspace=0.25)
+    # set sizes
+    SMALL_SIZE = 140
+    MEDIUM_SIZE = 140
+    BIGGER_SIZE = 160
+    plt.rc("font", size=MEDIUM_SIZE)  # controls default text sizes
+    plt.rc("axes", titlesize=BIGGER_SIZE)  # fontsize of the axes title
+    plt.rc("axes", labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
+    plt.rc("xtick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
+    plt.rc("ytick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
+    plt.rc("legend", fontsize=MEDIUM_SIZE)  # legend fontsize
+    plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
-        fig.clf()
+    fig.clf()
+    for env_n, env_id in enumerate(sorted(data.keys())):
+        print("Creating plots for environment: {}".format(env_id))
         for i, xy in enumerate(data[env_id].keys(), 1):
-            # colors = ["r", "g", "b", "c", "m", "y", "k"]
+            # colors = ["r", "g", "b", "m", "c", "k", "y"]
             colors = cm.jet(np.linspace(0, 1.0, len(data[env_id][xy].keys())))
-            ax = fig.add_subplot(1, len(xys), i)
+            markers = ["o", "v", "s", "d", "p", "h"]
+            ax = fig.add_subplot(len(data.keys()), len(xys), i + env_n * (len(data.keys()) - 1))
             x_label = xy.split(":")[0]
             y_label = xy.split(":")[1]
-            x_label = transform_label(x_label)
-            y_label = transform_label(y_label)
             for j, config in enumerate(sorted(data[env_id][xy].keys())):
                 xs, ys = zip(*data[env_id][xy][config])
                 if config == "default":
@@ -156,9 +153,18 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 # ours
                 mean_y = np.nanmean(ys, axis=0)
                 stddev_y = np.nanstd(ys, axis=0)
-                ax.plot(x, mean_y, label=config, color=colors[j % len(colors)])
+                ax.plot(
+                    x,
+                    mean_y,
+                    label=config,
+                    color=colors[j % len(colors)],
+                    lw=20,
+                    marker=markers[j % len(markers)],
+                    ms=80,
+                    markevery=int(10),
+                )
                 ax.fill_between(
-                    x, mean_y - 0.5 * stddev_y, mean_y + 0.5 * stddev_y, alpha=0.2, color=colors[j % len(colors)]
+                    x, mean_y - 1.0 * stddev_y, mean_y + 1.0 * stddev_y, alpha=0.2, color=colors[j % len(colors)]
                 )
                 # ax.fill_between(
                 #     x, mean_y - 3 * stddev_y, mean_y + 3 * stddev_y, alpha=0.25, color=colors[j % len(colors)]
@@ -166,17 +172,22 @@ def plot_results(allresults, xys, target_dir, smooth=0):
 
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_label)
+                ax.tick_params(axis="x", pad=50, length=50, width=10)
+                ax.tick_params(axis="y", pad=50, length=50, width=10)
+                ax.spines["top"].set_visible(False)
+                ax.spines["right"].set_visible(False)
+                ax.spines["bottom"].set_visible(True)
+                ax.spines["left"].set_visible(True)
                 # use ax level legend
                 # ax.legend(fontsize=5)
             num_lines = len(data[env_id][xy].keys())
-        # use fig level legend
-        handles, labels = ax.get_legend_handles_labels()
-        fig.legend(handles, labels, loc="lower center", ncol=1)
-        fig.set_size_inches(5 * len(xys), 8)
-        fig.suptitle(env_id)
-        save_path = os.path.join(target_dir, "fig_{}.png".format(env_id))
-        print("Saving image to " + save_path)
-        plt.savefig(save_path, dpi=200)
+    # use fig level legend
+    handles, labels = ax.get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=int(num_lines), frameon=False)
+    fig.set_size_inches(50 * len(xys), 50 * len(data.keys()))
+    save_path = os.path.join(target_dir, "fig_{}.png".format(env_id))
+    print("Saving image to " + save_path)
+    plt.savefig(save_path, dpi=200)
     plt.show()
 
 

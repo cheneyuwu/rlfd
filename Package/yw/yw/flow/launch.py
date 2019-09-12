@@ -101,10 +101,10 @@ def transform_config_name(config_name):
             elif config_name[i] == "demo_strategy_pure_bc":
                 return ["BC"]
             elif config_name[i] == "demo_strategy_bc":
-                if "prm_loss_weight_0.001" in config_name:
-                    return ["$\lambda$TD3+BC, $\lambda$=0.001"]
-                elif "prm_loss_weight_0.0001" in config_name:
+                if "prm_loss_weight_0.0001" in config_name:
                     return ["$\lambda$TD3+BC, $\lambda$=0.0001"]
+                elif "prm_loss_weight_0.001" in config_name:
+                    return ["$\lambda$TD3+BC, $\lambda$=0.001"]
                 elif "prm_loss_weight_0.01" in config_name:
                     return ["$\lambda$TD3+BC, $\lambda$=0.01"]
                 elif "prm_loss_weight_0.1" in config_name:
