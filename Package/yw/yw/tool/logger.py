@@ -1,23 +1,17 @@
-# Import
-# ======================================
-
-# System import
-import os
-import sys
-import shutil
-import os.path as osp
-
-# Infra import
-import json
-import time
+"""Mostly adopted from OpenAI baselines: https://github.com/openai/baselines
+"""
 import datetime
+import json
+import os
+import os.path as osp
+import shutil
+import sys
 import tempfile
+import time
 from collections import defaultdict
-
 
 # Logger Levels
 # ======================================
-
 DEBUG = 1
 INFO = 2
 WARN = 3
@@ -28,8 +22,6 @@ DISABLED = 5
 
 # Logger Implementation Bases
 # ======================================
-
-
 class KVWriter(object):
     def writekvs(self, kvs):
         raise NotImplementedError
@@ -157,8 +149,6 @@ def make_output_format(format, ev_dir, log_suffix=""):
 
 # Backend
 # =====================================
-
-
 class Logger(object):
     DEFAULT = None  # A logger with no output files. (See right below class definition)
     # So that you can still log to the terminal without setting up any output files
@@ -219,8 +209,6 @@ class Logger(object):
 
 # API
 # =====================================
-
-
 def configure(dir=None, format_strs=None, log_suffix=None):
 
     # Use LOGDIR as the default logging directory
@@ -335,8 +323,6 @@ def reset():
 
 # Initial Configuration
 # ======================================
-
-
 def _configure_default_logger():
     configure()
     Logger.DEFAULT = Logger.CURRENT
@@ -351,8 +337,6 @@ dump_tabular = dumpkvs
 
 # For testing purposes
 # ======================================
-
-
 def test_demo():
     info("hi")
     debug("shouldn't appear")
@@ -384,4 +368,3 @@ def test_demo():
 
 if __name__ == "__main__":
     test_demo()
-

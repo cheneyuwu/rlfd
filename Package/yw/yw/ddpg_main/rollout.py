@@ -1,16 +1,17 @@
+"""Adopted from OpenAI baselines code base
+"""
+import pickle
 from collections import deque
 
 import numpy as np
-import pickle
+
+from yw.tool import logger
+from yw.util.util import store_args
 
 try:
     from mujoco_py import MujocoException
 except:
     MujocoException = None
-
-
-from yw.tool import logger
-from yw.util.util import store_args
 
 
 class RolloutWorkerBase:

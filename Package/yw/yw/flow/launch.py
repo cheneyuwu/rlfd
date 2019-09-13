@@ -1,10 +1,19 @@
 import argparse
-import os
-import sys
-import json
 import copy
 import importlib
+import json
+import os
 import shutil
+import sys
+
+from yw.flow.generate_demo import main as demo_entry
+from yw.flow.plot import main as plot_entry
+from yw.flow.query.generate_query import main as generate_query_entry
+from yw.flow.query.visualize_query import main as visualize_query_entry
+from yw.flow.run_agent import main as display_entry
+from yw.flow.train_ddpg_main import main as train_entry
+from yw.tool import logger
+from yw.util.mpi_util import mpi_exit, mpi_input
 
 # must include gym before loading mpi, for compute canada cluster
 try:
@@ -16,15 +25,6 @@ try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
-
-from yw.tool import logger
-from yw.util.mpi_util import mpi_input, mpi_exit
-from yw.flow.train_ddpg_main import main as train_entry
-from yw.flow.generate_demo import main as demo_entry
-from yw.flow.plot import main as plot_entry
-from yw.flow.run_agent import main as display_entry
-from yw.flow.query.generate_query import main as generate_query_entry
-from yw.flow.query.visualize_query import main as visualize_query_entry
 
 
 def import_param_config(load_dir):
@@ -88,6 +88,7 @@ def generate_params(root_dir, param_config):
 #             elif config_name[i] == "demo_strategy_none":
 #                 config_name[i] = "TD3"
 #     return config_name
+
 
 def transform_config_name(config_name):
     """ Transfer the legend names"""

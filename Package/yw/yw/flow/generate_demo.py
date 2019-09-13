@@ -1,20 +1,19 @@
-import sys
+import json
 import os
 import pickle
-import json
+import sys
 
 import numpy as np
 import tensorflow as tf
+
+from yw.ddpg_main import config
+from yw.tool import logger
+from yw.util.util import set_global_seeds
 
 try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
-
-# DDPG Package import
-from yw.tool import logger
-from yw.ddpg_main import config
-from yw.util.util import set_global_seeds
 
 
 DEFAULT_PARAMS = {
@@ -123,7 +122,6 @@ def main(policy_file, root_dir, **kwargs):
         np.savez_compressed(file_name, **episode)  # save the file
         logger.info("Demo file has been stored into {}.".format(file_name))
 
-    # Close the default session to prevent memory leaking
     tf.get_default_session().close()
 
 

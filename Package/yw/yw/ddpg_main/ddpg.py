@@ -1,21 +1,19 @@
 import pickle
+
+import matplotlib.gridspec as gridspec
+import matplotlib.pylab as pl
 import numpy as np
 import tensorflow as tf
+from mpl_toolkits.mplot3d import Axes3D
 
-from yw.tool import logger
-
+from yw.ddpg_main.actor_critic import ActorCritic
+from yw.ddpg_main.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping, GANDemoShaping, NFDemoShaping
 from yw.ddpg_main.mpi_adam import MpiAdam
 from yw.ddpg_main.normalizer import Normalizer
-from yw.ddpg_main.actor_critic import ActorCritic
-from yw.ddpg_main.replay_buffer import HERReplayBuffer, UniformReplayBuffer, RingReplayBuffer
-from yw.ddpg_main.demo_shaping import NFDemoShaping, EnsNFDemoShaping, GANDemoShaping, EnsGANDemoShaping
-from yw.util.tf_util import flatten_grads
-
-# for query (debugging only)
-import matplotlib.pylab as pl
-import matplotlib.gridspec as gridspec
-from mpl_toolkits.mplot3d import Axes3D
+from yw.ddpg_main.replay_buffer import HERReplayBuffer, RingReplayBuffer, UniformReplayBuffer
 from yw.flow.query import visualize_query
+from yw.tool import logger
+from yw.util.tf_util import flatten_grads
 
 
 class DDPG(object):
@@ -176,7 +174,6 @@ class DDPG(object):
         logger.info("Initializing demonstration buffer with {} episodes.".format(self.num_demo))
         # load the demonstration data from data file
         episode_batch = self.demo_buffer.load_from_file(data_file=demo_file, num_demo=self.num_demo)
-        # TODO figure out when to normalize the input to shaping
         self._update_demo_stats(episode_batch)
         if update_stats:
             logger.info("Updating stats using data from demostration buffer.")
@@ -253,7 +250,6 @@ class DDPG(object):
         assert self.demo_strategy in ["nf", "gan"]
         # train normalizing flow or gan for 1 epoch
         loss = 0
-        # self.sess.run(self.potential_demo_iter_tf.initializer)
         self.demo_shaping.initialize_dataset(sess=self.sess)
         losses = np.empty(0)
         while True:
@@ -498,50 +494,23 @@ class DDPG(object):
                 self.demo_g_stats = Normalizer(
                     self.dimg, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm
                 )
-
-            # potential_demo_dataset = demo_dataset.batch(self.shaping_params["batch_size"])
-            # self.potential_demo_iter_tf = potential_demo_dataset.make_initializable_iterator()
-            # self.potential_demo_inputs_tf = self.potential_demo_iter_tf.get_next()
-
             # potential function approximator, nf or gan
             if self.demo_strategy == "nf":
-                # self.demo_shaping = MAFDemoShaping(
-                #     gamma=self.gamma,
-                #     max_num_transitions=max_num_transitions,
-                #     batch_size=self.shaping_params["batch_size"],
-                #     demo_dataset=demo_dataset,                
-                #     # demo_inputs_tf=self.potential_demo_inputs_tf,
-                #     o_stats=self.demo_o_stats,
-                #     g_stats=self.demo_g_stats,
-                #     **self.shaping_params["nf"]
-                # )
                 self.demo_shaping = EnsNFDemoShaping(
                     gamma=self.gamma,
                     max_num_transitions=max_num_transitions,
                     batch_size=self.shaping_params["batch_size"],
                     demo_dataset=demo_dataset,
-                    # demo_inputs_tf=self.potential_demo_inputs_tf,
                     o_stats=self.demo_o_stats,
                     g_stats=self.demo_g_stats,
                     **self.shaping_params["nf"]
                 )
             elif self.demo_strategy == "gan":
-                # self.demo_shaping = GANDemoShaping(
-                #     gamma=self.gamma,
-                #     max_num_transitions=max_num_transitions,
-                #     batch_size=self.shaping_params["batch_size"],
-                #     demo_dataset=demo_dataset,                
-                #     # demo_inputs_tf=self.potential_demo_inputs_tf,
-                #     o_stats=self.demo_o_stats,
-                #     g_stats=self.demo_g_stats,
-                #     **self.shaping_params["gan"]
-                # )
                 self.demo_shaping = EnsGANDemoShaping(
                     gamma=self.gamma,
                     max_num_transitions=max_num_transitions,
                     batch_size=self.shaping_params["batch_size"],
                     demo_dataset=demo_dataset,
-                    # demo_inputs_tf=self.potential_demo_inputs_tf,
                     o_stats=self.demo_o_stats,
                     g_stats=self.demo_g_stats,
                     **self.shaping_params["gan"]

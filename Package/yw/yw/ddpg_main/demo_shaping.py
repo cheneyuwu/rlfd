@@ -3,9 +3,9 @@ import itertools
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-tfd = tfp.distributions
+from yw.util.tf_util import MAF, MLP, RealNVP
 
-from yw.util.tf_util import MAF, RealNVP, MLP
+tfd = tfp.distributions
 
 
 class DemoShaping:
@@ -87,7 +87,6 @@ class NFDemoShaping(DemoShaping):
         max_num_transitions,
         batch_size,
         demo_dataset,
-        # demo_inputs_tf,
         o_stats,
         g_stats,
         nf_type,
@@ -110,7 +109,6 @@ class NFDemoShaping(DemoShaping):
         """
         self.o_stats = o_stats
         self.g_stats = g_stats
-        # self.demo_inputs_tf = demo_inputs_tf
         demo_dataset = demo_dataset.shuffle(max_num_transitions).batch(batch_size)
         demo_iter_tf = demo_dataset.make_initializable_iterator()
         self.demo_iter_init_tf = demo_iter_tf.initializer
@@ -183,7 +181,6 @@ class EnsNFDemoShaping(DemoShaping):
         max_num_transitions,
         batch_size,
         demo_dataset,
-        # demo_inputs_tf,
         o_stats,
         g_stats,
         nf_type,
@@ -216,7 +213,6 @@ class EnsNFDemoShaping(DemoShaping):
                         max_num_transitions=max_num_transitions,
                         batch_size=batch_size,
                         demo_dataset=demo_dataset,
-                        # demo_inputs_tf=demo_inputs_tf,
                         o_stats=o_stats,
                         g_stats=g_stats,
                         lr=lr,
@@ -259,7 +255,6 @@ class GANDemoShaping(DemoShaping):
         max_num_transitions,
         batch_size,
         demo_dataset,
-        # demo_inputs_tf,
         o_stats,
         g_stats,
         potential_weight,
@@ -279,7 +274,6 @@ class GANDemoShaping(DemoShaping):
         # Parameters
         self.o_stats = o_stats
         self.g_stats = g_stats
-        # self.demo_inputs_tf = demo_inputs_tf
         demo_dataset = demo_dataset.shuffle(max_num_transitions).batch(batch_size)
         demo_iter_tf = demo_dataset.make_initializable_iterator()
         self.demo_iter_init_tf = demo_iter_tf.initializer
@@ -370,7 +364,6 @@ class EnsGANDemoShaping(DemoShaping):
         max_num_transitions,
         batch_size,
         demo_dataset,
-        # demo_inputs_tf,
         o_stats,
         g_stats,
         layer_sizes,
@@ -400,7 +393,6 @@ class EnsGANDemoShaping(DemoShaping):
                         max_num_transitions=max_num_transitions,
                         batch_size=batch_size,
                         demo_dataset=demo_dataset,
-                        # demo_inputs_tf=demo_inputs_tf,
                         o_stats=o_stats,
                         g_stats=g_stats,
                         layer_sizes=layer_sizes,
