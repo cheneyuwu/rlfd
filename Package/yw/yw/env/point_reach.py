@@ -1,11 +1,11 @@
 """Reacher Environment Implementation
 """
-import numpy as np
 import matplotlib
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
+import numpy as np
 
 matplotlib.use("Agg")  #  TkAgg Can change to 'Agg' for non-interactive mode
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 
 
 def make(env_name, **env_args):

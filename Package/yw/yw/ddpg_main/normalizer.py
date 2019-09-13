@@ -1,10 +1,12 @@
+"""adopted from openai baseline code base
+"""
+import numpy as np
+import tensorflow as tf
+
 try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
-
-import numpy as np
-import tensorflow as tf
 
 
 class Normalizer:

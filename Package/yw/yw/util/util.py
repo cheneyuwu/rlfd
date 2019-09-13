@@ -1,3 +1,5 @@
+"""Mostly adopted from OpenAI baselines: https://github.com/openai/baselines
+"""
 import importlib
 import inspect
 import functools

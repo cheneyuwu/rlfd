@@ -1,27 +1,30 @@
 import argparse
-import os
-import sys
-import json
 import copy
 import importlib
+import json
+import os
 import shutil
+import sys
+
+from yw.flow.generate_demo import main as demo_entry
+from yw.flow.plot import main as plot_entry
+from yw.flow.query.generate_query import main as generate_query_entry
+from yw.flow.query.visualize_query import main as visualize_query_entry
+from yw.flow.run_agent import main as display_entry
+from yw.flow.train_ddpg_main import main as train_entry
+from yw.tool import logger
+from yw.util.mpi_util import mpi_exit, mpi_input
 
 # must include gym before loading mpi, for compute canada cluster
-import mujoco_py
+try:
+    import mujoco_py
+except:
+    mujoco_py = None
 
 try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
-
-from yw.tool import logger
-from yw.util.mpi_util import mpi_input, mpi_exit
-from yw.flow.train_ddpg_main import main as train_entry
-from yw.flow.generate_demo import main as demo_entry
-from yw.flow.plot import main as plot_entry
-from yw.flow.run_agent import main as display_entry
-from yw.flow.query.generate_query import main as generate_query_entry
-from yw.flow.query.visualize_query import main as visualize_query_entry
 
 
 def import_param_config(load_dir):
@@ -66,46 +69,52 @@ def generate_params(root_dir, param_config):
     return res
 
 
-def transform_config_name(config_name):
-    """ Transfer the legend names"""
-    print(config_name)
-    for i in range(len(config_name)):
-        if config_name[i].startswith("demo_strategy"):
-            if config_name[i] == "demo_strategy_nf":
-                config_name[i] = "MAF Shaping"
-            elif config_name[i] == "demo_strategy_gan":
-                config_name[i] = "GAN Shaping"
-            elif config_name[i] == "demo_strategy_pure_bc":
-                config_name[i] = "BC"
-            elif config_name[i] == "demo_strategy_bc":
-                if "q_filter_1" in config_name:
-                    config_name[i] = "TD3+BC+Q Filter"
-                else:
-                    config_name[i] = "TD3+BC"
-            elif config_name[i] == "demo_strategy_none":
-                config_name[i] = "TD3"
-    return config_name
-
-
 # def transform_config_name(config_name):
 #     """ Transfer the legend names"""
 #     print(config_name)
 #     for i in range(len(config_name)):
 #         if config_name[i].startswith("demo_strategy"):
 #             if config_name[i] == "demo_strategy_nf":
-#                 return ["MAF Shaping"]
+#                 config_name[i] = "MAF Shaping"
 #             elif config_name[i] == "demo_strategy_gan":
-#                 return ["GAN Shaping"]
+#                 config_name[i] = "GAN Shaping"
 #             elif config_name[i] == "demo_strategy_pure_bc":
-#                 return ["BC"]
+#                 config_name[i] = "BC"
 #             elif config_name[i] == "demo_strategy_bc":
 #                 if "q_filter_1" in config_name:
-#                     return ["TD3+BC+Q Filter"]
+#                     config_name[i] = "TD3+BC+Q Filter"
 #                 else:
-#                     return ["TD3+BC"]
+#                     config_name[i] = "TD3+BC"
 #             elif config_name[i] == "demo_strategy_none":
-#                 return ["TD3"]
+#                 config_name[i] = "TD3"
 #     return config_name
+
+
+def transform_config_name(config_name):
+    """ Transfer the legend names"""
+    print(config_name)
+    for i in range(len(config_name)):
+        if config_name[i].startswith("demo_strategy"):
+            if config_name[i] == "demo_strategy_nf":
+                return ["NF Shaping"]
+            elif config_name[i] == "demo_strategy_gan":
+                return ["GAN Shaping"]
+            elif config_name[i] == "demo_strategy_pure_bc":
+                return ["BC"]
+            elif config_name[i] == "demo_strategy_bc":
+                if "prm_loss_weight_0.0001" in config_name:
+                    return ["$\lambda$TD3+BC, $\lambda$=0.0001"]
+                elif "prm_loss_weight_0.001" in config_name:
+                    return ["$\lambda$TD3+BC, $\lambda$=0.001"]
+                elif "prm_loss_weight_0.01" in config_name:
+                    return ["$\lambda$TD3+BC, $\lambda$=0.01"]
+                elif "prm_loss_weight_0.1" in config_name:
+                    return ["$\lambda$TD3+BC, $\lambda$=0.1"]
+                else:
+                    return ["TD3+BC"]
+            elif config_name[i] == "demo_strategy_none":
+                return ["TD3"]
+    return config_name
 
 
 def main(targets, exp_dir, policy_file, **kwargs):
@@ -179,7 +188,8 @@ def main(targets, exp_dir, policy_file, **kwargs):
                         shutil.copyfile(demo_file, demo_dest)
 
             # sync the process
-            comm.Barrier()
+            if comm is not None:
+                comm.Barrier()
 
             if policy_file == None:
                 policy_file = os.path.join(list(dir_param_dict.keys())[0], "rl/policy_latest.pkl")
@@ -219,7 +229,8 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     k = list(dir_param_dict.keys())
                     train_entry(root_dir=k[color_for_each_exp], comm=comm_for_each_exp)
 
-            comm.Barrier()
+            if comm is not None:
+                comm.Barrier()
 
         elif target == "demo":
             assert policy_file != None
@@ -244,10 +255,11 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     dirs=[exp_dir],
                     xys=[
                         "epoch:test/success_rate",
-                        # "epoch:test/total_shaping_reward",
+                        "epoch:test/total_shaping_reward",
                         "epoch:test/total_reward",
-                        # "epoch:test/mean_Q",
-                        # "epoch:test/mean_Q_plus_P",
+                        "epoch:test/mean_Q",
+                        "epoch:test/mean_Q_plus_P",
+                        # "train/episode:test/total_reward"
                     ],
                     smooth=True,
                 )
@@ -293,7 +305,8 @@ def main(targets, exp_dir, policy_file, **kwargs):
         else:
             assert 0, "unknown target: {}".format(target)
 
-        comm.Barrier()
+        if comm is not None:
+            comm.Barrier()
         logger.reset()
 
     return

@@ -4,16 +4,17 @@
 1. setup Mujoco
   - On cluster: https://docs.computecanada.ca/wiki/MuJoCo
   - note: you need to manually install mujoco_py
-2. download the repo (modify .gitmodules if necessary!)
-  - `git clone git@github.com:cheneyuwu/RLProject`
+2. download the repo
+  - `git clone git@github.com:cheneyuwu/RLProject` (modify .gitmodules if necessary!)
   - `git submodule init`
   - `git submodule sync`
   - `git submodule update --remote`
 3. enter virtual env and install packages: gym, yw, tensorflow, tensorflow_probability
   - note: on compute canada cluster you need to manually install tensorflow and use `module load mpi4py` to get the mpi python package
-4. add rl project directory to the bashrc
+4. Modify the directory of EXPRUN according to the true exp running directory
+5. change TkAgg to Agg for plot.py visualize_query.py and point_reach.py
+6. add rl project directory to the bashrc
   - export RLProject='/home/yuchenwu/projects/def-florian7/yuchenwu/RLProject'
-5. Modify the directory of EXPRUN according to the true exp running directory
 
 ## Compute Canada Cluster
 - [Wiki](https://docs.computecanada.ca/wiki/Main_Page)
