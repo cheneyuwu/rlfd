@@ -25,6 +25,7 @@ DEFAULT_PARAMS = {
     "demo": {"random_eps": 0.0, "noise_eps": 0.1, "polyak_noise": 0.0, "compute_Q": True, "render": False},
     "extra_noise_mean": 0.0,
     "extra_noise_var": 0.0,
+    "filename": "demo_data.npz",
 }
 
 
@@ -117,7 +118,7 @@ def main(policy_file, root_dir, **kwargs):
     # store demonstration data (only the main thread)
     if rank == 0:
         os.makedirs(root_dir, exist_ok=True)
-        file_name = os.path.join(root_dir, "demo_data.npz")
+        file_name = os.path.join(root_dir, params["filename"])
         # array(batch_size x (T or T+1) x dim_key), we only need the first one!
         np.savez_compressed(file_name, **episode)  # save the file
         logger.info("Demo file has been stored into {}.".format(file_name))
