@@ -126,7 +126,7 @@ def main(policy_file, root_dir, **kwargs):
 
 if __name__ == "__main__":
 
-    from yw.util.cmd_util import ArgParser
+    from td3fd.util.cmd_util import ArgParser
 
     ap = ArgParser()
     ap.parser.add_argument("--root_dir", help="policy store directory", type=str, default=None)

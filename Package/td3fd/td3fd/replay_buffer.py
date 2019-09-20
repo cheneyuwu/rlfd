@@ -139,7 +139,7 @@ class RingReplayBuffer(ReplayBufferBase):
         self.pointer = 0
 
 
-class ReplayBuffer(ReplayBufferBase):
+class UniformReplayBuffer(ReplayBufferBase):
     def __init__(self, buffer_shapes, size_in_transitions, T):
         """ Creates a replay buffer.
 
@@ -210,7 +210,25 @@ class ReplayBuffer(ReplayBufferBase):
         return transitions
 
     def sample_transitions(self, buffers, batch_size):
-        raise NotImplementedError
+        """Sample transitions of size batch_size randomly from episode_batch.
+
+        Args:
+            episode_batch - {key: array(buffer_size x T x dim_key)}
+            batch_size    - batch size in transitions
+
+        Return:
+            transitions
+        """
+        # Select which episodes and time steps to use.
+        episode_idxs = np.random.randint(0, buffers["u"].shape[0], batch_size)
+        t_samples = np.random.randint(self.T, size=batch_size)
+        transitions = {key: buffers[key][episode_idxs, t_samples].copy() for key in buffers.keys()}
+
+        transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:]) for k in transitions.keys()}
+
+        assert transitions["u"].shape[0] == batch_size
+
+        return transitions
 
     def get_current_size_episode(self):
         return self.current_size
@@ -235,87 +253,3 @@ class ReplayBuffer(ReplayBufferBase):
         if inc == 1:
             idx = idx[0]
         return idx
-
-
-class UniformReplayBuffer(ReplayBuffer):
-    def __init__(self, buffer_shapes, size_in_transitions, T):
-        super().__init__(buffer_shapes, size_in_transitions, T)
-
-    def sample_transitions(self, buffers, batch_size):
-        """Sample transitions of size batch_size randomly from episode_batch.
-
-        Args:
-            episode_batch - {key: array(buffer_size x T x dim_key)}
-            batch_size    - batch size in transitions
-
-        Return:
-            transitions
-        """
-        # Select which episodes and time steps to use.
-        episode_idxs = np.random.randint(0, buffers["u"].shape[0], batch_size)
-        t_samples = np.random.randint(self.T, size=batch_size)
-        transitions = {key: buffers[key][episode_idxs, t_samples].copy() for key in buffers.keys()}
-
-        transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:]) for k in transitions.keys()}
-
-        assert transitions["u"].shape[0] == batch_size
-
-        return transitions
-
-
-class HERReplayBuffer(ReplayBuffer):
-    def __init__(self, buffer_shapes, size_in_transitions, T, k, reward_fun):
-
-        """Creates a HER experience replay replay buffer.
-
-        Args:
-            k          (int)  - the ratio between HER replays and regular replays (e.g. k = 4 -> 4 times as many HER replays as regular replays are used)
-            reward_fun (func) - function to re-compute the reward with substituted goals
-        """
-        super().__init__(buffer_shapes, size_in_transitions, T)
-        self.future_p = 1 - (1.0 / (1 + k))
-        self.reward_fun = reward_fun
-
-    def sample_transitions(self, buffers, batch_size):
-        """
-        buffers is {key: array(buffer_size x T x dim_key)}
-        """
-        # Select which episodes and time steps to use.
-        episode_idxs = np.random.randint(0, buffers["u"].shape[0], batch_size)
-        t_samples = np.random.randint(self.T, size=batch_size)
-        transitions = {key: buffers[key][episode_idxs, t_samples].copy() for key in buffers.keys()}
-
-        # Select future time indexes proportional with probability future_p. These
-        # will be used for HER replay by substituting in future goals.
-        her_indexes = np.where(np.random.uniform(size=batch_size) < self.future_p)
-        future_offset = np.random.uniform(size=batch_size) * (self.T - t_samples)
-        future_offset = future_offset.astype(int)
-        future_t = (t_samples + 1 + future_offset)[her_indexes]
-
-        # Replace goal with achieved goal but only for the previously-selected
-        # HER transitions (as defined by her_indexes). For the other transitions,
-        # keep the original goal.
-        future_ag = buffers["ag"][episode_idxs[her_indexes], future_t]
-        transitions["g"][her_indexes] = future_ag
-        transitions["g_2"][her_indexes] = future_ag
-
-        if "q" in transitions.keys():
-            transitions["q"][her_indexes] = -100 * np.ones(transitions["q"][her_indexes].shape)
-
-        # Reconstruct info dictionary for reward computation.
-        info = {}
-        for key, value in transitions.items():
-            if key.startswith("info_"):
-                info[key.replace("info_", "")] = value
-        # Re-compute reward since we may have substituted the goal.
-        reward_params = {k: transitions[k] for k in ["ag_2", "g_2"]}
-        reward_params["info"] = info
-        transitions["r"] = self.reward_fun(**reward_params).reshape(
-            -1, 1
-        )  # reshape to be consistent with default reward
-
-        transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:]) for k in transitions.keys()}
-
-        assert transitions["u"].shape[0] == batch_size
-
-        return transitions

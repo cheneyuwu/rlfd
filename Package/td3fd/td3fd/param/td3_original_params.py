@@ -13,7 +13,6 @@ params_config = {
     "ddpg": {
         # replay buffer setup
         "buffer_size": int(1e6),
-        "replay_strategy": "none",  # ["her", "none"] (her for hindsight exp replay)
         # actor critic networks
         "scope": "ddpg",
         "use_td3": 1,
@@ -64,8 +63,6 @@ params_config = {
         "clip_pos_returns": False,
         "clip_return": False,
     },
-    # HER config
-    "her": {"k": 4},
     # rollouts config
     "rollout": {
         "rollout_batch_size": 4,

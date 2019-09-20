@@ -5,11 +5,9 @@ import tensorflow as tf
 
 from td3fd import logger
 from td3fd.actor_critic import ActorCritic
-from td3fd.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping, GANDemoShaping, NFDemoShaping
+from td3fd.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping
 from td3fd.normalizer import Normalizer
-from td3fd.query import visualize_query
-from td3fd.replay_buffer import HERReplayBuffer, RingReplayBuffer, UniformReplayBuffer
-from td3fd.util.tf_util import flatten_grads
+from td3fd.replay_buffer import RingReplayBuffer, UniformReplayBuffer
 
 
 class DDPG(object):
@@ -41,7 +39,6 @@ class DDPG(object):
         demo_strategy,
         bc_params,
         shaping_params,
-        replay_strategy,
         gamma,
         info,
         **kwargs
@@ -69,8 +66,6 @@ class DDPG(object):
             reuse              (boolean)      - whether or not the networks should be reused
             # Replay Buffer
             buffer_size        (int)          - number of transitions that are stored in the replay buffer
-            # HER
-            replay_strategy    (dict)         - strategy to use and function that samples from the replay buffer
             # Dual Network Set
             polyak             (float)        - coefficient for Polyak-averaging of the target network
             # Training
@@ -118,7 +113,6 @@ class DDPG(object):
         assert self.demo_strategy in ["none", "pure_bc", "bc", "gan", "nf"]
         self.bc_params = bc_params
         self.shaping_params = shaping_params
-        self.replay_strategy = replay_strategy
         self.gamma = gamma
         self.info = info
 
@@ -328,31 +322,14 @@ class DDPG(object):
             # need the "done" signal for restarting from training
             buffer_shapes["done"] = (1,)
         # initialize replay buffer(s)
-        if self.replay_strategy is None:
-            pass
-        elif self.replay_strategy["strategy"] == "her":
-            assert self.fix_T
-            self.replay_buffer = HERReplayBuffer(
-                buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
-            )
+        if self.fix_T:
+            self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.T)
             if self.demo_strategy != "none" or self.sample_demo_buffer:
-                self.demo_buffer = HERReplayBuffer(
-                    buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
-                )
-        elif self.replay_strategy["strategy"] == "none" and self.fix_T:
-            self.replay_buffer = UniformReplayBuffer(
-                buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
-            )
-            if self.demo_strategy != "none" or self.sample_demo_buffer:
-                self.demo_buffer = UniformReplayBuffer(
-                    buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
-                )
-        elif self.replay_strategy["strategy"] == "none" and not self.fix_T:
-            self.replay_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size, **self.replay_strategy["args"])
-            if self.demo_strategy != "none" or self.sample_demo_buffer:
-                self.demo_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size, **self.replay_strategy["args"])
+                self.demo_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.T)
         else:
-            assert False, "unknown replay strategy"
+            self.replay_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
+            if self.demo_strategy != "none" or self.sample_demo_buffer:
+                self.demo_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
 
     def _create_network(self):
 
@@ -637,15 +614,11 @@ class DDPG(object):
         """
         Our policies can be loaded from pkl, but after unpickling you cannot continue training.
         """
-        # replay_strategy may contain the compute reward function
-        excluded_names = ["self", "replay_strategy"]
-
-        state = {k: v for k, v in self.init_args.items() if not k in excluded_names}
+        state = {k: v for k, v in self.init_args.items() if not k == "self"}
         state["tf"] = self.sess.run([x for x in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)])
         return state
 
     def __setstate__(self, state):
-        state["replay_strategy"] = None
         kwargs = state["kwargs"]
         del state["kwargs"]
 

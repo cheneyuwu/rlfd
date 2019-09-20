@@ -20,7 +20,6 @@ DEFAULT_PARAMS = {
     "ddpg": {
         # replay buffer setup
         "buffer_size": int(1e6),
-        "replay_strategy": "none",  # choose between ["her", "none"] (her for hindsight exp replay)
         # actor critic networks
         "scope": "ddpg",
         "use_td3": 1,  # whether or not to use td3
@@ -75,8 +74,6 @@ DEFAULT_PARAMS = {
         "clip_pos_returns": False,  # whether or not this environment has positive return.
         "clip_return": False,
     },
-    # HER config
-    "her": {"k": 4},  # number of additional goals used for replay
     # rollouts config
     "rollout": {
         "rollout_batch_size": 4,
@@ -185,33 +182,9 @@ def add_env_params(params):
     return params
 
 
-def configure_her(params):
-    env = EnvCache.get_env(params["make_env"])
-    env.reset()
-
-    def reward_fun(ag_2, g_2, info):  # vectorized
-        return env.compute_reward(achieved_goal=ag_2, desired_goal=g_2, info=info)
-
-    # Prepare configuration for HER.
-    her_params = params["her"]
-    her_params["reward_fun"] = reward_fun
-
-    logger.info("*** her_params ***")
-    log_params(her_params)
-    logger.info("*** her_params ***")
-
-    return her_params
-
-
-def configure_ddpg(params, comm=None):
+def configure_ddpg(params):
     # Extract relevant parameters.
     ddpg_params = params["ddpg"]
-
-    if ddpg_params["replay_strategy"] == "her":
-        sample_params = configure_her(params)
-    else:
-        sample_params = {}
-    ddpg_params["replay_strategy"] = {"strategy": ddpg_params["replay_strategy"], "args": sample_params}
 
     # Update parameters
     ddpg_params.update(
@@ -236,7 +209,7 @@ def configure_ddpg(params, comm=None):
     log_params(ddpg_params)
     logger.info("*** ddpg_params ***")
 
-    policy = DDPG(**ddpg_params, comm=comm)
+    policy = DDPG(**ddpg_params)
     return policy
 
 

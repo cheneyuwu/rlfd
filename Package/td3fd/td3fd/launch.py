@@ -10,8 +10,6 @@ from td3fd import logger
 from td3fd.demo_util.generate_demo import main as demo_entry
 from td3fd.evaluate import main as display_entry
 from td3fd.plot import main as plot_entry
-from td3fd.query.generate_query import main as generate_query_entry
-from td3fd.query.visualize_query import main as visualize_query_entry
 from td3fd.train import main as train_entry
 from td3fd.util.mpi_util import mpi_exit, mpi_input
 
@@ -197,7 +195,6 @@ def main(targets, exp_dir, policy_file, **kwargs):
 
             # run experiments
             parallel = 1  # CHANGE this number to allow launching in serial
-            num_cpu = 1  # CHANGE this number to allow multiple processes
             # total num exps
             num_exp = len(dir_param_dict.keys())
 
@@ -207,27 +204,23 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     train_entry(root_dir=k)
 
             elif not parallel:
-                logger.info("{} experiments in series. ({} cpus for each experiment)".format(num_exp, num_cpu))
-                assert num_cpu <= total_num_cpu, "no enough cpu! need {} cpus".format(num_cpu)
-                comm_for_exps = comm.Split(color=int(rank >= num_cpu))
-                if rank < num_cpu:
-                    assert comm_for_exps.Get_size() == num_cpu
+                logger.info("{} experiments in series.".format(num_exp))
+                comm_for_exps = comm.Split(color=int(rank > 0))
+                if rank == 0:
+                    assert comm_for_exps.Get_size() == 1
                     for k in dir_param_dict.keys():
                         train_entry(root_dir=k, comm=comm_for_exps)
-
             else:
-                logger.info("{} experiments in parallel. ({} cpus for each experiment)".format(num_exp, num_cpu))
-                cpus_for_training = num_exp * num_cpu
-                assert cpus_for_training <= total_num_cpu, "no enough cpu! need {} cpus".format(cpus_for_training)
+                logger.info("{} experiments in parallel.".format(num_exp))
+                assert num_exp <= total_num_cpu, "no enough cpu! need {} cpus".format(num_exp)
                 # select processes to run the experiment, which is [0, num_exp]
-                comm_for_exps = comm.Split(color=int(rank >= cpus_for_training))
-                if rank < cpus_for_training:
-                    assert comm_for_exps.Get_size() == cpus_for_training
-                    color_for_each_exp = comm_for_exps.Get_rank() % num_exp
-                    comm_for_each_exp = comm_for_exps.Split(color=color_for_each_exp)
-                    assert comm_for_each_exp.Get_size() == num_cpu
+                comm_for_exps = comm.Split(color=int(rank >= num_exp))
+                if rank < num_exp:
+                    assert comm_for_exps.Get_size() == num_exp
+                    comm_for_each_exp = comm_for_exps.Split(color=comm_for_exps.Get_rank())
+                    assert comm_for_each_exp.Get_size() == 1
                     k = list(dir_param_dict.keys())
-                    train_entry(root_dir=k[color_for_each_exp], comm=comm_for_each_exp)
+                    train_entry(root_dir=k[comm_for_exps.Get_rank()], comm=comm_for_each_exp)
 
             if comm is not None:
                 comm.Barrier()
@@ -263,20 +256,6 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     ],
                     smooth=True,
                 )
-
-        elif target == "gen_query":
-            # currently assume only 1 level of subdir
-            logger.info("\n\n=================================================")
-            logger.info("Generating queries at: {}".format(exp_dir))
-            logger.info("=================================================")
-            generate_query_entry(directories=[exp_dir], save=1)
-
-        elif target == "vis_query":
-            logger.info("\n\n=================================================")
-            logger.info("Visualizing queries.")
-            logger.info("=================================================")
-            # currently assume only 1 level of subdir
-            visualize_query_entry(directories=[exp_dir], save=1)
 
         elif target == "cp_result":
             expdata_dir = os.path.abspath(os.path.expanduser(os.environ["EXPDATA"]))

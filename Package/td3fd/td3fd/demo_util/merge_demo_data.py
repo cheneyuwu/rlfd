@@ -3,6 +3,7 @@ import sys
 
 import numpy as np
 
+
 def main(load_files, store_dir, **kwargs):
     result = None
     for dir in load_files:
@@ -12,7 +13,7 @@ def main(load_files, store_dir, **kwargs):
         else:
             for k in result.keys():
                 result[k] = np.concatenate((result[k], res[k]), axis=0)
-    
+
     # store demonstration data
     os.makedirs(store_dir, exist_ok=True)
     file_name = os.path.join(store_dir, "merged_demo.npz")
@@ -22,16 +23,10 @@ def main(load_files, store_dir, **kwargs):
 
 
 if __name__ == "__main__":
-    from yw.util.cmd_util import ArgParser
+    from td3fd.util.cmd_util import ArgParser
 
     ap = ArgParser()
-    ap.parser.add_argument(
-        "--load_file",
-        help="directions",
-        type=str,
-        action="append",
-        dest="load_files",
-    )
+    ap.parser.add_argument("--load_file", help="directions", type=str, action="append", dest="load_files")
     ap.parser.add_argument(
         "--store_dir",
         help="policy store directory",

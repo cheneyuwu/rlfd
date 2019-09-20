@@ -58,68 +58,6 @@ def single_threaded_session():
     return make_session(num_cpu=1)
 
 
-# Flat vectors
-# =====================================
-def var_shape(x):
-    out = x.get_shape().as_list()
-    assert all(isinstance(a, int) for a in out), "shape function assumes that shape is fully known"
-    return out
-
-
-def numel(x):
-    return intprod(var_shape(x))
-
-
-def intprod(x):
-    return int(np.prod(x))
-
-
-def flatgrad(loss, var_list, clip_norm=None):
-    grads = tf.gradients(loss, var_list)
-    if clip_norm is not None:
-        grads = [tf.clip_by_norm(grad, clip_norm=clip_norm) for grad in grads]
-    return tf.concat(
-        axis=0,
-        values=[
-            tf.reshape(grad if grad is not None else tf.zeros_like(v), [numel(v)])
-            for (v, grad) in zip(var_list, grads)
-        ],
-    )
-
-
-def flatten_grads(var_list, grads):
-    """Flattens a variables and their gradients.
-    """
-    return tf.concat([tf.reshape(grad, [numel(v)]) for (v, grad) in zip(var_list, grads)], 0)
-
-
-class SetFromFlat(object):
-    def __init__(self, var_list, dtype=tf.float32):
-        assigns = []
-        shapes = list(map(var_shape, var_list))
-        total_size = np.sum([intprod(shape) for shape in shapes])
-
-        self.theta = theta = tf.placeholder(dtype, [total_size])
-        start = 0
-        assigns = []
-        for (shape, v) in zip(shapes, var_list):
-            size = intprod(shape)
-            assigns.append(tf.assign(v, tf.reshape(theta[start : start + size], shape)))
-            start += size
-        self.op = tf.group(*assigns)
-
-    def __call__(self, theta):
-        tf.get_default_session().run(self.op, feed_dict={self.theta: theta})
-
-
-class GetFlat(object):
-    def __init__(self, var_list):
-        self.op = tf.concat(axis=0, values=[tf.reshape(v, [numel(v)]) for v in var_list])
-
-    def __call__(self):
-        return tf.get_default_session().run(self.op)
-
-
 # Shape adjustment for feeding into tf placeholders
 # =============================================================================
 def adjust_shape(placeholder, data):
@@ -182,36 +120,36 @@ class MLP:
         return res
 
 
-def nn(input, layers_sizes, reuse=None, flatten=False, initializer_type="glorot", name=""):
-    """Creates a simple neural network
-    """
-    # choose initializer
-    if initializer_type == "zero":
-        kernel_initializer = tf.initializers.zeros()
-        bias_initializer = tf.initializers.constant(0.01)
-    elif initializer_type == "glorot":
-        kernel_initializer = tf.initializers.glorot_normal()
-        # kernel_initializer = tf.initializers.glorot_uniform()
-        bias_initializer = None
-    else:
-        assert False, "unsupported initializer type"
-    # connect layers
-    for i, size in enumerate(layers_sizes):
-        activation = tf.nn.relu if i < len(layers_sizes) - 1 else None
-        input = tf.layers.dense(
-            inputs=input,
-            units=size,
-            kernel_initializer=kernel_initializer,
-            bias_initializer=bias_initializer,
-            reuse=reuse,
-            name=name + "_" + str(i),
-        )
-        if activation:
-            input = activation(input)
-    if flatten:
-        assert layers_sizes[-1] == 1
-        input = tf.reshape(input, [-1])
-    return input
+# def nn(input, layers_sizes, reuse=None, flatten=False, initializer_type="glorot", name=""):
+#     """Creates a simple neural network
+#     """
+#     # choose initializer
+#     if initializer_type == "zero":
+#         kernel_initializer = tf.initializers.zeros()
+#         bias_initializer = tf.initializers.constant(0.01)
+#     elif initializer_type == "glorot":
+#         kernel_initializer = tf.initializers.glorot_normal()
+#         # kernel_initializer = tf.initializers.glorot_uniform()
+#         bias_initializer = None
+#     else:
+#         assert False, "unsupported initializer type"
+#     # connect layers
+#     for i, size in enumerate(layers_sizes):
+#         activation = tf.nn.relu if i < len(layers_sizes) - 1 else None
+#         input = tf.layers.dense(
+#             inputs=input,
+#             units=size,
+#             kernel_initializer=kernel_initializer,
+#             bias_initializer=bias_initializer,
+#             reuse=reuse,
+#             name=name + "_" + str(i),
+#         )
+#         if activation:
+#             input = activation(input)
+#     if flatten:
+#         assert layers_sizes[-1] == 1
+#         input = tf.reshape(input, [-1])
+#     return input
 
 
 """Adopted from Eric Jang's normalizing flow tutorial: https://blog.evjang.com/2018/01/nf1.html
