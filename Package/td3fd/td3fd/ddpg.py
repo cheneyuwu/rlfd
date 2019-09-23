@@ -551,7 +551,7 @@ class DDPG(object):
         return state
 
     def __setstate__(self, state):
-        self.__init__(**state, **kwargs)
+        self.__init__(**state)
         vars = [x for x in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)]
         assert len(vars) == len(state["tf"])
         node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
