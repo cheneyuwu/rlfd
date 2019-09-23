@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 
-from td3fd.actor_critic import ActorCritic
+from td3fd.actor_critic import Actor, Critic
 from td3fd.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping
 from td3fd.normalizer import Normalizer
 from td3fd.memory import RingReplayBuffer, UniformReplayBuffer
@@ -223,28 +223,28 @@ class DDPG(object):
         feed = {self.inputs_tf[k]: batch[k] for k in self.inputs_tf.keys()}
         if self.use_td3 and self.training_step % 2 == 1:
             critic_loss, actor_loss, _ = self.sess.run(
-                [self.Q_loss_tf, self.pi_loss_tf, self.Q_update_op], feed_dict=feed
+                [self.q_loss_tf, self.pi_loss_tf, self.q_update_op], feed_dict=feed
             )
         else:
             critic_loss, actor_loss, _, _ = self.sess.run(
-                [self.Q_loss_tf, self.pi_loss_tf, self.Q_update_op, self.pi_update_op], feed_dict=feed
+                [self.q_loss_tf, self.pi_loss_tf, self.q_update_op, self.pi_update_op], feed_dict=feed
             )
 
         return critic_loss, actor_loss
 
-    def init_target_net(self):
-        self.sess.run(self.init_target_net_op)
+    def initialize_target_net(self):
+        self.sess.run(self.initialize_target_net_op)
 
     def update_target_net(self):
         self.sess.run(self.update_target_net_op)
 
     def logs(self, prefix=""):
         logs = []
-        logs.append((prefix + "stats_o/mean", np.mean(self.sess.run([self.o_stats.mean]))))
-        logs.append((prefix + "stats_o/std", np.mean(self.sess.run([self.o_stats.std]))))
+        logs.append((prefix + "stats_o/mean", np.mean(self.sess.run([self.o_stats.mean_tf]))))
+        logs.append((prefix + "stats_o/std", np.mean(self.sess.run([self.o_stats.std_tf]))))
         if self.dimg != 0:
-            logs.append((prefix + "stats_g/mean", np.mean(self.sess.run([self.g_stats.mean]))))
-            logs.append((prefix + "stats_g/std", np.mean(self.sess.run([self.g_stats.std]))))
+            logs.append((prefix + "stats_g/mean", np.mean(self.sess.run([self.g_stats.mean_tf]))))
+            logs.append((prefix + "stats_g/std", np.mean(self.sess.run([self.g_stats.std_tf]))))
         return logs
 
     def _create_memory(self):
@@ -286,13 +286,6 @@ class DDPG(object):
                 self.demo_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
 
     def _create_network(self):
-
-        # Normalizer for goal and observation.
-        with tf.variable_scope("o_stats"):
-            self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
-        with tf.variable_scope("g_stats"):
-            self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
-
         # Inputs to DDPG
         self.inputs_tf = {}
         self.inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
@@ -302,6 +295,7 @@ class DDPG(object):
         if self.dimg != 0:
             self.inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
             self.inputs_tf["g_2"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
+
         # create a variable for each o, g, u key in the inputs_tf dict
         input_o_tf = self.inputs_tf["o"]
         input_o_2_tf = self.inputs_tf["o_2"]
@@ -309,7 +303,64 @@ class DDPG(object):
         input_g_2_tf = self.inputs_tf["g_2"] if self.dimg != 0 else None
         input_u_tf = self.inputs_tf["u"]
 
-        # Input Dataset that loads from demonstration buffer. Used for BC and Potential
+        # Normalizer for goal and observation.
+        self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
+        self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
+        # normalized o g
+        norm_input_o_tf = self.o_stats.normalize(input_o_tf)
+        norm_input_o_2_tf = self.o_stats.normalize(input_o_2_tf)
+        norm_input_g_tf = self.g_stats.normalize(input_g_tf) if self.dimg != 0 else None
+        norm_input_g_2_tf = self.g_stats.normalize(input_g_2_tf) if self.dimg != 0 else None
+
+        # Models
+        # main networks
+        self.main_actor = Actor(
+            dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes, noise=False
+        )
+        self.main_critic = Critic(
+            dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
+        )
+        if self.use_td3:
+            self.main_critic_twin = Critic(
+                dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
+            )
+        # target networks
+        self.target_actor = Actor(
+            dimo=self.dimo,
+            dimg=self.dimg,
+            dimu=self.dimu,
+            max_u=self.max_u,
+            layer_sizes=self.layer_sizes,
+            noise=self.use_td3,
+        )
+        self.target_critic = Critic(
+            dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
+        )
+        if self.use_td3:
+            self.target_critic_twin = Critic(
+                dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
+            )
+        # connect graphs
+        # actor output
+        self.main_pi_tf = self.main_actor(o=norm_input_o_tf, g=norm_input_g_tf)
+        # critic output
+        self.main_q_tf = self.main_critic(o=norm_input_o_tf, g=norm_input_g_tf, u=input_u_tf)
+        self.main_q_pi_tf = self.main_critic(o=norm_input_o_tf, g=norm_input_g_tf, u=self.main_pi_tf)
+        if self.use_td3:
+            self.main_q2_tf = self.main_critic_twin(o=norm_input_o_tf, g=norm_input_g_tf, u=input_u_tf)
+            self.main_q2_pi_tf = self.main_critic_twin(o=norm_input_o_tf, g=norm_input_g_tf, u=self.main_pi_tf)
+        # actor output
+        self.target_pi_tf = self.target_actor(o=norm_input_o_2_tf, g=norm_input_g_2_tf)
+        # critic output
+        self.target_q_tf = self.target_critic(o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=input_u_tf)
+        self.target_q_pi_tf = self.target_critic(o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=self.target_pi_tf)
+        if self.use_td3:
+            self.target_q2_tf = self.target_critic_twin(o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=input_u_tf)
+            self.target_q2_pi_tf = self.target_critic_twin(
+                o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=self.target_pi_tf
+            )
+
+        # Input Dataset that loads from demonstration buffer.
         demo_shapes = {}
         demo_shapes["o"] = (self.dimo,)
         if self.dimg != 0:
@@ -333,56 +384,11 @@ class DDPG(object):
             .repeat(1)
         )
 
-        # Models
-        with tf.variable_scope("main"):
-            self.main = ActorCritic(
-                dimo=self.dimo,
-                dimg=self.dimg,
-                dimu=self.dimu,
-                max_u=self.max_u,
-                o_stats=self.o_stats,
-                g_stats=self.g_stats,
-                layer_sizes=self.layer_sizes,
-                use_td3=self.use_td3,
-                noise=False,
-            )
-            # actor output
-            self.main_pi_tf = self.main.actor(o=input_o_tf, g=input_g_tf)
-            # critic output
-            self.main_q_tf = self.main.critic1(o=input_o_tf, g=input_g_tf, u=input_u_tf)
-            self.main_q_pi_tf = self.main.critic1(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
-            if self.use_td3:
-                self.main_q2_tf = self.main.critic2(o=input_o_tf, g=input_g_tf, u=input_u_tf)
-                self.main_q2_pi_tf = self.main.critic2(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
-        with tf.variable_scope("target"):
-            self.target = ActorCritic(
-                dimo=self.dimo,
-                dimg=self.dimg,
-                dimu=self.dimu,
-                max_u=self.max_u,
-                o_stats=self.o_stats,
-                g_stats=self.g_stats,
-                layer_sizes=self.layer_sizes,
-                use_td3=self.use_td3,
-                noise=self.use_td3,
-            )
-            # actor output
-            self.target_pi_tf = self.target.actor(o=input_o_2_tf, g=input_g_2_tf)
-            # critic output
-            self.target_q_tf = self.target.critic1(o=input_o_2_tf, g=input_g_2_tf, u=input_u_tf)
-            self.target_q_pi_tf = self.target.critic1(o=input_o_2_tf, g=input_g_2_tf, u=self.target_pi_tf)
-            if self.use_td3:
-                self.target_q2_tf = self.target.critic2(o=input_o_2_tf, g=input_g_2_tf, u=input_u_tf)
-                self.target_q2_pi_tf = self.target.critic2(o=input_o_2_tf, g=input_g_2_tf, u=self.target_pi_tf)
-        assert len(self.main.vars) == len(self.target.vars)
-
         # Add shaping reward
         with tf.variable_scope("shaping"):
             # normalizer for goal and observation.
-            with tf.variable_scope("demo_o_stats"):
-                self.demo_o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
-            with tf.variable_scope("demo_g_stats"):
-                self.demo_g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
+            self.demo_o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
+            self.demo_g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
             # potential function approximator, nf or gan
             if self.demo_strategy == "nf":
                 self.demo_shaping = EnsNFDemoShaping(
@@ -439,7 +445,7 @@ class DDPG(object):
             mask = np.concatenate((np.ones(self.batch_size), np.zeros(self.batch_size_demo)), axis=0)
             rl_bellman_tf = tf.boolean_mask(rl_bellman_tf, mask)
         rl_loss_tf = tf.reduce_mean(rl_bellman_tf)
-        self.Q_loss_tf = rl_loss_tf
+        self.q_loss_tf = rl_loss_tf
 
         # Actor Loss
         if self.demo_strategy == "bc":
@@ -481,19 +487,32 @@ class DDPG(object):
             pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
         self.pi_loss_tf = pi_loss_tf
 
-        self.Q_update_op = tf.train.AdamOptimizer(learning_rate=self.q_lr).minimize(
-            self.Q_loss_tf, var_list=self.main.critic_vars
+        self.q_update_op = tf.train.AdamOptimizer(learning_rate=self.q_lr).minimize(
+            self.q_loss_tf, var_list=self.main_critic.trainable_variables
         )
         self.pi_update_op = tf.train.AdamOptimizer(learning_rate=self.pi_lr).minimize(
-            self.pi_loss_tf, var_list=self.main.actor_vars
+            self.pi_loss_tf, var_list=self.main_actor.trainable_variables
         )
 
         # Polyak averaging
-        self.init_target_net_op = list(map(lambda v: v[0].assign(v[1]), zip(self.target.vars, self.main.vars)))
-        self.update_target_net_op = list(
-            map(
-                lambda v: v[0].assign(self.polyak * v[0] + (1.0 - self.polyak) * v[1]),
-                zip(self.target.vars, self.main.vars),
+        hard_copy_func = lambda v: v[0].assign(v[1])
+        soft_copy_func = lambda v: v[0].assign(self.polyak * v[0] + (1.0 - self.polyak) * v[1])
+        self.initialize_target_net_op = (
+            list(map(hard_copy_func, zip(self.target_actor.variables, self.main_actor.variables)))
+            + list(map(hard_copy_func, zip(self.target_critic.variables, self.main_critic.variables)))
+            + (
+                list(map(hard_copy_func, zip(self.target_critic_twin.variables, self.main_critic_twin.variables)))
+                if self.use_td3
+                else []
+            )
+        )
+        self.update_target_net_op = (
+            list(map(soft_copy_func, zip(self.target_actor.variables, self.main_actor.variables)))
+            + list(map(soft_copy_func, zip(self.target_critic.variables, self.main_critic.variables)))
+            + (
+                list(map(soft_copy_func, zip(self.target_critic_twin.variables, self.main_critic_twin.variables)))
+                if self.use_td3
+                else []
             )
         )
 
@@ -503,7 +522,7 @@ class DDPG(object):
 
         # Initialize all variables
         self.sess.run(tf.global_variables_initializer())
-        self.init_target_net()
+        self.initialize_target_net()
         self.training_step = self.sess.run(self.training_step_tf)
 
     def _update_stats(self, episode_batch):
@@ -547,8 +566,9 @@ class DDPG(object):
         return state
 
     def __setstate__(self, state):
+        stored_vars = state.pop("tf")
         self.__init__(**state)
         vars = [x for x in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)]
-        assert len(vars) == len(state["tf"])
-        node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
+        assert len(vars) == len(stored_vars)
+        node = [tf.assign(var, val) for var, val in zip(vars, stored_vars)]
         self.sess.run(node)
