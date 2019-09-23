@@ -240,16 +240,12 @@ class DDPG(object):
 
     def logs(self, prefix=""):
         logs = []
-        logs += [("stats_o/mean", np.mean(self.sess.run([self.o_stats.mean])))]
-        logs += [("stats_o/std", np.mean(self.sess.run([self.o_stats.std])))]
+        logs.append((prefix + "stats_o/mean", np.mean(self.sess.run([self.o_stats.mean]))))
+        logs.append((prefix + "stats_o/std", np.mean(self.sess.run([self.o_stats.std]))))
         if self.dimg != 0:
-            logs += [("stats_g/mean", np.mean(self.sess.run([self.g_stats.mean])))]
-            logs += [("stats_g/std", np.mean(self.sess.run([self.g_stats.std])))]
-
-        if prefix is not "" and not prefix.endswith("/"):
-            return [(prefix + "/" + key, val) for key, val in logs]
-        else:
-            return logs
+            logs.append((prefix + "stats_g/mean", np.mean(self.sess.run([self.g_stats.mean]))))
+            logs.append((prefix + "stats_g/std", np.mean(self.sess.run([self.g_stats.std]))))
+        return logs
 
     def _create_memory(self):
         # buffer shape
