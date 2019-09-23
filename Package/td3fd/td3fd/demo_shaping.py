@@ -23,7 +23,6 @@ class DemoShaping:
         """
         self.gamma = gamma
         self.scope = tf.get_variable_scope()
-        self.saver = tf.train.Saver(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name))
 
     def potential(self, o, g, u):
         raise NotImplementedError
@@ -33,12 +32,6 @@ class DemoShaping:
         next_potential = self.potential(o_2, g_2, u_2)
         assert potential.shape[1] == next_potential.shape[1] == 1
         return self.gamma * next_potential - potential
-
-    def save_weights(self, sess, path):
-        self.saver.save(sess, path)
-
-    def load_weights(self, sess, path):
-        self.saver.restore(sess, path)
 
     def _concat_inputs_normalize(self, o, g, u):
         # concat demonstration inputs
