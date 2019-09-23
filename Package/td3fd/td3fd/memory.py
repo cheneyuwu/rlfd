@@ -4,14 +4,12 @@ import numpy as np
 
 
 class ReplayBufferBase:
-    def __init__(self, buffer_shapes, size):
+    def __init__(self, size):
         """ Creates a replay buffer.
 
         Args:
-            buffer_shapes       (dict of float) - the shape for all buffers that are used in the replay buffer
-            size_in_transitions (int)           - the size of the buffer, measured in transitions
+            size (int) - the size of the buffer, measured in transitions
         """
-        self.buffer_shapes = buffer_shapes
         # memory management
         self.size = size
         self.current_size = 0
@@ -76,7 +74,7 @@ class RingReplayBuffer(ReplayBufferBase):
             buffer_shapes       (dict of float) - the shape for all buffers that are used in the replay buffer
             size_in_transitions (int)           - the size of the buffer, measured in transitions
         """
-        super().__init__(buffer_shapes=buffer_shapes, size=size_in_transitions)
+        super().__init__(size=size_in_transitions)
 
         # contains {key: array(transitions x dim_key)}
         self.buffers = {key: np.empty([self.size, *shape], dtype=np.float32) for key, shape in buffer_shapes.items()}
@@ -149,7 +147,7 @@ class UniformReplayBuffer(ReplayBufferBase):
             T                   (int)         - the time horizon for episodes
         """
 
-        super().__init__(buffer_shapes=buffer_shapes, size=size_in_transitions // T)
+        super().__init__(size=size_in_transitions // T)
 
         # self.buffers is {key: array(size_in_episodes x T or T+1 x dim_key)}
         self.buffers = {key: np.empty([self.size, *shape], dtype=np.float32) for key, shape in buffer_shapes.items()}

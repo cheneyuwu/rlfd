@@ -10,7 +10,10 @@ from td3fd import logger
 from td3fd.demo_util.generate_demo import main as demo_entry
 from td3fd.evaluate import main as display_entry
 from td3fd.plot import main as plot_entry
+
 from td3fd.train import main as train_entry
+
+# from td3fd.ddpg_torch.train import main as train_entry
 from td3fd.util.mpi_util import mpi_exit, mpi_input
 
 # must include gym before loading mpi, for compute canada cluster

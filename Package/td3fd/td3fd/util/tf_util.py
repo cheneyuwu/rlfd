@@ -56,48 +56,10 @@ def single_threaded_session():
     Returns a session which will only use a single CPU
     """
     return make_session(num_cpu=1)
-
-
-# Shape adjustment for feeding into tf placeholders
-# =============================================================================
-def adjust_shape(placeholder, data):
-    """
-    adjust shape of the data to the shape of the placeholder if possible.
-    If shape is incompatible, AssertionError is thrown
-
-    Parameters:
-        placeholder     tensorflow input placeholder
-
-        data            input data to be (potentially) reshaped to be fed into placeholder
-
-    Returns:
-        reshaped data
-    """
-
-    if not isinstance(data, np.ndarray) and not isinstance(data, list):
-        return data
-    if isinstance(data, list):
-        data = np.array(data)
-
-    placeholder_shape = [x or -1 for x in placeholder.shape.as_list()]
-
-    return np.reshape(data, placeholder_shape)
-
-
 # NNs
 # =============================================================================
 class MLP:
-    def __init__(self, input_shape, layers_sizes, initializer_type="glorot", name=""):
-        # choose initializer
-        if initializer_type == "zero":
-            kernel_initializer = tf.initializers.zeros()
-            bias_initializer = tf.initializers.constant(0.01)
-        elif initializer_type == "glorot":
-            kernel_initializer = tf.initializers.glorot_normal()
-            # kernel_initializer = tf.initializers.glorot_uniform()
-            bias_initializer = None
-        else:
-            assert False, "unsupported initializer type"
+    def __init__(self, input_shape, layers_sizes, name=""):
         # build layers
         self.layers = []
         for i, size in enumerate(layers_sizes):
@@ -105,8 +67,8 @@ class MLP:
             layer = tf.layers.Dense(
                 units=size,
                 activation=activation,
-                kernel_initializer=kernel_initializer,
-                bias_initializer=bias_initializer,
+                kernel_initializer=tf.initializers.glorot_normal(),
+                bias_initializer=None,
                 name=name + "_" + str(i),
             )
             layer.build(input_shape=input_shape)
@@ -118,38 +80,6 @@ class MLP:
         for l in self.layers:
             res = l(res)
         return res
-
-
-# def nn(input, layers_sizes, reuse=None, flatten=False, initializer_type="glorot", name=""):
-#     """Creates a simple neural network
-#     """
-#     # choose initializer
-#     if initializer_type == "zero":
-#         kernel_initializer = tf.initializers.zeros()
-#         bias_initializer = tf.initializers.constant(0.01)
-#     elif initializer_type == "glorot":
-#         kernel_initializer = tf.initializers.glorot_normal()
-#         # kernel_initializer = tf.initializers.glorot_uniform()
-#         bias_initializer = None
-#     else:
-#         assert False, "unsupported initializer type"
-#     # connect layers
-#     for i, size in enumerate(layers_sizes):
-#         activation = tf.nn.relu if i < len(layers_sizes) - 1 else None
-#         input = tf.layers.dense(
-#             inputs=input,
-#             units=size,
-#             kernel_initializer=kernel_initializer,
-#             bias_initializer=bias_initializer,
-#             reuse=reuse,
-#             name=name + "_" + str(i),
-#         )
-#         if activation:
-#             input = activation(input)
-#     if flatten:
-#         assert layers_sizes[-1] == 1
-#         input = tf.reshape(input, [-1])
-#     return input
 
 
 """Adopted from Eric Jang's normalizing flow tutorial: https://blog.evjang.com/2018/01/nf1.html
@@ -211,16 +141,7 @@ class ToyNF:
 # Modern Normalizing Flows
 # =============================================================================
 class MAF:
-    def __init__(self, base_dist, dim, num_bijectors=6, layer_sizes=[512, 512], initializer_type="glorot"):
-        # choose initializer
-        if initializer_type == "zero":
-            kernel_initializer = tf.initializers.zeros()
-            bias_initializer = tf.initializers.constant(0.01)
-        elif initializer_type == "glorot":
-            kernel_initializer = tf.initializers.glorot_normal()
-            bias_initializer = None
-        else:
-            assert False, "unsupported initializer type"
+    def __init__(self, base_dist, dim, num_bijectors=6, layer_sizes=[512, 512]):
         # build layers
         self.bijectors = []
         for _ in range(num_bijectors):
@@ -228,8 +149,8 @@ class MAF:
                 tfb.MaskedAutoregressiveFlow(
                     shift_and_log_scale_fn=tfb.masked_autoregressive_default_template(
                         hidden_layers=layer_sizes,
-                        kernel_initializer=kernel_initializer,
-                        bias_initializer=bias_initializer,
+                        kernel_initializer=tf.initializers.glorot_normal(),
+                        bias_initializer=None,
                     )
                 )
             )
@@ -243,16 +164,7 @@ class MAF:
 
 
 class RealNVP:
-    def __init__(self, base_dist, dim, num_masked, num_bijectors=6, layer_sizes=[512, 512], initializer_type="glorot"):
-        # choose initializer
-        if initializer_type == "zero":
-            kernel_initializer = tf.initializers.zeros()
-            bias_initializer = tf.initializers.constant(0.01)
-        elif initializer_type == "glorot":
-            kernel_initializer = tf.initializers.glorot_normal()
-            bias_initializer = None
-        else:
-            assert False, "unsupported initializer type"
+    def __init__(self, base_dist, dim, num_masked, num_bijectors=6, layer_sizes=[512, 512]):
         # build layers
         self.bijectors = []
         for _ in range(num_bijectors):
@@ -261,8 +173,8 @@ class RealNVP:
                     num_masked=num_masked,
                     shift_and_log_scale_fn=tfb.real_nvp_default_template(
                         hidden_layers=layer_sizes,
-                        kernel_initializer=kernel_initializer,
-                        bias_initializer=bias_initializer,
+                        kernel_initializer=tf.initializers.glorot_normal(),
+                        bias_initializer=None,
                     ),
                 )
             )

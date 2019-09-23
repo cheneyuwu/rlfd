@@ -7,6 +7,7 @@ import numpy as np
 import tensorflow as tf
 
 from td3fd import config, logger
+from td3fd.util.cmd_util import ArgParser
 from td3fd.util.util import set_global_seeds
 
 try:
@@ -16,32 +17,20 @@ except ImportError:
 
 
 class Trainer:
-    def __init__(
-        self,
-        root_dir,
-        save_interval,
-        policy,
-        rollout_worker,
-        evaluator,
-        shaping_n_epochs,
-        pure_bc_n_epochs,
-        n_epochs,
-        n_batches,
-        n_cycles,
-        **kwargs
-    ):
+    def __init__(self, root_dir, params):
         # Params
         self.root_dir = root_dir
-        self.save_interval = save_interval
-        self.policy = policy
-        self.rollout_worker = rollout_worker
-        self.evaluator = evaluator
-        self.shaping_n_epochs = shaping_n_epochs
-        self.pure_bc_n_epochs = pure_bc_n_epochs
-        self.n_epochs = n_epochs
-        self.n_batches = n_batches
-        self.n_cycles = n_cycles
 
+        # Configure and train rl agent
+        self.policy = config.configure_ddpg(params=params)
+        self.rollout_worker = config.config_rollout(params=params, policy=self.policy)
+        self.evaluator = config.config_evaluator(params=params, policy=self.policy)
+
+        self.save_interval = 10
+        self.shaping_n_epochs = self.policy.shaping_params["num_epochs"]
+        self.num_epochs = self.policy.num_epochs
+        self.num_batches = self.policy.num_batches
+        self.num_cycles = self.policy.num_cycles
         # Setup paths
         # checkpoint files
         self.ckpt_save_path = os.path.join(self.root_dir, "rl_ckpt")
@@ -54,7 +43,6 @@ class Trainer:
         # rl policies (cannot restart training)
         policy_save_path = os.path.join(self.root_dir, "rl")
         os.makedirs(policy_save_path, exist_ok=True)
-        best_policy_path = os.path.join(policy_save_path, "policy_best.pkl")
         latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
         periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")
 
@@ -65,28 +53,24 @@ class Trainer:
             self.policy.init_demo_buffer(demo_file, update_stats=self.policy.sample_demo_buffer)
 
         # Restart-training
-        self.best_success_rate = -1
         self.epoch = 0
         self.restart = self._load_states()
 
         # Pre-Training a potential function (currently we do not support restarting from this state)
         if not self.restart:
             self._train_potential()
-            self._train_pure_bc()
             self._store_states()
 
         # Train the rl agent
-        for epoch in range(self.epoch, self.n_epochs):
+        for epoch in range(self.epoch, self.num_epochs):
             # train
-            if self.policy.demo_strategy != "pure_bc":
-                self.rollout_worker.clear_history()
-                for _ in range(self.n_cycles):
-                    episode = self.rollout_worker.generate_rollouts()
-                    self.policy.store_episode(episode)
-                    for _ in range(self.n_batches):
-                        self.policy.train()
-                    self.policy.check_train()
-                    self.policy.update_target_net()
+            self.rollout_worker.clear_history()
+            for _ in range(self.num_cycles):
+                episode = self.rollout_worker.generate_rollouts()
+                self.policy.store_episode(episode)
+                for _ in range(self.num_batches):
+                    self.policy.train()
+                self.policy.update_target_net()
             # test
             self.evaluator.clear_history()
             self.evaluator.generate_rollouts()
@@ -97,11 +81,7 @@ class Trainer:
             # save the policy
             save_msg = ""
             success_rate = self.evaluator.current_success_rate()
-            if success_rate >= self.best_success_rate:
-                self.best_success_rate = success_rate
-                logger.info("New best success rate: {}.".format(self.best_success_rate))
-                self.policy.save_policy(best_policy_path)
-                save_msg += "best, "
+            logger.info("Current success rate: {}".format(success_rate))
             if self.save_interval > 0 and epoch % self.save_interval == (self.save_interval - 1):
                 policy_path = periodic_policy_path.format(epoch)
                 self.policy.save_policy(policy_path)
@@ -120,16 +100,6 @@ class Trainer:
             if epoch % (self.shaping_n_epochs / 100) == (self.shaping_n_epochs / 100 - 1):
                 logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
 
-    def _train_pure_bc(self):
-        if self.policy.demo_strategy != "pure_bc":
-            return
-        logger.info("Training the policy using pure behavior cloning")
-        for epoch in range(self.pure_bc_n_epochs):
-            loss = self.policy.train_pure_bc()
-            if epoch % (self.pure_bc_n_epochs / 100) == (self.pure_bc_n_epochs / 100 - 1):
-                logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-        self.policy.init_target_net()
-
     def _log(self, epoch):
         logger.record_tabular("epoch", epoch)
         for key, val in self.evaluator.logs("test"):
@@ -146,7 +116,7 @@ class Trainer:
         self.rollout_worker.dump_history_to_file(self.ckpt_rollout_path)
         self.evaluator.dump_history_to_file(self.ckpt_evaluator_path)
         with open(self.ckpt_trainer_path, "wb") as f:
-            pickle.dump([self.epoch, self.best_success_rate], f)
+            pickle.dump(self.epoch, f)
         logger.info("Saving periodic check point.")
 
     def _load_states(self):
@@ -167,7 +137,7 @@ class Trainer:
             restart_msg += "evaluator history, "
         if os.path.exists(self.ckpt_trainer_path):
             with open(self.ckpt_trainer_path, "rb") as f:
-                self.epoch, self.best_success_rate = pickle.load(f)
+                self.epoch = pickle.load(f)
             restart_msg += "weight"
         # rewrite the progress.csv if necessary
         progress = os.path.join(self.root_dir, "progress.csv")
@@ -230,20 +200,13 @@ def main(root_dir, **kwargs):
     # Prepare parameters for training
     params = config.add_env_params(params=params)
 
-    # Configure and train rl agent
-    policy = config.configure_ddpg(params=params)
-    rollout_worker = config.config_rollout(params=params, policy=policy)
-    evaluator = config.config_evaluator(params=params, policy=policy)
-
     # Launch the training script
-    Trainer(root_dir=root_dir, policy=policy, rollout_worker=rollout_worker, evaluator=evaluator, **params["train"])
+    Trainer(root_dir=root_dir, params=params)
 
     tf.get_default_session().close()
 
 
 if __name__ == "__main__":
-
-    from td3fd.util.cmd_util import ArgParser
 
     ap = ArgParser()
     # logging and saving path

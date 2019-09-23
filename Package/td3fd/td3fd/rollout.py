@@ -19,13 +19,13 @@ class RolloutWorkerBase:
         make_env,
         policy,
         dims,
-        T,
+        eps_length,
         max_u,
         noise_eps,
         polyak_noise,
         random_eps,
         rollout_batch_size,
-        compute_Q,
+        compute_q,
         history_len,
         render,
         **kwargs
@@ -38,7 +38,7 @@ class RolloutWorkerBase:
             policy             (object)      - the policy that is used to act
             dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
             rollout_batch_size (int)         - the number of parallel rollouts that should be used
-            compute_Q          (bool)        - whether or not to compute the Q values alongside the actions
+            compute_q          (bool)        - whether or not to compute the Q values alongside the actions
             noise_eps          (float)       - scale of the additive Gaussian noise
             random_eps         (float)       - probability of selecting a completely random action
             history_len        (int)         - length of history for statistics smoothing
@@ -48,16 +48,16 @@ class RolloutWorkerBase:
         self.make_env = make_env
         self.policy = policy
         self.dims = dims
-        self.T = T
+        self.eps_length = eps_length
         self.max_u = max_u
         self.rollout_batch_size = rollout_batch_size
-        self.compute_Q = compute_Q
+        self.compute_q = compute_q
         self.noise_eps = noise_eps
         self.polyak_noise = polyak_noise
         self.random_eps = random_eps
         self.render = render
 
-        assert self.T > 0
+        assert self.eps_length > 0
         self.info_keys = [key.replace("info_", "") for key in dims.keys() if key.startswith("info_")]
 
         self.history = {
@@ -89,7 +89,7 @@ class RolloutWorkerBase:
         raise NotImplementedError
 
     def generate_rollouts(self):
-        """Performs `rollout_batch_size` rollouts for maximum time horizon `T` with the current policy
+        """Performs `rollout_batch_size` rollouts for maximum time horizon `eps_length` with the current policy
         """
         raise NotImplementedError
 
@@ -105,7 +105,7 @@ class RolloutWorkerBase:
         logs += [("total_reward", np.mean(self.history["total_reward_history"]))]
         logs += [("total_shaping_reward", np.mean(self.history["total_shaping_reward_history"]))]
         logs += [("success_rate", np.mean(self.history["success_history"]))]
-        if self.compute_Q:
+        if self.compute_q:
             logs += [("mean_Q", np.mean(self.history["Q_history"]))]
             logs += [("mean_Q_plus_P", np.mean(self.history["QP_history"]))]
         logs += [("episode", self.history["n_episodes"])]
@@ -170,13 +170,13 @@ class RolloutWorker(RolloutWorkerBase):
         make_env,
         policy,
         dims,
-        T,
+        eps_length,
         max_u,
         noise_eps=0.0,
         polyak_noise=0.0,
         random_eps=0.0,
         rollout_batch_size=1,
-        compute_Q=False,
+        compute_q=False,
         history_len=10,
         render=False,
         **kwargs
@@ -189,7 +189,7 @@ class RolloutWorker(RolloutWorkerBase):
             policy             (object)      - the policy that is used to act
             dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
             rollout_batch_size (int)         - the number of parallel rollouts that should be used
-            compute_Q          (bool)        - whether or not to compute the Q values alongside the actions
+            compute_q          (bool)        - whether or not to compute the Q values alongside the actions
             noise_eps          (float)       - scale of the additive Gaussian noise
             random_eps         (float)       - probability of selecting a completely random action
             history_len        (int)         - length of history for statistics smoothing
@@ -199,13 +199,13 @@ class RolloutWorker(RolloutWorkerBase):
             make_env=make_env,
             policy=policy,
             dims=dims,
-            T=T,
+            eps_length=eps_length,
             max_u=max_u,
             noise_eps=noise_eps,
             polyak_noise=polyak_noise,
             random_eps=random_eps,
             rollout_batch_size=rollout_batch_size,
-            compute_Q=compute_Q,
+            compute_q=compute_q,
             history_len=history_len,
             render=render,
         )
@@ -225,13 +225,14 @@ class RolloutWorker(RolloutWorkerBase):
             env.seed(seed + 1000 * idx)
 
     def generate_rollouts(self):
-        """ Performs `rollout_batch_size` rollouts for maximum time horizon `T` with the current policy
+        """ Performs `rollout_batch_size` rollouts for maximum time horizon `eps_length` with the current policy
         """
 
         # Information to store
         obs, achieved_goals, acts, goals, rewards, successes, shaping_rewards = [], [], [], [], [], [], []
         info_values = [
-            np.empty((self.T, self.rollout_batch_size, self.dims["info_" + key]), np.float32) for key in self.info_keys
+            np.empty((self.eps_length, self.rollout_batch_size, self.dims["info_" + key]), np.float32)
+            for key in self.info_keys
         ]
         Qs, QPs = [], []
 
@@ -246,10 +247,10 @@ class RolloutWorker(RolloutWorkerBase):
         ag[:] = self.initial_ag
 
         # Main episode loop
-        for t in range(self.T):
+        for t in range(self.eps_length):
             # get the action for all envs of the current batch
-            policy_output = self.policy.get_actions(o, self.g, compute_Q=self.compute_Q)
-            if self.compute_Q:
+            policy_output = self.policy.get_actions(o, self.g, compute_q=self.compute_q)
+            if self.compute_q:
                 u = self._add_noise_to_action(policy_output[0])
                 # Q value
                 Q = policy_output[1]
@@ -296,7 +297,7 @@ class RolloutWorker(RolloutWorkerBase):
             rewards.append(r.copy())
             successes.append(success.copy())
             shaping_rewards.append(shaping_reward.copy())
-            if self.compute_Q:
+            if self.compute_q:
                 Qs.append(Q.copy())
                 QPs.append(QP.copy())
             o[...] = o_new  # o_2 -> o
@@ -327,7 +328,7 @@ class RolloutWorker(RolloutWorkerBase):
         total_reward = np.mean(total_rewards)
         self.history["total_reward_history"].append(total_reward)
         # Q output from critic networks
-        if self.compute_Q:
+        if self.compute_q:
             self.history["Q_history"].append(np.mean(Qs))
             self.history["QP_history"].append(np.mean(QPs))
         self.history["n_episodes"] += self.rollout_batch_size
@@ -361,13 +362,13 @@ class SerialRolloutWorker(RolloutWorkerBase):
         make_env,
         policy,
         dims,
-        T,
+        eps_length,
         max_u,
         noise_eps=0.0,
         polyak_noise=0.0,
         random_eps=0.0,
         rollout_batch_size=1,
-        compute_Q=False,
+        compute_q=False,
         history_len=10,
         render=False,
         **kwargs
@@ -380,7 +381,7 @@ class SerialRolloutWorker(RolloutWorkerBase):
             policy             (cls)         - the policy that is used to act
             dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
             rollout_batch_size (int)         - the number of parallel rollouts that should be used
-            compute_Q          (bool)        - whether or not to compute the Q values alongside the actions
+            compute_q          (bool)        - whether or not to compute the Q values alongside the actions
             noise_eps          (float)       - scale of the additive Gaussian noise
             random_eps         (float)       - probability of selecting a completely random action
             history_len        (int)         - length of history for statistics smoothing
@@ -390,13 +391,13 @@ class SerialRolloutWorker(RolloutWorkerBase):
             make_env=make_env,
             policy=policy,
             dims=dims,
-            T=T,
+            eps_length=eps_length,
             max_u=max_u,
             noise_eps=noise_eps,
             polyak_noise=polyak_noise,
             random_eps=random_eps,
             rollout_batch_size=rollout_batch_size,
-            compute_Q=compute_Q,
+            compute_q=compute_q,
             history_len=history_len,
             render=render,
         )
@@ -416,7 +417,7 @@ class SerialRolloutWorker(RolloutWorkerBase):
         self.env.seed(seed)
 
     def generate_rollouts(self):
-        """ Performs `rollout_batch_size` rollouts for maximum time horizon `T` with the current policy
+        """ Performs `rollout_batch_size` rollouts for maximum time horizon `eps_length` with the current policy
         """
 
         # Information to store
@@ -440,10 +441,10 @@ class SerialRolloutWorker(RolloutWorkerBase):
             ag[...] = self.initial_ag
 
             # Main episode loop
-            for t in range(self.T):
+            for t in range(self.eps_length):
                 # get the action for all envs of the current batch
-                policy_output = self.policy.get_actions(o, self.g, compute_Q=self.compute_Q)
-                if self.compute_Q:
+                policy_output = self.policy.get_actions(o, self.g, compute_q=self.compute_q)
+                if self.compute_q:
                     u = self._add_noise_to_action(policy_output[0])
                     # Q value
                     Q = policy_output[1]
@@ -494,7 +495,7 @@ class SerialRolloutWorker(RolloutWorkerBase):
 
                 # extra plotting info recorded per step
                 shaping_rewards.append(shaping_reward.copy())
-                if self.compute_Q:
+                if self.compute_q:
                     Qs.append(Q.copy())
                     QPs.append(QP.copy())
 
@@ -508,7 +509,7 @@ class SerialRolloutWorker(RolloutWorkerBase):
                     dones.append(np.ones(1))
                     break
 
-                dones.append(np.array((float(t == self.T - 1),)))
+                dones.append(np.array((float(t == self.eps_length - 1),)))
 
             # extra plotting into recorded per episode
             successes.append(success.copy())
@@ -541,7 +542,7 @@ class SerialRolloutWorker(RolloutWorkerBase):
         total_reward = np.sum(np.array(rewards)) / self.rollout_batch_size
         self.history["total_reward_history"].append(total_reward)
         # Q output from critic networks
-        if self.compute_Q:
+        if self.compute_q:
             self.history["Q_history"].append(np.mean(Qs))
             self.history["QP_history"].append(np.mean(QPs))
         self.history["n_episodes"] += self.rollout_batch_size

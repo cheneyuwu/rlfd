@@ -95,7 +95,6 @@ class NFDemoShaping(DemoShaping):
         num_masked,
         num_bijectors,
         layer_sizes,
-        initializer_type,
         prm_loss_weight,
         reg_loss_weight,
         potential_weight,
@@ -127,11 +126,7 @@ class NFDemoShaping(DemoShaping):
         self.base_dist = tfd.MultivariateNormalDiag(loc=tf.zeros([demo_state_dim], tf.float64))
         if nf_type == "maf":
             self.nf = MAF(
-                base_dist=self.base_dist,
-                dim=demo_state_dim,
-                num_bijectors=num_bijectors,
-                layer_sizes=layer_sizes,
-                initializer_type=initializer_type,
+                base_dist=self.base_dist, dim=demo_state_dim, num_bijectors=num_bijectors, layer_sizes=layer_sizes
             )
         elif nf_type == "realnvp":
             self.nf = RealNVP(
@@ -140,7 +135,6 @@ class NFDemoShaping(DemoShaping):
                 num_masked=num_masked,
                 num_bijectors=num_bijectors,
                 layer_sizes=layer_sizes,
-                initializer_type=initializer_type,
             )
         else:
             assert False, nf_type
@@ -189,7 +183,6 @@ class EnsNFDemoShaping(DemoShaping):
         num_masked,
         num_bijectors,
         layer_sizes,
-        initializer_type,
         prm_loss_weight,
         reg_loss_weight,
         potential_weight,
@@ -220,7 +213,6 @@ class EnsNFDemoShaping(DemoShaping):
                         num_masked=num_masked,
                         num_bijectors=num_bijectors,
                         layer_sizes=layer_sizes,
-                        initializer_type=initializer_type,
                         prm_loss_weight=prm_loss_weight,
                         reg_loss_weight=reg_loss_weight,
                         potential_weight=potential_weight,
@@ -260,7 +252,6 @@ class GANDemoShaping(DemoShaping):
         g_stats,
         potential_weight,
         layer_sizes,
-        initializer_type,
         latent_dim,
         gp_lambda,
         critic_iter,
@@ -291,16 +282,10 @@ class GANDemoShaping(DemoShaping):
         # Generator & Discriminator
         with tf.variable_scope("generator"):
             input_shape = (None, latent_dim)  # latent space dimensions
-            self.generator = MLP(
-                input_shape=input_shape,
-                layers_sizes=layer_sizes + [demo_state_tf.shape[-1]],
-                initializer_type=initializer_type,
-            )
+            self.generator = MLP(input_shape=input_shape, layers_sizes=layer_sizes + [demo_state_tf.shape[-1]])
         with tf.variable_scope("discriminator"):
             input_shape = (None, demo_state_tf.shape[-1])
-            self.discriminator = MLP(
-                input_shape=input_shape, layers_sizes=layer_sizes + [1], initializer_type=initializer_type
-            )
+            self.discriminator = MLP(input_shape=input_shape, layers_sizes=layer_sizes + [1])
 
         # Loss functions
         assert len(demo_state_tf.shape) == 2
@@ -368,7 +353,6 @@ class EnsGANDemoShaping(DemoShaping):
         o_stats,
         g_stats,
         layer_sizes,
-        initializer_type,
         latent_dim,
         gp_lambda,
         critic_iter,
@@ -397,7 +381,6 @@ class EnsGANDemoShaping(DemoShaping):
                         o_stats=o_stats,
                         g_stats=g_stats,
                         layer_sizes=layer_sizes,
-                        initializer_type=initializer_type,
                         latent_dim=latent_dim,
                         gp_lambda=gp_lambda,
                         critic_iter=critic_iter,

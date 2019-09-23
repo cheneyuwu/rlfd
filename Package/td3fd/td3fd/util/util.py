@@ -1,10 +1,11 @@
 """Mostly adopted from OpenAI baselines: https://github.com/openai/baselines
 """
+import functools
 import importlib
 import inspect
-import functools
-import numpy as np
 import random
+
+import numpy as np
 
 
 def import_function(spec):
@@ -16,20 +17,22 @@ def import_function(spec):
     return fn
 
 
-def set_global_seeds(i):
-    try:
-        from mpi4py import MPI
-
-        rank = MPI.COMM_WORLD.Get_rank()
-    except ImportError:
-        rank = 0
-
-    myseed = i + 1000000 * rank if i is not None else None
+def set_global_seeds(seed):
     try:
         import tensorflow as tf
 
-        tf.set_random_seed(myseed)
+        tf.reset_default_graph()  # should be removed after tf2
+        tf.set_random_seed(seed)
     except ImportError:
         pass
-    np.random.seed(myseed)
-    random.seed(myseed)
+    try:
+        import torch
+
+        torch.manual_seed(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    except ImportError:
+        pass
+
+    np.random.seed(seed)
+    random.seed(seed)
