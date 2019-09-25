@@ -11,14 +11,16 @@ params_config = {
     "fix_T": True,
     # DDPG config
     "ddpg": {
+        "num_epochs": int(4e2),
+        "num_cycles": 10,
+        "num_batches": 40,
         # replay buffer setup
         "buffer_size": int(1e5),
         # actor critic networks
         "scope": "ddpg",
-        "use_td3": 1,
+        "use_td3": True,
         "layer_sizes": [256, 256, 256],
-        "initializer_type": "glorot",  # ["zero", "glorot"]
-        "Q_lr": 0.001,
+        "q_lr": 0.001,
         "pi_lr": 0.001,
         "action_l2": 0.4,
         "batch_size": 256,
@@ -29,9 +31,10 @@ params_config = {
         "batch_size_demo": 128,
         "use_demo_reward": 0,
         "num_demo": 40,
-        "demo_strategy": "none",  # ["none", "pure_bc", "bc", "nf", "gan"]
+        "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         "bc_params": {"q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
         "shaping_params": {
+            "num_epochs": int(1e4),
             "batch_size": 128,
             "nf": {
                 "num_ens": 2,
@@ -39,16 +42,14 @@ params_config = {
                 "lr": 2e-4,
                 "num_masked": 4,
                 "num_bijectors": 4,
-                "layer_sizes": [256, 256],
-                "initializer_type": "glorot",  # ["zero", "glorot"]
+                "layer_sizes": [128, 128],
                 "prm_loss_weight": 1.0,
-                "reg_loss_weight": 1000.0,
+                "reg_loss_weight": 500.0,
                 "potential_weight": 3.0,
             },
             "gan": {
                 "num_ens": 4,
                 "layer_sizes": [256, 256, 256],
-                "initializer_type": "glorot",  # ["zero", "glorot"]
                 "latent_dim": 6,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
@@ -69,7 +70,7 @@ params_config = {
         "noise_eps": 0.2,
         "polyak_noise": 0.0,
         "random_eps": 0.2,
-        "compute_Q": False,
+        "compute_q": False,
         "history_len": 10,
     },
     "evaluator": {
@@ -77,17 +78,8 @@ params_config = {
         "noise_eps": 0.05,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
-        "compute_Q": True,
+        "compute_q": True,
         "history_len": 1,
-    },
-    # training config
-    "train": {
-        "n_epochs": int(4e2),
-        "n_cycles": 10,
-        "n_batches": 40,
-        "shaping_n_epochs": int(7e3),
-        "pure_bc_n_epochs": int(1e3),
-        "save_interval": 10,
     },
     "seed": tuple(range(2)),
 }
