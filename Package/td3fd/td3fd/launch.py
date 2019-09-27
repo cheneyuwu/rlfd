@@ -10,10 +10,7 @@ from td3fd import logger
 from td3fd.demo_util.generate_demo import main as demo_entry
 from td3fd.evaluate import main as display_entry
 from td3fd.plot import main as plot_entry
-
 from td3fd.train import main as train_entry
-
-# from td3fd.ddpg_torch.train import main as train_entry
 from td3fd.util.mpi_util import mpi_exit, mpi_input
 
 # must include gym before loading mpi, for compute canada cluster
@@ -180,7 +177,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
                         mpi_exit(1, comm=comm)
                     os.makedirs(k, exist_ok=True)
                     # copy params.json file
-                    with open(os.path.join(k, "copied_params.json"), "w") as f:
+                    with open(os.path.join(k, "params.json"), "w") as f:
                         json.dump(v, f)
                     # copy demo_sata file if exist
                     demo_file = os.path.join(exp_dir, "demo_data.npz")
