@@ -4,10 +4,10 @@ import numpy as np
 import tensorflow as tf
 
 from td3fd import logger
+from td3fd.gail.model import Discriminator, Generator, ValueNet
+from td3fd.memory import RingReplayBuffer, UniformReplayBuffer, iterbatches
 from td3fd.normalizer import Normalizer
-from td3fd.gail.model import Generator, Discriminator, ValueNet
-from td3fd.gail.memory import RingReplayBuffer, UniformReplayBuffer, iterbatches
-from td3fd.util.tf_util import SetFromFlat, GetFlat, intprod, flatgrad
+from td3fd.util.tf_util import GetFlat, SetFromFlat, flatgrad, intprod
 
 
 class GAIL(object):
@@ -538,4 +538,3 @@ def cg(f_Ax, b, cg_iters=10, callback=None, verbose=False, residual_tol=1e-10):
     if verbose:
         print(fmtstr % (i + 1, rdotr, np.linalg.norm(x)))  # pylint: disable=W0631
     return x
-

@@ -77,7 +77,6 @@ def train(root_dir, params):
         logger.info("Saving", save_msg, "policy.")
 
 
-
 def main(root_dir, **kwargs):
 
     assert root_dir is not None, "provide root directory for saving training data"

@@ -1,10 +1,9 @@
 import numpy as np
 import tensorflow as tf
 
-from td3fd.rollout import RolloutWorker, SerialRolloutWorker
-from td3fd.env_manager import EnvManager
 from td3fd import logger
-
+from td3fd.env_manager import EnvManager
+from td3fd.rollout import RolloutWorker, SerialRolloutWorker
 
 # Helper Functions for Configuration
 # =====================================

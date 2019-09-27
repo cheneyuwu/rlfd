@@ -1,10 +1,10 @@
 import numpy as np
 import tensorflow as tf
 
+from td3fd import logger
 from td3fd.ddpg.ddpg import DDPG
 from td3fd.ddpg.rollout import RolloutWorker, SerialRolloutWorker
 from td3fd.env_manager import EnvManager
-from td3fd import logger
 
 DEFAULT_PARAMS = {
     # config summary

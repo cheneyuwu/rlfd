@@ -6,11 +6,10 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from td3fd import logger
-from td3fd import config
+from td3fd import config, logger
 from td3fd.ddpg import config as ddpg_config
-from td3fd.gail import config as gail_config
 from td3fd.ddpg.train import Trainer as ddpg_train
+from td3fd.gail import config as gail_config
 from td3fd.gail.train import train as gail_train
 from td3fd.util.cmd_util import ArgParser
 from td3fd.util.util import set_global_seeds
