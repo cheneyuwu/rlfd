@@ -3,9 +3,9 @@ import pickle
 import numpy as np
 import tensorflow as tf
 
-from td3fd.ddpg.actor_critic import Actor, Critic
 from td3fd.ddpg.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping
-from td3fd.ddpg.memory import RingReplayBuffer, UniformReplayBuffer
+from td3fd.ddpg.model import Actor, Critic
+from td3fd.memory import RingReplayBuffer, UniformReplayBuffer
 from td3fd.normalizer import Normalizer
 
 
@@ -369,7 +369,7 @@ class DDPG(object):
         max_num_transitions = self.num_demo * self.eps_length
 
         def generate_demo_data():
-            demo_data = self.demo_buffer.sample_all()
+            demo_data = self.demo_buffer.sample()
             num_transitions = demo_data["u"].shape[0]
             assert all([demo_data[k].shape[0] == num_transitions for k in demo_data.keys()])
             for i in range(num_transitions):
