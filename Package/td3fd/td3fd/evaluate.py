@@ -5,7 +5,8 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from td3fd import config, logger
+from td3fd import config
+from td3fd import logger
 from td3fd.util.util import set_global_seeds
 
 try:

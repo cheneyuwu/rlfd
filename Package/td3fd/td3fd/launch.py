@@ -112,6 +112,9 @@ def transform_config_name(config_name):
                     return ["TD3+BC"]
             elif config_name[i] == "demo_strategy_none":
                 return ["TD3"]
+        elif config_name[i].startswith("config"):
+            if config_name[i] == "config_gail":
+                return ["GAIL"]
     return config_name
 
 
@@ -149,7 +152,6 @@ def main(targets, exp_dir, policy_file, **kwargs):
             if rank == 0:
                 for k, v in dir_param_dict.items():
                     assert os.path.exists(k), k
-                    assert v["config"] == "default"
                     # copy params.json file, rename the config entry
                     varied_params = k[len(exp_dir) + 1 :].split("/")
                     config_name = [x for x in varied_params if not any([x.startswith(y) for y in exc_params])]

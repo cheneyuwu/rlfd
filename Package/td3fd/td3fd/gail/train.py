@@ -37,20 +37,17 @@ def train(root_dir, params):
     assert os.path.isfile(demo_file), "demonstration training set does not exist"
     policy.init_demo_buffer(demo_file)
 
-    for epoch in range(10000):  # TODO
+    for epoch in range(policy.num_epochs):
         # Train
         # train generator and value function
         rollout_worker.clear_history()
         for _ in range(policy.policy_step):
             episode = rollout_worker.generate_rollouts()
+            policy.clear_buffer()
             policy.store_episode(episode)
             policy.train_policy()
-            policy.clear_buffer()
         # train discriminator
-        episode = rollout_worker.generate_rollouts()
-        policy.store_episode(episode)
         policy.train_disc()
-        policy.clear_buffer()
         # Evaluate
         evaluator.clear_history()
         evaluator.generate_rollouts()

@@ -11,12 +11,13 @@ params_config = {
     "fix_T": True,  # whether or not to fix episode length for all rollouts (if false, then use the ring buffer)
     # GAIL config
     "gail": {
+        "num_epochs": int(2.4e3),
         # replay buffer size (gail and demo)
         "buffer_size": int(1e6),
         # demonstrations
-        "num_demo": 10,
+        "num_demo": 40,
         "scope": "gail",
-        "policy_step": 3,
+        "policy_step": 2,
         "disc_step": 1,
         "gen_layer_sizes": [100, 100],
         "disc_layer_sizes": [100, 100],
@@ -27,14 +28,14 @@ params_config = {
         "cg_damping": 3e-4,
         "cg_iters": 10,
         "vf_iters": 5,
-        "vf_batch_size": 20,
+        "vf_batch_size": 128,
         # normalizer
         "norm_eps": 0.01,
         "norm_clip": 5,
     },
     # rollouts config
     "rollout": {
-        "rollout_batch_size": 1,
+        "rollout_batch_size": 4,
         "noise_eps": 0.0,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
         "polyak_noise": 0.0,  # use polyak_noise * last_noise + (1 - polyak_noise) * curr_noise
         "random_eps": 0.0,  # percentage of time a random action is taken
