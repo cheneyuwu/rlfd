@@ -52,14 +52,15 @@ def train(root_dir, params):
         evaluator.clear_history()
         evaluator.generate_rollouts()
 
-        logger.record_tabular("epoch", epoch)
-        for key, val in evaluator.logs("test"):
-            logger.record_tabular(key, val)
-        for key, val in rollout_worker.logs("train"):
-            logger.record_tabular(key, val)
-        for key, val in policy.logs():
-            logger.record_tabular(key, val)
-        logger.dump_tabular()
+        if epoch % 5 == 4:
+            logger.record_tabular("epoch", int((epoch + 1) / 5))
+            for key, val in evaluator.logs("test"):
+                logger.record_tabular(key, val)
+            for key, val in rollout_worker.logs("train"):
+                logger.record_tabular(key, val)
+            for key, val in policy.logs():
+                logger.record_tabular(key, val)
+            logger.dump_tabular()
 
         # save the policy
         save_msg = ""
