@@ -27,7 +27,7 @@ N_TASKS=20
 LAUNCH_EXP_DIR="."
 TRAINING_FILE="*.py"
 
-mpiexec -n ${N_TASKS} python -m yw.flow.launch --exp_dir ${LAUNCH_EXP_DIR} --targets train:${TRAINING_FILE}
+mpiexec -n ${N_TASKS} python -m td3fd.launch --exp_dir ${LAUNCH_EXP_DIR} --targets train:${TRAINING_FILE}
 
 # Extra
 # useful command for changing the config name for seeds that succeeded
