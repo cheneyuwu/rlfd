@@ -18,10 +18,11 @@ DEFAULT_PARAMS = {
     "fix_T": True,  # whether or not to fix episode length for all rollouts (if false, then use the ring buffer)
     # GAIL config
     "gail": {
+        "num_epochs": int(4e2),
         # replay buffer size (gail and demo)
         "buffer_size": int(1e6),
         # demonstrations
-        "num_demo": 10,
+        "num_demo": 40,
         "scope": "gail",
         "policy_step": 3,
         "disc_step": 1,

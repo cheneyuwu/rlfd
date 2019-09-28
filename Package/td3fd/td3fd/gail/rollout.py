@@ -229,7 +229,7 @@ class RolloutWorker(RolloutWorkerBase):
         """
 
         # Information to store
-        obs, achieved_goals, acts, goals, rewards, successes, shaping_rewards = [], [], [], [], [], [], []
+        obs, achieved_goals, acts, goals, rewards, successes, shaping_rewards, dones = [], [], [], [], [], [], [], []
         policy_rewards, policy_values = [], []  # rewards and values from policy
         info_values = [
             np.empty((self.eps_length, self.rollout_batch_size, self.dims["info_" + key]), np.float32)
@@ -305,6 +305,8 @@ class RolloutWorker(RolloutWorkerBase):
             policy_values.append(pv.copy())
             successes.append(success.copy())
             shaping_rewards.append(shaping_reward.copy())
+            # extra done signal to indicate the episode is done
+            dones.append(np.array((self.rollout_batch_size * [float(t == self.eps_length - 1)])).reshape(-1, 1))
             if self.compute_q:
                 Qs.append(Q.copy())
                 QPs.append(QP.copy())
@@ -316,7 +318,9 @@ class RolloutWorker(RolloutWorkerBase):
         policy_values.append(pv.copy())
 
         # Store all information into an episode dict
-        episode = dict(o=obs, u=acts, g=goals, ag=achieved_goals, r=rewards, pr=policy_rewards, pv=policy_values)
+        episode = dict(
+            o=obs, u=acts, g=goals, ag=achieved_goals, r=rewards, pr=policy_rewards, pv=policy_values, done=dones
+        )
         for key, value in zip(self.info_keys, info_values):
             episode["info_{}".format(key)] = value
         episode = self._convert_episode_to_batch_major(episode)

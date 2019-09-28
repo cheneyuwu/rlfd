@@ -13,6 +13,7 @@ from td3fd.util.tf_util import GetFlat, SetFromFlat, flatgrad, intprod
 class GAIL(object):
     def __init__(
         self,
+        num_epochs,
         scope,
         buffer_size,
         num_demo,
@@ -70,6 +71,7 @@ class GAIL(object):
         self.fix_T = fix_T
         self.gamma = gamma
         self.info = info
+        self.num_epochs = num_epochs
 
         # Prepare parameters
         self.dimo = self.input_dims["o"]
@@ -143,11 +145,12 @@ class GAIL(object):
         self.policy_buffer.clear_buffer()
 
     def _add_vtarg_and_adv(self, rollout):
-        assert rollout["u"].shape[0] == self.eps_length  # TODO
-        rollout["adv"] = gaelam = np.empty((self.eps_length, 1), dtype=np.float32)
+        rollout["adv"] = gaelam = np.empty((rollout["done"].shape[0], 1), dtype=np.float32)
         rew = rollout["pr"]
         lastgaelam = 0
-        for t in reversed(range(self.eps_length)):
+        for t in reversed(range(rollout["done"].shape[0])):
+            if rollout["done"][t]:
+                lastgaelam = 0
             delta = rew[t] + self.gamma * rollout["pv_2"][t] - rollout["pv"][t]
             gaelam[t] = lastgaelam = delta + self.gamma * self.lam * lastgaelam
         rollout["tdlamret"] = rollout["adv"] + rollout["pv"]
@@ -327,6 +330,8 @@ class GAIL(object):
             policy_buffer_shapes = buffer_shapes.copy()
             policy_buffer_shapes["pr"] = (self.eps_length, 1)
             policy_buffer_shapes["pv"] = (self.eps_length + 1, 1)
+            # TODO: later we should move this above, but now it can only be here since the demo_data.npz does not have done signal
+            policy_buffer_shapes["done"] = (self.eps_length, 1)
             self.policy_buffer = UniformReplayBuffer(policy_buffer_shapes, self.buffer_size, self.eps_length)
         else:
             # demonstration buffer
