@@ -9,11 +9,14 @@
   - `git submodule init`
   - `git submodule sync`
   - `git submodule update --remote`
-3. enter virtual env and install packages: gym, yw, tensorflow, tensorflow_probability
+3. build virtual env
+  - On cluster: `module load python/3.6` (make sure that you have the correct python version)
+  - create a folder `./.venv` and run `virtualenv venv` inside this folder
+4. enter virtual env and install packages: gym, yw, tensorflow, tensorflow_probability
   - note: on compute canada cluster you need to manually install tensorflow and use `module load mpi4py` to get the mpi python package
-4. Modify the directory of EXPRUN according to the true exp running directory
-5. change TkAgg to Agg for plot.py visualize_query.py and point_reach.py
-6. add rl project directory to the bashrc
+5. Modify the directory of EXPRUN according to the true exp running directory
+6. change TkAgg to Agg for plot.py visualize_query.py and point_reach.py
+7. add rl project directory to the bashrc
   - export RLProject='/home/yuchenwu/projects/def-florian7/yuchenwu/RLProject'
 
 ## Compute Canada Cluster
@@ -33,10 +36,7 @@
     - For multiple ssh keys: https://gist.github.com/jexchan/2351996
   3. clone github repository and setup bash, vim, tmux, etc
     - note that compute canada's bashrc is not empty, do not overwrite the original content
-  4. build virtual env
-    - `module load python/3.6` (make sure that you have the correct python version)
-    - create a folder `~/ENV` and run `virtualenv <env name>` inside this folder
-  5. Install this package (see above)
+  4. Install this package (see above)
 
 
 - [SLURM](https://www.rc.fas.harvard.edu/resources/documentation/convenient-slurm-commands/)
