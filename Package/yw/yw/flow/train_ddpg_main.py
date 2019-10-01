@@ -1,22 +1,21 @@
+import json
 import os
+import pickle
 import sys
+from itertools import combinations  # for dimension projection
+
+import numpy as np
+import tensorflow as tf
+
+from yw.ddpg_main import config
+from yw.tool import logger
+from yw.util.mpi_util import mpi_average
+from yw.util.util import set_global_seeds
 
 try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
-
-import json
-import pickle
-import numpy as np
-import tensorflow as tf
-
-from yw.tool import logger
-from yw.ddpg_main import config
-from yw.util.util import set_global_seeds
-from yw.util.mpi_util import mpi_average
-
-from itertools import combinations  # for dimension projection
 
 
 class Trainer:
@@ -214,7 +213,6 @@ class Trainer:
             f.seek(0)
             lines = f.readlines()
         with open(progress, "w") as f:
-            epoch_idx = keys.index("epoch")
             f.write(lines[0])
             for line in lines[1:]:
                 if int(line.split(",")[0]) < self.epoch:
@@ -299,7 +297,6 @@ def main(root_dir, comm=None, **kwargs):
         **params["train"]
     )
 
-    # Close the default session to prevent memory leaking
     tf.get_default_session().close()
 
 

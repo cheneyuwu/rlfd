@@ -6,7 +6,7 @@ params_config = {
     "env_name": "FetchPegInHoleRandInit-v1",
     "r_scale": 1.0,
     "r_shift": 0.0,
-    "eps_length": 25,
+    "eps_length": 40,
     "env_args": {},
     "fix_T": True,
     # DDPG config
@@ -31,7 +31,7 @@ params_config = {
         "use_demo_reward": 0,
         "num_demo": 40,
         "demo_strategy": "none",  # ["none", "pure_bc", "bc", "nf", "gan"]
-        "bc_params": {"q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 10.0},
+        "bc_params": {"q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
         "shaping_params": {
             "batch_size": 128,
             "nf": {

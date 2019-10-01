@@ -8,10 +8,6 @@ try:
     import gym
 except:
     gym = None
-try:
-    import yw.env.suite_wrapper as suite
-except:
-    suite = None
 
 
 class EnvManager:
@@ -75,14 +71,6 @@ class EnvManager:
             try:
                 _ = gym.make(env_name, **env_args)
                 self.make_env = lambda: gym.make(env_name, **env_args)
-            except:
-                pass
-
-        if self.make_env is None and suite is not None:
-            try:
-                tmp = suite.make(env_name, **env_args)
-                tmp.close()
-                self.make_env = lambda: suite.make(env_name, **env_args)
             except:
                 pass
 

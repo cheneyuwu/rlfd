@@ -1,9 +1,9 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-tfd = tfp.distributions
-
 from yw.util.tf_util import MLP
+
+tfd = tfp.distributions
 
 
 class ActorCritic:

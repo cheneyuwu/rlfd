@@ -1,3 +1,5 @@
+"""Partially adopted from OpenAI baseline code base
+"""
 import numpy as np
 
 

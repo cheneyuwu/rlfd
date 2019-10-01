@@ -1,11 +1,12 @@
+"""Mostly adopted from OpenAI baselines: https://github.com/openai/baselines
+"""
+import collections
+import copy
+import functools
+import multiprocessing
 import os
 
 import numpy as np
-import copy
-import functools
-import collections
-import multiprocessing
-
 import tensorflow as tf  # pylint: ignore-module
 import tensorflow_probability as tfp
 
@@ -59,8 +60,6 @@ def single_threaded_session():
 
 # Flat vectors
 # =====================================
-
-
 def var_shape(x):
     out = x.get_shape().as_list()
     assert all(isinstance(a, int) for a in out), "shape function assumes that shape is fully known"
@@ -147,10 +146,8 @@ def adjust_shape(placeholder, data):
     return np.reshape(data, placeholder_shape)
 
 
-# Build neural net works
+# NNs
 # =============================================================================
-
-
 class MLP:
     def __init__(self, input_shape, layers_sizes, initializer_type="glorot", name=""):
         # choose initializer
@@ -217,10 +214,10 @@ def nn(input, layers_sizes, reuse=None, flatten=False, initializer_type="glorot"
     return input
 
 
+"""Adopted from Eric Jang's normalizing flow tutorial: https://blog.evjang.com/2018/01/nf1.html
+"""
 # Simple Normalizing Flow
 # =============================================================================
-
-# quite easy to interpret - multiplying by alpha causes a contraction in volume.
 class LeakyReLU(tfb.Bijector):
     def __init__(self, alpha=0.5, validate_args=False, name="leaky_relu"):
         super(LeakyReLU, self).__init__(
@@ -298,15 +295,10 @@ class MAF:
                     )
                 )
             )
-            # BatchNorm helps to stabilize deep normalizing flows, esp. Real-NVP
-            # if i % 4 == 0:
-            #     self.bijectors.append(tfb.BatchNormalization())
             self.bijectors.append(tfb.Permute(permutation=list(range(0, dim))[::-1]))
-
-        # Discard the last Permute layer.
+        # discard the last Permute layer.
         flow_bijector = tfb.Chain(list(reversed(self.bijectors[:-1])))
         self.dist = tfd.TransformedDistribution(distribution=base_dist, bijector=flow_bijector)
-
         # output
         self.log_prob = self.dist.log_prob
         self.prob = self.dist.prob
@@ -336,15 +328,10 @@ class RealNVP:
                     ),
                 )
             )
-            # BatchNorm helps to stabilize deep normalizing flows, esp. Real-NVP
-            # if i % 4 == 0:
-            #     self.bijectors.append(tfb.BatchNormalization())
             self.bijectors.append(tfb.Permute(permutation=list(range(0, dim))[::-1]))
-
-        # Discard the last Permute layer.
+        # discard the last Permute layer.
         flow_bijector = tfb.Chain(list(reversed(self.bijectors[:-1])))
         self.dist = tfd.TransformedDistribution(distribution=base_dist, bijector=flow_bijector)
-
         # output
         self.log_prob = self.dist.log_prob
         self.prob = self.dist.prob

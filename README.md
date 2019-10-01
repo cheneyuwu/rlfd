@@ -1,57 +1,20 @@
-# IL + RL Project
-- 2019 Summer Research with Professor Florian Shkurti
+# Shaping Rewards for Combined Reinforcement and Imitation Learning using Generative Models 
+- by Yuchen Wu, Melissa Mozifian and Prof. Florian Shkurti
 
+Note: This codebase has not been cleaned up yet. Will do it soon!
+
+## [Link to Paper](.)
 
 ## Installation
-- clone the repository
-- In the root directory
-    - `source setup.sh`
-- Go to Package/yw
-    - `pip install -e .`
-- Run flow tests using command
-    - `ywregtest`
+1. Setup Mujoco and install mujoco_py
+2. Clone this repo and its `gym` submodule
+    - `git clone git@github.com:cheneyuwu/RLProject`
+    - `git submodule init`
+    - `git submodule sync`
+    - `git submodule update --remote`
+3. Install packages at `./Package/gym` and  `./Package/yw`
+4. Source the setup script at root directory, this script just defines some environment variables for the logger.
+    - `source setup.py`
 
-
-## Experiments
-- Experiment/train.py - Main script for training the RL agent with/without demonstration.
-
-
-## Algorithm Options and Flags (train_ddpg_main.py)
-
-### Path configuration
-- Both are implemented by OpenAI. Using OpenAI logger and MPI.
-- Parameters
-  - |||
-    |-|-|
-    | logdir | Log directory|
-    | loglevel | Use 1 for debugging and 2 for normal information output
-
-### Environment
-- Select the environment based on user inputs. The environment should have properties listed in the env_manager.py.
-- Parameters
-    - |||
-      |-|-|
-      | env_name/env | Choose the environment. |
-      | r_scale | This will scale down the reward by r_scale. The purpose is to reduce the size of the output so that demonstration can be effective early. |
-      | r_shift | This will shift up the reward y r_shift. Same idea as above. |
-
-### DDPG
-staging_tf    staged values
-buffer_ph_tf  placeholders
-
-demo_q_mean_tf
-demo_q_var_tf
-demo_q_sample_tf
-max_q_tf
-
-Q_loss_tf -> a list of losses for each critic sample
-pi_loss_tf -> a list of losses for each pi sample
-
-policy.
-pi_tf  list of output from actor
-Q_tf
-Q_pi_tf
-Q_pi_mean_tf
-Q_pi_var_tf
-_input_Q
-
+## Run experiments
+- TODO

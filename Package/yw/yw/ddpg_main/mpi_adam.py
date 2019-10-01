@@ -1,12 +1,14 @@
-import tensorflow as tf
+"""Adopted from OpenAI baseline code base
+"""
 import numpy as np
+import tensorflow as tf
+
+import yw.util.tf_util as U
 
 try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
-
-import yw.util.tf_util as U
 
 
 class MpiAdam(object):
@@ -62,12 +64,3 @@ class MpiAdam(object):
             thetaroot = np.empty_like(thetalocal)
             self.comm.Bcast(thetaroot, root=0)
             assert (thetaroot == thetalocal).all(), (thetaroot, thetalocal)
-
-
-@U.in_session
-def test_MpiAdam():
-    pass
-
-
-if __name__ == "__main__":
-    test_MpiAdam()

@@ -1,13 +1,10 @@
-import tensorflow as tf
 import numpy as np
-
-from yw.tool import logger
+import tensorflow as tf
 
 from yw.ddpg_main.ddpg import DDPG
 from yw.ddpg_main.rollout import RolloutWorker, SerialRolloutWorker
-
 from yw.env.env_manager import EnvManager
-
+from yw.tool import logger
 
 DEFAULT_PARAMS = {
     # config summary
