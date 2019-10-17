@@ -23,9 +23,11 @@ class Actor(tf.Module):
                 bias_initializer=None,
             )
             self.model_layers.append(layer)
+        # TODO: accept multidimensional imputs
+        assert len(self.dimu) == 1, "only accept 1 dimensional output"
         self.model_layers.append(
             tf.keras.layers.Dense(
-                units=self.dimu,
+                units=self.dimu[0],
                 activation="tanh",
                 kernel_initializer=tf.keras.initializers.glorot_normal(),
                 bias_initializer=None,
@@ -35,8 +37,10 @@ class Actor(tf.Module):
 
     def __call__(self, o, g):
         state = o
+        state = tf.keras.layers.Flatten()(state) # TODO need an encoding layer here
         # for multigoal environments, we have goal as another states
-        if self.dimg != 0:
+        if self.dimg != (0,):
+            assert len(state.shape) == 2, "only accept 2 dimensional output when goal exists"
             state = tf.concat([state, g], axis=1)
         else:
             assert g is None
@@ -69,7 +73,8 @@ class Critic(tf.Module):
     def __call__(self, o, g, u):
         state = o
         # for multigoal environments, we have goal as another states
-        if self.dimg != 0:
+        state = tf.keras.layers.Flatten()(state) # TODO need an encoding layer here
+        if self.dimg != (0,):
             state = tf.concat([state, g], axis=1)
         else:
             assert g is None
@@ -82,9 +87,9 @@ class Critic(tf.Module):
 def test_actor_critic():
     import numpy as np
 
-    dimo = 2
-    dimg = 2
-    dimu = 2
+    dimo = (2,)
+    dimg = (2,)
+    dimu = (2,)
     max_u = 2.0
     noise = True
     layer_sizes = [16]

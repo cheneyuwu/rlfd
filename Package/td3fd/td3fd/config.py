@@ -28,6 +28,10 @@ class EnvCache:
 
 
 def add_env_params(params):
+    """
+    Add the following environment parameters to params:
+        make_env, eps_length, gamma, max_u, dims
+    """
     env_manager = EnvManager(
         env_name=params["env_name"],
         env_args=params["env_args"],
@@ -42,8 +46,7 @@ def add_env_params(params):
     )
     params["make_env"] = env_manager.get_env
     tmp_env = EnvCache.get_env(params["make_env"])
-    assert hasattr(tmp_env, "_max_episode_steps")
-    params["eps_length"] = tmp_env._max_episode_steps
+    params["eps_length"] = tmp_env.eps_length
     params["gamma"] = 1.0 - 1.0 / params["eps_length"]
     assert hasattr(tmp_env, "max_u")
     params["max_u"] = np.array(tmp_env.max_u) if isinstance(tmp_env.max_u, list) else tmp_env.max_u
@@ -51,16 +54,16 @@ def add_env_params(params):
     tmp_env.reset()
     obs, _, _, info = tmp_env.step(tmp_env.action_space.sample())
     dims = {
-        "o": obs["observation"].shape[0],  # the state
-        "g": obs["desired_goal"].shape[0],  # extra state that does not change within 1 episode
-        "u": tmp_env.action_space.shape[0],
+        "o": obs["observation"].shape,  # the observation
+        "g": obs["desired_goal"].shape,  # extra observation that does not change within 1 episode
+        "u": tmp_env.action_space.shape,
     }
     # temporarily put here as we never run multigoal jobs
     for key, value in info.items():
         value = np.array(value)
         if value.ndim == 0:
             value = value.reshape(1)
-        dims["info_{}".format(key)] = value.shape[0]
+        dims["info_{}".format(key)] = value.shape
     params["dims"] = dims
     return params
 

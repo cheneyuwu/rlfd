@@ -25,7 +25,6 @@ from td3fd.train import main as train_entry
 from td3fd.util.mpi_util import mpi_exit, mpi_input
 
 
-
 def import_param_config(load_dir):
     """Assume that there is a gv called params_config that contains all the params
     """

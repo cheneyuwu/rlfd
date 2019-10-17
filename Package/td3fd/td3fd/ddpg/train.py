@@ -100,6 +100,7 @@ class Trainer:
             loss = self.policy.train_shaping()
             if epoch % (self.shaping_n_epochs / 100) == (self.shaping_n_epochs / 100 - 1):
                 logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
+                self.policy.evaluate_shaping()
 
     def _log(self, epoch):
         logger.record_tabular("epoch", epoch)

@@ -96,7 +96,7 @@ class RingReplayBuffer(ReplayBufferBase):
         assert num_demo is None or num_demo <= len(dones)
         last_idx = dones[num_demo - 1] if num_demo is not None else dones[-1]
         for key in episode_batch.keys():
-            assert len(episode_batch[key].shape) == 2
+            assert len(episode_batch[key].shape) >= 2
             episode_batch[key] = episode_batch[key][: last_idx + 1]
         self.store_episode(episode_batch)
         return episode_batch
@@ -155,7 +155,7 @@ class UniformReplayBuffer(ReplayBufferBase):
     def load_from_file(self, data_file, num_demo=None):
         episode_batch = {**np.load(data_file)}
         for key in episode_batch.keys():
-            assert len(episode_batch[key].shape) == 3  # (eps x T x dim)
+            assert len(episode_batch[key].shape) >= 3  # (eps x T x dim)
             assert num_demo is None or num_demo <= episode_batch[key].shape[0], "No enough demonstration data!"
             episode_batch[key] = episode_batch[key][:num_demo]
         self.store_episode(episode_batch)
@@ -170,13 +170,13 @@ class UniformReplayBuffer(ReplayBufferBase):
         for key in self.buffers.keys():
             buffers[key] = self.buffers[key][: self.current_size]
 
-        buffers["o_2"] = buffers["o"][:, 1:, :]
+        buffers["o_2"] = buffers["o"][:, 1:, ...]
         if "ag" in buffers.keys():
-            buffers["ag_2"] = buffers["ag"][:, 1:, :]
+            buffers["ag_2"] = buffers["ag"][:, 1:, ...]
         if "g" in buffers.keys():
-            buffers["g_2"] = buffers["g"][:, :, :]
+            buffers["g_2"] = buffers["g"][:, :, ...]
         if "pv" in buffers.keys():
-            buffers["pv_2"] = buffers["pv"][:, 1:, :]
+            buffers["pv_2"] = buffers["pv"][:, 1:, ...]
 
         transitions = self.sample_transitions(buffers, batch_size)
         assert all([key in transitions for key in list(self.buffers.keys())]), "key missing from transitions"

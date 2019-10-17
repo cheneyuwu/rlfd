@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 
-from td3fd.ddpg.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping
+from td3fd.ddpg.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping, GANDemoShaping, PixelGANDemoShaping
 from td3fd.ddpg.model import Actor, Critic
 from td3fd.memory import RingReplayBuffer, UniformReplayBuffer
 from td3fd.normalizer import Normalizer
@@ -60,7 +60,7 @@ class DDPG(object):
             norm_clip          (float)        - normalized inputs are clipped to be in [-norm_clip, norm_clip]
             # NN Configuration
             scope              (str)          - the scope used for the TensorFlow graph
-            input_dims         (dict of ints) - dimensions for the observation (o), the goal (g), and the actions (u)
+            input_dims         (dict of tps)  - dimensions for the observation (o), the goal (g), and the actions (u)
             layer_sizes        (list of ints) - number of units in each hidden layers
             initializer_type   (str)          - initializer of the weight for both policy and critic
             reuse              (boolean)      - whether or not the networks should be reused
@@ -136,9 +136,9 @@ class DDPG(object):
             vals.append(self.demo_actor_shaping)
         # feed
         feed = {}
-        feed[self.inputs_tf["o"]] = o.reshape(-1, self.dimo)
+        feed[self.inputs_tf["o"]] = o.reshape(-1, *self.dimo)
         if self.dimg != 0:
-            feed[self.inputs_tf["g"]] = g.reshape(-1, self.dimg)
+            feed[self.inputs_tf["g"]] = g.reshape(-1, *self.dimg)
         # compute
         ret = self.sess.run(vals, feed_dict=feed)
         # post processing
@@ -215,6 +215,15 @@ class DDPG(object):
                 break
         return loss
 
+    def evaluate_shaping(self):
+        pass
+        # images = self.demo_shaping.evaluate(self.sess)
+        # images = ((images + 1.0) * 127.5).astype(np.int32)
+        # import matplotlib.pyplot as plt
+
+        # plt.imshow(images[0])
+        # plt.show()
+
     def train(self):
         batch = self.sample_batch()
 
@@ -251,28 +260,28 @@ class DDPG(object):
         # buffer shape
         buffer_shapes = {}
         if self.fix_T:
-            buffer_shapes["o"] = (self.eps_length + 1, self.dimo)
-            buffer_shapes["u"] = (self.eps_length, self.dimu)
+            buffer_shapes["o"] = (self.eps_length + 1, *self.dimo)
+            buffer_shapes["u"] = (self.eps_length, *self.dimu)
             buffer_shapes["r"] = (self.eps_length, 1)
-            if self.dimg != 0:  # for multigoal environment - or states that do not change over episodes.
-                buffer_shapes["ag"] = (self.eps_length + 1, self.dimg)
-                buffer_shapes["g"] = (self.eps_length, self.dimg)
+            if self.dimg != (0,):  # for multigoal environment - or states that do not change over episodes.
+                buffer_shapes["ag"] = (self.eps_length + 1, *self.dimg)
+                buffer_shapes["g"] = (self.eps_length, *self.dimg)
             for key, val in self.input_dims.items():
                 if key.startswith("info"):
-                    buffer_shapes[key] = (self.eps_length, *(tuple([val]) if val > 0 else tuple()))
+                    buffer_shapes[key] = (self.eps_length, *val)
         else:
-            buffer_shapes["o"] = (self.dimo,)
-            buffer_shapes["o_2"] = (self.dimo,)
-            buffer_shapes["u"] = (self.dimu,)
+            buffer_shapes["o"] = self.dimo
+            buffer_shapes["o_2"] = self.dimo
+            buffer_shapes["u"] = self.dimu
             buffer_shapes["r"] = (1,)
             if self.dimg != 0:  # for multigoal environment - or states that do not change over episodes.
-                buffer_shapes["ag"] = (self.dimg,)
-                buffer_shapes["g"] = (self.dimg,)
-                buffer_shapes["ag_2"] = (self.dimg,)
-                buffer_shapes["g_2"] = (self.dimg,)
+                buffer_shapes["ag"] = self.dimg
+                buffer_shapes["g"] = self.dimg
+                buffer_shapes["ag_2"] = self.dimg
+                buffer_shapes["g_2"] = self.dimg
             for key, val in self.input_dims.items():
                 if key.startswith("info"):
-                    buffer_shapes[key] = tuple([val]) if val > 0 else tuple()
+                    buffer_shapes[key] = val
             # need the "done" signal for restarting from training
             buffer_shapes["done"] = (1,)
         # initialize replay buffer(s)
@@ -288,19 +297,19 @@ class DDPG(object):
     def _create_network(self):
         # Inputs to DDPG
         self.inputs_tf = {}
-        self.inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
-        self.inputs_tf["o_2"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
-        self.inputs_tf["u"] = tf.placeholder(tf.float32, shape=(None, self.dimu))
+        self.inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, *self.dimo))
+        self.inputs_tf["o_2"] = tf.placeholder(tf.float32, shape=(None, *self.dimo))
+        self.inputs_tf["u"] = tf.placeholder(tf.float32, shape=(None, *self.dimu))
         self.inputs_tf["r"] = tf.placeholder(tf.float32, shape=(None, 1))
-        if self.dimg != 0:
-            self.inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
-            self.inputs_tf["g_2"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
+        if self.dimg != (0,):
+            self.inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, *self.dimg))
+            self.inputs_tf["g_2"] = tf.placeholder(tf.float32, shape=(None, *self.dimg))
 
         # create a variable for each o, g, u key in the inputs_tf dict
         input_o_tf = self.inputs_tf["o"]
         input_o_2_tf = self.inputs_tf["o_2"]
-        input_g_tf = self.inputs_tf["g"] if self.dimg != 0 else None
-        input_g_2_tf = self.inputs_tf["g_2"] if self.dimg != 0 else None
+        input_g_tf = self.inputs_tf["g"] if self.dimg != (0,) else None
+        input_g_2_tf = self.inputs_tf["g_2"] if self.dimg != (0,) else None
         input_u_tf = self.inputs_tf["u"]
 
         # Normalizer for goal and observation.
@@ -309,8 +318,8 @@ class DDPG(object):
         # normalized o g
         norm_input_o_tf = self.o_stats.normalize(input_o_tf)
         norm_input_o_2_tf = self.o_stats.normalize(input_o_2_tf)
-        norm_input_g_tf = self.g_stats.normalize(input_g_tf) if self.dimg != 0 else None
-        norm_input_g_2_tf = self.g_stats.normalize(input_g_2_tf) if self.dimg != 0 else None
+        norm_input_g_tf = self.g_stats.normalize(input_g_tf) if self.dimg != (0,) else None
+        norm_input_g_2_tf = self.g_stats.normalize(input_g_2_tf) if self.dimg != (0,) else None
 
         # Models
         # main networks
@@ -362,10 +371,10 @@ class DDPG(object):
 
         # Input Dataset that loads from demonstration buffer.
         demo_shapes = {}
-        demo_shapes["o"] = (self.dimo,)
+        demo_shapes["o"] = self.dimo
         if self.dimg != 0:
-            demo_shapes["g"] = (self.dimg,)
-        demo_shapes["u"] = (self.dimu,)
+            demo_shapes["g"] = self.dimg
+        demo_shapes["u"] = self.dimu
         max_num_transitions = self.num_demo * self.eps_length
 
         def generate_demo_data():
@@ -410,6 +419,15 @@ class DDPG(object):
                     g_stats=self.demo_g_stats,
                     **self.shaping_params["gan"]
                 )
+                # self.demo_shaping = PixelGANDemoShaping(
+                #     gamma=self.gamma,
+                #     max_num_transitions=max_num_transitions,
+                #     batch_size=self.shaping_params["batch_size"],
+                #     demo_dataset=demo_dataset,
+                #     o_stats=self.demo_o_stats,
+                #     g_stats=self.demo_g_stats,
+                #     **self.shaping_params["gan"]
+                # )
             else:
                 self.demo_shaping = None
 
