@@ -23,7 +23,6 @@ class DemoShaping:
             u_2 - output from the actor of the main network
         """
         self.gamma = gamma
-        self.scope = tf.get_variable_scope()
 
     def potential(self, o, g, u):
         raise NotImplementedError
@@ -193,25 +192,24 @@ class EnsNFDemoShaping(DemoShaping):
         # setup ensemble
         self.nfs = []
         for i in range(num_ens):
-            with tf.variable_scope("ens_" + str(i)):
-                self.nfs.append(
-                    NFDemoShaping(
-                        nf_type=nf_type,
-                        gamma=gamma,
-                        max_num_transitions=max_num_transitions,
-                        batch_size=batch_size,
-                        demo_dataset=demo_dataset,
-                        o_stats=o_stats,
-                        g_stats=g_stats,
-                        lr=lr,
-                        num_masked=num_masked,
-                        num_bijectors=num_bijectors,
-                        layer_sizes=layer_sizes,
-                        prm_loss_weight=prm_loss_weight,
-                        reg_loss_weight=reg_loss_weight,
-                        potential_weight=potential_weight,
-                    )
+            self.nfs.append(
+                NFDemoShaping(
+                    nf_type=nf_type,
+                    gamma=gamma,
+                    max_num_transitions=max_num_transitions,
+                    batch_size=batch_size,
+                    demo_dataset=demo_dataset,
+                    o_stats=o_stats,
+                    g_stats=g_stats,
+                    lr=lr,
+                    num_masked=num_masked,
+                    num_bijectors=num_bijectors,
+                    layer_sizes=layer_sizes,
+                    prm_loss_weight=prm_loss_weight,
+                    reg_loss_weight=reg_loss_weight,
+                    potential_weight=potential_weight,
                 )
+            )
         # loss
         self.loss = tf.reduce_sum([ens.loss for ens in self.nfs], axis=0)
         # optimizers
@@ -262,7 +260,7 @@ class GANDemoShaping(DemoShaping):
         self.o_stats = o_stats
         self.g_stats = g_stats
         demo_dataset = demo_dataset.shuffle(max_num_transitions).batch(batch_size)
-        demo_iter_tf = demo_dataset.make_initializable_iterator()
+        demo_iter_tf = tf.compat.v1.data.make_initializable_iterator(demo_dataset)
         self.demo_iter_init_tf = demo_iter_tf.initializer
         self.demo_inputs_tf = demo_iter_tf.get_next()
         demo_state_tf = self._concat_inputs_normalize(  # remove _normalize to not normalize the inputs
@@ -288,7 +286,7 @@ class GANDemoShaping(DemoShaping):
         disc_fake = self.discriminator(fake_data)
         disc_real = self.discriminator(demo_state_tf)
         # discriminator loss (including gp loss)
-        alpha = tf.random_uniform(
+        alpha = tf.random.uniform(
             shape=[tf.shape(demo_state_tf)[0]] + [1] * (len(demo_state_tf.shape) - 1), minval=0.0, maxval=1.0
         )
         interpolates = alpha * demo_state_tf + (1.0 - alpha) * fake_data
@@ -301,10 +299,10 @@ class GANDemoShaping(DemoShaping):
         self.gen_cost = -tf.reduce_mean(disc_fake)
 
         # Training
-        self.disc_train_op = tf.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
+        self.disc_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.disc_cost, var_list=self.discriminator.trainable_variables
         )
-        self.gen_train_op = tf.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
+        self.gen_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.gen_cost, var_list=self.generator.trainable_variables
         )
 
@@ -372,34 +370,33 @@ class EnsGANDemoShaping(DemoShaping):
         # Setup ensemble
         self.gans = []
         for i in range(num_ens):
-            with tf.variable_scope("ens_" + str(i)):
-                self.gans.append(
-                    GANDemoShaping(
-                        gamma=gamma,
-                        max_num_transitions=max_num_transitions,
-                        batch_size=batch_size,
-                        demo_dataset=demo_dataset,
-                        o_stats=o_stats,
-                        g_stats=g_stats,
-                        layer_sizes=layer_sizes,
-                        latent_dim=latent_dim,
-                        gp_lambda=gp_lambda,
-                        critic_iter=critic_iter,
-                        potential_weight=potential_weight,
-                    )
+            self.gans.append(
+                GANDemoShaping(
+                    gamma=gamma,
+                    max_num_transitions=max_num_transitions,
+                    batch_size=batch_size,
+                    demo_dataset=demo_dataset,
+                    o_stats=o_stats,
+                    g_stats=g_stats,
+                    layer_sizes=layer_sizes,
+                    latent_dim=latent_dim,
+                    gp_lambda=gp_lambda,
+                    critic_iter=critic_iter,
+                    potential_weight=potential_weight,
                 )
+            )
 
         # Loss functions
         self.disc_cost = tf.reduce_sum([ens.disc_cost for ens in self.gans], axis=0)
         self.gen_cost = tf.reduce_sum([ens.gen_cost for ens in self.gans], axis=0)
 
         # Training
-        self.disc_vars = list(itertools.chain(*[ens.disc_vars for ens in self.gans]))
-        self.gen_vars = list(itertools.chain(*[ens.gen_vars for ens in self.gans]))
-        self.disc_train_op = tf.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
+        self.disc_vars = list(itertools.chain(*[ens.discriminator.trainable_variables for ens in self.gans]))
+        self.gen_vars = list(itertools.chain(*[ens.generator.trainable_variables for ens in self.gans]))
+        self.disc_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.disc_cost, var_list=self.disc_vars
         )
-        self.gen_train_op = tf.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
+        self.gen_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.gen_cost, var_list=self.gen_vars
         )
 

@@ -32,15 +32,15 @@ class Normalizer(tf.Module):
         self.std_tf = tf.Variable(tf.ones(self.shape), dtype=self.dtype)
 
         # update
-        self.input = tf.placeholder(self.dtype, shape=(None, *self.shape))
+        self.input = tf.compat.v1.placeholder(self.dtype, shape=(None, *self.shape))
         self.update_op = tf.group(
             self.count_tf.assign_add(tf.cast(tf.shape(self.input)[0], tf.float32)),
             self.sum_tf.assign_add(tf.reduce_sum(self.input, axis=0)),
             self.sumsq_tf.assign_add(tf.reduce_sum(tf.square(self.input), axis=0)),
         )
         self.recompute_op = tf.group(
-            tf.assign(self.mean_tf, self.sum_tf / self.count_tf),
-            tf.assign(
+            tf.compat.v1.assign(self.mean_tf, self.sum_tf / self.count_tf),
+            tf.compat.v1.assign(
                 self.std_tf,
                 tf.sqrt(
                     tf.maximum(

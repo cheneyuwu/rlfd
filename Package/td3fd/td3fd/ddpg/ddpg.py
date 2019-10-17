@@ -121,13 +121,15 @@ class DDPG(object):
         self.dimu = self.input_dims["u"]
 
         # Get a tf session
-        self.sess = tf.get_default_session()
+        self.sess = tf.compat.v1.get_default_session()
         assert self.sess != None, "must have a default session before creating DDPG"
-        with tf.variable_scope(scope):
-            self.scope = tf.get_variable_scope()
+        with tf.compat.v1.variable_scope(scope):
+            self.scope = tf.compat.v1.get_variable_scope()
             self._create_memory()
             self._create_network()
-        self.saver = tf.train.Saver(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name))
+        self.saver = tf.compat.v1.train.Saver(
+            tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name)
+        )
 
     def get_actions(self, o, g, compute_q=False):
         # values to compute
@@ -297,13 +299,13 @@ class DDPG(object):
     def _create_network(self):
         # Inputs to DDPG
         self.inputs_tf = {}
-        self.inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, *self.dimo))
-        self.inputs_tf["o_2"] = tf.placeholder(tf.float32, shape=(None, *self.dimo))
-        self.inputs_tf["u"] = tf.placeholder(tf.float32, shape=(None, *self.dimu))
-        self.inputs_tf["r"] = tf.placeholder(tf.float32, shape=(None, 1))
+        self.inputs_tf["o"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimo))
+        self.inputs_tf["o_2"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimo))
+        self.inputs_tf["u"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimu))
+        self.inputs_tf["r"] = tf.compat.v1.placeholder(tf.float32, shape=(None, 1))
         if self.dimg != (0,):
-            self.inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, *self.dimg))
-            self.inputs_tf["g_2"] = tf.placeholder(tf.float32, shape=(None, *self.dimg))
+            self.inputs_tf["g"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimg))
+            self.inputs_tf["g_2"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimg))
 
         # create a variable for each o, g, u key in the inputs_tf dict
         input_o_tf = self.inputs_tf["o"]
@@ -321,7 +323,7 @@ class DDPG(object):
         norm_input_g_tf = self.g_stats.normalize(input_g_tf) if self.dimg != (0,) else None
         norm_input_g_2_tf = self.g_stats.normalize(input_g_2_tf) if self.dimg != (0,) else None
 
-        # Models
+        # Actor Critic Models
         # main networks
         self.main_actor = Actor(
             dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes, noise=False
@@ -349,7 +351,6 @@ class DDPG(object):
             self.target_critic_twin = Critic(
                 dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
             )
-        # connect graphs
         # actor output
         self.main_pi_tf = self.main_actor(o=norm_input_o_tf, g=norm_input_g_tf)
         # critic output
@@ -394,49 +395,39 @@ class DDPG(object):
         )
 
         # Add shaping reward
-        with tf.variable_scope("shaping"):
-            # normalizer for goal and observation.
-            self.demo_o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
-            self.demo_g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
-            # potential function approximator, nf or gan
-            if self.demo_strategy == "nf":
-                self.demo_shaping = EnsNFDemoShaping(
-                    gamma=self.gamma,
-                    max_num_transitions=max_num_transitions,
-                    batch_size=self.shaping_params["batch_size"],
-                    demo_dataset=demo_dataset,
-                    o_stats=self.demo_o_stats,
-                    g_stats=self.demo_g_stats,
-                    **self.shaping_params["nf"]
-                )
-            elif self.demo_strategy == "gan":
-                self.demo_shaping = EnsGANDemoShaping(
-                    gamma=self.gamma,
-                    max_num_transitions=max_num_transitions,
-                    batch_size=self.shaping_params["batch_size"],
-                    demo_dataset=demo_dataset,
-                    o_stats=self.demo_o_stats,
-                    g_stats=self.demo_g_stats,
-                    **self.shaping_params["gan"]
-                )
-                # self.demo_shaping = PixelGANDemoShaping(
-                #     gamma=self.gamma,
-                #     max_num_transitions=max_num_transitions,
-                #     batch_size=self.shaping_params["batch_size"],
-                #     demo_dataset=demo_dataset,
-                #     o_stats=self.demo_o_stats,
-                #     g_stats=self.demo_g_stats,
-                #     **self.shaping_params["gan"]
-                # )
-            else:
-                self.demo_shaping = None
+        # normalizer for goal and observation.
+        self.demo_o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
+        self.demo_g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
+        # potential function approximator, nf or gan
+        if self.demo_strategy == "nf":
+            self.demo_shaping = EnsNFDemoShaping(
+                gamma=self.gamma,
+                max_num_transitions=max_num_transitions,
+                batch_size=self.shaping_params["batch_size"],
+                demo_dataset=demo_dataset,
+                o_stats=self.demo_o_stats,
+                g_stats=self.demo_g_stats,
+                **self.shaping_params["nf"]
+            )
+        elif self.demo_strategy == "gan":
+            self.demo_shaping = EnsGANDemoShaping(
+                gamma=self.gamma,
+                max_num_transitions=max_num_transitions,
+                batch_size=self.shaping_params["batch_size"],
+                demo_dataset=demo_dataset,
+                o_stats=self.demo_o_stats,
+                g_stats=self.demo_g_stats,
+                **self.shaping_params["gan"]
+            )
+        else:
+            self.demo_shaping = None
 
-            if self.demo_shaping != None:
-                self.demo_critic_shaping = self.demo_shaping.reward(
-                    o=input_o_tf, g=input_g_tf, u=input_u_tf, o_2=input_o_2_tf, g_2=input_g_2_tf, u_2=self.target_pi_tf
-                )
-                self.demo_actor_shaping = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
-                self.demo_shaping_check = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=input_u_tf)
+        if self.demo_shaping != None:
+            self.demo_critic_shaping = self.demo_shaping.reward(
+                o=input_o_tf, g=input_g_tf, u=input_u_tf, o_2=input_o_2_tf, g_2=input_g_2_tf, u_2=self.target_pi_tf
+            )
+            self.demo_actor_shaping = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
+            self.demo_shaping_check = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=input_u_tf)
 
         # Critic loss
         # immediate reward
@@ -539,7 +530,7 @@ class DDPG(object):
         self.update_training_step_op = self.training_step_tf.assign_add(1)
 
         # Initialize all variables
-        self.sess.run(tf.global_variables_initializer())
+        self.sess.run(tf.compat.v1.global_variables_initializer())
         self.initialize_target_net()
         self.training_step = self.sess.run(self.training_step_tf)
 
