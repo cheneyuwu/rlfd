@@ -69,7 +69,6 @@ def add_env_params(params):
 
 
 def config_rollout(params, policy):
-    assert False
     rollout_params = params["rollout"]
     rollout_params.update({"dims": params["dims"], "eps_length": params["eps_length"], "max_u": params["max_u"]})
 
@@ -83,7 +82,6 @@ def config_rollout(params, policy):
 
 
 def config_evaluator(params, policy):
-    assert False
     eval_params = params["evaluator"]
     eval_params.update({"dims": params["dims"], "eps_length": params["eps_length"], "max_u": params["max_u"]})
 
@@ -97,7 +95,6 @@ def config_evaluator(params, policy):
 
 
 def config_demo(params, policy):
-    assert False
     demo_params = params["demo"]
     demo_params.update({"dims": params["dims"], "eps_length": params["eps_length"], "max_u": params["max_u"]})
 

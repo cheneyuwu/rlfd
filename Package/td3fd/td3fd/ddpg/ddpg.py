@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 
-from td3fd.ddpg.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping, GANDemoShaping, PixelGANDemoShaping
+from td3fd.ddpg.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping, GANDemoShaping
 from td3fd.ddpg.model import Actor, Critic
 from td3fd.memory import RingReplayBuffer, UniformReplayBuffer
 from td3fd.normalizer import Normalizer

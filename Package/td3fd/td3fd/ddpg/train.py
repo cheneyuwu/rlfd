@@ -7,7 +7,8 @@ import numpy as np
 import tensorflow as tf
 
 from td3fd import logger
-from td3fd.ddpg import config
+from td3fd import config
+from td3fd.ddpg import config as ddpg_config
 from td3fd.util.cmd_util import ArgParser
 from td3fd.util.util import set_global_seeds
 
@@ -23,7 +24,7 @@ class Trainer:
         self.root_dir = root_dir
 
         # Configure and train rl agent
-        self.policy = config.configure_ddpg(params=params)
+        self.policy = ddpg_config.configure_ddpg(params=params)
         self.rollout_worker = config.config_rollout(params=params, policy=self.policy)
         self.evaluator = config.config_evaluator(params=params, policy=self.policy)
 
@@ -187,7 +188,7 @@ def main(root_dir, **kwargs):
         config.check_params(params)
     else:
         logger.warn("WARNING: params.json not found! using the default parameters.")
-        params = config.DEFAULT_PARAMS.copy()
+        params = ddpg_config.DEFAULT_PARAMS.copy()
     comp_param_file = os.path.join(root_dir, "params.json")
     with open(comp_param_file, "w") as f:
         json.dump(params, f)

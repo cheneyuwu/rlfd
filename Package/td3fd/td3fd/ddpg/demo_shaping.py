@@ -4,7 +4,8 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from td3fd.util.tf_util import MAF, MLP, RealNVP
+from td3fd.util.tf_util import MAF, RealNVP
+from td3fd.ddpg.gan_network import Generator, Discriminator
 
 tfd = tfp.distributions
 
@@ -248,6 +249,7 @@ class GANDemoShaping(DemoShaping):
         latent_dim,
         gp_lambda,
         critic_iter,
+        **kwargs,
     ):
         """
         GAN with Wasserstein distance plus gradient penalty.
@@ -268,26 +270,27 @@ class GANDemoShaping(DemoShaping):
             self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
             self.demo_inputs_tf["u"],
         )
+        # TODO: for pixel input
+        # demo_state_tf = (self.demo_inputs_tf["o"] / 127.5) - 1.0
         self.potential_weight = potential_weight
         self.critic_iter = critic_iter
         self.train_gen = 0  # counter
 
         # Generator & Discriminator
-        with tf.variable_scope("generator"):
-            input_shape = (None, latent_dim)  # latent space dimensions
-            self.generator = MLP(input_shape=input_shape, layers_sizes=layer_sizes + [demo_state_tf.shape[-1]])
-        with tf.variable_scope("discriminator"):
-            input_shape = (None, demo_state_tf.shape[-1])
-            self.discriminator = MLP(input_shape=input_shape, layers_sizes=layer_sizes + [1])
+        # TODO: images need multiple dim output
+        self.generator = Generator(fc_layer_params=layer_sizes + [demo_state_tf.shape[-1]])
+        self.discriminator = Discriminator(fc_layer_params=layer_sizes + [1])
 
         # Loss functions
-        assert len(demo_state_tf.shape) == 2
-        fake_data = self.generator(tf.random.normal([tf.shape(demo_state_tf)[0], latent_dim]))
+        assert len(demo_state_tf.shape) >= 2
+        fake_data = self.generator(tf.random.uniform([tf.shape(demo_state_tf)[0], latent_dim]))
         self.fake_data = fake_data  # exposed for internal testing
         disc_fake = self.discriminator(fake_data)
         disc_real = self.discriminator(demo_state_tf)
         # discriminator loss (including gp loss)
-        alpha = tf.random_uniform(shape=[tf.shape(demo_state_tf)[0], 1], minval=0.0, maxval=1.0)
+        alpha = tf.random_uniform(
+            shape=[tf.shape(demo_state_tf)[0]] + [1] * (len(demo_state_tf.shape) - 1), minval=0.0, maxval=1.0
+        )
         interpolates = alpha * demo_state_tf + (1.0 - alpha) * fake_data
         disc_interpolates = self.discriminator(interpolates)
         gradients = tf.gradients(disc_interpolates, [interpolates][0])
@@ -298,18 +301,15 @@ class GANDemoShaping(DemoShaping):
         self.gen_cost = -tf.reduce_mean(disc_fake)
 
         # Training
-        self.disc_vars = tf.get_collection(
-            tf.GraphKeys.TRAINABLE_VARIABLES, scope=tf.get_variable_scope().name + "/" + "discriminator"
-        )
-        self.gen_vars = tf.get_collection(
-            tf.GraphKeys.TRAINABLE_VARIABLES, scope=tf.get_variable_scope().name + "/" + "generator"
-        )
         self.disc_train_op = tf.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
-            self.disc_cost, var_list=self.disc_vars
+            self.disc_cost, var_list=self.discriminator.trainable_variables
         )
         self.gen_train_op = tf.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
-            self.gen_cost, var_list=self.gen_vars
+            self.gen_cost, var_list=self.generator.trainable_variables
         )
+
+        # Evaluation
+        self.eval_generator = self.generator(tf.random.uniform([10, latent_dim]))
 
         super().__init__(gamma)
 
@@ -318,6 +318,8 @@ class GANDemoShaping(DemoShaping):
         Use the output of the GAN's discriminator as potential.
         """
         state_tf = self._concat_inputs_normalize(o, g, u)  # remove _normalize to not normalize the inputs
+        # TODO: for pixel inputs
+        # state_tf = o
         potential = self.discriminator(state_tf)
         potential = potential * self.potential_weight
         return potential
@@ -330,6 +332,12 @@ class GANDemoShaping(DemoShaping):
             sess.run(self.gen_train_op)
         self.train_gen = np.mod(self.train_gen + 1, self.critic_iter)
         return disc_cost
+
+    def evaluate(self, sess, feed_dict={}):
+        pass
+        # images = sess.run(self.eval_generator, feed_dict={})
+        # print(images[0])
+        # return images
 
     def initialize_dataset(self, sess):
         sess.run(self.demo_iter_init_tf)
