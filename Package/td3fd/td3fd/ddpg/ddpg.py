@@ -139,7 +139,7 @@ class DDPG(object):
         # feed
         feed = {}
         feed[self.inputs_tf["o"]] = o.reshape(-1, *self.dimo)
-        if self.dimg != 0:
+        if self.dimg != (0,):
             feed[self.inputs_tf["g"]] = g.reshape(-1, *self.dimg)
         # compute
         ret = self.sess.run(vals, feed_dict=feed)
@@ -253,7 +253,7 @@ class DDPG(object):
         logs = []
         logs.append((prefix + "stats_o/mean", np.mean(self.sess.run([self.o_stats.mean_tf]))))
         logs.append((prefix + "stats_o/std", np.mean(self.sess.run([self.o_stats.std_tf]))))
-        if self.dimg != 0:
+        if self.dimg != (0,):
             logs.append((prefix + "stats_g/mean", np.mean(self.sess.run([self.g_stats.mean_tf]))))
             logs.append((prefix + "stats_g/std", np.mean(self.sess.run([self.g_stats.std_tf]))))
         return logs
@@ -276,7 +276,7 @@ class DDPG(object):
             buffer_shapes["o_2"] = self.dimo
             buffer_shapes["u"] = self.dimu
             buffer_shapes["r"] = (1,)
-            if self.dimg != 0:  # for multigoal environment - or states that do not change over episodes.
+            if self.dimg != (0,):  # for multigoal environment - or states that do not change over episodes.
                 buffer_shapes["ag"] = self.dimg
                 buffer_shapes["g"] = self.dimg
                 buffer_shapes["ag_2"] = self.dimg
@@ -373,7 +373,7 @@ class DDPG(object):
         # Input Dataset that loads from demonstration buffer.
         demo_shapes = {}
         demo_shapes["o"] = self.dimo
-        if self.dimg != 0:
+        if self.dimg != (0,):
             demo_shapes["g"] = self.dimg
         demo_shapes["u"] = self.dimu
         max_num_transitions = self.num_demo * self.eps_length
@@ -496,10 +496,10 @@ class DDPG(object):
             pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
         self.pi_loss_tf = pi_loss_tf
 
-        self.q_update_op = tf.train.AdamOptimizer(learning_rate=self.q_lr).minimize(
+        self.q_update_op = tf.compat.v1.train.AdamOptimizer(learning_rate=self.q_lr).minimize(
             self.q_loss_tf, var_list=self.main_critic.trainable_variables
         )
-        self.pi_update_op = tf.train.AdamOptimizer(learning_rate=self.pi_lr).minimize(
+        self.pi_update_op = tf.compat.v1.train.AdamOptimizer(learning_rate=self.pi_lr).minimize(
             self.pi_loss_tf, var_list=self.main_actor.trainable_variables
         )
 
@@ -538,7 +538,7 @@ class DDPG(object):
         # add transitions to normalizer
         if self.fix_T:
             episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
-            if self.dimg != 0:
+            if self.dimg != (0,):
                 episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
                 episode_batch["g_2"] = episode_batch["g"][:, :, :]
             num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
@@ -547,14 +547,14 @@ class DDPG(object):
             transitions = episode_batch.copy()
 
         self.o_stats.update(transitions["o"])
-        if self.dimg != 0:
+        if self.dimg != (0,):
             self.g_stats.update(transitions["g"])
 
     def _update_demo_stats(self, episode_batch):
         # add transitions to normalizer
         if self.fix_T:
             episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
-            if self.dimg != 0:
+            if self.dimg != (0,):
                 episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
                 episode_batch["g_2"] = episode_batch["g"][:, :, :]
             num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
@@ -563,7 +563,7 @@ class DDPG(object):
             transitions = episode_batch.copy()
 
         self.demo_o_stats.update(transitions["o"])
-        if self.dimg != 0:
+        if self.dimg != (0,):
             self.demo_g_stats.update(transitions["g"])
 
     def __getstate__(self):
