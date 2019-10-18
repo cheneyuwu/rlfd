@@ -59,7 +59,7 @@ class FetchDemoGenerator:
         self.last_obs = obs
 
     def _use_policy(self):
-        while self.time_step <= self.env._max_episode_steps:
+        while self.time_step <= self.env.eps_length:
             action = self.policy.get_actions(self.last_obs["observation"], self.last_obs["desired_goal"])
             action = action.reshape(-1)
             self._step(action)
@@ -70,7 +70,7 @@ class FetchDemoGenerator:
         object_oriented_goal = object_rel_pos.copy()
         object_oriented_goal[2] += offset
 
-        while np.linalg.norm(object_oriented_goal) >= 0.01 and self.time_step <= self.env._max_episode_steps:
+        while np.linalg.norm(object_oriented_goal) >= 0.01 and self.time_step <= self.env.eps_length:
 
             action = [0, 0, 0, 0]
             for i in range(len(object_oriented_goal)):
@@ -88,7 +88,7 @@ class FetchDemoGenerator:
         goal = self.last_obs["desired_goal"][goal_dim : goal_dim + 3] + offset
         object_pos = self.last_obs["observation"][obj_pos_dim : obj_pos_dim + 3]
 
-        while np.linalg.norm(goal - object_pos) >= 0.01 and self.time_step <= self.env._max_episode_steps:
+        while np.linalg.norm(goal - object_pos) >= 0.01 and self.time_step <= self.env.eps_length:
 
             action = [0, 0, 0, 0]
             for i in range(len(goal - object_pos)):
@@ -106,7 +106,7 @@ class FetchDemoGenerator:
 
         interm_goal = object_pos * weight + goal * (1 - weight)
 
-        while np.linalg.norm(interm_goal - object_pos) >= 0.01 and self.time_step <= self.env._max_episode_steps:
+        while np.linalg.norm(interm_goal - object_pos) >= 0.01 and self.time_step <= self.env.eps_length:
 
             action = [0, 0, 0, 0]
             for i in range(len(interm_goal - object_pos)):
@@ -121,7 +121,7 @@ class FetchDemoGenerator:
         goal = self.init_obs["observation"][0:3]
         grip_pos = self.last_obs["observation"][0:3]
 
-        while np.linalg.norm(goal - grip_pos) >= 0.01 and self.time_step <= self.env._max_episode_steps:
+        while np.linalg.norm(goal - grip_pos) >= 0.01 and self.time_step <= self.env.eps_length:
 
             action = [0, 0, 0, 0]
             for i in range(len(goal - grip_pos)):
@@ -133,7 +133,7 @@ class FetchDemoGenerator:
             grip_pos = self.last_obs["observation"][0:3]
 
     def _stay(self):
-        while self.time_step <= self.env._max_episode_steps:
+        while self.time_step <= self.env.eps_length:
 
             action = [0, 0, 0, 0]
             for i in range(3):
