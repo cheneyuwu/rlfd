@@ -163,6 +163,9 @@ class DDPG(object):
         if update_stats:
             self._update_stats(episode_batch)
 
+    def add_to_demo_buffer(self, episode_batch):
+        self.demo_buffer.store_episode(episode_batch)
+
     def store_episode(self, episode_batch, update_stats=True):
         """
         episode_batch: array of batch_size x (T or T+1) x dim_key ('o' and 'ag' is of size T+1, others are of size T)
@@ -571,13 +574,15 @@ class DDPG(object):
         Our policies can be loaded from pkl, but after unpickling you cannot continue training.
         """
         state = {k: v for k, v in self.init_args.items() if not k == "self"}
-        state["tf"] = self.sess.run([x for x in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)])
+        state["tf"] = self.sess.run(
+            [x for x in tf.compat.v1.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name)]
+        )
         return state
 
     def __setstate__(self, state):
         stored_vars = state.pop("tf")
         self.__init__(**state)
-        vars = [x for x in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)]
+        vars = [x for x in tf.compat.v1.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name)]
         assert len(vars) == len(stored_vars)
         node = [tf.assign(var, val) for var, val in zip(vars, stored_vars)]
         self.sess.run(node)

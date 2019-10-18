@@ -19,7 +19,7 @@ except ImportError:
 
 from td3fd import logger
 from td3fd.demo_util.generate_demo import main as demo_entry
-from td3fd.evaluate import main as display_entry
+from td3fd.evaluate import main as evaluate_entry
 from td3fd.plot import main as plot_entry
 from td3fd.train import main as train_entry
 from td3fd.util.mpi_util import mpi_exit, mpi_input
@@ -234,12 +234,12 @@ def main(targets, exp_dir, policy_file, **kwargs):
             logger.info("=================================================")
             demo_entry(policy_file=policy_file, root_dir=exp_dir)
 
-        elif target == "display":
+        elif target == "evaluate":
             assert policy_file != None
             logger.info("\n\n=================================================")
-            logger.info("Displaying using policy file from {}.".format(policy_file))
+            logger.info("Evaluating using policy file from {}.".format(policy_file))
             logger.info("=================================================")
-            display_entry(policy_file=policy_file)
+            evaluate_entry(policy_file=policy_file)
 
         elif target == "plot":
             logger.info("\n\n=================================================")
@@ -259,7 +259,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     smooth=True,
                 )
 
-        elif target == "cp_result":
+        elif target == "copy_result":
             expdata_dir = os.path.abspath(os.path.expanduser(os.environ["EXPDATA"]))
             print("Experiment directory:", expdata_dir)
             assert os.path.exists(expdata_dir)
