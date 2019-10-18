@@ -15,7 +15,7 @@ params_config = {
         "num_cycles": 10,
         "num_batches": 40,
         # replay buffer setup
-        "buffer_size": int(1e5),
+        "buffer_size": int(1e3),
         # actor critic networks
         "scope": "ddpg",
         "use_td3": True,
@@ -30,11 +30,11 @@ params_config = {
         "sample_demo_buffer": 0,
         "batch_size_demo": 128,
         "use_demo_reward": 0,
-        "num_demo": 40,
+        "num_demo": 10,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         "bc_params": {"q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
         "shaping_params": {
-            "num_epochs": int(1e4),
+            "num_epochs": int(1e5),
             "batch_size": 128,
             "nf": {
                 "num_ens": 2,
@@ -50,7 +50,7 @@ params_config = {
             "gan": {
                 "num_ens": 4,
                 "layer_sizes": [256, 256, 256],
-                "latent_dim": 6,
+                "latent_dim": 100,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
                 "potential_weight": 3.0,
