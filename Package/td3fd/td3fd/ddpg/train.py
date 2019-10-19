@@ -54,10 +54,11 @@ class Trainer:
             assert os.path.isfile(demo_file), "demonstration training set does not exist"
             self.policy.init_demo_buffer(demo_file, update_stats=self.policy.sample_demo_buffer)
 
-        # if self.policy.demo_strategy in ["nf", "gan"]:
-        #     # Load policy.
-        #     with open("demo_policy.pkl", "rb") as f:
-        #         demo_policy = pickle.load(f)
+        if self.policy.demo_strategy in ["nf", "gan"]:
+            pass
+            # Incremental learning Option 1: dagger like method
+            # with open("demo_policy.pkl", "rb") as f:
+            #     demo_policy = pickle.load(f)
 
         # Restart-training
         self.epoch = 0
@@ -81,14 +82,18 @@ class Trainer:
             # test
             self.evaluator.clear_history()
             episode = self.evaluator.generate_rollouts()
-            # if self.policy.demo_strategy in ["nf", "gan"]:
-            #     o = episode["o"][:, :-1, ...].reshape(-1, *self.policy.dimo)
-            #     g = episode["g"].reshape(-1, *self.policy.dimg)
-            #     u = demo_policy.get_actions(o, g, compute_q=False)
-            #     u = u.reshape(episode["u"].shape)
-            #     episode["u"] = u
-            #     self.policy.add_to_demo_buffer(episode)
-            #     self._train_potential()
+            if self.policy.demo_strategy in ["nf", "gan"]:
+                pass
+                # Option 1: adding more experience (with correction) to the demonstration buffer
+                # o = episode["o"][:, :-1, ...].reshape(-1, *self.policy.dimo)
+                # g = episode["g"].reshape(-1, *self.policy.dimg)
+                # u = demo_policy.get_actions(o, g, compute_q=False)
+                # u = u.reshape(episode["u"].shape)
+                # episode["u"] = u
+                # self.policy.add_to_demo_buffer(episode)
+                # self._train_potential()
+                # Option 2: train gan discriminator using fake data from generator
+                self._train_potential(episode)
 
             self.epoch = epoch + 1
 
@@ -108,13 +113,12 @@ class Trainer:
             save_msg += "latest"
             logger.info("Saving", save_msg, "policy.")
 
-    def _train_potential(self):
-        if not self.policy.demo_strategy in ["nf", "gan"]:
-            return
-        logger.info("Training the policy for reward shaping.")
-        for epoch in range(self.shaping_num_epochs):
-            loss = self.policy.train_shaping()
-            if epoch % (self.shaping_num_epochs / 100) == (self.shaping_num_epochs / 100 - 1):
+    def _train_potential(self, episode=None):
+        logger.info("Training the reward shaping potential.")
+        num_epoch = 1 if episode else self.shaping_num_epochs
+        for epoch in range(num_epoch):
+            loss = self.policy.train_shaping_policy(episode) if episode else self.policy.train_shaping()
+            if epoch % (num_epoch / 100) == (num_epoch / 100 - 1):
                 logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
                 self.policy.evaluate_shaping()
 

@@ -77,7 +77,7 @@ class DemoShaping:
 class NFDemoShaping(DemoShaping):
     def __init__(
         self,
-        inputs_tf,
+        demo_inputs_tf,
         gamma,
         o_stats,
         g_stats,
@@ -156,7 +156,7 @@ class NFDemoShaping(DemoShaping):
 class EnsNFDemoShaping(DemoShaping):
     def __init__(
         self,
-        inputs_tf,
+        demo_inputs_tf,
         num_ens,
         gamma,
         o_stats,
@@ -184,7 +184,7 @@ class EnsNFDemoShaping(DemoShaping):
         for i in range(num_ens):
             self.nfs.append(
                 NFDemoShaping(
-                    inputs_tf=inputs_tf,
+                    demo_inputs_tf=demo_inputs_tf,
                     nf_type=nf_type,
                     gamma=gamma,
                     o_stats=o_stats,
@@ -221,7 +221,8 @@ class EnsNFDemoShaping(DemoShaping):
 class GANDemoShaping(DemoShaping):
     def __init__(
         self,
-        inputs_tf,
+        demo_inputs_tf,
+        policy_inputs_tf,
         gamma,
         o_stats,
         g_stats,
@@ -242,10 +243,19 @@ class GANDemoShaping(DemoShaping):
         # Parameters
         self.o_stats = o_stats
         self.g_stats = g_stats
-        self.inputs_tf = inputs_tf
+        self.demo_inputs_tf = demo_inputs_tf
+        self.policy_inputs_tf = policy_inputs_tf
 
         demo_state_tf = self._concat_inputs_normalize(  # remove _normalize to not normalize the inputs
-            self.inputs_tf["o"], self.inputs_tf["g"] if "g" in self.inputs_tf.keys() else None, self.inputs_tf["u"]
+            self.demo_inputs_tf["o"],
+            self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
+            self.demo_inputs_tf["u"],
+        )
+
+        policy_state_tf = self._concat_inputs_normalize(  # remove _normalize to not normalize the inputs
+            self.policy_inputs_tf["o"],
+            self.policy_inputs_tf["g"] if "g" in self.policy_inputs_tf.keys() else None,
+            self.policy_inputs_tf["u"],
         )
 
         # TODO: for pixel input
@@ -262,10 +272,10 @@ class GANDemoShaping(DemoShaping):
         # Loss functions
         assert len(demo_state_tf.shape) >= 2
         fake_data = self.generator(tf.random.uniform([tf.shape(demo_state_tf)[0], latent_dim]))
-        self.fake_data = fake_data  # exposed for internal testing
         disc_fake = self.discriminator(fake_data)
         disc_real = self.discriminator(demo_state_tf)
-        # discriminator loss (including gp loss)
+        disc_fake_policy = self.discriminator(policy_state_tf)
+        # discriminator loss on generator (including gp loss)
         alpha = tf.random.uniform(
             shape=[tf.shape(demo_state_tf)[0]] + [1] * (len(demo_state_tf.shape) - 1), minval=0.0, maxval=1.0
         )
@@ -275,12 +285,25 @@ class GANDemoShaping(DemoShaping):
         slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
         gradient_penalty = tf.reduce_mean((slopes - 1) ** 2)
         self.disc_cost = tf.reduce_mean(disc_fake) - tf.reduce_mean(disc_real) + gp_lambda * gradient_penalty
+        # discriminator loss on policy (including gp loss)
+        interpolates = alpha * demo_state_tf + (1.0 - alpha) * policy_state_tf
+        disc_interpolates = self.discriminator(interpolates)
+        gradients = tf.gradients(disc_interpolates, [interpolates][0])
+        slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
+        gradient_penalty = tf.reduce_mean((slopes - 1) ** 2)
+        self.disc_cost_policy = (
+            tf.reduce_mean(disc_fake_policy) - tf.reduce_mean(disc_real) + gp_lambda * gradient_penalty
+        )
         # generator loss
         self.gen_cost = -tf.reduce_mean(disc_fake)
 
         # Training
+
         self.disc_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.disc_cost, var_list=self.discriminator.trainable_variables
+        )
+        self.disc_train_policy_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
+            self.disc_cost_policy, var_list=self.discriminator.trainable_variables
         )
         self.gen_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.gen_cost, var_list=self.generator.trainable_variables
@@ -311,6 +334,11 @@ class GANDemoShaping(DemoShaping):
         self.train_gen = np.mod(self.train_gen + 1, self.critic_iter)
         return disc_cost
 
+    def train_on_policy(self, sess, feed_dict={}):
+        # train critic
+        disc_cost, _ = sess.run([self.disc_cost_policy, self.disc_train_policy_op], feed_dict=feed_dict)
+        return disc_cost
+
     def evaluate(self, sess, feed_dict={}):
         pass
         # images = sess.run(self.eval_generator, feed_dict={})
@@ -321,7 +349,8 @@ class GANDemoShaping(DemoShaping):
 class EnsGANDemoShaping(DemoShaping):
     def __init__(
         self,
-        inputs_tf,
+        demo_inputs_tf,
+        policy_inputs_tf,
         num_ens,
         gamma,
         o_stats,
@@ -347,7 +376,8 @@ class EnsGANDemoShaping(DemoShaping):
         for i in range(num_ens):
             self.gans.append(
                 GANDemoShaping(
-                    inputs_tf=inputs_tf,
+                    demo_inputs_tf=demo_inputs_tf,
+                    policy_inputs_tf=policy_inputs_tf,
                     gamma=gamma,
                     o_stats=o_stats,
                     g_stats=g_stats,
@@ -361,6 +391,7 @@ class EnsGANDemoShaping(DemoShaping):
 
         # Loss functions
         self.disc_cost = tf.reduce_sum([ens.disc_cost for ens in self.gans], axis=0)
+        self.disc_cost_policy = tf.reduce_sum([ens.disc_cost_policy for ens in self.gans], axis=0)
         self.gen_cost = tf.reduce_sum([ens.gen_cost for ens in self.gans], axis=0)
 
         # Training
@@ -368,6 +399,9 @@ class EnsGANDemoShaping(DemoShaping):
         self.gen_vars = list(itertools.chain(*[ens.generator.trainable_variables for ens in self.gans]))
         self.disc_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.disc_cost, var_list=self.disc_vars
+        )
+        self.disc_train_policy_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
+            self.disc_cost_policy, var_list=self.disc_vars
         )
         self.gen_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.gen_cost, var_list=self.gen_vars
@@ -388,4 +422,9 @@ class EnsGANDemoShaping(DemoShaping):
         if self.train_gen == 0:
             sess.run(self.gen_train_op, feed_dict=feed_dict)
         self.train_gen = np.mod(self.train_gen + 1, self.critic_iter)
+        return disc_cost
+
+    def train_on_policy(self, sess, feed_dict={}):
+        # train critic
+        disc_cost, _ = sess.run([self.disc_cost_policy, self.disc_train_policy_op], feed_dict=feed_dict)
         return disc_cost
