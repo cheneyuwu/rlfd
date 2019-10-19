@@ -3,7 +3,7 @@ params_config = {
     # config summary
     "config": "default",
     # environment config
-    "env_name": "FetchPegInHoleRandInit-v1",
+    "env_name": "YWFetchPegInHoleRandInit-v0",
     "r_scale": 1.0,
     "r_shift": 0.0,
     "eps_length": 40,
@@ -74,7 +74,7 @@ params_config = {
         "history_len": 10,
     },
     "evaluator": {
-        "rollout_batch_size": 20,
+        "rollout_batch_size": 40,
         "noise_eps": 0.05,
         "polyak_noise": 0.0,
         "random_eps": 0.0,

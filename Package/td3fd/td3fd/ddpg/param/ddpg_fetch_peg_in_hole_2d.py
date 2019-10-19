@@ -74,7 +74,7 @@ params_config = {
         "history_len": 10,
     },
     "evaluator": {
-        "rollout_batch_size": 20,
+        "rollout_batch_size": 40,
         "noise_eps": 0.05,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
