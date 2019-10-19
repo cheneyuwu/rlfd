@@ -5,7 +5,7 @@ import tensorflow as tf
 
 from td3fd.ddpg.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping, GANDemoShaping
 from td3fd.ddpg.actorcritic_network import Actor, Critic
-from td3fd.memory import RingReplayBuffer, UniformReplayBuffer
+from td3fd.memory import RingReplayBuffer, UniformReplayBuffer, iterbatches
 from td3fd.normalizer import Normalizer
 
 
@@ -208,17 +208,21 @@ class DDPG(object):
     def train_shaping(self):
         assert self.demo_strategy in ["nf", "gan"]
         # train normalizing flow or gan for 1 epoch
-        loss = 0
-        self.demo_shaping.initialize_dataset(sess=self.sess)
         losses = np.empty(0)
-        while True:
-            try:
-                loss = self.demo_shaping.train(sess=self.sess)
+        demo_data = self.demo_buffer.sample()
+        if self.dimg != (0,):
+            for (o, g, u) in iterbatches(
+                (demo_data["o"], demo_data["g"], demo_data["u"]), batch_size=self.shaping_params["batch_size"]
+            ):
+                feed = {self.demo_inputs_tf["o"]: o, self.demo_inputs_tf["g"]: g, self.demo_inputs_tf["u"]: u}
+                loss = self.demo_shaping.train(sess=self.sess, feed_dict=feed)
                 losses = np.append(losses, loss)
-            except tf.errors.OutOfRangeError:
-                loss = np.mean(losses)
-                break
-        return loss
+        else:
+            for (o, u) in iterbatches((demo_data["o"], demo_data["u"]), batch_size=self.shaping_params["batch_size"]):
+                feed = {self.demo_inputs_tf["o"]: o, self.demo_inputs_tf["u"]: u}
+                loss = self.demo_shaping.train(sess=self.sess, feed_dict=feed)
+                losses = np.append(losses, loss)
+        return np.mean(losses)
 
     def evaluate_shaping(self):
         pass
@@ -373,29 +377,12 @@ class DDPG(object):
                 o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=self.target_pi_tf
             )
 
-        # Input Dataset that loads from demonstration buffer.
-        demo_shapes = {}
-        demo_shapes["o"] = self.dimo
+        # Inputs
+        self.demo_inputs_tf = {}
+        self.demo_inputs_tf["o"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimo))
+        self.demo_inputs_tf["u"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimu))
         if self.dimg != (0,):
-            demo_shapes["g"] = self.dimg
-        demo_shapes["u"] = self.dimu
-        max_num_transitions = self.num_demo * self.eps_length * 100  # TODO: this sets an upper bound of the dataset
-
-        def generate_demo_data():
-            demo_data = self.demo_buffer.sample()
-            num_transitions = demo_data["u"].shape[0]
-            assert all([demo_data[k].shape[0] == num_transitions for k in demo_data.keys()])
-            for i in range(num_transitions):
-                yield {k: demo_data[k][i] for k in demo_shapes.keys()}
-
-        demo_dataset = (
-            tf.data.Dataset.from_generator(
-                generate_demo_data, output_types={k: tf.float32 for k in demo_shapes.keys()}, output_shapes=demo_shapes
-            )
-            .take(max_num_transitions)
-            .shuffle(max_num_transitions)
-            .repeat(1)
-        )
+            self.demo_inputs_tf["g"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimg))
 
         # Add shaping reward
         # normalizer for goal and observation.
@@ -404,20 +391,16 @@ class DDPG(object):
         # potential function approximator, nf or gan
         if self.demo_strategy == "nf":
             self.demo_shaping = EnsNFDemoShaping(
+                inputs_tf=self.demo_inputs_tf,
                 gamma=self.gamma,
-                max_num_transitions=max_num_transitions,
-                batch_size=self.shaping_params["batch_size"],
-                demo_dataset=demo_dataset,
                 o_stats=self.demo_o_stats,
                 g_stats=self.demo_g_stats,
                 **self.shaping_params["nf"]
             )
         elif self.demo_strategy == "gan":
             self.demo_shaping = EnsGANDemoShaping(
+                inputs_tf=self.demo_inputs_tf,
                 gamma=self.gamma,
-                max_num_transitions=max_num_transitions,
-                batch_size=self.shaping_params["batch_size"],
-                demo_dataset=demo_dataset,
                 o_stats=self.demo_o_stats,
                 g_stats=self.demo_g_stats,
                 **self.shaping_params["gan"]

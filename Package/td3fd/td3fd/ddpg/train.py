@@ -29,7 +29,7 @@ class Trainer:
         self.evaluator = config.config_evaluator(params=params, policy=self.policy)
 
         self.save_interval = 10
-        self.shaping_n_epochs = self.policy.shaping_params["num_epochs"]
+        self.shaping_num_epochs = self.policy.shaping_params["num_epochs"]
         self.num_epochs = self.policy.num_epochs
         self.num_batches = self.policy.num_batches
         self.num_cycles = self.policy.num_cycles
@@ -54,6 +54,11 @@ class Trainer:
             assert os.path.isfile(demo_file), "demonstration training set does not exist"
             self.policy.init_demo_buffer(demo_file, update_stats=self.policy.sample_demo_buffer)
 
+        # if self.policy.demo_strategy in ["nf", "gan"]:
+        #     # Load policy.
+        #     with open("demo_policy.pkl", "rb") as f:
+        #         demo_policy = pickle.load(f)
+
         # Restart-training
         self.epoch = 0
         self.restart = self._load_states()
@@ -75,11 +80,21 @@ class Trainer:
                 self.policy.update_target_net()
             # test
             self.evaluator.clear_history()
-            self.evaluator.generate_rollouts()
+            episode = self.evaluator.generate_rollouts()
+            # if self.policy.demo_strategy in ["nf", "gan"]:
+            #     o = episode["o"][:, :-1, ...].reshape(-1, *self.policy.dimo)
+            #     g = episode["g"].reshape(-1, *self.policy.dimg)
+            #     u = demo_policy.get_actions(o, g, compute_q=False)
+            #     u = u.reshape(episode["u"].shape)
+            #     episode["u"] = u
+            #     self.policy.add_to_demo_buffer(episode)
+            #     self._train_potential()
 
             self.epoch = epoch + 1
+
             # log
             self._log(epoch)
+
             # save the policy
             save_msg = ""
             success_rate = self.evaluator.current_success_rate()
@@ -97,9 +112,9 @@ class Trainer:
         if not self.policy.demo_strategy in ["nf", "gan"]:
             return
         logger.info("Training the policy for reward shaping.")
-        for epoch in range(self.shaping_n_epochs):
+        for epoch in range(self.shaping_num_epochs):
             loss = self.policy.train_shaping()
-            if epoch % (self.shaping_n_epochs / 100) == (self.shaping_n_epochs / 100 - 1):
+            if epoch % (self.shaping_num_epochs / 100) == (self.shaping_num_epochs / 100 - 1):
                 logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
                 self.policy.evaluate_shaping()
 
