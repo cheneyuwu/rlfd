@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 
 from td3fd.ddpg.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping, GANDemoShaping
-from td3fd.ddpg.model import Actor, Critic
+from td3fd.ddpg.actorcritic_network import Actor, Critic
 from td3fd.memory import RingReplayBuffer, UniformReplayBuffer
 from td3fd.normalizer import Normalizer
 
@@ -379,7 +379,7 @@ class DDPG(object):
         if self.dimg != (0,):
             demo_shapes["g"] = self.dimg
         demo_shapes["u"] = self.dimu
-        max_num_transitions = self.num_demo * self.eps_length
+        max_num_transitions = self.num_demo * self.eps_length * 100  # TODO: this sets an upper bound of the dataset
 
         def generate_demo_data():
             demo_data = self.demo_buffer.sample()
