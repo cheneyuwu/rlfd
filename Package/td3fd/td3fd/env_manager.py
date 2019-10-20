@@ -6,9 +6,9 @@ except:
     panda_env = None
 try:
     import gym
-    from mujoco_py import GlfwContext
+    # from mujoco_py import GlfwContext
 
-    GlfwContext(offscreen=True)  # Create a window to init GLFW.
+    # GlfwContext(offscreen=True)  # Create a window to init GLFW.
 except:
     gym = None
 
