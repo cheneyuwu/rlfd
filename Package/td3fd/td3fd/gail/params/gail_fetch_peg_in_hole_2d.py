@@ -3,7 +3,7 @@ params_config = {
     # config summary
     "config": "default",
     # environment config
-    "env_name": "FetchPegInHole2DVersion-v1",
+    "env_name": "YWFetchPegInHole2D-v0",
     "r_scale": 1.0,  # scale the reward of the environment down
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 40,  # overwrite the default length of the episode provided in _max_episode_steps

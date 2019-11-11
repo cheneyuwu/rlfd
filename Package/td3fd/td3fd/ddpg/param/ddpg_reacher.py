@@ -81,5 +81,5 @@ params_config = {
         "compute_q": True,
         "history_len": 1,
     },
-    "seed": tuple(range(2)),
+    "seed": 0,
 }

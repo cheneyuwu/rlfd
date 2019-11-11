@@ -1,4 +1,4 @@
-"""adopted from openai baseline code base
+"""Adopted from openai baseline
 """
 import numpy as np
 import tensorflow as tf
@@ -70,7 +70,7 @@ class Normalizer(tf.Module):
 
 
 def test_normalizer():
-    sess = tf.Session()
+    sess = tf.compat.v1.Session()
     normalizer = Normalizer((2, 2), sess=sess)
     dist_tf = tfp.distributions.Normal(loc=[[1.0, 2.0], [3.0, 4.0]], scale=2.0)
     train_data_tf = dist_tf.sample([1000000])
@@ -81,22 +81,18 @@ def test_normalizer():
     normalized_tf = normalizer.normalize(test_data_tf)
     denormalized_tf = normalizer.denormalize(normalized_tf)
 
-    sess.run(tf.global_variables_initializer())
+    sess.run(tf.compat.v1.global_variables_initializer())
     normalizer.update(train_data)
 
     mean, std = sess.run([normalizer.mean_tf, normalizer.std_tf])
     output, revert_output = sess.run([normalized_tf, denormalized_tf])
-
-    print(np.round(mean), "\n", np.round(std), "\n")
+    print("Before normalization:")
     print(np.round(np.mean(test_data, axis=0)), "\n", np.round(np.std(test_data, axis=0)), "\n")
+    print("After normalization:")
     print(np.round(np.mean(output, axis=0)), "\n", np.round(np.std(output, axis=0)), "\n")
+    print("After denormalization:")
     print(np.round(np.mean(revert_output, axis=0)), "\n", np.round(np.std(revert_output, axis=0)), "\n")
 
 
 if __name__ == "__main__":
-    import time
-
-    t = time.time()
     test_normalizer()
-    t = time.time() - t
-    print("Time: ", t)

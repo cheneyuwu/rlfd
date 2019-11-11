@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from td3fd.util.tf_util import MAF, RealNVP
+from td3fd.ddpg.normalizing_flows import MAF, RealNVP
 from td3fd.ddpg.gan_network import Generator, Discriminator
 
 tfd = tfp.distributions
@@ -102,7 +102,7 @@ class NFDemoShaping(DemoShaping):
         self.g_stats = g_stats
         self.inputs_tf = inputs_tf
 
-        demo_state_tf = self._concat_inputs_normalize(  # remove _normalize to not normalize the inputs
+        demo_state_tf = self._concat_inputs_normalize(
             self.inputs_tf["o"], self.inputs_tf["g"] if "g" in self.inputs_tf.keys() else None, self.inputs_tf["u"]
         )
 
@@ -144,8 +144,8 @@ class NFDemoShaping(DemoShaping):
 
         potential = tf.reshape(self.nf.prob(state_tf), (-1, 1))
         potential = tf.log(potential + tf.exp(-self.scale))
-        potential = potential + self.scale  # add shift
-        potential = self.potential_weight * potential / self.scale  # add scaling
+        potential = potential + self.scale  # shift
+        potential = self.potential_weight * potential / self.scale  # scale
         return tf.cast(potential, tf.float32)
 
     def train(self, sess, feed_dict={}):
@@ -297,14 +297,13 @@ class GANDemoShaping(DemoShaping):
         # generator loss
         self.gen_cost = -tf.reduce_mean(disc_fake)
 
-        # Training
-
+        # Train
         self.disc_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.disc_cost, var_list=self.discriminator.trainable_variables
         )
-        self.disc_train_policy_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
-            self.disc_cost_policy, var_list=self.discriminator.trainable_variables
-        )
+        self.disc_train_policy_op = tf.compat.v1.train.AdamOptimizer(
+            learning_rate=1e-4, beta1=0.5, beta2=0.9
+        ).minimize(self.disc_cost_policy, var_list=self.discriminator.trainable_variables)
         self.gen_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.gen_cost, var_list=self.generator.trainable_variables
         )
@@ -341,6 +340,7 @@ class GANDemoShaping(DemoShaping):
 
     def evaluate(self, sess, feed_dict={}):
         pass
+        # TODO: for pixel input check, future work
         # images = sess.run(self.eval_generator, feed_dict={})
         # print(images[0])
         # return images
@@ -400,9 +400,9 @@ class EnsGANDemoShaping(DemoShaping):
         self.disc_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.disc_cost, var_list=self.disc_vars
         )
-        self.disc_train_policy_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
-            self.disc_cost_policy, var_list=self.disc_vars
-        )
+        self.disc_train_policy_op = tf.compat.v1.train.AdamOptimizer(
+            learning_rate=1e-4, beta1=0.5, beta2=0.9
+        ).minimize(self.disc_cost_policy, var_list=self.disc_vars)
         self.gen_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.gen_cost, var_list=self.gen_vars
         )

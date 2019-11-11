@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 
-from td3fd.ddpg.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping, GANDemoShaping
+from td3fd.ddpg.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping
 from td3fd.ddpg.actorcritic_network import Actor, Critic
 from td3fd.memory import RingReplayBuffer, UniformReplayBuffer, iterbatches
 from td3fd.normalizer import Normalizer
@@ -605,14 +605,14 @@ class DDPG(object):
         """
         state = {k: v for k, v in self.init_args.items() if not k == "self"}
         state["tf"] = self.sess.run(
-            [x for x in tf.compat.v1.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name)]
+            [x for x in tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name)]
         )
         return state
 
     def __setstate__(self, state):
         stored_vars = state.pop("tf")
         self.__init__(**state)
-        vars = [x for x in tf.compat.v1.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name)]
+        vars = [x for x in tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name)]
         assert len(vars) == len(stored_vars)
         node = [tf.assign(var, val) for var, val in zip(vars, stored_vars)]
         self.sess.run(node)

@@ -1,5 +1,8 @@
-"""Partially adopted from OpenAI baseline code base
+""" We implemented two types of replay buffer "UniformReplayBuffer" and "RingReplayBuffer"
+    They are only different in the way they store experiences.
+    "UniformReplayBuffer" is easier to be extended to HER style methods. for future works
 """
+
 import numpy as np
 
 
@@ -19,7 +22,7 @@ def iterbatches(arrays, *, num_batches=None, batch_size=None, shuffle=True, incl
 
 class ReplayBufferBase:
     def __init__(self, size):
-        """ Creates a replay buffer.
+        """ Create a replay buffer.
         Args:
             size (int) - the size of the buffer, measured in transitions
         """

@@ -59,7 +59,7 @@ def main(policy_file, **kwargs):
     for _ in range(params["num_eps"]):
         demo.generate_rollouts()
 
-    # record logs
+    # Log
     for key, val in demo.logs("test"):
         logger.record_tabular(key, np.mean(val))
     if rank == 0:

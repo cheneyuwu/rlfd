@@ -1,4 +1,4 @@
-from td3fd.env import point_reach
+from td3fd.env import reacher_2d
 
 try:
     from td3fd.env.franka_env import panda_env
@@ -6,19 +6,25 @@ except:
     panda_env = None
 try:
     import gym
-    # from mujoco_py import GlfwContext
 
+    # Need this for getting observation in pixels (for vision based learning) (for future works)
+    # from mujoco_py import GlfwContext
     # GlfwContext(offscreen=True)  # Create a window to init GLFW.
 except:
     gym = None
 
 
 class EnvWrapper:
+    """ A simple wrapper of environments that shifts or scales environment reward: r = (r + r_shift) / r_scale
+    """
+
     def __init__(self, make_env, r_scale, r_shift, eps_length):
         self.env = make_env()
         self.r_scale = r_scale
         self.r_shift = r_shift
-        assert eps_length > 0, "for now, must provide eps_length"
+        assert (
+            eps_length > 0
+        ), "for now, you must provide eps_length, which is the suggested max number of simulation steps per episode."
         self.eps_length = eps_length
         # need the following properties
         self.max_u = self.env.max_u if hasattr(self.env, "max_u") else 1  # note that 1 is just for most envs
@@ -53,51 +59,29 @@ class EnvManager:
         self.make_env = None
         # Search from our own environments
         if env_name == "Reach2D":
-            env_args["dim"] = 2
             env_args["sparse"] = True
-            self.make_env = lambda: point_reach.make("Reacher", **env_args)
+            self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
         elif env_name == "Reach2DDense":
-            env_args["dim"] = 2
             env_args["sparse"] = False
-            self.make_env = lambda: point_reach.make("Reacher", **env_args)
+            self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
         elif env_name == "Reach2DF":
-            env_args["dim"] = 2
             env_args["order"] = 1
             env_args["sparse"] = True
-            self.make_env = lambda: point_reach.make("Reacher", **env_args)
+            self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
         elif env_name == "Reach2DFDense":
-            env_args["dim"] = 2
             env_args["order"] = 1
             env_args["sparse"] = False
-            self.make_env = lambda: point_reach.make("Reacher", **env_args)
-        elif env_name == "Reach1D":
-            env_args["dim"] = 1
-            env_args["sparse"] = True
-            self.make_env = lambda: point_reach.make("Reacher", **env_args)
-        elif env_name == "Reach1DDense":
-            env_args["dim"] = 1
-            env_args["sparse"] = False
-            self.make_env = lambda: point_reach.make("Reacher", **env_args)
-        elif env_name == "Reach1DF":
-            env_args["dim"] = 1
-            env_args["order"] = 1
-            env_args["sparse"] = True
-            self.make_env = lambda: point_reach.make("Reacher", **env_args)
-        elif env_name == "Reach1DFDense":
-            env_args["dim"] = 1
-            env_args["order"] = 1
-            env_args["sparse"] = False
-            self.make_env = lambda: point_reach.make("Reacher", **env_args)
+            self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
         elif env_name == "BlockReachF":
             env_args["sparse"] = True
             env_args["order"] = 1
             env_args["block"] = True
-            self.make_env = lambda: point_reach.make("Reacher", **env_args)
+            self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
         elif env_name == "BlockReachFDense":
             env_args["sparse"] = False
             env_args["order"] = 1
             env_args["block"] = True
-            self.make_env = lambda: point_reach.make("Reacher", **env_args)
+            self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
 
         # Search from openai gym
         if self.make_env is None and gym is not None:
@@ -125,7 +109,7 @@ if __name__ == "__main__":
     import numpy as np
 
     # For a openai env
-    env_manager = EnvManager("YWFetchPegInHolePixel-v0", eps_length=40)
+    env_manager = EnvManager("YWFetchPegInHole-v0", eps_length=40)
     env = env_manager.get_env()
 
     env.seed(0)
@@ -133,13 +117,5 @@ if __name__ == "__main__":
         env.reset()
         action = np.random.randn(env.action_space.shape[0])  # sample random action
         state, r, extra, info = env.step(action)
-        print(state.keys(), r, extra, info)
-        for k, i in state.items():
-            print(i.shape)
-        import matplotlib.pyplot as plt
-
-        plt.imshow(state["pixel"])
-        plt.show()
-
-        input("Press Enter to continue...")
+        print(state, r, extra, info)
         env.render()

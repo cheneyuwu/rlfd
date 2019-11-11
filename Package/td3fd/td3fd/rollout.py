@@ -1,4 +1,4 @@
-"""Adopted from OpenAI baselines code base
+"""Adopted from OpenAI baselines, HER
 """
 import pickle
 from collections import deque

@@ -1,10 +1,8 @@
 import numpy as np
-import tensorflow as tf
 
-from td3fd import logger
 from td3fd.ddpg.ddpg import DDPG
 
-DEFAULT_PARAMS = {
+default_params = {
     # config summary
     "config": "default",
     # environment config
@@ -92,22 +90,6 @@ DEFAULT_PARAMS = {
     },
     "seed": 0,
 }
-
-
-def check_params(params, default_params=DEFAULT_PARAMS):
-    """make sure that the keys match"""
-    assert type(params) == dict
-    assert type(default_params) == dict
-    for key, value in default_params.items():
-        assert key in params.keys(), "missing key: {} in provided params".format(key)
-        if type(value) == dict:
-            check_params(params[key], value)
-    for key, value in params.items():
-        assert key in default_params.keys(), "provided params has an extra key: {}".format(key)
-
-
-# Helper Functions for Configuration
-# =====================================
 
 
 def configure_ddpg(params):

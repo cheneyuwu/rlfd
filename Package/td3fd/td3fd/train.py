@@ -7,9 +7,9 @@ import numpy as np
 import tensorflow as tf
 
 from td3fd import config, logger
-from td3fd.ddpg import config as ddpg_config
-from td3fd.ddpg.train import Trainer as ddpg_train
-from td3fd.gail import config as gail_config
+from td3fd.ddpg.config import default_params as ddpg_default_params
+from td3fd.ddpg.train import train as ddpg_train
+from td3fd.gail.config import default_params as gail_default_params
 from td3fd.gail.train import train as gail_train
 from td3fd.util.cmd_util import ArgParser
 from td3fd.util.util import set_global_seeds
@@ -37,9 +37,9 @@ def main(root_dir, **kwargs):
     with open(param_file, "r") as f:
         params = json.load(f)
     if "ddpg" in params.keys():
-        ddpg_config.check_params(params)
+        config.check_params(params, ddpg_default_params)
     elif "gail" in params.keys():
-        gail_config.check_params(params)
+        config.check_params(params, gail_default_params)
     else:
         assert False
 

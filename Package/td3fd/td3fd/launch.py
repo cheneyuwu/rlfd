@@ -288,6 +288,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
 
         if comm is not None:
             comm.Barrier()
+
         logger.reset()
 
     return
