@@ -63,8 +63,8 @@ For our experiments, we provide two options for generating demonstration data.
         ```
 
 ### Training Models
-- Make sure you have your dmeonstrations `demo_data.npz` stored in your
-- Create a python script storing hyper-parameters to be used for training your model, named `<param name>.py`
+- Make sure you have your demonstrations `demo_data.npz` stored in the directory you are about to store the experiment results.
+- In the same folder, create a python script storing hyper-parameters to be used for training your model, named `<param name>.py`
     - We have pre-defined parameter files for the environments we tested in `<root>/Package/td3fd/td3fd/ddpg/param/*` and
     - Optionally, in the python file you just created, you can simple import from our pre-defined parameters, e.g.
         ```
@@ -77,7 +77,7 @@ For our experiments, we provide two options for generating demonstration data.
         ```
     Note 1: the name of the global variable starts with `params_config`. \
     Note 2: if a parameter is of type `tuple`, it is assumed that you want to iterate over the tuple and train multiple agents each with a different parameter listed in the `tuple`. \
-    In the above script, we imported the default parameters ued for the 2D peg in hole environment, then we override some of them parameters:
+    In the above script, we imported the default parameters used for the 2D Peg Insertion environment, then we override some of them parameters:
     - `params_config_gan["ddpg"]["demo_strategy"] = ("gan", "none")` means to train two agents, one with GAN shaping, one with just TD3 (as `use_TD3` is set to true in `ddpg_fetch_peg_in_hole_2d`)
     - `params_config_gan["seed"] = tuple(range(10))` means to train 10 agents with seed 0 to 10
     Therefore, this modified parameter dictionary tries to run 20 experiments, TD3 + GAN shaping with seed 0-10 and TD3 with seed 0-10. \
@@ -107,7 +107,7 @@ python -m td3fd.launch --targets evaluate --policy_file <policy file name>.pkl
 ```
 python -m td3fd.launch --targets plot --exp_dir <top level plotting directory>
 ```
-This script will collect (recursively) all the experiment results under `<top level plotting directory>` and generate one plot for each environment.
+This script will collect (recursively) all the experiment results under `<top level plotting directory>` and generate one plot named `Result_<environment name>.png` for each environment.
 
 ### Examples
 1. [2D Reacher Environment](./Experiment/Reacher2D)
