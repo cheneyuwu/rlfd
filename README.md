@@ -22,7 +22,7 @@
     pip install -e <root>/Package/gym
     pip install -e <root>/Package/td3fd
     ```
-    In terms of Tensorflow, `td3dfd` requires `tensorflow==1.15.0` and `tensorflow_probability==0.7.0`. \
+    In terms of Tensorflow, `td3dfd` requires `tensorflow==1.15.0` and `tensorflow_probability==0.7.0`.
 3. Source the setup script at root directory, this script just defines some environment variables for logging.
     ```
     source <root>/setup.py
