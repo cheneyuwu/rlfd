@@ -1,9 +1,8 @@
-# Best parameters found so far to be used for the Open AI fetch pick and place environment with a single goal.
 params_config = {
     # config summary
     "config": "default",
     # environment config
-    "env_name": "FetchPegInHoleRandInit-v1",
+    "env_name": "YWFetchPegInHoleRandInit-v0",
     "r_scale": 1.0,
     "r_shift": 0.0,
     "eps_length": 40,
@@ -27,9 +26,9 @@ params_config = {
         # double q learning
         "polyak": 0.95,
         # use demonstrations
-        "sample_demo_buffer": 0,
+        "sample_demo_buffer": False,
         "batch_size_demo": 128,
-        "use_demo_reward": 0,
+        "use_demo_reward": False,
         "num_demo": 40,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         "bc_params": {"q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
@@ -44,8 +43,8 @@ params_config = {
                 "num_bijectors": 4,
                 "layer_sizes": [256, 256],
                 "prm_loss_weight": 1.0,
-                "reg_loss_weight": 1000.0,
-                "potential_weight": 3.0,
+                "reg_loss_weight": 200.0,
+                "potential_weight": 10.0,
             },
             "gan": {
                 "num_ens": 4,
@@ -53,7 +52,7 @@ params_config = {
                 "latent_dim": 6,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
-                "potential_weight": 8.0,
+                "potential_weight": 3.0,
             },
         },
         # normalize observation
@@ -74,7 +73,7 @@ params_config = {
         "history_len": 10,
     },
     "evaluator": {
-        "rollout_batch_size": 20,
+        "rollout_batch_size": 40,
         "noise_eps": 0.05,
         "polyak_noise": 0.0,
         "random_eps": 0.0,

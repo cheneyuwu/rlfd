@@ -7,7 +7,8 @@ import numpy as np
 import tensorflow as tf
 
 from td3fd import logger
-from td3fd.gail import config
+from td3fd import config
+from td3fd.gail import config as gail_config
 from td3fd.util.cmd_util import ArgParser
 from td3fd.util.util import set_global_seeds
 
@@ -19,15 +20,17 @@ except ImportError:
 
 def train(root_dir, params):
 
-    policy = config.configure_gail(params=params)
-    rollout_worker = config.config_rollout(params=params, policy=policy)
-    evaluator = config.config_evaluator(params=params, policy=policy)
+    policy = gail_config.configure_gail(params=params)
+    rollout_worker = gail_config.config_rollout(params=params, policy=policy)
+    evaluator = gail_config.config_evaluator(params=params, policy=policy)
 
-    save_interval = 50
+    # In each epoch ddpg generates this many more experiences than gail, calculated by policy.num_cycle / policy.policy_step
+    ddpg_gail_experience_ratio = 5
+    save_interval = 10 * ddpg_gail_experience_ratio
 
     # Setup paths
     # rl policies (cannot restart training)
-    policy_save_path = os.path.join(root_dir, "gail")
+    policy_save_path = os.path.join(root_dir, "policies")
     os.makedirs(policy_save_path, exist_ok=True)
     latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
     periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")
@@ -38,22 +41,23 @@ def train(root_dir, params):
     policy.init_demo_buffer(demo_file)
 
     for epoch in range(policy.num_epochs):
-        # Train
-        # train generator and value function
+        # train
+        # generator and value function
         rollout_worker.clear_history()
         for _ in range(policy.policy_step):
             episode = rollout_worker.generate_rollouts()
             policy.clear_buffer()
             policy.store_episode(episode)
             policy.train_policy()
-        # train discriminator
+        # discriminator
         policy.train_disc()
-        # Evaluate
+        # test
         evaluator.clear_history()
         evaluator.generate_rollouts()
 
-        if epoch % 5 == 4:
-            logger.record_tabular("epoch", int((epoch + 1) / 5))
+        # log
+        if not (epoch + 1) % ddpg_gail_experience_ratio:
+            logger.record_tabular("epoch", int((epoch + 1) / ddpg_gail_experience_ratio))
             for key, val in evaluator.logs("test"):
                 logger.record_tabular(key, val)
             for key, val in rollout_worker.logs("train"):
@@ -91,10 +95,10 @@ def main(root_dir, **kwargs):
     if os.path.isfile(param_file):
         with open(param_file, "r") as f:
             params = json.load(f)
-        config.check_params(params)
+        config.check_params(params, gail_config.default_params)
     else:
         logger.warn("WARNING: params.json not found! using the default parameters.")
-        params = config.DEFAULT_PARAMS.copy()
+        params = gail_config.default_params.copy()
     comp_param_file = os.path.join(root_dir, "params.json")
     with open(comp_param_file, "w") as f:
         json.dump(params, f)

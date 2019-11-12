@@ -1,4 +1,4 @@
-"""Adopted from OpenAI baselines code base
+"""Adopted from OpenAI baselines, HER
 """
 import pickle
 from collections import deque
@@ -161,7 +161,7 @@ class RolloutWorkerBase:
         self.last_noise = 0.0
 
     def _random_action(self, n):
-        return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dims["u"]))
+        return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, *self.dims["u"]))
 
 
 class RolloutWorker(RolloutWorkerBase):
@@ -211,9 +211,9 @@ class RolloutWorker(RolloutWorkerBase):
         )
 
         self.envs = [self.make_env() for _ in range(self.rollout_batch_size)]
-        self.initial_o = np.empty((self.rollout_batch_size, self.dims["o"]), np.float32)  # observations
-        self.initial_ag = np.empty((self.rollout_batch_size, self.dims["g"]), np.float32)  # achieved goals
-        self.g = np.empty((self.rollout_batch_size, self.dims["g"]), np.float32)  # goals
+        self.initial_o = np.empty((self.rollout_batch_size, *self.dims["o"]), np.float32)  # observations
+        self.initial_ag = np.empty((self.rollout_batch_size, *self.dims["g"]), np.float32)  # achieved goals
+        self.g = np.empty((self.rollout_batch_size, *self.dims["g"]), np.float32)  # goals
 
         self.reset()
         self.clear_history()
@@ -232,7 +232,7 @@ class RolloutWorker(RolloutWorkerBase):
         obs, achieved_goals, acts, goals, rewards, successes, shaping_rewards, dones = [], [], [], [], [], [], [], []
         policy_rewards, policy_values = [], []  # rewards and values from policy
         info_values = [
-            np.empty((self.eps_length, self.rollout_batch_size, self.dims["info_" + key]), np.float32)
+            np.empty((self.eps_length, self.rollout_batch_size, *self.dims["info_" + key]), np.float32)
             for key in self.info_keys
         ]
         Qs, QPs = [], []
@@ -242,8 +242,8 @@ class RolloutWorker(RolloutWorkerBase):
         # Clear noise history for polyak noise
         self._clear_noise_history()
 
-        o = np.empty((self.rollout_batch_size, self.dims["o"]), np.float32)  # o
-        ag = np.empty((self.rollout_batch_size, self.dims["g"]), np.float32)  # ag
+        o = np.empty((self.rollout_batch_size, *self.dims["o"]), np.float32)  # o
+        ag = np.empty((self.rollout_batch_size, *self.dims["g"]), np.float32)  # ag
         o[:] = self.initial_o
         ag[:] = self.initial_ag
 
@@ -264,10 +264,10 @@ class RolloutWorker(RolloutWorkerBase):
             # compute policy estimated reward
             pr = self.policy.get_rewards(o, self.g, u).reshape(-1, 1)
 
-            u = u.reshape(-1, self.dims["u"])  # make sure that the shape is correct
+            u = u.reshape(-1, *self.dims["u"])  # make sure that the shape is correct
             # compute the next states
-            o_new = np.empty((self.rollout_batch_size, self.dims["o"]))  # o_2
-            ag_new = np.empty((self.rollout_batch_size, self.dims["g"]))  # ag_2
+            o_new = np.empty((self.rollout_batch_size, *self.dims["o"]))  # o_2
+            ag_new = np.empty((self.rollout_batch_size, *self.dims["g"]))  # ag_2
             r = np.empty((self.rollout_batch_size, 1))  # reward
             success = np.zeros(self.rollout_batch_size)  # from info
             shaping_reward = np.zeros((self.rollout_batch_size, 1))  # from info
@@ -289,6 +289,7 @@ class RolloutWorker(RolloutWorkerBase):
                 except MujocoException:
                     logger.warn("MujocoException caught during rollout generation. Trying again...")
                     return self.generate_rollouts()
+
             if np.isnan(o_new).any():
                 logger.warn("NaN caught during rollout generation. Trying again...")
                 return self.generate_rollouts()
@@ -450,8 +451,8 @@ class SerialRolloutWorker(RolloutWorkerBase):
             self._clear_noise_history()
 
             # Store initial observations and goals
-            o = np.empty((self.dims["o"],), np.float32)  # o
-            ag = np.empty((self.dims["g"],), np.float32)  # ag
+            o = np.empty(self.dims["o"], np.float32)  # o
+            ag = np.empty(self.dims["g"], np.float32)  # ag
             o[...] = self.initial_o
             ag[...] = self.initial_ag
 
@@ -472,14 +473,14 @@ class SerialRolloutWorker(RolloutWorkerBase):
                 # compute policy estimated reward
                 pr = self.policy.get_rewards(o, self.g, u).reshape((1,))
 
-                u = u.reshape((self.dims["u"],))  # make sure that the shape is correct
+                u = u.reshape(self.dims["u"])  # make sure that the shape is correct
                 # compute the next states
-                o_new = np.empty((self.dims["o"],))  # o_2
-                ag_new = np.empty((self.dims["g"],))  # ag_2
+                o_new = np.empty(self.dims["o"])  # o_2
+                ag_new = np.empty(self.dims["g"])  # ag_2
                 r = np.empty((1,))  # reward
                 success = np.zeros((1,))  # from info
                 shaping_reward = np.zeros((1,))  # from info
-                iv = {"info_" + k: np.empty((self.dims["info_" + k],)) for k in self.info_keys}
+                iv = {"info_" + k: np.empty(self.dims["info_" + k]) for k in self.info_keys}
                 # compute new states and observations
                 try:
                     curr_o_new, curr_r, _, info = self.env.step(u)

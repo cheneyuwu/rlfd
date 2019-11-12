@@ -91,26 +91,26 @@ class GAIL(object):
         assert compute_q == False
         vals = self.generator_output_tf
         feed = {}
-        feed[self.policy_inputs_tf["o"]] = o.reshape(-1, self.dimo)
-        if self.dimg != 0:
-            feed[self.policy_inputs_tf["g"]] = g.reshape(-1, self.dimg)
+        feed[self.policy_inputs_tf["o"]] = o.reshape(-1, *self.dimo)
+        if self.dimg != (0,):
+            feed[self.policy_inputs_tf["g"]] = g.reshape(-1, *self.dimg)
         ret = self.sess.run(vals, feed_dict=feed)
         return ret
 
     def get_rewards(self, o, g, u):
         feed = {}
-        feed[self.disc_inputs_tf["po"]] = o.reshape(-1, self.dimo)
-        if self.dimg != 0:
-            feed[self.disc_inputs_tf["pg"]] = g.reshape(-1, self.dimg)
-        feed[self.disc_inputs_tf["pu"]] = u.reshape(-1, self.dimu)
+        feed[self.disc_inputs_tf["po"]] = o.reshape(-1, *self.dimo)
+        if self.dimg != (0,):
+            feed[self.disc_inputs_tf["pg"]] = g.reshape(-1, *self.dimg)
+        feed[self.disc_inputs_tf["pu"]] = u.reshape(-1, *self.dimu)
         ret = self.sess.run(self.disc_reward_tf, feed_dict=feed)
         return ret
 
     def get_values(self, o, g):
         feed = {}
-        feed[self.policy_inputs_tf["o"]] = o.reshape(-1, self.dimo)
-        if self.dimg != 0:
-            feed[self.policy_inputs_tf["g"]] = g.reshape(-1, self.dimg)
+        feed[self.policy_inputs_tf["o"]] = o.reshape(-1, *self.dimo)
+        if self.dimg != (0,):
+            feed[self.policy_inputs_tf["g"]] = g.reshape(-1, *self.dimg)
         ret = self.sess.run(self.val_output_tf, feed_dict=feed)
         return ret
 
@@ -167,7 +167,7 @@ class GAIL(object):
 
         # Update normalizer
         self.policy_o_stats.update(rollout["o"])
-        if self.dimg != 0:
+        if self.dimg != (0,):
             self.policy_g_stats.update(rollout["g"])
 
         # Update generator using TRPO
@@ -185,7 +185,7 @@ class GAIL(object):
         vals = losses + [self.gen_grad_tf]
         feed = {}
         feed[self.policy_inputs_tf["o"]] = rollout["o"]
-        if self.dimg != 0:
+        if self.dimg != (0,):
             feed[self.policy_inputs_tf["g"]] = rollout["g"]
         feed[self.policy_inputs_tf["u"]] = rollout["u"]
         feed[self.policy_inputs_tf["atarg"]] = atarg
@@ -194,7 +194,7 @@ class GAIL(object):
         def fisher_vector_product(p):
             vals = self.gen_fvp_tf
             feed[self.policy_inputs_tf["o"]] = rollout["o"][::5]
-            if self.dimg != 0:
+            if self.dimg != (0,):
                 feed[self.policy_inputs_tf["g"]] = rollout["g"][::5]
             feed[self.policy_inputs_tf["u"]] = rollout["u"][::5]
             feed[self.policy_inputs_tf["atarg"]] = atarg[::5]
@@ -232,7 +232,7 @@ class GAIL(object):
         # Update Value Function
         for _ in range(self.vf_iters):
             vals = [self.val_loss_tf, self.val_update_op]
-            if self.dimg != 0:
+            if self.dimg != (0,):
                 # TODO: should we add a normalizer here?
                 for (mb_o, mb_g, mb_val) in iterbatches(
                     (rollout["o"], rollout["g"], rollout["tdlamret"]),
@@ -264,7 +264,7 @@ class GAIL(object):
 
         disc_losses = []
         vals = [self.disc_loss_tf, self.disc_update_op]
-        if self.dimg != 0:
+        if self.dimg != (0,):
             for (policy_o, policy_g, policy_u) in iterbatches(
                 (rollout["o"], rollout["g"], rollout["u"]), include_final_partial_batch=False, batch_size=batch_size
             ):
@@ -301,12 +301,12 @@ class GAIL(object):
         logs = []
         logs.append((prefix + "policy_stats_o/mean", np.mean(self.sess.run([self.policy_o_stats.mean_tf]))))
         logs.append((prefix + "policy_stats_o/std", np.mean(self.sess.run([self.policy_o_stats.std_tf]))))
-        if self.dimg != 0:
+        if self.dimg != (0,):
             logs.append((prefix + "policy_stats_g/mean", np.mean(self.sess.run([self.policy_g_stats.mean_tf]))))
             logs.append((prefix + "policy_stats_g/std", np.mean(self.sess.run([self.policy_g_stats.std_tf]))))
         logs.append((prefix + "disc_stats_o/mean", np.mean(self.sess.run([self.disc_o_stats.mean_tf]))))
         logs.append((prefix + "disc_stats_o/std", np.mean(self.sess.run([self.disc_o_stats.std_tf]))))
-        if self.dimg != 0:
+        if self.dimg != (0,):
             logs.append((prefix + "disc_stats_g/mean", np.mean(self.sess.run([self.disc_g_stats.mean_tf]))))
             logs.append((prefix + "disc_stats_g/std", np.mean(self.sess.run([self.disc_g_stats.std_tf]))))
         return logs
@@ -316,15 +316,15 @@ class GAIL(object):
         buffer_shapes = {}
         if self.fix_T:
             # demonstration buffer
-            buffer_shapes["o"] = (self.eps_length + 1, self.dimo)
-            buffer_shapes["u"] = (self.eps_length, self.dimu)
+            buffer_shapes["o"] = (self.eps_length + 1, *self.dimo)
+            buffer_shapes["u"] = (self.eps_length, *self.dimu)
             buffer_shapes["r"] = (self.eps_length, 1)
-            if self.dimg != 0:  # for multigoal environment - or states that do not change over episodes.
-                buffer_shapes["ag"] = (self.eps_length + 1, self.dimg)
-                buffer_shapes["g"] = (self.eps_length, self.dimg)
+            if self.dimg != (0,):  # for multigoal environment - or states that do not change over episodes.
+                buffer_shapes["ag"] = (self.eps_length + 1, *self.dimg)
+                buffer_shapes["g"] = (self.eps_length, *self.dimg)
             for key, val in self.input_dims.items():
                 if key.startswith("info"):
-                    buffer_shapes[key] = (self.eps_length, *(tuple([val]) if val > 0 else tuple()))
+                    buffer_shapes[key] = (self.eps_length, *val)
             self.demo_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
             # policy buffer
             policy_buffer_shapes = buffer_shapes.copy()
@@ -335,19 +335,20 @@ class GAIL(object):
             self.policy_buffer = UniformReplayBuffer(policy_buffer_shapes, self.buffer_size, self.eps_length)
         else:
             # demonstration buffer
-            buffer_shapes["o"] = (self.dimo,)
-            buffer_shapes["o_2"] = (self.dimo,)
-            buffer_shapes["u"] = (self.dimu,)
+            buffer_shapes["o"] = self.dimo
+            buffer_shapes["o_2"] = self.dimo
+            buffer_shapes["u"] = self.dimu
             buffer_shapes["r"] = (1,)
-            if self.dimg != 0:  # for multigoal environment - or states that do not change over episodes.
-                buffer_shapes["ag"] = (self.dimg,)
-                buffer_shapes["g"] = (self.dimg,)
-                buffer_shapes["ag_2"] = (self.dimg,)
-                buffer_shapes["g_2"] = (self.dimg,)
+            if self.dimg != (0,):  # for multigoal environment - or states that do not change over episodes.
+                buffer_shapes["ag"] = self.dimg
+                buffer_shapes["g"] = self.dimg
+                buffer_shapes["ag_2"] = self.dimg
+                buffer_shapes["g_2"] = self.dimg
             for key, val in self.input_dims.items():
                 if key.startswith("info"):
-                    buffer_shapes[key] = tuple([val]) if val > 0 else tuple()
-            buffer_shapes["done"] = (1,)  # need the "done" signal for restarting from training
+                    buffer_shapes[key] = val
+            # need the "done" signal for restarting from training
+            buffer_shapes["done"] = (1,)
             self.demo_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
             # policy buffer
             policy_buffer_shapes = buffer_shapes.copy()
@@ -359,22 +360,22 @@ class GAIL(object):
     def _create_network(self):
         # Inputs to generator and value function
         self.policy_inputs_tf = {}
-        self.policy_inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
-        if self.dimg != 0:
-            self.policy_inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
-        self.policy_inputs_tf["u"] = tf.placeholder(tf.float32, shape=(None, self.dimu))
+        self.policy_inputs_tf["o"] = tf.placeholder(tf.float32, shape=(None, *self.dimo))
+        if self.dimg != (0,):
+            self.policy_inputs_tf["g"] = tf.placeholder(tf.float32, shape=(None, *self.dimg))
+        self.policy_inputs_tf["u"] = tf.placeholder(tf.float32, shape=(None, *self.dimu))
         self.policy_inputs_tf["atarg"] = tf.placeholder(tf.float32, shape=(None, 1))
         self.policy_inputs_tf["ret"] = tf.placeholder(tf.float32, shape=(None, 1))
 
         # Inputs to discriminator
         self.disc_inputs_tf = {}
-        self.disc_inputs_tf["po"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
-        self.disc_inputs_tf["do"] = tf.placeholder(tf.float32, shape=(None, self.dimo))
-        if self.dimg != 0:
-            self.disc_inputs_tf["pg"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
-            self.disc_inputs_tf["dg"] = tf.placeholder(tf.float32, shape=(None, self.dimg))
-        self.disc_inputs_tf["pu"] = tf.placeholder(tf.float32, shape=(None, self.dimu))
-        self.disc_inputs_tf["du"] = tf.placeholder(tf.float32, shape=(None, self.dimu))
+        self.disc_inputs_tf["po"] = tf.placeholder(tf.float32, shape=(None, *self.dimo))
+        self.disc_inputs_tf["do"] = tf.placeholder(tf.float32, shape=(None, *self.dimo))
+        if self.dimg != (0,):
+            self.disc_inputs_tf["pg"] = tf.placeholder(tf.float32, shape=(None, *self.dimg))
+            self.disc_inputs_tf["dg"] = tf.placeholder(tf.float32, shape=(None, *self.dimg))
+        self.disc_inputs_tf["pu"] = tf.placeholder(tf.float32, shape=(None, *self.dimu))
+        self.disc_inputs_tf["du"] = tf.placeholder(tf.float32, shape=(None, *self.dimu))
 
         # Normalizers
         self.policy_o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
@@ -384,15 +385,15 @@ class GAIL(object):
 
         # policy inputs (with normalization)
         policy_input_o_tf = self.policy_o_stats.normalize(self.policy_inputs_tf["o"])
-        policy_input_g_tf = self.policy_g_stats.normalize(self.policy_inputs_tf["g"]) if self.dimg != 0 else None
+        policy_input_g_tf = self.policy_g_stats.normalize(self.policy_inputs_tf["g"]) if self.dimg != (0,) else None
         policy_input_u_tf = self.policy_inputs_tf["u"]
         policy_input_atarg_tf = self.policy_inputs_tf["atarg"]
         policy_input_ret_tf = self.policy_inputs_tf["ret"]
         # disc inputs (with normalization)
         disc_input_po_tf = self.disc_o_stats.normalize(self.disc_inputs_tf["po"])
         disc_input_do_tf = self.disc_o_stats.normalize(self.disc_inputs_tf["do"])
-        disc_input_pg_tf = self.disc_g_stats.normalize(self.disc_inputs_tf["pg"]) if self.dimg != 0 else None
-        disc_input_dg_tf = self.disc_g_stats.normalize(self.disc_inputs_tf["dg"]) if self.dimg != 0 else None
+        disc_input_pg_tf = self.disc_g_stats.normalize(self.disc_inputs_tf["pg"]) if self.dimg != (0,) else None
+        disc_input_dg_tf = self.disc_g_stats.normalize(self.disc_inputs_tf["dg"]) if self.dimg != (0,) else None
         disc_input_pu_tf = self.disc_inputs_tf["pu"]
         disc_input_du_tf = self.disc_inputs_tf["du"]
 

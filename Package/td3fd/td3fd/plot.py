@@ -11,7 +11,7 @@ from matplotlib import cm
 from td3fd.util.cmd_util import ArgParser
 from td3fd.util.reader_util import load_csv
 
-matplotlib.use("Agg")  # Can change to 'Agg' for non-interactive mode
+matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode
 matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["ps.fonttype"] = 42
 
@@ -77,6 +77,7 @@ def load_results(root_dir_or_dirs):
                     continue
                 paramsjson = os.path.join(dirname, "params_renamed.json")  # search for the renamed file first
                 if not os.path.exists(paramsjson):
+                    # continue # Note: this is only for plotting old figures
                     paramsjson = os.path.join(dirname, "params.json")
                 with open(paramsjson, "r") as f:
                     result["params"] = json.load(f)
@@ -147,10 +148,10 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 assert xs.shape == ys.shape
 
                 x = xs[0]
-                # from openai spinning up
+                # plot percentile
                 # ax.plot(x, np.nanmedian(ys, axis=0), label=config)
                 # ax.fill_between(x, np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25)
-                # ours
+                # or plot mean var
                 mean_y = np.nanmean(ys, axis=0)
                 stddev_y = np.nanstd(ys, axis=0)
                 ax.plot(
@@ -166,10 +167,6 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 ax.fill_between(
                     x, mean_y - 1.0 * stddev_y, mean_y + 1.0 * stddev_y, alpha=0.2, color=colors[j % len(colors)]
                 )
-                # ax.fill_between(
-                #     x, mean_y - 3 * stddev_y, mean_y + 3 * stddev_y, alpha=0.25, color=colors[j % len(colors)]
-                # )
-
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_label)
                 ax.tick_params(axis="x", pad=50, length=50, width=10)
@@ -181,14 +178,14 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 # use ax level legend
                 # ax.legend(fontsize=5)
             num_lines = len(data[env_id][xy].keys())
-    # use fig level legend
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=int(num_lines), frameon=False)
-    fig.set_size_inches(50 * len(xys), 50 * len(data.keys()))
-    save_path = os.path.join(target_dir, "fig_{}.png".format(env_id))
-    print("Saving image to " + save_path)
-    plt.savefig(save_path, dpi=200)
-    plt.show()
+        # use fig level legend
+        handles, labels = ax.get_legend_handles_labels()
+        fig.legend(handles, labels, loc="lower center", ncol=int(num_lines), frameon=False)
+        fig.set_size_inches(50 * len(xys), 50 * len(data.keys()))
+        save_path = os.path.join(target_dir, "Result_{}.png".format(env_id))
+        print("Saving image to " + save_path)
+        plt.savefig(save_path, dpi=200)
+        plt.show()
 
 
 def main(dirs, xys, save_path=None, smooth=0, **kwargs):

@@ -21,8 +21,8 @@ def set_global_seeds(seed):
     try:
         import tensorflow as tf
 
-        tf.reset_default_graph()  # should be removed after tf2
-        tf.set_random_seed(seed)
+        tf.compat.v1.reset_default_graph()  # should be removed after tf2
+        tf.compat.v1.set_random_seed(seed)
     except ImportError:
         pass
     try:

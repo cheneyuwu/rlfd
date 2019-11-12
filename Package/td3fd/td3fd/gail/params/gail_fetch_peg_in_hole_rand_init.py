@@ -1,14 +1,13 @@
-# Best parameters found so far to be used for the Open AI fetch pick and place environment with a single goal and two objects.
 params_config = {
     # config summary
     "config": "default",
     # environment config
-    "env_name": "FetchPegInHoleRandInit-v1",
-    "r_scale": 1.0,  # scale the reward of the environment down
-    "r_shift": 0.0,  # shift the reward of the environment up
-    "eps_length": 40,  # overwrite the default length of the episode provided in _max_episode_steps
-    "env_args": {},  # extra arguments passed to the environment
-    "fix_T": True,  # whether or not to fix episode length for all rollouts (if false, then use the ring buffer)
+    "env_name": "YWFetchPegInHoleRandInit-v0",
+    "r_scale": 1.0,
+    "r_shift": 0.0,
+    "eps_length": 40,
+    "env_args": {},
+    "fix_T": True,
     # GAIL config
     "gail": {
         "num_epochs": int(2.4e4),
@@ -24,7 +23,7 @@ params_config = {
         "max_kl": 0.01,
         "gen_ent_coeff": 0,
         "disc_ent_coeff": 1e-3,
-        "lam": 0.97,  # value used by openai for their mujoco environments
+        "lam": 0.97,
         "cg_damping": 3e-4,
         "cg_iters": 10,
         "vf_iters": 5,
@@ -36,9 +35,9 @@ params_config = {
     # rollouts config
     "rollout": {
         "rollout_batch_size": 4,
-        "noise_eps": 0.0,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
-        "polyak_noise": 0.0,  # use polyak_noise * last_noise + (1 - polyak_noise) * curr_noise
-        "random_eps": 0.0,  # percentage of time a random action is taken
+        "noise_eps": 0.0,
+        "polyak_noise": 0.0,
+        "random_eps": 0.0,
         "compute_q": False,
     },
     "evaluator": {

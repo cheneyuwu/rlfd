@@ -55,7 +55,7 @@ def main(policy_file=None, **kwargs):
     # Change the following parameters
     num_itr = 40
     render = False
-    env_name = "FetchPegInHole2DVersion-v1"
+    env_name = "YWFetchPegInHole2D-v0"
     eps_length = 40
     env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=eps_length).get_env()
     # Load policy.

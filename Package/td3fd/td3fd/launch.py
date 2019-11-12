@@ -19,11 +19,10 @@ except ImportError:
 
 from td3fd import logger
 from td3fd.demo_util.generate_demo import main as demo_entry
-from td3fd.evaluate import main as display_entry
+from td3fd.evaluate import main as evaluate_entry
 from td3fd.plot import main as plot_entry
 from td3fd.train import main as train_entry
 from td3fd.util.mpi_util import mpi_exit, mpi_input
-
 
 
 def import_param_config(load_dir):
@@ -228,19 +227,19 @@ def main(targets, exp_dir, policy_file, **kwargs):
             if comm is not None:
                 comm.Barrier()
 
-        elif target == "demo":
+        elif target == "demo_data":
             assert policy_file != None
             logger.info("\n\n=================================================")
             logger.info("Using policy file from {} to generate demo data.".format(policy_file))
             logger.info("=================================================")
             demo_entry(policy_file=policy_file, root_dir=exp_dir)
 
-        elif target == "display":
+        elif target == "evaluate":
             assert policy_file != None
             logger.info("\n\n=================================================")
-            logger.info("Displaying using policy file from {}.".format(policy_file))
+            logger.info("Evaluating using policy file from {}.".format(policy_file))
             logger.info("=================================================")
-            display_entry(policy_file=policy_file)
+            evaluate_entry(policy_file=policy_file)
 
         elif target == "plot":
             logger.info("\n\n=================================================")
@@ -251,16 +250,16 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     dirs=[exp_dir],
                     xys=[
                         "epoch:test/success_rate",
-                        "epoch:test/total_shaping_reward",
+                        # "epoch:test/total_shaping_reward",
                         "epoch:test/total_reward",
-                        "epoch:test/mean_Q",
-                        "epoch:test/mean_Q_plus_P",
+                        # "epoch:test/mean_Q",
+                        # "epoch:test/mean_Q_plus_P",
                         # "train/episode:test/total_reward"
                     ],
                     smooth=True,
                 )
 
-        elif target == "cp_result":
+        elif target == "copy_result":
             expdata_dir = os.path.abspath(os.path.expanduser(os.environ["EXPDATA"]))
             print("Experiment directory:", expdata_dir)
             assert os.path.exists(expdata_dir)
@@ -289,6 +288,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
 
         if comm is not None:
             comm.Barrier()
+
         logger.reset()
 
     return
@@ -298,33 +298,21 @@ if __name__ == "__main__":
 
     from td3fd.util.cmd_util import ArgParser
 
-    """
-    Example flow:
-    1. (mpirun -np 1) python launch.py --targets train:rldense
-       Train a rl agent with config defined in rldense.py located in the same directory as launch.py. The output is in
-       TempResult/Temp by default (you can overwrite this default using --exp_dir <overwrite directory>).
-    2. (mpirun -np 1) python launch.py --targets train:rldense demo
-       In addition to 1, also generate demo_data using the trained rl agent and store the demo file as demo_data.py in
-       TempResult/Temp by default.
-    3. (mpirun -np 1) python launch.py --targets train:rldense demo train:rlnorm
-       In addition to 2, also use the generated demo file to train an rl agent with config defined in rlnorm.py located
-       in the same directory as launch.py. The output is TempResult/Temp
-    4. (mpirun -np 1) python launch.py --targets train:rldense plot
-       In addition to 1, also collects result in TempResult/Temp and generates plots
-
-    Note:
-    1. In the params config file (e.g. rldense.py), if the val of any key is a list, this script will create a
-       sub-folder named "key-val" and put the exp result there.
-
-    Run this script with different chain of targets and see what happens! I hope the flow makes sense:)
-    """
     exp_parser = ArgParser(allow_unknown_args=False)
-    exp_parser.parser.add_argument("--targets", help="target or list of target", type=str, nargs="+", default=None)
     exp_parser.parser.add_argument(
         "--exp_dir", help="top level directory to store experiment results", type=str, default=os.getcwd()
     )
     exp_parser.parser.add_argument(
-        "--policy_file", help="top level directory to store experiment results", type=str, default=None
+        "--targets",
+        help="target or list of targets in [demo_data, train:<parameter file>.py, plot, evaluate]",
+        type=str,
+        nargs="+",
+    )
+    exp_parser.parser.add_argument(
+        "--policy_file",
+        help="when target is evaluate or demodata, specify the policy file to be used, <policy name>.pkl",
+        type=str,
+        default=None,
     )
     exp_parser.parse(sys.argv)
     main(**exp_parser.get_dict())

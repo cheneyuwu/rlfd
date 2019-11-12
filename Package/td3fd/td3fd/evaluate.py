@@ -19,7 +19,7 @@ DEFAULT_PARAMS = {
     "seed": 0,
     "num_eps": 10,
     "fix_T": False,
-    "demo": {"random_eps": 0.0, "noise_eps": 0.1, "compute_Q": True, "render": 1, "rollout_batch_size": 1},
+    "demo": {"random_eps": 0.0, "noise_eps": 0.1, "compute_Q": True, "render": True, "rollout_batch_size": 1},
 }
 
 
@@ -32,8 +32,6 @@ def main(policy_file, **kwargs):
     rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
 
     params = DEFAULT_PARAMS.copy()
-    # reset default graph every time this function is called.
-    tf.reset_default_graph()
     # Seed everything
     set_global_seeds(params["seed"])
     tf.InteractiveSession()
@@ -61,13 +59,13 @@ def main(policy_file, **kwargs):
     for _ in range(params["num_eps"]):
         demo.generate_rollouts()
 
-    # record logs
+    # Log
     for key, val in demo.logs("test"):
         logger.record_tabular(key, np.mean(val))
     if rank == 0:
         logger.dump_tabular()
 
-    tf.get_default_session().close()
+    tf.compat.v1.get_default_session().close()
 
 
 if __name__ == "__main__":
