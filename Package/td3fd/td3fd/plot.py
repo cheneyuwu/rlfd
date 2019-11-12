@@ -11,7 +11,7 @@ from matplotlib import cm
 from td3fd.util.cmd_util import ArgParser
 from td3fd.util.reader_util import load_csv
 
-matplotlib.use("Agg")  # Can change to 'Agg' for non-interactive mode
+matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode
 matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["ps.fonttype"] = 42
 

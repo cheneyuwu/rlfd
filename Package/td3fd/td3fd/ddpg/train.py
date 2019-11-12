@@ -129,10 +129,10 @@ def main(root_dir, **kwargs):
     if os.path.isfile(param_file):
         with open(param_file, "r") as f:
             params = json.load(f)
-        config.check_params(params)
+        config.check_params(params, ddpg_config.default_params)
     else:
         logger.warn("WARNING: params.json not found! using the default parameters.")
-        params = ddpg_config.DEFAULT_PARAMS.copy()
+        params = ddpg_config.default_params.copy()
     comp_param_file = os.path.join(root_dir, "params.json")
     with open(comp_param_file, "w") as f:
         json.dump(params, f)

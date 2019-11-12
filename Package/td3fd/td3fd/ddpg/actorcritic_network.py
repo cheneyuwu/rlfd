@@ -23,7 +23,7 @@ class Actor(tf.Module):
                 bias_initializer=None,
             )
             self.model_layers.append(layer)
-        # TODO: accept multidimensional imputs
+        # TODO: accept multidimensional inputs
         assert len(self.dimu) == 1, "only accept 1 dimensional output"
         self.model_layers.append(
             tf.keras.layers.Dense(
