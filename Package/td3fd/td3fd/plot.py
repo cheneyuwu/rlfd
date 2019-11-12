@@ -178,14 +178,14 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 # use ax level legend
                 # ax.legend(fontsize=5)
             num_lines = len(data[env_id][xy].keys())
-    # use fig level legend
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=int(num_lines), frameon=False)
-    fig.set_size_inches(50 * len(xys), 50 * len(data.keys()))
-    save_path = os.path.join(target_dir, "fig_{}.png".format(env_id))
-    print("Saving image to " + save_path)
-    plt.savefig(save_path, dpi=200)
-    plt.show()
+        # use fig level legend
+        handles, labels = ax.get_legend_handles_labels()
+        fig.legend(handles, labels, loc="lower center", ncol=int(num_lines), frameon=False)
+        fig.set_size_inches(50 * len(xys), 50 * len(data.keys()))
+        save_path = os.path.join(target_dir, "fig_{}.png".format(env_id))
+        print("Saving image to " + save_path)
+        plt.savefig(save_path, dpi=200)
+        plt.show()
 
 
 def main(dirs, xys, save_path=None, smooth=0, **kwargs):
