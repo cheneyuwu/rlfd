@@ -5,7 +5,7 @@ This is a toy 2d point reaching environment where you simply direct a point to i
 state  - (x, y), current location of the point
 goal   - (x', y'), goal location
 action - (dx, dy), direction to move
-reward - 1 if ||(x, y) - (x', y')|| < threshold else 0
+reward - 0 if ||(x, y) - (x', y')|| < threshold else -1
 ```
 The updating rule is simply: `state_t+1 = state_t + action_t`.
 
@@ -49,10 +49,10 @@ python -m td3fd.launch --targets train:train_rl.py train:train_rlbc.py train:tra
 ```
 This command will train the following 4 models, each stored in an individual folder:
 ```
-config_TD3 - just using TD3 without demonstrations
-config_ - Reward shaping via GAN
-config_ - Reward shaping via normalizing flow (MAF)
-config_ - TD3 + Behavioral cloning
+config_TD3             - TD3 without demonstrations
+config_TD3_GAN_Shaping - TD3 + Reward shaping via GAN
+config_TD3_MAF_Shaping - TD3 + Reward shaping via normalizing flow (MAF)
+config_TD3_BC          - TD3 + Behavioral cloning
 ```
 
 ### Evaluating/Visualizing Models
@@ -66,3 +66,4 @@ python -m td3fd.launch --targets evaluate --policy_file config_<config name>/pol
 python -m td3fd.launch --targets plot
 ```
 A plot named `Result_Reach2DF.png` will be generated, which should look like ![Reference_Result_Reach2DF](./Reference_Result_Reach2DF.png)
+The left plot shows success rate vs epochs, and the right plot shows total reward vs epochs. In this case, as we use sparse reward where the agent gets a reward of -1 unless it reaches the goal, these two plots look the same.
