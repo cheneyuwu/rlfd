@@ -1,4 +1,4 @@
-# Shaping Rewards for Combined Reinforcement and Imitation Learning using Generative Models 
+# Shaping Rewards for Combined Reinforcement and Imitation Learning using Generative Models
 - by Yuchen Wu, Melissa Mozifian and Prof. Florian Shkurti
 
 ## [Link to Paper](.)
@@ -26,7 +26,7 @@
     Also refer to [OpenAI Gym](https://github.com/openai/gym) for more information.
 3. Source the setup script at root directory, this script just defines some environment variables for the logging.
     ```
-    source setup.py
+    source <root>/setup.py
     ```
 
 ## Running Experiments
@@ -70,25 +70,25 @@ For our experiments, we provide two options for generating demonstration data.
         ```
         from copy import deepcopy
         from td3fd.ddpg.param.ddpg_fetch_peg_in_hole_2d import params_config as base_params
-        
+
         params_config = deepcopy(base_params)
         params_config["ddpg"]["demo_strategy"] = ("gan", "none")
-        params_config["seed"] = tuple(range(10))   
+        params_config["seed"] = tuple(range(10))
         ```
     Note 1: the name of the global variable starts with `params_config`. \
     Note 2: if a parameter is of type `tuple`, it is assumed that you want to iterate over the tuple and train multiple agents each with a different parameter listed in the `tuple`. \
-    In the above script, we imported the default parameters ued for the 2D peg in hole environment, then we override some of them parameters: 
+    In the above script, we imported the default parameters ued for the 2D peg in hole environment, then we override some of them parameters:
     - `params_config_gan["ddpg"]["demo_strategy"] = ("gan", "none")` means to train two agents, one with GAN shaping, one with just TD3 (as `use_TD3` is set to true in `ddpg_fetch_peg_in_hole_2d`)
     - `params_config_gan["seed"] = tuple(range(10))` means to train 10 agents with seed 0 to 10
     Therefore, this modified parameter dictionary tries to run 20 experiments, TD3 + GAN shaping with seed 0-10 and TD3 with seed 0-10. \
     See `<root>/Package/td3fd/td3fd/ddpg/config` and `<root>/Package/td3fd/td3fd/gail/config` for a detailed description of all parameters
-
 - Put the `demo_data.npz` generated in previous step in the same folder as `<param name>.py`
     - Note: If you only want to run our implementation of TD3, then `demo_data.npz` is not needed.
 - In the same folder, run
     ```
-    python -m td3fd.launch --targets train:<param name>.py
+    (mpirun -n 20) python -m td3fd.launch --targets train:<param name>.py
     ```
+    Note: Use `mpirun -n 20` if you have OpenMPI installed and want to run all 20 experiments in parallel.
 - After training, the following files should present in the each experiment directory:
     ```
     demo_data.npz - demontration data, which is copies to each run
@@ -111,3 +111,4 @@ This script will collect (recursively) all the experiment results under `<top le
 
 ### Examples
 1. [2D Reacher Environment](./Experiment/Reacher2D)
+2. [Fetch Peg Insertion Environment](./Experiment/FetchPegInsertion)
