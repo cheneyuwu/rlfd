@@ -1,7 +1,7 @@
 # Shaping Rewards for Combined Reinforcement and Imitation Learning using Generative Models
 - by Yuchen Wu, Melissa Mozifian and Prof. Florian Shkurti
 
-## [Link to Paper](.)
+## [Link to Project Webpage](http://www.cs.toronto.edu/~florian/rl_with_shaping/)
 
 ## Prerequisites
 1. This repository requires Python3 (>=3.5) and is tested with python 3.6.
