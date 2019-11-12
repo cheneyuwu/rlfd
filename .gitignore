@@ -111,7 +111,7 @@ Temp*/
 .DS_store
 
 # np zip files, data only
-*.npz
+# *.npz
 
 # pickle files that stores policies
-*.pkl
+# *.pkl
