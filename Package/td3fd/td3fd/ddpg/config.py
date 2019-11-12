@@ -34,7 +34,7 @@ default_params = {
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread
         "use_demo_reward": 0,  # whether or not to assume that demonstrations have rewards, and train it on the critic
         "num_demo": 0,  # number of expert demo episodes
-        "demo_strategy": "none",  # choose between ["none", "pure_bc", "bc", "nf", "gan"]
+        "demo_strategy": "none",  # choose between ["none", "bc", "nf", "gan"]
         "bc_params": {
             "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
             "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
