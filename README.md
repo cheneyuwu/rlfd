@@ -5,8 +5,8 @@
 
 ## Prerequisites
 1. This repository requires Python3 (>=3.5) and is tested with python 3.6.
-2. You will also need [MuJoCo](http://mujoco.org/) & [mujoco_py](https://github.com/openai/mujoco-py) to run experiments for the PegInsertion and PickAndPlace environments as we did for the paper. However, we also provide a toy 2D reacher environment for quick testing and tutorial purpose. So if you are not interested in reproducing the results, MuJoCo is optional.
-3. We also support running multiple experiments with different parameters in parallel through [OpenMPI](https://www.open-mpi.org/) & [mpi4py](https://mpi4py.readthedocs.io/en/stable/) but is also optional.
+2. You will also need [MuJoCo](http://mujoco.org/) & [mujoco_py](https://github.com/openai/mujoco-py) to run experiments for the PegInsertion and PickAndPlace environments as we did for the paper. However, we also provide a toy 2D reacher environment for quick testing and tutorial purpose, so MuJoCo is optional if you are not interested in reproducing the results.
+3. We also support training multiple models (with different parameters) in parallel through [OpenMPI](https://www.open-mpi.org/) & [mpi4py](https://mpi4py.readthedocs.io/en/stable/) but is also optional.
 
 
 ## Installation
@@ -23,8 +23,7 @@
     pip install -e <root>/Package/td3fd
     ```
     In terms of Tensorflow, `td3dfd` requires `tensorflow==1.15.0` and `tensorflow_probability==0.7.0`. \
-    Also refer to [OpenAI Gym](https://github.com/openai/gym) for more information.
-3. Source the setup script at root directory, this script just defines some environment variables for the logging.
+3. Source the setup script at root directory, this script just defines some environment variables for logging.
     ```
     source <root>/setup.py
     ```
@@ -32,7 +31,7 @@
 ## Running Experiments
 
 ### Generating Demonstrations
-Demonstration data must be stored as a npz file named `demo_data.npz`, it should contain the following entries:
+Demonstration data must be stored as a `npz` file named `demo_data.npz`, it should contain the following entries:
 - "o": array of observations of shape (number of episodes, episode_length+1, observation dimension)
 - "u": array of actions of shape (number of episodes, episode_length, action dimension)
 - "g": (optional) array of goals of shape (number of episodes, episode_length, goal dimension)
@@ -57,14 +56,13 @@ For our experiments, we provide two options for generating demonstration data.
             "filename": "demo_data.npz" // Output file name. This is the default name consumed by the training scripts.
         }
         ```
-    2. put the pre-trained `<policy name>.pkl` in the same folder as your `demo_config.json` and then
+    2. put the pre-trained `<policy name>.pkl` in the same folder as your `demo_config.json` and then run
         ```
         python -m td3fd.launch --targets demo_data --policy_file <policy name>.pkl
         ```
 
 ### Training Models
-- Make sure you have your demonstrations `demo_data.npz` stored in the directory you are about to store the experiment results.
-- In the same folder, create a python script storing hyper-parameters to be used for training your model, named `<param name>.py`
+- Create a python script storing parameters to be used for training your model, named `<param name>.py`
     - We have pre-defined parameter files for the environments we tested in `<root>/Package/td3fd/td3fd/ddpg/param/*` and
     - Optionally, in the python file you just created, you can simple import from our pre-defined parameters, e.g.
         ```
@@ -77,9 +75,10 @@ For our experiments, we provide two options for generating demonstration data.
         ```
     Note 1: the name of the global variable starts with `params_config`. \
     Note 2: if a parameter is of type `tuple`, it is assumed that you want to iterate over the tuple and train multiple agents each with a different parameter listed in the `tuple`. \
-    In the above script, we imported the default parameters used for the 2D Peg Insertion environment, then we override some of them parameters:
-    - `params_config_gan["ddpg"]["demo_strategy"] = ("gan", "none")` means to train two agents, one with GAN shaping, one with just TD3 (as `use_TD3` is set to true in `ddpg_fetch_peg_in_hole_2d`)
-    - `params_config_gan["seed"] = tuple(range(10))` means to train 10 agents with seed 0 to 10
+    In the above script, we imported the default parameters used for the 2D Peg Insertion environment, then we override some parameters:
+    - `params_config_gan["ddpg"]["demo_strategy"] = ("gan", "none")` means to train two agents, one with reward shaping via GAN, one with just TD3 (as `use_TD3` has been set `True` in `ddpg_fetch_peg_in_hole_2d`)
+    - `params_config_gan["seed"] = tuple(range(10))` means to train 10 agents with seed 0 to 10.
+
     Therefore, this modified parameter dictionary tries to run 20 experiments, TD3 + GAN shaping with seed 0-10 and TD3 with seed 0-10. \
     See `<root>/Package/td3fd/td3fd/ddpg/config` and `<root>/Package/td3fd/td3fd/gail/config` for a detailed description of all parameters
 - Put the `demo_data.npz` generated in previous step in the same folder as `<param name>.py`
@@ -93,7 +92,7 @@ For our experiments, we provide two options for generating demonstration data.
     ```
     demo_data.npz - demontration data, which is copies to each run
     log.txt       - training logs
-    params.json   - hyper parameters for the experiment enclosed in this directory
+    params.json   - parameters for the experiment enclosed in this directory
     progress.csv  - experiment statistics for plotting
     policies      - a folder containing intermediate policies, <policy_[0-9]+>.pkl, and the last one, policy_last.pkl
     ```
