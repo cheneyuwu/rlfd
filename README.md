@@ -111,3 +111,4 @@ This script will collect (recursively) all the experiment results under `<top le
 ### Examples
 1. [2D Reacher Environment](./Experiment/Reacher2D)
 2. [Fetch Peg Insertion Environment](./Experiment/FetchPegInsertion)
+3. [Fetch Pick and Place Environment](./Experiment/FetchPickAndPlace)

@@ -40,7 +40,7 @@ class FetchDemoGenerator:
         # reset env and store initial observation
         obs = self.env.reset()
         self.episode_obs.append(obs)
-        self.num_object = int(obs["desired_goal"].shape[0] / 3)
+        self.num_object = int(obs["_desired_goal"].shape[0] / 3)
         self.init_obs = obs.copy()
         self.last_obs = obs.copy()
 
@@ -60,7 +60,7 @@ class FetchDemoGenerator:
 
     def _use_policy(self):
         while self.time_step <= self.env.eps_length:
-            action = self.policy.get_actions(self.last_obs["observation"], self.last_obs["desired_goal"])
+            action = self.policy.get_actions(self.last_obs["observation"], self.last_obs["_desired_goal"])
             action = action.reshape(-1)
             self._step(action)
 
@@ -85,7 +85,7 @@ class FetchDemoGenerator:
             object_oriented_goal[2] += offset
 
     def _move_to_goal(self, obj_pos_dim, goal_dim, gripper=-1.0, offset=np.array((0.0, 0.0, 0.0))):
-        goal = self.last_obs["desired_goal"][goal_dim : goal_dim + 3] + offset
+        goal = self.last_obs["_desired_goal"][goal_dim : goal_dim + 3] + offset
         object_pos = self.last_obs["observation"][obj_pos_dim : obj_pos_dim + 3]
 
         while np.linalg.norm(goal - object_pos) >= 0.01 and self.time_step <= self.env.eps_length:
@@ -101,7 +101,7 @@ class FetchDemoGenerator:
 
     def _move_to_interm_goal(self, obj_pos_dim, goal_dim, weight):
 
-        goal = self.last_obs["desired_goal"][goal_dim : goal_dim + 3]
+        goal = self.last_obs["_desired_goal"][goal_dim : goal_dim + 3]
         object_pos = self.last_obs["observation"][obj_pos_dim : obj_pos_dim + 3]
 
         interm_goal = object_pos * weight + goal * (1 - weight)
@@ -152,14 +152,14 @@ def store_demo_data(T, num_itr, demo_data_obs, demo_data_acs, demo_data_rewards,
         for transition in range(T):
             obs.append([demo_data_obs[epsd][transition].get("observation")])
             acts.append([demo_data_acs[epsd][transition]])
-            goals.append([demo_data_obs[epsd][transition].get("desired_goal")])
-            achieved_goals.append([demo_data_obs[epsd][transition].get("achieved_goal")])
+            goals.append([demo_data_obs[epsd][transition].get("_desired_goal")])
+            achieved_goals.append([demo_data_obs[epsd][transition].get("_achieved_goal")])
             rs.append([demo_data_rewards[epsd][transition]])
             for idx, key in enumerate(info_keys):
                 info_values[idx][transition, 0] = demo_data_info[epsd][transition][key]
 
         obs.append([demo_data_obs[epsd][T].get("observation")])
-        achieved_goals.append([demo_data_obs[epsd][T].get("achieved_goal")])
+        achieved_goals.append([demo_data_obs[epsd][T].get("_achieved_goal")])
 
         episode = dict(o=obs, u=acts, g=goals, ag=achieved_goals, r=rs)
         for key, value in zip(info_keys, info_values):

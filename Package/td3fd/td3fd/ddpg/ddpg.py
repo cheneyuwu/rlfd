@@ -615,5 +615,5 @@ class DDPG(object):
         self.__init__(**state)
         vars = [x for x in tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name)]
         assert len(vars) == len(stored_vars)
-        node = [tf.assign(var, val) for var, val in zip(vars, stored_vars)]
+        node = [tf.compat.v1.assign(var, val) for var, val in zip(vars, stored_vars)]
         self.sess.run(node)

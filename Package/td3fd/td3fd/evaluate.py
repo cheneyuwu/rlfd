@@ -65,7 +65,7 @@ def main(policy_file, **kwargs):
     if rank == 0:
         logger.dump_tabular()
 
-    tf.get_default_session().close()
+    tf.compat.v1.get_default_session().close()
 
 
 if __name__ == "__main__":

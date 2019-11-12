@@ -43,8 +43,8 @@ params_config = {
                 "num_bijectors": 4,
                 "layer_sizes": [256, 256],
                 "prm_loss_weight": 1.0,
-                "reg_loss_weight": 1000.0,
-                "potential_weight": 3.0,
+                "reg_loss_weight": 200.0,
+                "potential_weight": 10.0,
             },
             "gan": {
                 "num_ens": 4,
@@ -52,7 +52,7 @@ params_config = {
                 "latent_dim": 6,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
-                "potential_weight": 8.0,
+                "potential_weight": 3.0,
             },
         },
         # normalize observation

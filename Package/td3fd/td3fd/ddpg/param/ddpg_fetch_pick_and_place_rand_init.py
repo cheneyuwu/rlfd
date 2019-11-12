@@ -33,7 +33,7 @@ params_config = {
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         "bc_params": {"q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
         "shaping_params": {
-            "num_epochs": int(2e4),
+            "num_epochs": int(3e4),
             "batch_size": 128,
             "nf": {
                 "num_ens": 2,
@@ -43,16 +43,16 @@ params_config = {
                 "num_bijectors": 4,
                 "layer_sizes": [256, 256],
                 "prm_loss_weight": 1.0,
-                "reg_loss_weight": 1000.0,
-                "potential_weight": 3.0,
+                "reg_loss_weight": 400.0,
+                "potential_weight": 10.0,
             },
             "gan": {
                 "num_ens": 4,
                 "layer_sizes": [256, 256, 256],
-                "latent_dim": 25,
+                "latent_dim": 16,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
-                "potential_weight": 0.5,
+                "potential_weight": 1.0,
             },
         },
         # normalize observation
