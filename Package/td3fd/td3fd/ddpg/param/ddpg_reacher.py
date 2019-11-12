@@ -1,4 +1,3 @@
-# Best parameters found so far to be used for the Open AI fetch pick and place environment with a single goal.
 params_config = {
     # config summary
     "config": "default",
@@ -11,7 +10,7 @@ params_config = {
     "fix_T": True,
     # DDPG config
     "ddpg": {
-        "num_epochs": int(1e3),
+        "num_epochs": int(1e2),
         "num_cycles": 10,
         "num_batches": 40,
         # replay buffer setup
@@ -27,9 +26,9 @@ params_config = {
         # double q learning
         "polyak": 0.95,
         # use demonstrations
-        "sample_demo_buffer": 0,
+        "sample_demo_buffer": False,
         "batch_size_demo": 128,
-        "use_demo_reward": 0,
+        "use_demo_reward": False,
         "num_demo": 40,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         "bc_params": {"q_filter": 1, "prm_loss_weight": 0.1, "aux_loss_weight": 1.0},

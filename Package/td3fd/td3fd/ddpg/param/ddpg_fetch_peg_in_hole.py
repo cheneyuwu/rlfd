@@ -1,4 +1,3 @@
-# Best parameters found so far to be used for the Open AI fetch pick and place environment with a single goal.
 params_config = {
     # config summary
     "config": "default",
@@ -25,9 +24,9 @@ params_config = {
         # double q learning
         "polyak": 0.95,
         # use demonstrations
-        "sample_demo_buffer": 0,
+        "sample_demo_buffer": False,
         "batch_size_demo": 128,
-        "use_demo_reward": 0,
+        "use_demo_reward": False,
         "num_demo": 30,
         "demo_strategy": "none",  # ["none", "pure_bc", "bc", "nf", "gan"]
         "bc_params": {"q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},

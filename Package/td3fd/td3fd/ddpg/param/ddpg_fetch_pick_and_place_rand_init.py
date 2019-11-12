@@ -1,9 +1,8 @@
-# Best parameters found so far to be used for the Open AI fetch pick and place environment with a single goal.
 params_config = {
     # config summary
     "config": "default",
     # environment config
-    "env_name": "FetchPickAndPlaceRandInit-v1",
+    "env_name": "YWFetchPickAndPlaceRandInit-v0",
     "r_scale": 1.0,
     "r_shift": 0.0,
     "eps_length": 40,
@@ -27,9 +26,9 @@ params_config = {
         # double q learning
         "polyak": 0.95,
         # use demonstrations
-        "sample_demo_buffer": 0,
+        "sample_demo_buffer": False,
         "batch_size_demo": 128,
-        "use_demo_reward": 0,
+        "use_demo_reward": False,
         "num_demo": 50,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         "bc_params": {"q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
