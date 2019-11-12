@@ -31,16 +31,8 @@ def train(root_dir, params):
     num_cycles = policy.num_cycles
 
     # Setup paths
-    # checkpoint files
-    ckpt_save_path = os.path.join(root_dir, "rl_ckpt")
-    os.makedirs(ckpt_save_path, exist_ok=True)
-    ckpt_weight_path = os.path.join(ckpt_save_path, "rl_weights.ckpt")
-    ckpt_rb_path = os.path.join(ckpt_save_path, "rb_data.npz")
-    ckpt_rollout_path = os.path.join(ckpt_save_path, "rollout_history.pkl")
-    ckpt_evaluator_path = os.path.join(ckpt_save_path, "evaluator_history.pkl")
-    ckpt_trainer_path = os.path.join(ckpt_save_path, "trainer.pkl")
     # rl policies (cannot restart training)
-    policy_save_path = os.path.join(root_dir, "rl")
+    policy_save_path = os.path.join(root_dir, "policies")
     os.makedirs(policy_save_path, exist_ok=True)
     latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
     periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")

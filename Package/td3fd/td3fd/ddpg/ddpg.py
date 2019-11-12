@@ -109,7 +109,7 @@ class DDPG(object):
         self.use_demo_reward = use_demo_reward
         self.num_demo = num_demo
         self.demo_strategy = demo_strategy
-        assert self.demo_strategy in ["none", "pure_bc", "bc", "gan", "nf"]
+        assert self.demo_strategy in ["none", "bc", "gan", "nf"]
         self.bc_params = bc_params
         self.shaping_params = shaping_params
         self.gamma = gamma
@@ -266,6 +266,7 @@ class DDPG(object):
 
     def evaluate_shaping(self):
         pass
+        # TODO: future work, try vision based RL
         # images = self.demo_shaping.evaluate(self.sess)
         # images = ((images + 1.0) * 127.5).astype(np.int32)
         # import matplotlib.pyplot as plt

@@ -33,7 +33,7 @@ class DemoShaping:
         assert potential.shape[1] == next_potential.shape[1] == 1
         return self.gamma * next_potential - potential
 
-    def _concat_inputs_normalize(self, o, g, u):
+    def _concat_normalize_inputs(self, o, g, u):
         # concat demonstration inputs
         state_tf = self.o_stats.normalize(o)
         if g != None:
@@ -53,7 +53,7 @@ class DemoShaping:
         # note: shape of state_tf is (num_demo, k), where k is sum of dim o g u
         return state_tf
 
-    def _cast_concat_inputs_normalize(self, o, g, u):
+    def _cast_concat_normalize_inputs(self, o, g, u):
         # concat demonstration inputs
         state_tf = tf.cast(self.o_stats.normalize(o), tf.float64)
         if g != None:
@@ -100,10 +100,12 @@ class NFDemoShaping(DemoShaping):
         """
         self.o_stats = o_stats
         self.g_stats = g_stats
-        self.inputs_tf = inputs_tf
+        self.demo_inputs_tf = demo_inputs_tf
 
-        demo_state_tf = self._concat_inputs_normalize(
-            self.inputs_tf["o"], self.inputs_tf["g"] if "g" in self.inputs_tf.keys() else None, self.inputs_tf["u"]
+        demo_state_tf = self._cast_concat_normalize_inputs(
+            self.demo_inputs_tf["o"],
+            self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
+            self.demo_inputs_tf["u"],
         )
 
         # params for potentials
@@ -140,7 +142,7 @@ class NFDemoShaping(DemoShaping):
         super().__init__(gamma)
 
     def potential(self, o, g, u):
-        state_tf = self._cast_concat_inputs_normalize(o, g, u)
+        state_tf = self._cast_concat_normalize_inputs(o, g, u)
 
         potential = tf.reshape(self.nf.prob(state_tf), (-1, 1))
         potential = tf.log(potential + tf.exp(-self.scale))
@@ -201,9 +203,7 @@ class EnsNFDemoShaping(DemoShaping):
         # loss
         self.loss = tf.reduce_sum([ens.loss for ens in self.nfs], axis=0)
         # optimizers
-        self.train_op = tf.train.AdamOptimizer(learning_rate=lr).minimize(self.loss)
-        # dataset initializer
-        self.demo_iter_init_tf = [ens.demo_iter_init_tf for ens in self.nfs]
+        self.train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=lr).minimize(self.loss)
 
         super().__init__(gamma)
 
@@ -246,13 +246,13 @@ class GANDemoShaping(DemoShaping):
         self.demo_inputs_tf = demo_inputs_tf
         self.policy_inputs_tf = policy_inputs_tf
 
-        demo_state_tf = self._concat_inputs_normalize(  # remove _normalize to not normalize the inputs
+        demo_state_tf = self._concat_normalize_inputs(  # remove _normalize to not normalize the inputs
             self.demo_inputs_tf["o"],
             self.demo_inputs_tf["g"] if "g" in self.demo_inputs_tf.keys() else None,
             self.demo_inputs_tf["u"],
         )
 
-        policy_state_tf = self._concat_inputs_normalize(  # remove _normalize to not normalize the inputs
+        policy_state_tf = self._concat_normalize_inputs(  # remove _normalize to not normalize the inputs
             self.policy_inputs_tf["o"],
             self.policy_inputs_tf["g"] if "g" in self.policy_inputs_tf.keys() else None,
             self.policy_inputs_tf["u"],
@@ -298,13 +298,13 @@ class GANDemoShaping(DemoShaping):
         self.gen_cost = -tf.reduce_mean(disc_fake)
 
         # Train
-        self.disc_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
+        self.disc_train_op = tf.compat.v1.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.disc_cost, var_list=self.discriminator.trainable_variables
         )
-        self.disc_train_policy_op = tf.compat.v1.train.AdamOptimizer(
+        self.disc_train_policy_op = tf.compat.v1.compat.v1.train.AdamOptimizer(
             learning_rate=1e-4, beta1=0.5, beta2=0.9
         ).minimize(self.disc_cost_policy, var_list=self.discriminator.trainable_variables)
-        self.gen_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
+        self.gen_train_op = tf.compat.v1.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.gen_cost, var_list=self.generator.trainable_variables
         )
 
@@ -317,7 +317,7 @@ class GANDemoShaping(DemoShaping):
         """
         Use the output of the GAN's discriminator as potential.
         """
-        state_tf = self._concat_inputs_normalize(o, g, u)  # remove _normalize to not normalize the inputs
+        state_tf = self._concat_normalize_inputs(o, g, u)  # remove _normalize to not normalize the inputs
         # TODO: for pixel inputs
         # state_tf = o
         potential = self.discriminator(state_tf)
