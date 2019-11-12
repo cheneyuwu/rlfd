@@ -20,9 +20,7 @@ DEFAULT_PARAMS = {
     "num_eps": 40,
     "fix_T": True,
     "max_concurrency": 10,
-    "demo": {"random_eps": 0.0, "noise_eps": 0.1, "polyak_noise": 0.0, "compute_q": True, "render": False},
-    "extra_noise_mean": 0.0,
-    "extra_noise_var": 0.0,
+    "demo": {"random_eps": 0.0, "noise_eps": 0.1, "render": False},
     "filename": "demo_data.npz",
 }
 
@@ -101,17 +99,6 @@ def main(policy_file, root_dir, **kwargs):
         logger.record_tabular(key, np.mean(val))
     if rank == 0:
         logger.dump_tabular()
-
-    # Add extra noise to the demonstration actions (maybe to the states as well later)
-    logger.info(
-        "Adding gaussian noise with mean: {}, var: {} to the actions".format(
-            params["extra_noise_mean"], params["extra_noise_var"]
-        )
-    )
-    episode["u"] += np.random.normal(
-        loc=params["extra_noise_mean"], scale=params["extra_noise_var"], size=episode["u"].shape
-    )
-    np.clip(episode["u"], -policy.max_u, policy.max_u, out=episode["u"])
 
     # store demonstration data (only the main thread)
     if rank == 0:
