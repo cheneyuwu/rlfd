@@ -23,7 +23,7 @@ class ValueNet(tf.Module):
     def __call__(self, o, g):
         state = o
         # for multigoal environments, we have goal as another states
-        if self.dimg != 0:
+        if self.dimg != (0,):
             state = tf.concat([state, g], axis=1)
         else:
             assert g is None
@@ -47,12 +47,14 @@ class Generator(tf.Module):
                 units=size, activation="relu", kernel_initializer=tf.keras.initializers.glorot_normal()
             )
             self.model_layers.append(layer)
+        # TODO: accept multidimensional inputs
+        assert len(self.dimu) == 1, "only accept 1 dimensional output"
         self.model_layers.append(
             tf.keras.layers.Dense(
-                units=self.dimu, activation="tanh", kernel_initializer=tf.keras.initializers.glorot_normal()
+                units=self.dimu[0], activation="tanh", kernel_initializer=tf.keras.initializers.glorot_normal()
             )
         )
-        self.logstd_tf = tf.Variable(tf.zeros(self.dimu), dtype=tf.float32)
+        self.logstd_tf = tf.Variable(tf.zeros(self.dimu[0]), dtype=tf.float32)
 
     def __call__(self, o, g):
         dist = self.get_output_dist(o, g)
@@ -63,7 +65,7 @@ class Generator(tf.Module):
     def get_output_dist(self, o, g):
         state = o
         # for multigoal environments, we have goal as another states
-        if self.dimg != 0:
+        if self.dimg != (0,):
             state = tf.concat([state, g], axis=1)
         else:
             assert g is None
@@ -95,7 +97,7 @@ class Discriminator(tf.Module):
     def __call__(self, o, g, u):
         state = o
         # for multigoal environments, we have goal as another states
-        if self.dimg != 0:
+        if self.dimg != (0,):
             state = tf.concat([state, g], axis=1)
         else:
             assert g is None

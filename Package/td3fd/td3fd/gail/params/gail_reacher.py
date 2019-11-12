@@ -2,15 +2,15 @@ params_config = {
     # config summary
     "config": "default",
     # environment config
-    "env_name": "YWFetchPegInHoleRandInit-v0",
+    "env_name": "Reach2DF",
     "r_scale": 1.0,
     "r_shift": 0.0,
-    "eps_length": 40,
+    "eps_length": 20,
     "env_args": {},
     "fix_T": True,
     # GAIL config
     "gail": {
-        "num_epochs": int(2.4e4),
+        "num_epochs": int(5e2),
         # replay buffer size (gail and demo)
         "buffer_size": int(1e6),
         # demonstrations
