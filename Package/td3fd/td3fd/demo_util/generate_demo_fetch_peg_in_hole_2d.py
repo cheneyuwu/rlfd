@@ -113,7 +113,7 @@ def main(policy_file=None, **kwargs):
     assert itr == num_itr
 
     store_demo_data(
-        T=env._max_episode_steps,
+        T=env.eps_length,
         num_itr=num_itr,
         demo_data_obs=demo_data_obs,
         demo_data_acs=demo_data_acs,

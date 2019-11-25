@@ -115,9 +115,9 @@ def plot_results(allresults, xys, target_dir, smooth=0):
     fig = plt.figure()
     fig.subplots_adjust(left=0.15, right=0.98, bottom=0.27, top=0.9, wspace=0.25, hspace=0.25)
     # set sizes
-    SMALL_SIZE = 140
-    MEDIUM_SIZE = 140
-    BIGGER_SIZE = 160
+    SMALL_SIZE = 14
+    MEDIUM_SIZE = 14
+    BIGGER_SIZE = 16
     plt.rc("font", size=MEDIUM_SIZE)  # controls default text sizes
     plt.rc("axes", titlesize=BIGGER_SIZE)  # fontsize of the axes title
     plt.rc("axes", labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
@@ -159,9 +159,9 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                     mean_y,
                     label=config,
                     color=colors[j % len(colors)],
-                    lw=20,
+                    lw=2,
                     marker=markers[j % len(markers)],
-                    ms=80,
+                    ms=8,
                     markevery=int(10),
                 )
                 ax.fill_between(
@@ -169,8 +169,8 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 )
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_label)
-                ax.tick_params(axis="x", pad=50, length=50, width=10)
-                ax.tick_params(axis="y", pad=50, length=50, width=10)
+                ax.tick_params(axis="x", pad=5, length=5, width=1)
+                ax.tick_params(axis="y", pad=5, length=5, width=1)
                 ax.spines["top"].set_visible(False)
                 ax.spines["right"].set_visible(False)
                 ax.spines["bottom"].set_visible(True)
@@ -181,7 +181,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
         # use fig level legend
         handles, labels = ax.get_legend_handles_labels()
         fig.legend(handles, labels, loc="lower center", ncol=int(num_lines), frameon=False)
-        fig.set_size_inches(50 * len(xys), 50 * len(data.keys()))
+        fig.set_size_inches(5 * len(xys), 5 * len(data.keys()))
         save_path = os.path.join(target_dir, "Result_{}.png".format(env_id))
         print("Saving image to " + save_path)
         plt.savefig(save_path, dpi=200)

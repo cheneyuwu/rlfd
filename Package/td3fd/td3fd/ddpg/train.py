@@ -24,7 +24,7 @@ def train(root_dir, params):
     rollout_worker = config.config_rollout(params=params, policy=policy)
     evaluator = config.config_evaluator(params=params, policy=policy)
 
-    save_interval = 10
+    save_interval = 4
     shaping_num_epochs = policy.shaping_params["num_epochs"]
     num_epochs = policy.num_epochs
     num_batches = policy.num_batches
@@ -73,22 +73,26 @@ def train(root_dir, params):
 
         # TODO: Incremental learning
         # if policy.demo_strategy in ["nf", "gan"]:
-        #     # Option 1: adding more experience (with correction) to the demonstration buffer
-        #     o = episode["o"][:, :-1, ...].reshape(-1, *policy.dimo)
-        #     g = episode["g"].reshape(-1, *policy.dimg)
-        #     u = demo_policy.get_actions(o, g, compute_q=False)
-        #     u = u.reshape(episode["u"].shape)
-        #     episode["u"] = u
-        #     policy.add_to_demo_buffer(episode)
-        #     for epoch in range(shaping_num_epochs):
-        #         loss = policy.train_shaping()
-        #         if epoch % (shaping_num_epochs / 100) == (shaping_num_epochs / 100 - 1):
-        #             logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-        #             policy.evaluate_shaping()
-        #     # Option 2: train gan discriminator using fake data from generator
-        #     loss = policy.train_shaping_policy(episode)
-        #     logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-        #     policy.evaluate_shaping()
+            # # Option 1: adding more experience (with correction) to the demonstration buffer
+            # o = episode["o"][:, :-1, ...].reshape(-1, *policy.dimo)
+            # g = episode["g"].reshape(-1, *policy.dimg)
+            # u = demo_policy.get_actions(o, g, compute_q=False)
+            # u = u.reshape(episode["u"].shape)
+            # episode["u"] = u
+            # policy.add_to_demo_buffer(episode)
+            # for epoch in range(shaping_num_epochs):
+            #     loss = policy.train_shaping()
+            #     if epoch % (shaping_num_epochs / 100) == (shaping_num_epochs / 100 - 1):
+            #         logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
+            #         policy.evaluate_shaping()
+            # # Option 2: train gan discriminator using fake data from generator
+            # if epoch % 10 == 0:
+            #     for _ in range(2):
+            #         evaluator.clear_history()
+            #         episode = evaluator.generate_rollouts()
+            #         loss = policy.train_shaping_policy(episode)
+            #         logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
+            #         policy.evaluate_shaping()
 
         # log
         logger.record_tabular("epoch", epoch)

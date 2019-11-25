@@ -40,7 +40,7 @@ Demonstration data must be stored as a `npz` file named `demo_data.npz`, it shou
 
 For our experiments, we provide two options for generating demonstration data.
 1. Using hard coded scripts. Refer to `<root>/Experiment/<envrionment names>/README.md` for more information.
-2. Using pre-trained scripts. Our implementation of DDPG/GAIL stores models through pickle as `<policy name>.pkl`. To use a pre-trained model to generate demonstration data:
+2. Using pre-trained policies. Our implementation of DDPG/GAIL stores models through pickle as `<policy name>.pkl`. To use a pre-trained model to generate demonstration data:
     1. create a json file named `demo_config.json` containing the following:
         ```
         {
