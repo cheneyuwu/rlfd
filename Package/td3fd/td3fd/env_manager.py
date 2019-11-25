@@ -1,3 +1,5 @@
+import numpy as np
+
 from td3fd.env import reacher_2d
 
 try:
@@ -15,29 +17,28 @@ except:
 
 
 class EnvWrapper:
-    """ A simple wrapper of environments that shifts or scales environment reward: r = (r + r_shift) / r_scale
+    """Wrapper of the environment that does the following:
+        1. adjust rewards: r = (r + r_shift) / r_scale
+        2. modify state to contain: observation, achieved_goal, desired_goal
     """
 
     def __init__(self, make_env, r_scale, r_shift, eps_length):
         self.env = make_env()
         self.r_scale = r_scale
         self.r_shift = r_shift
-        assert (
-            eps_length > 0
-        ), "for now, you must provide eps_length, which is the suggested max number of simulation steps per episode."
-        self.eps_length = eps_length
+        self.eps_length = eps_length if eps_length else self.env._max_episode_steps
         # need the following properties
         self.max_u = self.env.max_u if hasattr(self.env, "max_u") else 1  # note that 1 is just for most envs
         self.action_space = self.env.action_space
 
-    def compute_reward(self, achieved_goal, desired_goal, info):
-        reward = self.env.compute_reward(achieved_goal=achieved_goal, desired_goal=desired_goal, info=info)
-        reward = (reward + self.r_shift) / self.r_scale
-        return reward
+    # def compute_reward(self, achieved_goal, desired_goal, info):
+    #     reward = self.env.compute_reward(achieved_goal=achieved_goal, desired_goal=desired_goal, info=info)
+    #     reward = (reward + self.r_shift) / self.r_scale
+    #     return reward
 
     def reset(self, **kwargs):
         state = self.env.reset(**kwargs)
-        return state
+        return self._transform_state(state)
 
     def render(self, **kwargs):
         return self.env.render(**kwargs)
@@ -46,12 +47,20 @@ class EnvWrapper:
         return self.env.seed(seed)
 
     def step(self, action):
-        state, r, extra, info = self.env.step(action)
+        state, r, done, info = self.env.step(action)
         r = (r + self.r_shift) / self.r_scale
-        return state, r, extra, info
+        return self._transform_state(state), r, done, info
 
     def close(self):
         return self.env.close()
+    
+    def _transform_state(self, state):
+        """
+        modify state to contain: observation, achieved_goal, desired_goal
+        """
+        if not type(state) == dict:
+            state = {"observation": state, "achieved_goal": np.empty(0), "desired_goal": np.empty(0)}
+        return state
 
 
 class EnvManager:
@@ -109,13 +118,15 @@ if __name__ == "__main__":
     import numpy as np
 
     # For a openai env
-    env_manager = EnvManager("YWFetchPegInHole-v0", eps_length=40)
+    env_manager = EnvManager("Reacher-v2")
     env = env_manager.get_env()
 
     env.seed(0)
+    done = True
     for i in range(1000):
-        env.reset()
+        if done:
+            env.reset()
         action = np.random.randn(env.action_space.shape[0])  # sample random action
-        state, r, extra, info = env.step(action)
-        print(state, r, extra, info)
+        state, r, done, info = env.step(action)
+        print(state, r, done, info)
         env.render()
