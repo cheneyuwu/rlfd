@@ -464,7 +464,7 @@ class SerialRolloutWorker(RolloutWorkerBase):
                 iv = {"info_" + k: np.empty(self.dims["info_" + k]) for k in self.info_keys}
                 # compute new states and observations
                 try:
-                    curr_o_new, curr_r, _, info = self.env.step(u)
+                    curr_o_new, curr_r, done, info = self.env.step(u)
                     o_new[...] = curr_o_new["observation"]
                     ag_new[...] = curr_o_new["achieved_goal"]
                     r[...] = curr_r
@@ -503,7 +503,7 @@ class SerialRolloutWorker(RolloutWorkerBase):
                 ag[...] = ag_new  # ag_2 -> ag
 
                 # UNCOMMENT this to end this episode if succeeded
-                if success:
+                if success or done: # some environment has it's done info in info["success"]
                     if t == 0:
                         logger.warn("Starting with a success, this may be an indication of error!")
                     dones.append(np.ones(1))
