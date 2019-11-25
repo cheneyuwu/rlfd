@@ -12,7 +12,7 @@ default_params = {
     "eps_length": 0,  # overwrite the default length of the episode provided in _max_episode_steps
     "env_args": {},  # extra arguments passed to the environment
     "fix_T": True,  # whether or not to fix episode length for all rollouts (if false, then use the ring buffer)
-    # DDPG config
+    # DDPG config (with TD3 params)
     "ddpg": {
         "num_epochs": 10,
         "num_cycles": 10,  # per epoch
@@ -21,7 +21,7 @@ default_params = {
         "buffer_size": int(1e6),
         # actor critic networks
         "scope": "ddpg",
-        "use_td3": 1,  # whether or not to use td3
+        "use_td3": True,  # whether or not to use td3
         "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layer
         "q_lr": 0.001,  # critic learning rate
         "pi_lr": 0.001,  # actor learning rate
@@ -65,10 +65,10 @@ default_params = {
         },
         # normalize observation
         "norm_eps": 0.01,  # epsilon used for observation normalization
-        "norm_clip": 5,  # normalized observations are cropped to this values
+        "norm_clip": 5,  # normalized observations are cropped to this value
         # i/o clippings
         "clip_obs": 200.0,
-        "clip_pos_returns": False,  # whether or not this environment has positive return.
+        "clip_pos_returns": False,  # whether or not this environment should have positive return.
         "clip_return": False,
     },
     # rollouts config

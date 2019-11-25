@@ -6,6 +6,10 @@ import os
 import shutil
 import sys
 
+import tensorflow as tf
+from tfdeterminism import patch
+patch() # deterministic tensorflow, requires tensorflow-determinism
+
 # must include gym before loading mpi, for compute canada cluster
 try:
     import mujoco_py
