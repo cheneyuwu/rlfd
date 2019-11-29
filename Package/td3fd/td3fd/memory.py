@@ -21,7 +21,7 @@ def iterbatches(arrays, *, num_batches=None, batch_size=None, shuffle=True, incl
 
 
 class ReplayBufferBase:
-    def __init__(self, size):
+    def __init__(self, buffer_shapes, size):
         """ Create a replay buffer.
         Args:
             size (int) - the size of the buffer, measured in transitions
@@ -29,6 +29,9 @@ class ReplayBufferBase:
         # memory management
         self.size = size
         self.current_size = 0
+
+        # buffer
+        self.buffers = {key: np.empty([self.size, *shape], dtype=np.float32) for key, shape in buffer_shapes.items()}
 
     def sample(self, batch_size):
         """ Returns a dict {key: array(batch_size x shapes[key])}
@@ -77,6 +80,9 @@ class ReplayBufferBase:
         """Overwrite this for further cleanup"""
         pass
 
+    def _get_storage_idx(self):
+        raise NotImplementedError
+
 
 class RingReplayBuffer(ReplayBufferBase):
     def __init__(self, buffer_shapes, size_in_transitions):
@@ -86,10 +92,9 @@ class RingReplayBuffer(ReplayBufferBase):
             buffer_shapes       (dict of float) - the shape for all buffers that are used in the replay buffer
             size_in_transitions (int)           - the size of the buffer, measured in transitions
         """
-        super().__init__(size=size_in_transitions)
+        super().__init__(size=size_in_transitions, buffer_shapes=buffer_shapes)
 
         # contains {key: array(transitions x dim_key)}
-        self.buffers = {key: np.empty([self.size, *shape], dtype=np.float32) for key, shape in buffer_shapes.items()}
         self.pointer = 0
 
     def load_from_file(self, data_file, num_demo=None):
@@ -149,10 +154,9 @@ class UniformReplayBuffer(ReplayBufferBase):
             T                   (int)         - the time horizon for episodes
         """
 
-        super().__init__(size=size_in_transitions // T)
+        super().__init__(size=size_in_transitions // T, buffer_shapes=buffer_shapes)
 
         # self.buffers is {key: array(size_in_episodes x T or T+1 x dim_key)}
-        self.buffers = {key: np.empty([self.size, *shape], dtype=np.float32) for key, shape in buffer_shapes.items()}
         self.T = T
 
     def load_from_file(self, data_file, num_demo=None):
