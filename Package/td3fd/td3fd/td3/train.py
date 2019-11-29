@@ -54,6 +54,20 @@ def train(root_dir, params):
         demo_memory = config.config_memory(params=params)
         demo_memory.load_from_file(demo_file)
 
+    # Train shaping potential
+    if demo_strategy in ["nf", "gan"]:
+        shaping = ddpg_config.configure_shaping(params)
+        logger.info("Training the reward shaping potential.")
+        for epoch in range(shaping_num_epochs):
+            demo_data = demo_memory.sample()
+            for (o, g, u) in iterbatches(
+                (demo_data["o"], demo_data["g"], demo_data["u"]), batch_size=shaping_batch_size
+            ):
+                batch = {"o": o, "g": g, "u": u}
+                d_loss, g_loss = shaping.train(batch)
+            if epoch % (shaping_num_epochs / 100) == (shaping_num_epochs / 100 - 1):
+                logger.info("epoch: {} demo shaping loss: {}".format(epoch, d_loss))
+
     # Generate some random experiences before training
     for _ in range(10000):
         episode = rollout_worker.generate_rollouts(random=True)
@@ -73,7 +87,7 @@ def train(root_dir, params):
                     demo_batch = demo_memory.sample(batch_size_demo)
                 policy.train(batch, demo_batch)
             policy.update_target_net()
-        
+
         # test
         evaluator.clear_history()
         episode = evaluator.generate_rollouts()
