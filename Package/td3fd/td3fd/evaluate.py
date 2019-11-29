@@ -17,9 +17,9 @@ except ImportError:
 
 DEFAULT_PARAMS = {
     "seed": 0,
-    "num_eps": 10,
+    "num_eps": 1,
     "fix_T": False,
-    "demo": {"random_eps": 0.0, "noise_eps": 0.1, "compute_Q": True, "render": True, "rollout_batch_size": 1},
+    "demo": {"random_eps": 0.0, "noise_eps": 0.1, "compute_Q": True, "render": True, "num_episodes": 1},
 }
 
 

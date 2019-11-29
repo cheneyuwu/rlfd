@@ -25,11 +25,11 @@ DEFAULT_PARAMS = {
 }
 
 
-def main(policy_file, root_dir, **kwargs):
+def main(policy, root_dir, **kwargs):
     """Generate demo from policy file
     """
     assert root_dir is not None, "must provide the directory to store into"
-    assert policy_file is not None, "must provide the policy_file"
+    assert policy is not None, "must provide the policy"
 
     # Setup
     logger.configure()
@@ -49,15 +49,13 @@ def main(policy_file, root_dir, **kwargs):
             with open(param_file, "w") as f:
                 json.dump(params, f)
 
-    # reset default graph every time this function is called.
-    tf.reset_default_graph()
     # Set random seed for the current graph
     set_global_seeds(params["seed"])
     # get a default session for the current graph
     tf.InteractiveSession()
 
     # Load policy.
-    with open(policy_file, "rb") as f:
+    with open(policy, "rb") as f:
         policy = pickle.load(f)
 
     # Extract environment construction information
@@ -73,7 +71,7 @@ def main(policy_file, root_dir, **kwargs):
     if params["fix_T"]:
         params["demo"]["rollout_batch_size"] = np.minimum(params["num_eps"], params["max_concurrency"])
     else:
-        params["demo"]["rollout_batch_size"] = params["num_eps"]
+        params["demo"]["num_episodes"] = params["num_eps"]
     params = config.add_env_params(params=params)
     demo = config.config_demo(params=params, policy=policy)
 
@@ -108,7 +106,7 @@ def main(policy_file, root_dir, **kwargs):
         np.savez_compressed(file_name, **episode)  # save the file
         logger.info("Demo file has been stored into {}.".format(file_name))
 
-    tf.get_default_session().close()
+    tf.compat.v1.get_default_session().close()
 
 
 if __name__ == "__main__":
@@ -117,7 +115,7 @@ if __name__ == "__main__":
 
     ap = ArgParser()
     ap.parser.add_argument("--root_dir", help="policy store directory", type=str, default=None)
-    ap.parser.add_argument("--policy_file", help="input policy for training", type=str, default=None)
+    ap.parser.add_argument("--policy", help="input policy file for training", type=str, default=None)
     ap.parse(sys.argv)
 
     main(**ap.get_dict())

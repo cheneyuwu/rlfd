@@ -6,10 +6,6 @@ import os
 import shutil
 import sys
 
-import tensorflow as tf
-from tfdeterminism import patch
-patch() # deterministic tensorflow, requires tensorflow-determinism
-
 # must include gym before loading mpi, for compute canada cluster
 try:
     import mujoco_py
@@ -122,7 +118,7 @@ def transform_config_name(config_name):
     return config_name
 
 
-def main(targets, exp_dir, policy_file, **kwargs):
+def main(targets, exp_dir, policy, **kwargs):
 
     # Consider rank as pid.
     comm = MPI.COMM_WORLD if MPI is not None else None
@@ -137,8 +133,8 @@ def main(targets, exp_dir, policy_file, **kwargs):
     # get the abs path of the exp dir
     assert exp_dir is not None, "must provide the experiment root directory --exp_dir"
     exp_dir = os.path.abspath(os.path.expanduser(exp_dir))
-    if policy_file is not None:
-        policy_file = os.path.abspath(os.path.expanduser(policy_file))
+    if policy is not None:
+        policy = os.path.abspath(os.path.expanduser(policy))
 
     for target in targets:
         if "rename:" in target:
@@ -195,9 +191,9 @@ def main(targets, exp_dir, policy_file, **kwargs):
             if comm is not None:
                 comm.Barrier()
 
-            if policy_file == None:
-                policy_file = os.path.join(list(dir_param_dict.keys())[0], "rl/policy_latest.pkl")
-                logger.info("Setting policy_file to {}".format(policy_file))
+            if policy == None:
+                policy = os.path.join(list(dir_param_dict.keys())[0], "rl/policy_latest.pkl")
+                logger.info("Setting policy to {}".format(policy))
 
             # run experiments
             parallel = 1  # CHANGE this number to allow launching in serial
@@ -231,19 +227,19 @@ def main(targets, exp_dir, policy_file, **kwargs):
             if comm is not None:
                 comm.Barrier()
 
-        elif target == "demo_data":
-            assert policy_file != None
+        elif target == "demo":
+            assert policy != None
             logger.info("\n\n=================================================")
-            logger.info("Using policy file from {} to generate demo data.".format(policy_file))
+            logger.info("Using policy file from {} to generate demo data.".format(policy))
             logger.info("=================================================")
-            demo_entry(policy_file=policy_file, root_dir=exp_dir)
+            demo_entry(policy=policy, root_dir=exp_dir)
 
         elif target == "evaluate":
-            assert policy_file != None
+            assert policy != None
             logger.info("\n\n=================================================")
-            logger.info("Evaluating using policy file from {}.".format(policy_file))
+            logger.info("Evaluating using policy file from {}.".format(policy))
             logger.info("=================================================")
-            evaluate_entry(policy_file=policy_file)
+            evaluate_entry(policy=policy)
 
         elif target == "plot":
             logger.info("\n\n=================================================")
@@ -313,7 +309,7 @@ if __name__ == "__main__":
         nargs="+",
     )
     exp_parser.parser.add_argument(
-        "--policy_file",
+        "--policy",
         help="when target is evaluate or demodata, specify the policy file to be used, <policy name>.pkl",
         type=str,
         default=None,
