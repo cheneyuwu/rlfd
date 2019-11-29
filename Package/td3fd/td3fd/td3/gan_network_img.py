@@ -5,14 +5,14 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Generator(nn.Module):
-    def __init__(self, channels):
+    def __init__(self, latent_dim, channels):
         super().__init__()
         # Filters [1024, 512, 256]
         # Input_dim = 100
         # Output_dim = C (number of channels)
         self.main_module = nn.Sequential(
             # Z latent vector 100
-            nn.ConvTranspose2d(in_channels=100, out_channels=1024, kernel_size=4, stride=1, padding=0),
+            nn.ConvTranspose2d(in_channels=latent_dim, out_channels=1024, kernel_size=4, stride=1, padding=0),
             nn.BatchNorm2d(num_features=1024),
             nn.ReLU(True),
             # State (1024x4x4)

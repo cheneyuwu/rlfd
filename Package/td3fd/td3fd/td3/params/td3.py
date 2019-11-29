@@ -10,12 +10,16 @@ params_config = {
     "eps_length": 0,
     "env_args": {},
     "fix_T": False,
+    # ddpg training
+    "num_demo": 40,
+    "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
     # DDPG config
     "ddpg": {
         "num_epochs": int(1e3),
         "num_cycles": 500,
         "num_batches": 1,
         "batch_size": 256,
+        "batch_size_demo": 128,
         # actor critic networks
         "layer_sizes": [256, 256],
         "twin_delayed": True,
@@ -27,13 +31,7 @@ params_config = {
         "action_l2": 0.0,
         # double q learning
         "polyak": 0.995,
-        # use demonstrations
-        "sample_demo_buffer": False,
-        "batch_size_demo": 128,
-        "use_demo_reward": False,
-        "num_demo": 40,
-        "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
-        "bc_params": {"q_filter": 1, "prm_loss_weight": 0.1, "aux_loss_weight": 1.0},
+        "bc_params": {"q_filter": False, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
         # normalize observation
         "norm_eps": 0.0,
         "norm_clip": np.inf,
@@ -52,12 +50,8 @@ params_config = {
             "reg_loss_weight": 200.0,
             "potential_weight": 3.0,
         },
-        "gan": {
-            "num_ens": 1,
-            "layer_sizes": [256, 256, 256],
-            "potential_weight": 3.0,
-        },
-    },    
+        "gan": {"num_ens": 1, "layer_sizes": [256, 256, 256], "potential_weight": 3.0,},
+    },
     "memory": {
         # replay buffer setup
         "buffer_size": int(1e6),

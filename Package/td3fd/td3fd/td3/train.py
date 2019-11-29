@@ -20,32 +20,19 @@ except ImportError:
 
 def train(root_dir, params):
 
-    # seed everything.
-    set_global_seeds(params["seed"])
-
-    config.add_env_params(params=params)
-
-    policy = ddpg_config.configure_ddpg(params=params)
-    memory = config.config_memory(params=params)
-    rollout_worker = config.config_rollout(params=params, policy=policy)
-    evaluator = config.config_evaluator(params=params, policy=policy)
-
-    # Adding demonstration data to the demonstration buffer
-    demo_memory = None
-    if policy.demo_strategy != "none" or policy.sample_demo_buffer:
-        demo_file = os.path.join(root_dir, "demo_data.npz")
-        assert os.path.isfile(demo_file), "demonstration training set does not exist"
-        demo_memory = config.config_memory(params=params)
-        demo_memory.load_from_file(demo_file)
-
     # Training parameter
     save_interval = 4
+    demo_strategy = params["demo_strategy"]
     shaping_num_epochs = params["shaping"]["num_epochs"]
     shaping_batch_size = params["shaping"]["batch_size"]
-    num_epochs = policy.num_epochs
-    num_batches = policy.num_batches
-    num_cycles = policy.num_cycles
-    batch_size = policy.batch_size
+    num_epochs = params["ddpg"]["num_epochs"]
+    num_batches = params["ddpg"]["num_batches"]
+    num_cycles = params["ddpg"]["num_cycles"]
+    batch_size = params["ddpg"]["batch_size"]
+    batch_size_demo = params["ddpg"]["batch_size_demo"]
+
+    # Seed everything.
+    set_global_seeds(params["seed"])
 
     # Setup paths
     policy_save_path = os.path.join(root_dir, "policies")
@@ -53,27 +40,21 @@ def train(root_dir, params):
     latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
     periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")
 
-    # TODO: Incremental learning Option 1: dagger like method
-    # if policy.demo_strategy in ["nf", "gan"]:
-    #     with open("demo_policy.pkl", "rb") as f:
-    #         demo_policy = pickle.load(f)
+    # Construct ...
+    config.add_env_params(params=params)
+    policy = ddpg_config.configure_ddpg(params=params)
+    memory = config.config_memory(params=params)
+    rollout_worker = config.config_rollout(params=params, policy=policy)
+    evaluator = config.config_evaluator(params=params, policy=policy)
+    # adding demonstration data to the demonstration buffer
+    demo_memory = None
+    if demo_strategy != "none":
+        demo_file = os.path.join(root_dir, "demo_data.npz")
+        assert os.path.isfile(demo_file), "demonstration training set does not exist"
+        demo_memory = config.config_memory(params=params)
+        demo_memory.load_from_file(demo_file)
 
-    # Train shaping potential
-    shaping = None
-    if policy.demo_strategy in ["nf", "gan"]:
-        shaping = ddpg_config.configure_shaping(params)
-        logger.info("Training the reward shaping potential.")
-        for epoch in range(shaping_num_epochs):
-            demo_data = demo_memory.sample()
-            for (o, g, u) in iterbatches(
-                (demo_data["o"], demo_data["g"], demo_data["u"]), batch_size=shaping_batch_size
-            ):
-                batch = {"o": o, "g": g, "u": u}
-                d_loss, g_loss = shaping.train(batch)
-                if epoch % (shaping_num_epochs / 100) == (shaping_num_epochs / 100 - 1):
-                    logger.info("epoch: {} demo shaping loss: {}".format(epoch, d_loss))
-
-    # Generate random experiences before training
+    # Generate some random experiences before training
     for _ in range(10000):
         episode = rollout_worker.generate_rollouts(random=True)
         memory.store_episode(episode)
@@ -87,34 +68,15 @@ def train(root_dir, params):
             memory.store_episode(episode)
             for _ in range(num_batches):
                 batch = memory.sample(batch_size)
-                policy.train(batch)
+                demo_batch = None
+                if demo_strategy != "none":
+                    demo_batch = demo_memory.sample(batch_size_demo)
+                policy.train(batch, demo_batch)
             policy.update_target_net()
+        
         # test
         evaluator.clear_history()
         episode = evaluator.generate_rollouts()
-
-        # TODO: Incremental learning
-        # if policy.demo_strategy in ["nf", "gan"]:
-        # # Option 1: adding more experience (with correction) to the demonstration buffer
-        # o = episode["o"][:, :-1, ...].reshape(-1, *policy.dimo)
-        # g = episode["g"].reshape(-1, *policy.dimg)
-        # u = demo_policy.get_actions(o, g, compute_q=False)
-        # u = u.reshape(episode["u"].shape)
-        # episode["u"] = u
-        # policy.add_to_demo_buffer(episode)
-        # for epoch in range(shaping_num_epochs):
-        #     loss = policy.train_shaping()
-        #     if epoch % (shaping_num_epochs / 100) == (shaping_num_epochs / 100 - 1):
-        #         logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-        #         policy.evaluate_shaping()
-        # # Option 2: train gan discriminator using fake data from generator
-        # if epoch % 10 == 0:
-        #     for _ in range(2):
-        #         evaluator.clear_history()
-        #         episode = evaluator.generate_rollouts()
-        #         loss = policy.train_shaping_policy(episode)
-        #         logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-        #         policy.evaluate_shaping()
 
         # log
         logger.record_tabular("epoch", epoch)

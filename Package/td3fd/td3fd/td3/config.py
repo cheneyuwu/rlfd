@@ -13,6 +13,9 @@ default_params = {
     "eps_length": 0,  # overwrite the default length of the episode provided in _max_episode_steps
     "env_args": {},  # extra arguments passed to the environment
     "fix_T": True,  # whether or not to fix episode length for all rollouts (if false, then use the ring buffer)
+    # ddpg training
+    "num_demo": 40,
+    "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
     # DDPG config (with TD3 params)
     "ddpg": {
         # training
@@ -20,6 +23,7 @@ default_params = {
         "num_cycles": 10,  # per epoch
         "num_batches": 40,  # training batches per cycle
         "batch_size": 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
+        "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread
         # actor critic networks
         "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layer
         "twin_delayed": True,
@@ -31,14 +35,8 @@ default_params = {
         "action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
-        # use demonstrations
-        "sample_demo_buffer": False,  # whether or not to sample from demonstration buffer
-        "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread
-        "use_demo_reward": False,  # whether or not to assume that demonstrations have rewards, and train it on the critic
-        "num_demo": 0,  # number of expert demo episodes
-        "demo_strategy": "none",  # choose between ["none", "bc", "nf", "gan"]
         "bc_params": {
-            "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
+            "q_filter": False,  # whether or not a Q value filter should be used on the actor outputs
             "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
             "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss (also called the cloning loss)
         },
@@ -66,7 +64,7 @@ default_params = {
             "layer_sizes": [256, 256],  # number of neurons in each hidden layer (both generator and discriminator)
             "potential_weight": 3.0,
         },
-    },    
+    },
     "memory": {
         # replay buffer setup
         "buffer_size": int(1e6),
@@ -106,6 +104,7 @@ def configure_ddpg(params):
             "max_u": params["max_u"],
             "fix_T": params["fix_T"],
             "gamma": params["gamma"],
+            "demo_strategy": params["demo_strategy"],
             "info": {
                 "env_name": params["env_name"],
                 "r_scale": params["r_scale"],
@@ -121,7 +120,7 @@ def configure_ddpg(params):
 
 def configure_shaping(params):
     # Extract relevant parameters.
-    shaping_params = params["shaping"]["gan"] # TODO
+    shaping_params = params["shaping"]["gan"]  # TODO: nf
     # Update parameters
     shaping_params.update(
         {
