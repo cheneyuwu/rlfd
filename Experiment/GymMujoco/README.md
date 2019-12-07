@@ -3,17 +3,18 @@
 ## Running Experiments
 
 ### Training Models with RL
-- The default parameters for this environment is stored in `<root>/Package/td3fd/td3fd/ddpg/param/ddpg_reacher.py`.
+- The default parameters for this environment is stored in `<root>/Package/td3fd/td3fd/td3/params/td3.py`.
 - In this directory, we have created several parameter files that import the default parameters, modify it to run with different configurations, e.g. `train_rl.py`
 Use the following command to train all models:
 ```
 python -m td3fd.launch --targets train:train_rl.py
 ```
+- You can stop the training `ctrl+c` once you see it converges (reward_per_eps=1e+3)
 
 ### Evaluating/Visualizing Models
 You can visualize each model using the following command
 ```
-python -m td3fd.launch --targets evaluate --policy config_<config name>/policies/policy_latest.pkl
+python -m td3fd.launch --targets evaluate --policy <exp dir>/policies/policy_latest.pkl
 ```
 
 ### Generating Demonstrations
@@ -34,9 +35,16 @@ For this environment, we use the pre-trained policy `policy_latest.pkl` to gener
 ```
 Use the following command to generate demonstration data:
 ```
-python -m td3fd.launch --targets demo --policy config_<config name>/policies/policy_latest.pkl
+python -m td3fd.launch --targets demo --policy <exp directory>/policies/policy_latest.pkl
 ```
 This command will generate `demo_data.npz` storing the generated demonstrations.
+
+### Training Models with RL+Demo
+- Now follow the comments in `train_rl.py` to use `bc` (behavior cloning) and `gan` shaping. Compare the result
+Use the following command to train all models:
+```
+python -m td3fd.launch --targets train:train_rl.py
+```
 
 ### Plotting
 ```

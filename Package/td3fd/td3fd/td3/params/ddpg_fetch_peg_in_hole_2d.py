@@ -54,7 +54,7 @@ params_config = {
     },
     "memory": {
         # replay buffer setup
-        "buffer_size": int(1e6),
+        "buffer_size": int(1e4),
     },
     # rollouts config
     "rollout": {

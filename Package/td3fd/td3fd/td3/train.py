@@ -70,9 +70,10 @@ def train(root_dir, params):
         policy.shaping = shaping
 
     # Generate some random experiences before training (used by td3 for gym mujoco envs)
-    for _ in range(10000):
-        episode = rollout_worker.generate_rollouts(random=True)
-        memory.store_episode(episode)
+    # Comment this if running with Fetch Environments
+    # for _ in range(10000):
+    #     episode = rollout_worker.generate_rollouts(random=True)
+    #     memory.store_episode(episode)
 
     # Train rl policy
     for epoch in range(num_epochs):
