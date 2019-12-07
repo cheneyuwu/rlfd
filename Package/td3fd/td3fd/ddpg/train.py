@@ -57,6 +57,11 @@ def train(root_dir, params):
                 logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
                 policy.evaluate_shaping()
 
+    # Generate random experiences before training
+    # for _ in range(10000):
+    #     episode = rollout_worker.generate_rollouts()
+    #     policy.store_episode(episode)    
+
     # Train the rl agent
     for epoch in range(num_epochs):
         # train
@@ -106,8 +111,6 @@ def train(root_dir, params):
 
         # save the policy
         save_msg = ""
-        success_rate = evaluator.current_success_rate()
-        logger.info("Current success rate: {}".format(success_rate))
         if save_interval > 0 and epoch % save_interval == (save_interval - 1):
             policy_path = periodic_policy_path.format(epoch)
             policy.save_policy(policy_path)

@@ -7,7 +7,7 @@ tfd = tfp.distributions
 
 
 class Actor(tf.Module):
-    def __init__(self, dimo, dimg, dimu, max_u, noise, layer_sizes):
+    def __init__(self, dimo, dimg, dimu, max_u, layer_sizes):
         super().__init__()
         self.dimo = dimo
         self.dimg = dimg
@@ -23,7 +23,7 @@ class Actor(tf.Module):
                 bias_initializer=None,
             )
             self.model_layers.append(layer)
-        # TODO: accept multidimensional inputs
+        # TODO: accept multidimensional outputs
         assert len(self.dimu) == 1, "only accept 1 dimensional output"
         self.model_layers.append(
             tf.keras.layers.Dense(
@@ -33,7 +33,6 @@ class Actor(tf.Module):
                 bias_initializer=None,
             )
         )
-        self.noise = tfd.Normal(loc=0.0, scale=0.1 if noise else 0.0)
 
     def __call__(self, o, g):
         state = o
@@ -47,7 +46,6 @@ class Actor(tf.Module):
         res = state
         for l in self.model_layers:
             res = l(res)
-        res = res + self.noise.sample(tf.shape(res))
         res = tf.clip_by_value(res, -1.0, 1.0) * self.max_u
         return res
 
@@ -91,12 +89,11 @@ def test_actor_critic():
     dimg = (2,)
     dimu = (2,)
     max_u = 2.0
-    noise = True
     layer_sizes = [16]
-    o = tf.placeholder(tf.float32, shape=(None, dimo))
-    g = tf.placeholder(tf.float32, shape=(None, dimg))
+    o = tf.placeholder(tf.float32, shape=(None, *dimo))
+    g = tf.placeholder(tf.float32, shape=(None, *dimg))
 
-    actor = Actor(dimo, dimg, dimu, max_u, noise, layer_sizes)
+    actor = Actor(dimo, dimg, dimu, max_u, layer_sizes)
     critic = Critic(dimo, dimg, dimu, max_u, layer_sizes)
     u = actor(o, g)
     q = critic(o, g, u)

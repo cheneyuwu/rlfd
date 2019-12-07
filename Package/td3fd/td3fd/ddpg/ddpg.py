@@ -2,11 +2,15 @@ import pickle
 
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
-from td3fd.ddpg.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping
 from td3fd.ddpg.actorcritic_network import Actor, Critic
+from td3fd.ddpg.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping
 from td3fd.memory import RingReplayBuffer, UniformReplayBuffer, iterbatches
-from td3fd.normalizer import Normalizer
+from td3fd.ddpg.normalizer import Normalizer
+
+tfd = tfp.distributions
+
 
 
 class DDPG(object):
@@ -319,6 +323,11 @@ class DDPG(object):
             for key, val in self.input_dims.items():
                 if key.startswith("info"):
                     buffer_shapes[key] = (self.eps_length, *val)
+            
+            self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
+            if self.demo_strategy != "none" or self.sample_demo_buffer:
+                self.demo_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
+        
         else:
             buffer_shapes["o"] = self.dimo
             buffer_shapes["o_2"] = self.dimo
@@ -334,12 +343,7 @@ class DDPG(object):
                     buffer_shapes[key] = val
             # need the "done" signal for restarting from training
             buffer_shapes["done"] = (1,)
-        # initialize replay buffer(s)
-        if self.fix_T:
-            self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
-            if self.demo_strategy != "none" or self.sample_demo_buffer:
-                self.demo_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
-        else:
+
             self.replay_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
             if self.demo_strategy != "none" or self.sample_demo_buffer:
                 self.demo_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
@@ -374,7 +378,7 @@ class DDPG(object):
         # Actor Critic Models
         # main networks
         self.main_actor = Actor(
-            dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes, noise=False
+            dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
         )
         self.main_critic = Critic(
             dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
@@ -390,7 +394,6 @@ class DDPG(object):
             dimu=self.dimu,
             max_u=self.max_u,
             layer_sizes=self.layer_sizes,
-            noise=self.use_td3,
         )
         self.target_critic = Critic(
             dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
@@ -401,24 +404,26 @@ class DDPG(object):
             )
         # actor output
         self.main_pi_tf = self.main_actor(o=norm_input_o_tf, g=norm_input_g_tf)
+        self.target_pi_tf = self.target_actor(o=norm_input_o_2_tf, g=norm_input_g_2_tf)
+        if self.use_td3:
+            # TODO pass noise scale as parameter
+            noise = tfd.Normal(loc=0.0, scale=0.2).sample(tf.shape(self.target_pi_tf))
+            noise = tf.clip_by_value(noise, -0.5, 0.5) * self.max_u
+            self.target_pi_tf = tf.clip_by_value(self.target_pi_tf + noise, -self.max_u, self.max_u)
         # critic output
         self.main_q_tf = self.main_critic(o=norm_input_o_tf, g=norm_input_g_tf, u=input_u_tf)
         self.main_q_pi_tf = self.main_critic(o=norm_input_o_tf, g=norm_input_g_tf, u=self.main_pi_tf)
-        if self.use_td3:
-            self.main_q2_tf = self.main_critic_twin(o=norm_input_o_tf, g=norm_input_g_tf, u=input_u_tf)
-            self.main_q2_pi_tf = self.main_critic_twin(o=norm_input_o_tf, g=norm_input_g_tf, u=self.main_pi_tf)
-        # actor output
-        self.target_pi_tf = self.target_actor(o=norm_input_o_2_tf, g=norm_input_g_2_tf)
-        # critic output
         self.target_q_tf = self.target_critic(o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=input_u_tf)
         self.target_q_pi_tf = self.target_critic(o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=self.target_pi_tf)
         if self.use_td3:
+            self.main_q2_tf = self.main_critic_twin(o=norm_input_o_tf, g=norm_input_g_tf, u=input_u_tf)
+            self.main_q2_pi_tf = self.main_critic_twin(o=norm_input_o_tf, g=norm_input_g_tf, u=self.main_pi_tf)
             self.target_q2_tf = self.target_critic_twin(o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=input_u_tf)
             self.target_q2_pi_tf = self.target_critic_twin(
                 o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=self.target_pi_tf
             )
 
-        # Demostration Inputs
+        # Demonstration Inputs
         self.demo_inputs_tf = {}
         self.demo_inputs_tf["o"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimo))
         self.demo_inputs_tf["u"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimu))

@@ -74,6 +74,8 @@ default_params = {
     # rollouts config
     "rollout": {
         "rollout_batch_size": 4,
+        "num_steps": None, 
+        "num_episodes": None,
         "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
         "polyak_noise": 0.0,  # use polyak_noise * last_noise + (1 - polyak_noise) * curr_noise
         "random_eps": 0.3,  # percentage of time a random action is taken
@@ -82,6 +84,8 @@ default_params = {
     },
     "evaluator": {
         "rollout_batch_size": 20,
+        "num_steps": None, 
+        "num_episodes": None,        
         "noise_eps": 0.0,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
