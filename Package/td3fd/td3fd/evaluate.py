@@ -23,8 +23,8 @@ DEFAULT_PARAMS = {
 }
 
 
-def main(policy_file, **kwargs):
-    assert policy_file is not None, "must provide the policy_file"
+def main(policy, **kwargs):
+    assert policy is not None, "must provide the policy"
 
     # Setup
     logger.configure()
@@ -37,7 +37,7 @@ def main(policy_file, **kwargs):
     tf.InteractiveSession()
 
     # Load policy.
-    with open(policy_file, "rb") as f:
+    with open(policy, "rb") as f:
         policy = pickle.load(f)
 
     # Extract environment construction information
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     from td3fd.util.cmd_util import ArgParser
 
     ap = ArgParser()
-    ap.parser.add_argument("--policy_file", help="demonstration training dataset", type=str, default=None)
+    ap.parser.add_argument("--policy", help="demonstration training dataset", type=str, default=None)
     ap.parse(sys.argv)
 
     main(**ap.get_dict())
