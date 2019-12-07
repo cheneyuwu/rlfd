@@ -10,8 +10,9 @@ try:
     import gym
 
     # Need this for getting observation in pixels (for vision based learning) (for future works)
-    # from mujoco_py import GlfwContext
-    # GlfwContext(offscreen=True)  # Create a window to init GLFW.
+    from mujoco_py import GlfwContext
+
+    GlfwContext(offscreen=True)  # Create a window to init GLFW.
 except:
     gym = None
 
@@ -28,8 +29,9 @@ class EnvWrapper:
         self.r_shift = r_shift
         self.eps_length = eps_length if eps_length else self.env._max_episode_steps
         # need the following properties
-        self.max_u = self.env.max_u if hasattr(self.env, "max_u") else 1  # note that 1 is just for most envs
         self.action_space = self.env.action_space
+        self.observation_space = self.env.observation_space
+        self.max_u = self.action_space.high[0]
 
     # def compute_reward(self, achieved_goal, desired_goal, info):
     #     reward = self.env.compute_reward(achieved_goal=achieved_goal, desired_goal=desired_goal, info=info)
@@ -53,7 +55,7 @@ class EnvWrapper:
 
     def close(self):
         return self.env.close()
-    
+
     def _transform_state(self, state):
         """
         modify state to contain: observation, achieved_goal, desired_goal
@@ -116,9 +118,10 @@ class EnvManager:
 
 if __name__ == "__main__":
     import numpy as np
+    import matplotlib.pyplot as plt
 
     # For a openai env
-    env_manager = EnvManager("Reacher-v2")
+    env_manager = EnvManager("YWFetchPegInHole2D-v0")
     env = env_manager.get_env()
 
     env.seed(0)
@@ -126,7 +129,10 @@ if __name__ == "__main__":
     for i in range(1000):
         if done:
             env.reset()
-        action = np.random.randn(env.action_space.shape[0])  # sample random action
+        action = np.random.randn(env.action_space.shape[0]) * env.action_space.high[0]  # sample random action
         state, r, done, info = env.step(action)
-        print(state, r, done, info)
-        env.render()
+        # print(state, r, done, info)
+        print(state["pixel"][..., :3].shape)
+        plt.imshow(state["pixel"][..., 3] / 255.0)
+        plt.show()
+        # env.render()
