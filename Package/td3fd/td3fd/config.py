@@ -72,6 +72,7 @@ def config_memory(params):
         buffer_shapes["o"] = (eps_length + 1, *dimo)
         buffer_shapes["u"] = (eps_length, *dimu)
         buffer_shapes["r"] = (eps_length, 1)
+        buffer_shapes["done"] = (eps_length, 1)
         buffer_shapes["ag"] = (eps_length + 1, *dimg)
         buffer_shapes["g"] = (eps_length, *dimg)
         for key, val in dims.items():
@@ -84,6 +85,7 @@ def config_memory(params):
         buffer_shapes["o_2"] = dimo
         buffer_shapes["u"] = dimu
         buffer_shapes["r"] = (1,)
+        buffer_shapes["done"] = (1,)
         buffer_shapes["ag"] = dimg
         buffer_shapes["g"] = dimg
         buffer_shapes["ag_2"] = dimg
@@ -91,8 +93,6 @@ def config_memory(params):
         for key, val in dims.items():
             if key.startswith("info"):
                 buffer_shapes[key] = val
-        # need the "done" signal for restarting from training
-        buffer_shapes["done"] = (1,)
 
         return RingReplayBuffer(buffer_shapes, buffer_size)
 
