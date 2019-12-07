@@ -4,7 +4,10 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+# TODO switch between networks for image input and state input. image assumed to be (3, 32, 32)
 from td3fd.td3.actorcritic_network import Actor, Critic
+# from td3fd.td3.actorcritic_network_img import Actor, Critic # this is for image
+
 from td3fd.td3.normalizer import Normalizer
 from torchsummary import summary
 
@@ -84,18 +87,18 @@ class DDPG(object):
         self.main_actor = Actor(self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes).to(device)
         self.target_actor = Actor(self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes).to(device)
         self.actor_optimizer = torch.optim.Adam(self.main_actor.parameters(), lr=self.pi_lr)
-        summary(self.main_actor, [self.dimo, self.dimg])
+        # summary(self.main_actor, [self.dimo, self.dimg])
         # critic
         self.main_critic = Critic(self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes).to(device)
         self.target_critic = Critic(self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes).to(device)
         self.critic_optimizer = torch.optim.Adam(self.main_critic.parameters(), lr=self.q_lr)
-        summary(self.main_critic, [self.dimo, self.dimg, self.dimu])
+        # summary(self.main_critic, [self.dimo, self.dimg, self.dimu])
         # critic twin
         if self.twin_delayed:
             self.main_critic_twin = Critic(self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes).to(device)
             self.target_critic_twin = Critic(self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes).to(device)
             self.critic_twin_optimizer = torch.optim.Adam(self.main_critic_twin.parameters(), lr=self.q_lr)
-            summary(self.main_critic_twin, [self.dimo, self.dimg, self.dimu])
+            # summary(self.main_critic_twin, [self.dimo, self.dimg, self.dimu])
 
         self.shaping = None  # TODO
         self.initialize_target_net()
@@ -106,10 +109,14 @@ class DDPG(object):
         g = g.reshape((o.shape[0], *self.dimg))
         o_tc = torch.FloatTensor(o).to(device)
         g_tc = torch.FloatTensor(g).to(device)
+
+        # Normalize inputs (do not normalize inputs for gym/mujoco envs)
+        # o_tc = self.o_stats.normalize(o_tc)
+        # g_tc = self.g_stats.normalize(g_tc)
+        # TODO: uncomment for images
+        # o_tc = (o_tc * 2.0 / 255.0) - 1.0
+
         u_tc = self.main_actor(o=o_tc, g=g_tc)
-        # TODO
-        # o_tc = self.o_stats.normalize(torch.FloatTensor(o).to(device))
-        # g_tc = self.g_stats.normalize(torch.FloatTensor(g).to(device))
 
         if compute_q:
             q = self.main_critic(o=o_tc, g=g_tc, u=u_tc).cpu().data.numpy()
@@ -147,11 +154,15 @@ class DDPG(object):
             do_tc = torch.FloatTensor(demo_batch["o"]).to(device)
             dg_tc = torch.FloatTensor(demo_batch["g"]).to(device)
             du_tc = torch.FloatTensor(demo_batch["u"]).to(device)
-        # TODO
-        # o_tc = self.o_stats.normalize(torch.FloatTensor(batch["o"]).to(device))
-        # g_tc = self.g_stats.normalize(torch.FloatTensor(batch["g"]).to(device))
-        # o_2_tc = self.o_stats.normalize(torch.FloatTensor(batch["o_2"]).to(device))
-        # g_2_tc = self.g_stats.normalize(torch.FloatTensor(batch["g_2"]).to(device))
+
+        # Normalize states and actions
+        # o_tc = self.o_stats.normalize(batch["o"])
+        # g_tc = self.g_stats.normalize(batch["g"])
+        # o_2_tc = self.o_stats.normalize(batch["o_2"])
+        # g_2_tc = self.g_stats.normalize(batch["g_2"])
+        # TODO: uncomment for images
+        # o_tc = (o_tc * 2.0 / 255.0) - 1.0
+        # o_2_tc = (o_2_tc * 2.0 / 255.0) - 1.0
 
         # Critic update
         with torch.no_grad():

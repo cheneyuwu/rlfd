@@ -249,12 +249,10 @@ def main(targets, exp_dir, policy, **kwargs):
                 plot_entry(
                     dirs=[exp_dir],
                     xys=[
-                        "epoch:test/success_rate",
-                        # "epoch:test/total_shaping_reward",
-                        "epoch:test/total_reward",
-                        # "epoch:test/mean_Q",
-                        # "epoch:test/mean_Q_plus_P",
-                        # "train/episode:test/total_reward"
+                        # "epoch:test/success_rate",
+                        # "epoch:test/:reward_per_eps",
+                        # "train/steps:test/success_rate",
+                        "train/steps:test/reward_per_eps",
                     ],
                     smooth=True,
                 )

@@ -1,7 +1,10 @@
 import numpy as np
 
 from td3fd.td3.ddpg import DDPG
+
+# TODO switch between Shaping for image input and state input. image assumed to be (3, 32, 32)
 from td3fd.td3.shaping import GANShaping
+# from td3fd.td3.shaping import ImgGANShaping as GANShaping  # This is for image
 
 default_params = {
     # config summary
@@ -60,7 +63,7 @@ default_params = {
             "potential_weight": 5.0,
         },
         "gan": {
-            "num_ens": 1,  # number of gan ensembles
+            "num_ens": 1,  # number of gan ensembles (not used right now)
             "layer_sizes": [256, 256],  # number of neurons in each hidden layer (both generator and discriminator)
             "potential_weight": 3.0,
         },
@@ -71,17 +74,15 @@ default_params = {
     },
     # rollouts config
     "rollout": {
-        "rollout_batch_size": 4,
-        "num_steps": None,
-        "num_episodes": None,
+        "num_steps": None,  # number of sim steps per call to generate_rollouts
+        "num_episodes": None,  # number of episodes per call to generate_rollouts
         "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
         "polyak_noise": 0.0,  # use polyak_noise * last_noise + (1 - polyak_noise) * curr_noise
         "random_eps": 0.3,  # percentage of time a random action is taken
-        "compute_q": False,
+        "compute_q": False,  # whether or not to compute average q value
         "history_len": 10,  # make sure that this is same as number of cycles
     },
     "evaluator": {
-        "rollout_batch_size": 20,
         "num_steps": None,
         "num_episodes": None,
         "noise_eps": 0.0,

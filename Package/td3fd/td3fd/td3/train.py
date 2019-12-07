@@ -4,7 +4,6 @@ import pickle
 import sys
 
 import numpy as np
-import tensorflow as tf
 
 from td3fd import config, logger
 from td3fd.memory import iterbatches
@@ -67,17 +66,20 @@ def train(root_dir, params):
                 d_loss, g_loss = shaping.train(batch)
             if epoch % (shaping_num_epochs / 100) == (shaping_num_epochs / 100 - 1):
                 logger.info("epoch: {} demo shaping loss: {}".format(epoch, d_loss))
+                shaping.evaluate()
+        policy.shaping = shaping
 
-    # Generate some random experiences before training
+    # Generate some random experiences before training (used by td3 for gym mujoco envs)
     for _ in range(10000):
         episode = rollout_worker.generate_rollouts(random=True)
         memory.store_episode(episode)
 
-    # Train the rl agent
+    # Train rl policy
     for epoch in range(num_epochs):
         # train
         rollout_worker.clear_history()
-        for _ in range(num_cycles):
+        for cyc in range(num_cycles):
+            # print("cycle: {} completed!!".format(cyc))
             episode = rollout_worker.generate_rollouts()
             memory.store_episode(episode)
             for _ in range(num_batches):
