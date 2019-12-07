@@ -4,7 +4,7 @@
 ## [Link to Project Webpage](http://www.cs.toronto.edu/~florian/rl_with_shaping/)
 
 ## Run new experiments (with images as input)
-1. Carefully go through the instructions below and get familiar with the code
+1. Carefully go through the instructions below (starting from Installation) and get familiar with the code
 2. Check the example in [GYM MuJoCo Environments](./Experiment/GymMujoco). With this example, you should have an idea of how the code works.
 3. Below are some known modifications needed to run with image inputs: (all files inside `<root>/Package/td3fd/td3fd/td3/*`)
     1. config.py uncomment line 7 to use a shaping class I wrote that can train a GAN on images. Also take a look at this class, and modify it to properly concatenate observations and actions.
