@@ -3,9 +3,20 @@
 
 ## [Link to Project Webpage](http://www.cs.toronto.edu/~florian/rl_with_shaping/)
 
+## Run new experiments (with images as input)
+1. Carefully go through the instructions below and get familiar with the code
+2. Check the example in [GYM MuJoCo Environments](./Experiment/GymMujoco). With this example, you should have an idea of how the code works.
+3. Below are some known modifications needed to run with image inputs: (all files inside `<root>/Package/td3fd/td3fd/td3/*`)
+    1. config.py uncomment line 7 to use a shaping class I wrote that can train a GAN on images. Also take a look at this class, and modify it to properly concatenate observations and actions.
+        - The current idea is to replicate actions multiple times until it has similar dims as observations
+    2. ddpg.py uncomment line 9 to use actor critic with cnns. also follow instructions on line 116 & 163 to normalize image inputs
+4. Now go to [Our 2D peginsertion Environments](./Experiment/FetchPegInsertion2D). A set of parameters have been defined there for the Peg Insertion 2D environments. The environment has been modified to return image as observations. However, we still need some work to make GAN-Shaping work.
+5. My plan is to run our algorithm on some environments (image based) where RL has shown working well. So once you have some idea of how the code works, you can try different environments (such as GYM box2d envs, LunarLanding etc)
+
+
 ## Prerequisites
 1. This repository requires Python3 (>=3.5) and is tested with python 3.6.
-2. You will also need [MuJoCo](http://mujoco.org/) & [mujoco_py](https://github.com/openai/mujoco-py) to run experiments for the PegInsertion and PickAndPlace environments as we did for the paper. However, we also provide a toy 2D reacher environment for quick testing and tutorial purpose, so MuJoCo is optional if you are not interested in reproducing the results.
+2. You will also need [MuJoCo](http://mujoco.org/) & [mujoco_py](https://github.com/openai/mujoco-py) **(use version 1.5, do not use 2.0)** to run experiments for the PegInsertion and PickAndPlace environments as we did for the paper. However, we also provide a toy 2D reacher environment for quick testing and tutorial purpose, so MuJoCo is optional if you are not interested in reproducing the results.
 3. We also support training multiple models (with different parameters) in parallel through [OpenMPI](https://www.open-mpi.org/) & [mpi4py](https://mpi4py.readthedocs.io/en/stable/) but is also optional.
 
 
@@ -23,7 +34,8 @@
     pip install -e <root>/Package/td3fd
     ```
     In terms of Tensorflow, `td3dfd` requires `tensorflow==1.15.0` and `tensorflow_probability==0.7.0`.
-3. Source the setup script at root directory, this script just defines some environment variables for logging.
+    For PyTorch, just install the latest version and `torchvision`, `torchsummary`.
+3. Source the setup script at root directory, this script just defines some environment variables for logging. (Note: you need to run this everytime you enter a new terminal, unless you put it in your bashrc)
     ```
     source <root>/setup.py
     ```
@@ -36,7 +48,8 @@ Demonstration data must be stored as a `npz` file named `demo_data.npz`, it shou
 - "u": array of actions of shape (number of episodes, episode_length, action dimension)
 - "g": (optional) array of goals of shape (number of episodes, episode_length, goal dimension)
 - "ag": (optional) array of achieved goals of shape (number of episodes, episode_length+1, goal dimension)
-- "r": observations of shape (number of episodes, episode_length, 1)
+- "r": rewards of shape (number of episodes, episode_length, 1)
+- "done": the done signal of shape (number of episodes, episode_length, 1)
 
 For our experiments, we provide two options for generating demonstration data.
 1. Using hard coded scripts. Refer to `<root>/Experiment/<envrionment names>/README.md` for more information.
@@ -99,7 +112,7 @@ For our experiments, we provide two options for generating demonstration data.
 
 ### Evaluating/Visualizing Models
 ```
-python -m td3fd.launch --targets evaluate --policy_file <policy file name>.pkl
+python -m td3fd.launch --targets evaluate --policy <policy file name>.pkl
 ```
 
 ### Plotting
@@ -108,7 +121,10 @@ python -m td3fd.launch --targets plot --exp_dir <top level plotting directory>
 ```
 This script will collect (recursively) all the experiment results under `<top level plotting directory>` and generate one plot named `Result_<environment name>.png` for each environment.
 
-### Examples
+### Examples (new)
+1. [GYM MuJoCo Environments](./Experiment/GymMujoco)
+
+### Examples (Old)
 1. [2D Reacher Environment](./Experiment/Reacher2D)
 2. [Fetch Peg Insertion Environment](./Experiment/FetchPegInsertion)
 3. [Fetch Pick and Place Environment](./Experiment/FetchPickAndPlace)
