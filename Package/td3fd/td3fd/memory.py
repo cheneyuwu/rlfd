@@ -69,9 +69,6 @@ class ReplayBufferBase:
     def full(self):
         return self.current_size == self.size
 
-    def get_current_size(self):
-        return self.current_size
-
     def clear_buffer(self):
         self.current_size = 0
         self._clear_buffer()
@@ -214,10 +211,12 @@ class UniformReplayBuffer(ReplayBufferBase):
 
         return transitions
 
-    def get_current_size_episode(self):
+    @property
+    def current_size_episode(self):
         return self.current_size
 
-    def get_current_size_transiton(self):
+    @property
+    def current_size_transiton(self):
         return self.current_size * self.T
 
     def _get_storage_idx(self, inc):
