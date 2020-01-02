@@ -17,6 +17,12 @@ except:
     gym = None
 
 
+try:
+    from metaworld.benchmarks import ML1 as mtw
+except:
+    mtw = None
+
+
 class EnvWrapper:
     """Wrapper of the environment that does the following:
         1. adjust rewards: r = (r + r_shift) / r_scale
@@ -94,10 +100,24 @@ class EnvManager:
             env_args["block"] = True
             self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
 
-        # Search from openai gym
+        # Search in Gym Envs
         if self.make_env is None and gym is not None:
-            _ = gym.make(env_name, **env_args)
-            self.make_env = lambda: gym.make(env_name, **env_args)
+            try:
+                _ = gym.make(env_name, **env_args)
+                self.make_env = lambda: gym.make(env_name, **env_args)
+            except:
+                pass
+
+        # Search in MetaWorld Envs
+        if self.make_env is None and mtw is not None and env_name in mtw.available_tasks():
+
+            def make_env():
+                env = mtw.get_train_tasks(env_name)  # Create an environment with task `pick_place`
+                tasks = env.sample_tasks(1)  # Sample a task (in this case, a goal variation)
+                env.set_task(tasks[0])  # Set task
+                return env
+
+            self.make_env = make_env
 
         # Franka environment
         if self.make_env is None and panda_env is not None:
@@ -120,19 +140,30 @@ if __name__ == "__main__":
     import numpy as np
     import matplotlib.pyplot as plt
 
-    # For a openai env
-    env_manager = EnvManager("YWFetchPegInHole2D-v0")
-    env = env_manager.get_env()
+    # # For a openai env
+    # env_manager = EnvManager("YWFetchPegInHole2D-v0")
+    # env = env_manager.get_env()
 
-    env.seed(0)
-    done = True
-    for i in range(1000):
-        if done:
-            env.reset()
-        action = np.random.randn(env.action_space.shape[0]) * env.action_space.high[0]  # sample random action
-        state, r, done, info = env.step(action)
-        # print(state, r, done, info)
-        print(state["pixel"][..., :3].shape)
-        plt.imshow(state["pixel"][..., 3] / 255.0)
-        plt.show()
-        # env.render()
+    # env.seed(0)
+    # done = True
+    # for i in range(1000):
+    #     if done:
+    #         env.reset()
+    #     action = np.random.randn(env.action_space.shape[0]) * env.action_space.high[0]  # sample random action
+    #     state, r, done, info = env.step(action)
+    #     # print(state, r, done, info)
+    #     print(state["pixel"][..., :3].shape)
+    #     plt.imshow(state["pixel"][..., 3] / 255.0)
+    #     plt.show()
+    #     # env.render()
+
+    # # For a metaworld env
+    # env_manager = EnvManager("pick-place-v1", eps_length=50)
+    # env = env_manager.get_env()
+    # while True:
+    #     obs = env.reset()  # Reset environment
+    #     for _ in range(1000):
+    #         a = env.action_space.sample()  # Sample an action
+
+    #         obs, reward, done, info = env.step(a)  # Step the environoment with the sampled random action
+    #         env.render()
