@@ -1,6 +1,6 @@
 # RL + IL Research Project
 Meeting Summary\
-Sept 24th, 2019
+Oct 1th, 2019
 
 
 ## Tasks & Planning
