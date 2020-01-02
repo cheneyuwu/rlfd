@@ -4,7 +4,7 @@ params_config = {
     # config summary
     "config": "default",
     # environment config
-    "env_name": "YWFetchPegInHole2D-v0",
+    "env_name": "Reach2DF",
     "r_scale": 1.0,
     "r_shift": 0.0,
     "eps_length": 0,
@@ -12,15 +12,15 @@ params_config = {
     "gamma": None,
     "fix_T": True,
     # normalize observation
-    "norm_obs": False,  # whethere or not to normalize observations
+    "norm_obs": True,  # whethere or not to normalize observations
     "norm_eps": 0.01,  # epsilon used for observation normalization
-    "norm_clip": 5,  # normalized observations are cropped to this value        
+    "norm_clip": 5,  # normalized observations are cropped to this value
     # ddpg training
     "num_demo": 40,
     "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
     # DDPG config
     "ddpg": {
-        "num_epochs": int(4e2),
+        "num_epochs": int(1e2),
         "num_cycles": 10,
         "num_batches": 40,
         "batch_size": 256,
@@ -39,29 +39,29 @@ params_config = {
         "bc_params": {"q_filter": False, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
     },
     "shaping": {
-        "num_epochs": int(1e4),
+        "num_epochs": int(4e3),
         "batch_size": 128,
         "nf": {
             "num_ens": 2,
             "nf_type": "maf",  # ["maf", "realnvp"]
-            "lr": 2e-4,
-            "num_masked": 4,
+            "lr": 5e-4,
+            "num_masked": 2,
             "num_bijectors": 4,
-            "layer_sizes": [128, 128],
+            "layer_sizes": [256, 256],
             "prm_loss_weight": 1.0,
-            "reg_loss_weight": 500.0,
+            "reg_loss_weight": 200.0,
             "potential_weight": 3.0,
         },
         "gan": {"num_ens": 1, "layer_sizes": [256, 256, 256], "potential_weight": 3.0,},
     },
     "memory": {
         # replay buffer setup
-        "buffer_size": int(1e4),
+        "buffer_size": int(1e6),
     },
     # rollouts config
     "rollout": {
-        "num_steps": None,
         "num_episodes": 4,
+        "num_steps": None,
         "noise_eps": 0.2,
         "polyak_noise": 0.0,
         "random_eps": 0.2,
@@ -71,7 +71,7 @@ params_config = {
     "evaluator": {
         "num_episodes": 10,
         "num_steps": None,
-        "noise_eps": 0.05,
+        "noise_eps": 0.0,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
         "compute_q": True,

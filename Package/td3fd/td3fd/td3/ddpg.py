@@ -6,6 +6,7 @@ import torch.nn.functional as F
 
 # TODO switch between networks for image input and state input. image assumed to be (3, 32, 32)
 from td3fd.td3.actorcritic_network import Actor, Critic
+
 # from td3fd.td3.actorcritic_network_img import Actor, Critic # this is for image
 
 from td3fd.td3.normalizer import Normalizer
@@ -36,13 +37,13 @@ class DDPG(object):
         polyak,
         gamma,
         action_l2,
+        norm_obs,
         norm_eps,
         norm_clip,
         # TODO
         demo_strategy,
         bc_params,
         info,
-        fix_T,
     ):
         # Store initial args passed into the function
         self.init_args = locals()
@@ -59,6 +60,7 @@ class DDPG(object):
         self.pi_lr = pi_lr
         self.max_u = max_u
 
+        self.norm_obs = norm_obs
         self.norm_eps = norm_eps
         self.norm_clip = norm_clip
 
@@ -68,10 +70,7 @@ class DDPG(object):
         assert self.demo_strategy in ["bc", "gan", "nf", "none"]
         self.bc_params = bc_params
         self.gamma = gamma
-        self.gamma = 0.99  # TODO make this a parameter
         self.info = info
-
-        # self.fix_T = fix_T
 
         # Prepare parameters
         self.dimo = self.dims["o"]
@@ -107,12 +106,14 @@ class DDPG(object):
     def get_actions(self, o, g, compute_q=False):
         o = o.reshape((-1, *self.dimo))
         g = g.reshape((o.shape[0], *self.dimg))
-        o_tc = torch.FloatTensor(o).to(device)
-        g_tc = torch.FloatTensor(g).to(device)
+        o_tc = torch.tensor(o, dtype=torch.float).to(device)
+        g_tc = torch.tensor(g, dtype=torch.float).to(device)
 
         # Normalize inputs (do not normalize inputs for gym/mujoco envs)
-        # o_tc = self.o_stats.normalize(o_tc)
-        # g_tc = self.g_stats.normalize(g_tc)
+        if self.norm_obs:
+            o_tc = self.o_stats.normalize(o_tc)
+            g_tc = self.g_stats.normalize(g_tc)
+
         # TODO: uncomment for images
         # o_tc = (o_tc * 2.0 / 255.0) - 1.0
 
@@ -143,23 +144,37 @@ class DDPG(object):
 
         self.total_it += 1
 
-        r_tc = torch.FloatTensor(batch["r"]).to(device)
-        o_tc = torch.FloatTensor(batch["o"]).to(device)
-        g_tc = torch.FloatTensor(batch["g"]).to(device)
-        u_tc = torch.FloatTensor(batch["u"]).to(device)
-        o_2_tc = torch.FloatTensor(batch["o_2"]).to(device)
-        g_2_tc = torch.FloatTensor(batch["g_2"]).to(device)
-        done_tc = torch.FloatTensor(batch["done"]).to(device)
-        if demo_batch != None:  ## Behavior cloning
-            do_tc = torch.FloatTensor(demo_batch["o"]).to(device)
-            dg_tc = torch.FloatTensor(demo_batch["g"]).to(device)
-            du_tc = torch.FloatTensor(demo_batch["u"]).to(device)
+        o_tc = torch.tensor(batch["o"], dtype=torch.float).to(device)
+        g_tc = torch.tensor(batch["g"], dtype=torch.float).to(device)
+        o_2_tc = torch.tensor(batch["o_2"], dtype=torch.float).to(device)
+        g_2_tc = torch.tensor(batch["g_2"], dtype=torch.float).to(device)
+        u_tc = torch.tensor(batch["u"], dtype=torch.float).to(device)
+        r_tc = torch.tensor(batch["r"], dtype=torch.float).to(device)
+        done_tc = torch.tensor(batch["done"], dtype=torch.float).to(device)
+        if demo_batch != None:
+            do_tc = torch.tensor(demo_batch["o"], dtype=torch.float).to(device)
+            dg_tc = torch.tensor(demo_batch["g"], dtype=torch.float).to(device)
+            du_tc = torch.tensor(demo_batch["u"], dtype=torch.float).to(device)
+
+        # Shaping input which are not normalized
+        shaping_o_tc = o_tc.clone().detach()
+        shaping_g_tc = g_tc.clone().detach()
+        shaping_o_2_tc = o_2_tc.clone().detach()
+        shaping_g_2_tc = g_2_tc.clone().detach()
+        if demo_batch != None:
+            shaping_do_tc = do_tc.clone().detach()
+            shaping_dg_tc = dg_tc.clone().detach()
 
         # Normalize states and actions
-        # o_tc = self.o_stats.normalize(batch["o"])
-        # g_tc = self.g_stats.normalize(batch["g"])
-        # o_2_tc = self.o_stats.normalize(batch["o_2"])
-        # g_2_tc = self.g_stats.normalize(batch["g_2"])
+        if self.norm_obs:
+            o_tc = self.o_stats.normalize(o_tc)
+            g_tc = self.g_stats.normalize(g_tc)
+            o_2_tc = self.o_stats.normalize(o_2_tc)
+            g_2_tc = self.g_stats.normalize(g_2_tc)
+            if demo_batch != None:  # Behavior cloning
+                do_tc = self.o_stats.normalize(do_tc)
+                dg_tc = self.g_stats.normalize(dg_tc)
+
         # TODO: uncomment for images
         # o_tc = (o_tc * 2.0 / 255.0) - 1.0
         # o_2_tc = (o_2_tc * 2.0 / 255.0) - 1.0
@@ -171,7 +186,9 @@ class DDPG(object):
             target_tc = r_tc
             if self.demo_strategy in ["gan", "nf"]:  # add reward shaping
                 assert self.shaping != None
-                target_tc += self.shaping.reward(o_tc, g_tc, u_tc, o_2_tc, g_2_tc, u_2_tc)
+                target_tc += self.shaping.reward(
+                    shaping_o_tc, shaping_g_tc, u_tc, shaping_o_2_tc, shaping_g_2_tc, u_2_tc
+                )
             if self.twin_delayed:
                 target_tc += (
                     (1.0 - done_tc)
@@ -203,18 +220,18 @@ class DDPG(object):
         # Actor update
         pi_tc = self.main_actor(o=o_tc, g=g_tc)
         actor_loss = -torch.mean(self.main_critic(o=o_tc, g=g_tc, u=pi_tc))
-        actor_loss += self.action_l2 * torch.mean(pi_tc)
+        actor_loss += self.action_l2 * torch.mean((pi_tc / self.max_u) ** 2)
         if self.demo_strategy in ["gan", "nf"]:
             assert self.shaping != None
-            actor_loss += torch.mean(self.shaping.potential(o_tc, g_tc, u_tc))
+            actor_loss += -torch.mean(self.shaping.potential(shaping_o_tc, shaping_g_tc, u_tc))
             dpi_tc = self.main_actor(o=do_tc, g=dg_tc)
             actor_loss += -torch.mean(self.main_critic(o=do_tc, g=dg_tc, u=dpi_tc))
-            actor_loss += self.action_l2 * torch.mean(dpi_tc)
-            actor_loss += torch.mean(self.shaping.potential(do_tc, dg_tc, du_tc))
+            actor_loss += self.action_l2 * torch.mean((dpi_tc / self.max_u) ** 2)
+            actor_loss += -torch.mean(self.shaping.potential(shaping_do_tc, shaping_dg_tc, du_tc))
         if self.demo_strategy == "bc":
             dpi_tc = self.main_actor(o=do_tc, g=dg_tc)
             actor_loss += -torch.mean(self.main_critic(o=do_tc, g=dg_tc, u=dpi_tc))
-            actor_loss += self.action_l2 * torch.mean(dpi_tc)
+            actor_loss += self.action_l2 * torch.mean((dpi_tc / self.max_u) ** 2)
             actor_loss = (
                 actor_loss * self.bc_params["prm_loss_weight"]
                 + torch.mean((self.main_actor(do_tc, dg_tc) - du_tc) ** 2) * self.bc_params["aux_loss_weight"]
@@ -240,8 +257,10 @@ class DDPG(object):
 
     def update_stats(self, batch):
         # add transitions to normalizer
-        self.o_stats.update(torch.FloatTensor(batch["o"]))
-        self.g_stats.update(torch.FloatTensor(batch["g"]))
+        if not self.norm_obs:
+            return
+        self.o_stats.update(torch.tensor(batch["o"], dtype=torch.float).to(device))
+        self.g_stats.update(torch.tensor(batch["g"], dtype=torch.float).to(device))
 
     def logs(self, prefix=""):
         logs = []
@@ -256,6 +275,7 @@ class DDPG(object):
         Our policies can be loaded from pkl, but after unpickling you cannot continue training.
         """
         state = {k: v for k, v in self.init_args.items() if not k == "self"}
+        state["shaping"] = self.shaping
         state["tc"] = {
             "o_stats": self.o_stats.state_dict(),
             "g_stats": self.g_stats.state_dict(),
@@ -273,7 +293,9 @@ class DDPG(object):
 
     def __setstate__(self, state):
         state_dicts = state.pop("tc")
+        shaping = state.pop("shaping")
         self.__init__(**state)
+        self.shaping = shaping
         self.o_stats.load_state_dict(state_dicts["o_stats"])
         self.g_stats.load_state_dict(state_dicts["g_stats"])
         self.main_actor.load_state_dict(state_dicts["main_actor"])

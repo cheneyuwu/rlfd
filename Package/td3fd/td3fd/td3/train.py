@@ -57,8 +57,9 @@ def train(root_dir, params):
     if demo_strategy in ["nf", "gan"]:
         shaping = ddpg_config.configure_shaping(params)
         logger.info("Training the reward shaping potential.")
+        demo_data = demo_memory.sample()
+        shaping.update_stats(demo_data) # TODO: compare to tf implementation, make sure this is correct
         for epoch in range(shaping_num_epochs):
-            demo_data = demo_memory.sample()
             for (o, g, u) in iterbatches(
                 (demo_data["o"], demo_data["g"], demo_data["u"]), batch_size=shaping_batch_size
             ):
@@ -85,9 +86,11 @@ def train(root_dir, params):
             memory.store_episode(episode)
             for _ in range(num_batches):
                 batch = memory.sample(batch_size)
+                policy.update_stats(batch)
                 demo_batch = None
                 if demo_strategy != "none":
                     demo_batch = demo_memory.sample(batch_size_demo)
+                    policy.update_stats(demo_batch)
                 policy.train(batch, demo_batch)
             policy.update_target_net()
 

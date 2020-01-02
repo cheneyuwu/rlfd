@@ -9,7 +9,12 @@ params_config = {
     "r_shift": 0.0,
     "eps_length": 0,
     "env_args": {},
+    "gamma": 0.99,
     "fix_T": False,
+    # normalize observation
+    "norm_obs": True,  # whethere or not to normalize observations
+    "norm_eps": 0.01,  # epsilon used for observation normalization
+    "norm_clip": 5,  # normalized observations are cropped to this value    
     # ddpg training
     "num_demo": 40,
     "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
@@ -32,9 +37,6 @@ params_config = {
         # double q learning
         "polyak": 0.995,
         "bc_params": {"q_filter": False, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
-        # normalize observation
-        "norm_eps": 0.0,
-        "norm_clip": np.inf,
     },
     "shaping": {
         "num_epochs": int(1e3),

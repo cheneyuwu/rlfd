@@ -30,7 +30,8 @@ class Normalizer(torch.nn.Module):
         self.register_buffer("std_tc", torch.ones(*self.shape, requires_grad=False))
 
     def update(self, v):
-        v = v.reshape(-1, *self.shape)
+        # almost equivalent to v = v.reshape(-1, *self.shape), but handles self.shape==(0,)
+        v = v.reshape(np.prod(v.shape[: -len(self.shape)]), *self.shape)
         self.count_tc += v.shape[0]
         self.sum_tc += torch.sum(v, dim=0)
         self.sumsq_tc += torch.sum(v ** 2, dim=0)

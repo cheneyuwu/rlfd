@@ -4,6 +4,7 @@ from td3fd.td3.ddpg import DDPG
 
 # TODO switch between Shaping for image input and state input. image assumed to be (3, 32, 32)
 from td3fd.td3.shaping import GANShaping
+
 # from td3fd.td3.shaping import ImgGANShaping as GANShaping  # This is for image
 
 default_params = {
@@ -15,7 +16,12 @@ default_params = {
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 0,  # overwrite the default length of the episode provided in _max_episode_steps
     "env_args": {},  # extra arguments passed to the environment
+    "gamma": None,  # reward discount, usually set to be 0.995, 0.95, set to None to select based on max_eps_length
     "fix_T": True,  # whether or not to fix episode length for all rollouts (if false, then use the ring buffer)
+    # normalize observation
+    "norm_obs": False,  # whethere or not to normalize observations
+    "norm_eps": 0.01,  # epsilon used for observation normalization
+    "norm_clip": 5,  # normalized observations are cropped to this value
     # ddpg training
     "num_demo": 40,
     "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
@@ -43,9 +49,6 @@ default_params = {
             "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
             "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss (also called the cloning loss)
         },
-        # normalize observation
-        "norm_eps": 0.01,  # epsilon used for observation normalization
-        "norm_clip": 5,  # normalized observations are cropped to this value
     },
     # reward shaping
     "shaping": {
@@ -103,8 +106,10 @@ def configure_ddpg(params):
         {
             "dims": params["dims"].copy(),  # agent takes an input observations
             "max_u": params["max_u"],
-            "fix_T": params["fix_T"],
             "gamma": params["gamma"],
+            "norm_obs": params["norm_obs"],
+            "norm_eps": params["norm_eps"],
+            "norm_clip": params["norm_clip"],
             "demo_strategy": params["demo_strategy"],
             "info": {
                 "env_name": params["env_name"],
@@ -112,6 +117,7 @@ def configure_ddpg(params):
                 "r_shift": params["r_shift"],
                 "eps_length": params["eps_length"],
                 "env_args": params["env_args"],
+                "gamma": params["gamma"],
             },
         }
     )
@@ -128,6 +134,9 @@ def configure_shaping(params):
             "dims": params["dims"].copy(),  # agent takes an input observations
             "max_u": params["max_u"],
             "gamma": params["gamma"],
+            "norm_obs": params["norm_obs"],
+            "norm_eps": params["norm_eps"],
+            "norm_clip": params["norm_clip"],
         }
     )
     policy = GANShaping(**shaping_params)

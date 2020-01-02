@@ -41,7 +41,10 @@ class Shaping:
 
 
 class GANShaping(Shaping):
-    def __init__(self, dims, max_u, gamma, layer_sizes, potential_weight, **kwargs):
+    def __init__(self, dims, max_u, gamma, layer_sizes, potential_weight, norm_obs, norm_eps, norm_clip, **kwargs):
+
+        # Store initial args passed into the function
+        self.init_args = locals()
 
         super().__init__(gamma)
 
@@ -51,20 +54,24 @@ class GANShaping(Shaping):
         self.dimg = self.dims["g"]
         self.dimu = self.dims["u"]
         self.max_u = max_u
+        self.norm_obs = norm_obs
+        self.norm_eps = norm_eps
+        self.norm_clip = norm_clip
         self.potential_weight = potential_weight
 
         # WGAN values from paper
         self.learning_rate = 1e-4
-        self.latent_dim = 2
+        self.latent_dim = 6  # 100 for images, use a smaller value for state based environments
         self.b1 = 0.5
         self.b2 = 0.999
         self.critic_iter = 5
-        self.lambda_term = 0.1  # used to be 10
+        # lambda set to 10 for images, but we use a smaller value for faster convergence when output dim is low
+        self.lambda_term = 0.1
         self.batch_size = 64
 
-        # Normalizer for goal and observation.
-        self.o_stats = Normalizer(self.dimo).to(device)
-        self.g_stats = Normalizer(self.dimg).to(device)
+        # Normalizer for goal and clipervation.
+        self.o_stats = Normalizer(self.dimo, norm_eps, norm_clip).to(device)
+        self.g_stats = Normalizer(self.dimg, norm_eps, norm_clip).to(device)
 
         state_dim = self.dimo[0] + self.dimg[0] + self.dimu[0]
         self.G = Generator(self.latent_dim, state_dim).to(device)
@@ -79,16 +86,24 @@ class GANShaping(Shaping):
 
         self.current_critic_iter = 0
 
+    def update_stats(self, batch):
+        # add transitions to normalizer
+        if not self.norm_obs:
+            return
+        self.o_stats.update(torch.tensor(batch["o"], dtype=torch.float).to(device))
+        self.g_stats.update(torch.tensor(batch["g"], dtype=torch.float).to(device))
+
     def train(self, batch):
 
-        o_tc = torch.FloatTensor(batch["o"]).to(device)
-        g_tc = torch.FloatTensor(batch["g"]).to(device)
-        u_tc = torch.FloatTensor(batch["u"]).to(device)
+        o_tc = torch.tensor(batch["o"], dtype=torch.float).to(device)
+        g_tc = torch.tensor(batch["g"], dtype=torch.float).to(device)
+        u_tc = torch.tensor(batch["u"], dtype=torch.float).to(device)
 
         # Do not normalize input o/g for gym/mujoco envs
+        if self.norm_obs:
+            o_tc = self.o_stats.normalize(o_tc)
+            g_tc = self.g_stats.normalize(g_tc)
         u_tc = u_tc / self.max_u
-        # o_tc = self.o_stats.normalize(o_tc)
-        # g_tc = self.g_stats.normalize(g_tc)
 
         images = torch.cat((o_tc, g_tc, u_tc), axis=1)
 
@@ -148,23 +163,55 @@ class GANShaping(Shaping):
         self.current_critic_iter += 1
         return d_loss, g_loss
 
-    def evaluate(self):
-        pass
-
     def potential(self, o, g, u):
         """
         Use the output of the GAN's discriminator as potential.
         """
+        # Do not normalize input o/g for gym/mujoco envs
+        if self.norm_obs:
+            o = self.o_stats.normalize(o)
+            g = self.g_stats.normalize(g)
         u = u / self.max_u
+
         inputs = torch.cat((o, g, u), axis=1)
         potential = self.D(inputs)
         potential = potential * self.potential_weight
         return potential
 
+    def evaluate(self):
+        pass
+
+    def __getstate__(self):
+        """
+        Our policies can be loaded from pkl, but after unpickling you cannot continue training.
+        """
+        state = {k: v for k, v in self.init_args.items() if not k == "self"}
+        state["tc"] = {
+            "o_stats": self.o_stats.state_dict(),
+            "g_stats": self.g_stats.state_dict(),
+            "D": self.D.state_dict(),
+            "G": self.G.state_dict(),
+            "d_optimizer": self.d_optimizer.state_dict(),
+            "g_optimizer": self.g_optimizer.state_dict(),
+        }
+        return state
+
+    def __setstate__(self, state):
+        state_dicts = state.pop("tc")
+        self.__init__(**state)
+        self.o_stats.load_state_dict(state_dicts["o_stats"])
+        self.g_stats.load_state_dict(state_dicts["g_stats"])
+        self.D.load_state_dict(state_dicts["D"])
+        self.G.load_state_dict(state_dicts["G"])
+        self.d_optimizer.load_state_dict(state_dicts["d_optimizer"])
+        self.g_optimizer.load_state_dict(state_dicts["g_optimizer"])
 
 
 class ImgGANShaping(Shaping):
-    def __init__(self, dims, max_u, gamma, layer_sizes, potential_weight, **kwargs):
+    def __init__(self, dims, max_u, gamma, layer_sizes, potential_weight, norm_obs, norm_eps, norm_clip, **kwargs):
+
+        # Store initial args passed into the function
+        self.init_args = locals()
 
         super().__init__(gamma)
 
@@ -184,11 +231,11 @@ class ImgGANShaping(Shaping):
         self.critic_iter = 5
         self.lambda_term = 10
         self.batch_size = 64
-        self.channel = 3 # use 4 when using RGBD input
+        self.channel = 3  # use 4 when using RGBD input
 
         # Normalizer for goal and observation.
-        self.o_stats = Normalizer(self.dimo).to(device)
-        self.g_stats = Normalizer(self.dimg).to(device)
+        self.o_stats = Normalizer(self.dimo, norm_eps, norm_clip).to(device)
+        self.g_stats = Normalizer(self.dimg, norm_eps, norm_clip).to(device)
 
         # state_dim = self.dimo[0] + self.dimg[0] + self.dimu[0]
         state_dim = (self.channel, 32, 32)
@@ -217,7 +264,7 @@ class ImgGANShaping(Shaping):
         # normalize the image without depth
         images = images[:, :3, ...].div(255.0 / 2).add(-1.0)
 
-        # TODO: 
+        # TODO:
         assert False, "here we should find a proper way of concatenate observations and actions"
         images = o_tc
 
@@ -314,3 +361,28 @@ class ImgGANShaping(Shaping):
             else:
                 generated_images.append(sample.reshape(32, 32))
         return generated_images
+
+    def __getstate__(self):
+        """
+        Our policies can be loaded from pkl, but after unpickling you cannot continue training.
+        """
+        state = {k: v for k, v in self.init_args.items() if not k == "self"}
+        state["tc"] = {
+            "o_stats": self.o_stats.state_dict(),
+            "g_stats": self.g_stats.state_dict(),
+            "D": self.D.state_dict(),
+            "G": self.G.state_dict(),
+            "d_optimizer": self.d_optimizer.state_dict(),
+            "g_optimizer": self.g_optimizer.state_dict(),
+        }
+        return state
+
+    def __setstate__(self, state):
+        state_dicts = state.pop("tc")
+        self.__init__(**state)
+        self.o_stats.load_state_dict(state_dicts["o_stats"])
+        self.g_stats.load_state_dict(state_dicts["g_stats"])
+        self.D.load_state_dict(state_dicts["D"])
+        self.G.load_state_dict(state_dicts["G"])
+        self.d_optimizer.load_state_dict(state_dicts["d_optimizer"])
+        self.g_optimizer.load_state_dict(state_dicts["g_optimizer"])
