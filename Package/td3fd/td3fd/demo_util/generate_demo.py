@@ -59,23 +59,20 @@ def main(policy, root_dir, **kwargs):
         policy = pickle.load(f)
 
     # Extract environment construction information
-    env_name = policy.info["env_name"].replace("Dense", "")  # the reward should be sparse
-    T = policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T
-
-    # Prepare params.
-    params["env_name"] = env_name
+    params["env_name"] = policy.info["env_name"].replace("Dense", "")  # the reward should be sparse
     params["r_scale"] = policy.info["r_scale"]
     params["r_shift"] = policy.info["r_shift"]
-    params["eps_length"] = T
+    params["eps_length"] = policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T
     params["env_args"] = policy.info["env_args"]
+    params["gamma"] = policy.info["gamma"]
     if params["fix_T"]:
-        params["demo"]["rollout_batch_size"] = np.minimum(params["num_eps"], params["max_concurrency"])
+        params["demo"]["num_episodes"] = np.minimum(params["num_eps"], params["max_concurrency"])
     else:
         params["demo"]["num_episodes"] = params["num_eps"]
     params = config.add_env_params(params=params)
     demo = config.config_demo(params=params, policy=policy)
 
-    # Run evaluation.
+    # Generate demonstration data
     if params["fix_T"]:
         episode = None
         num_eps_togo = params["num_eps"]
@@ -98,7 +95,7 @@ def main(policy, root_dir, **kwargs):
     if rank == 0:
         logger.dump_tabular()
 
-    # store demonstration data (only the main thread)
+    # Store demonstration data (only the main thread)
     if rank == 0:
         os.makedirs(root_dir, exist_ok=True)
         file_name = os.path.join(root_dir, params["filename"])

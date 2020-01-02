@@ -38,7 +38,7 @@ def add_env_params(params):
     # maximum number of simulation steps per episode
     params["eps_length"] = tmp_env.eps_length
     # calculate discount factor gamma based on episode length
-    params["gamma"] = 1.0 - 1.0 / params["eps_length"]
+    params["gamma"] = 1.0 - 1.0 / params["eps_length"] if params["gamma"] is None else params["gamma"]
     # limit on the magnitude of actions
     params["max_u"] = np.array(tmp_env.max_u) if isinstance(tmp_env.max_u, list) else tmp_env.max_u
     # get environment observation & action dimensions
@@ -50,6 +50,8 @@ def add_env_params(params):
         "u": tmp_env.action_space.shape,
     }
     for key, value in info.items():
+        if type(value) == str: # Note: for now, do not add info str to memory (replay buffer)
+            continue
         value = np.array(value)
         if value.ndim == 0:
             value = value.reshape(1)
