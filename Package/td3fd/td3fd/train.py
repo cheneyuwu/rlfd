@@ -7,10 +7,16 @@ import numpy as np
 import tensorflow as tf
 
 from td3fd import config, logger
+
+# pytorch
 from td3fd.td3.config import default_params as ddpg_default_params
 from td3fd.td3.train import train as ddpg_train
+# tensorflow
+# from td3fd.ddpg.config import default_params as ddpg_default_params
+# from td3fd.ddpg.train import train as ddpg_train
 # from td3fd.gail.config import default_params as gail_default_params
 # from td3fd.gail.train import train as gail_train
+
 from td3fd.util.cmd_util import ArgParser
 from td3fd.util.util import set_global_seeds
 
@@ -47,9 +53,6 @@ def main(root_dir, **kwargs):
     set_global_seeds(params["seed"])
     # get a new default session for the current default graph
     tf.compat.v1.InteractiveSession()
-
-    # Prepare parameters for training
-    params = config.add_env_params(params=params)
 
     # Launch the training script
     if "ddpg" in params.keys():
