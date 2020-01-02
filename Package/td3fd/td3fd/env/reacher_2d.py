@@ -5,6 +5,8 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 
+from gym import spaces
+
 matplotlib.use("TkAgg")  #  TkAgg Can change to 'Agg' for non-interactive mode
 
 
@@ -32,22 +34,23 @@ class Reacher:
         self.threshold = self.boundary / 12
         self._max_episode_steps = 30 if self.order == 2 else 20
         self.max_u = 2
-        self.action_space = self.ActionSpace()
+
         self.workspace = self.Block((-self.boundary, -self.boundary), 2 * self.boundary, 2 * self.boundary)
         self.blocks = []
         if block == True:
             # add an obstacle
             self.blocks.append(self.Block((-0.5, -0.5), 1.0, 1.0))
         plt.ion()
-        self.reset()
+        obs = self.reset()
 
-    class ActionSpace:
-        def __init__(self, seed=0):
-            self.random = np.random.RandomState(seed)
-            self.shape = (2,)
-
-        def sample(self):
-            return self.random.rand(2)
+        self.action_space = spaces.Box(-1.0 * self.max_u, 1.0 * self.max_u, shape=(2,), dtype="float32")
+        self.observation_space = spaces.Dict(
+            dict(
+                observation=spaces.Box(-np.inf, np.inf, shape=obs["observation"].shape, dtype="float32"),
+                desired_goal=spaces.Box(-np.inf, np.inf, shape=obs["desired_goal"].shape, dtype="float32"),
+                achieved_goal=spaces.Box(-np.inf, np.inf, shape=obs["achieved_goal"].shape, dtype="float32"),
+            )
+        )
 
     class Block:
         def __init__(self, start, width, height):
@@ -176,7 +179,7 @@ class Reacher:
         return (
             {"observation": obs, "desired_goal": g, "achieved_goal": ag},
             r,
-            0,
+            0.0,
             {"is_success": is_success, "shaping_reward": -distance},
         )
 
