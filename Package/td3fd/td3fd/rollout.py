@@ -338,6 +338,7 @@ class SerialRolloutWorker(RolloutWorkerBase):
         make_env,
         policy,
         dims,
+        eps_length,
         max_u,
         num_steps=None,
         num_episodes=None,
@@ -387,7 +388,9 @@ class SerialRolloutWorker(RolloutWorkerBase):
         assert any([num_steps, num_episodes]) and not all([num_steps, num_episodes])
         self.num_steps = num_steps
         self.num_episodes = num_episodes
+        self.eps_length = eps_length
         self.done = True
+        self.curr_eps_step = 0
 
         self.compute_q = compute_q
         self.env = make_env()
@@ -410,8 +413,9 @@ class SerialRolloutWorker(RolloutWorkerBase):
         current_episode = 0
         while (not self.num_steps) or current_step < self.num_steps:
             # start a new episode if the last one is done
-            if self.done:
+            if self.done or (self.curr_eps_step == self.eps_length):
                 self.done = False
+                self.curr_eps_step = 0
                 self._clear_noise_history()  # clear noise history for polyak noise
                 state = self.env.reset()
                 self.o, self.ag, self.g = state["observation"], state["achieved_goal"], state["desired_goal"]
@@ -466,7 +470,8 @@ class SerialRolloutWorker(RolloutWorkerBase):
             self.ag = ag_2  # ag_2 -> ag
 
             current_step += 1
-            if self.done:
+            self.curr_eps_step += 1
+            if self.done or (self.curr_eps_step == self.eps_length):
                 current_episode += 1
                 if self.num_episodes and current_episode == self.num_episodes:
                     break
