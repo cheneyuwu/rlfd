@@ -7,6 +7,7 @@ params_config = {
     "r_shift": 0.0,
     "eps_length": 0,
     "env_args": {},
+    "gamma": None,
     "fix_T": False,
     # DDPG config
     "ddpg": {
@@ -58,16 +59,11 @@ params_config = {
         # normalize observation
         "norm_eps": 0.01,
         "norm_clip": 5,
-        # i/o clippings
-        "clip_obs": 200.0,
-        "clip_pos_returns": False,
-        "clip_return": False,
     },
     # rollouts config
     "rollout": {
         "num_episodes": None,
         "num_steps": 1,
-        "rollout_batch_size": None,
         "noise_eps": 0.1,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
@@ -75,9 +71,8 @@ params_config = {
         "history_len": 300,
     },
     "evaluator": {
-        "num_episodes": 4,
+        "num_episodes": 10,
         "num_steps": None,
-        "rollout_batch_size": None,
         "noise_eps": 0.0,
         "polyak_noise": 0.0,
         "random_eps": 0.0,

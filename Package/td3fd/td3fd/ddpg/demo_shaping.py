@@ -19,7 +19,7 @@ class DemoShaping:
             g - goal
             u - action
             o_2 - observation that goes to
-            g_2 - same as g, idk why I must make this specific
+            g_2 - same as g
             u_2 - output from the actor of the main network
         """
         self.gamma = gamma
@@ -337,14 +337,7 @@ class GANDemoShaping(DemoShaping):
         # train critic
         disc_cost, _ = sess.run([self.disc_cost_policy, self.disc_train_policy_op], feed_dict=feed_dict)
         return disc_cost
-
-    def evaluate(self, sess, feed_dict={}):
-        pass
-        # TODO: for pixel input check, future work
-        # images = sess.run(self.eval_generator, feed_dict={})
-        # print(images[0])
-        # return images
-
+        
 
 class EnsGANDemoShaping(DemoShaping):
     def __init__(

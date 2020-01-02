@@ -23,7 +23,6 @@ class Actor(tf.Module):
                 bias_initializer=None,
             )
             self.model_layers.append(layer)
-        # TODO: accept multidimensional outputs
         assert len(self.dimu) == 1, "only accept 1 dimensional output"
         self.model_layers.append(
             tf.keras.layers.Dense(
@@ -71,7 +70,7 @@ class Critic(tf.Module):
     def __call__(self, o, g, u):
         state = o
         # for multigoal environments, we have goal as another states
-        state = tf.keras.layers.Flatten()(state) # TODO need an encoding layer here
+        state = tf.keras.layers.Flatten()(state)
         if self.dimg != (0,):
             state = tf.concat([state, g], axis=1)
         else:

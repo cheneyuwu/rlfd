@@ -7,12 +7,13 @@ params_config = {
     "r_shift": 0.0,
     "eps_length": 40,
     "env_args": {},
+    "gamma": None,
     "fix_T": True,
     # DDPG config
     "ddpg": {
         "num_epochs": int(4e3),
         "num_cycles": 10,
-        "num_batches": 40,        
+        "num_batches": 40,
         # replay buffer setup
         "buffer_size": int(5e5),
         # actor critic networks
@@ -58,27 +59,25 @@ params_config = {
         # normalize observation
         "norm_eps": 0.01,
         "norm_clip": 5,
-        # i/o clippings
-        "clip_obs": 200.0,
-        "clip_pos_returns": False,
-        "clip_return": False,
     },
     # rollouts config
     "rollout": {
-        "rollout_batch_size": 4,
+        "num_episodes": 4,
+        "num_steps": None,
         "noise_eps": 0.2,
         "polyak_noise": 0.0,
         "random_eps": 0.2,
         "compute_q": False,
-        "history_len": 10,
+        "history_len": 300,
     },
     "evaluator": {
-        "rollout_batch_size": 20,
+        "num_episodes": 10,
+        "num_steps": None,
         "noise_eps": 0.05,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
         "compute_q": True,
-        "history_len": 1,
+        "history_len": 300,
     },
     "seed": tuple(range(2)),
 }

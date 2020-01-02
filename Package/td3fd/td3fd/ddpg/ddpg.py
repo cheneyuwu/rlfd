@@ -6,8 +6,8 @@ import tensorflow_probability as tfp
 
 from td3fd.ddpg.actorcritic_network import Actor, Critic
 from td3fd.ddpg.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping
-from td3fd.memory import RingReplayBuffer, UniformReplayBuffer, iterbatches
 from td3fd.ddpg.normalizer import Normalizer
+from td3fd.memory import RingReplayBuffer, UniformReplayBuffer, iterbatches
 
 tfd = tfp.distributions
 
@@ -16,36 +16,35 @@ tfd = tfp.distributions
 class DDPG(object):
     def __init__(
         self,
-        input_dims,
-        use_td3,
-        layer_sizes,
-        polyak,
-        buffer_size,
+        # for learning
+        num_epochs,
+        num_cycles,
+        num_batches,
         batch_size,
+        batch_size_demo,
+        # configuration
+        dims,
+        layer_sizes,
+        use_td3,
         q_lr,
         pi_lr,
+        max_u,
+        polyak,
+        gamma,
+        action_l2,
         norm_eps,
         norm_clip,
-        max_u,
-        action_l2,
-        clip_obs,
         scope,
         eps_length,
+        buffer_size,
         fix_T,
-        clip_pos_returns,
-        clip_return,
         sample_demo_buffer,
-        batch_size_demo,
         use_demo_reward,
         num_demo,
         demo_strategy,
         bc_params,
         shaping_params,
-        gamma,
         info,
-        num_epochs,
-        num_cycles,
-        num_batches,
     ):
         """
         Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER). Added functionality
@@ -56,15 +55,12 @@ class DDPG(object):
             max_u              (float)        - maximum action magnitude, i.e. actions are in [-max_u, max_u]
             T                  (int)          - the time horizon for rollouts
             fix_T              (bool)         - every episode has fixed length
-            clip_obs           (float)        - clip observations before normalization to be in [-clip_obs, clip_obs]
-            clip_pos_returns   (boolean)      - whether or not positive returns should be clipped (i.e. clip to 0)
-            clip_return        (float)        - clip returns to be in [-clip_return, clip_return]
             # Normalizer
             norm_eps           (float)        - a small value used in the normalizer to avoid numerical instabilities
             norm_clip          (float)        - normalized inputs are clipped to be in [-norm_clip, norm_clip]
             # NN Configuration
             scope              (str)          - the scope used for the TensorFlow graph
-            input_dims         (dict of tps)  - dimensions for the observation (o), the goal (g), and the actions (u)
+            dims               (dict of tps)  - dimensions for the observation (o), the goal (g), and the actions (u)
             layer_sizes        (list of ints) - number of units in each hidden layers
             initializer_type   (str)          - initializer of the weight for both policy and critic
             reuse              (boolean)      - whether or not the networks should be reused
@@ -90,28 +86,32 @@ class DDPG(object):
         # Store initial args passed into the function
         self.init_args = locals()
 
-        # Parameters
         self.num_epochs = num_epochs
         self.num_cycles = num_cycles
         self.num_batches = num_batches
-        self.input_dims = input_dims
-        self.use_td3 = use_td3
-        self.layer_sizes = layer_sizes
-        self.polyak = polyak
         self.buffer_size = buffer_size
         self.batch_size = batch_size
-        self.q_lr = q_lr
-        self.pi_lr = pi_lr
-        self.norm_eps = norm_eps
-        self.norm_clip = norm_clip
-        self.max_u = max_u
-        self.action_l2 = action_l2
-        self.eps_length = eps_length
-        self.fix_T = fix_T
+        self.num_demo = num_demo
+        self.use_demo_reward = use_demo_reward
         self.sample_demo_buffer = sample_demo_buffer
         self.batch_size_demo = batch_size_demo
-        self.use_demo_reward = use_demo_reward
-        self.num_demo = num_demo
+        self.eps_length = eps_length
+        self.fix_T = fix_T
+
+        # Parameters
+        self.dims = dims
+        self.layer_sizes = layer_sizes
+        self.use_td3 = use_td3
+        self.polyak = polyak
+        self.q_lr = q_lr
+        self.pi_lr = pi_lr
+        self.max_u = max_u
+
+        self.norm_eps = norm_eps
+        self.norm_clip = norm_clip
+        
+        self.action_l2 = action_l2
+
         self.demo_strategy = demo_strategy
         assert self.demo_strategy in ["none", "bc", "gan", "nf"]
         self.bc_params = bc_params
@@ -120,9 +120,9 @@ class DDPG(object):
         self.info = info
 
         # Prepare parameters
-        self.dimo = self.input_dims["o"]
-        self.dimg = self.input_dims["g"]
-        self.dimu = self.input_dims["u"]
+        self.dimo = self.dims["o"]
+        self.dimg = self.dims["g"]
+        self.dimu = self.dims["u"]
 
         # Get a tf session
         self.sess = tf.compat.v1.get_default_session()
@@ -191,23 +191,11 @@ class DDPG(object):
             transitions = self.replay_buffer.sample(self.batch_size)  # otherwise only sample from primary buffer
         return transitions
 
-    def save_policy(self, path):
+    def save(self, path):
         """Pickles the current policy for later inspection.
         """
         with open(path, "wb") as f:
             pickle.dump(self, f)
-
-    def save_replay_buffer(self, path):
-        self.replay_buffer.dump_to_file(path)
-
-    def load_replay_buffer(self, path):
-        self.replay_buffer.load_from_file(path)
-
-    def save_weights(self, path):
-        self.saver.save(self.sess, path)
-
-    def load_weights(self, path):
-        self.saver.restore(self.sess, path)
 
     def train_shaping(self):
         assert self.demo_strategy in ["nf", "gan"]
@@ -268,16 +256,6 @@ class DDPG(object):
                 losses = np.append(losses, loss)
         return np.mean(losses)
 
-    def evaluate_shaping(self):
-        pass
-        # TODO: future work, try vision based RL
-        # images = self.demo_shaping.evaluate(self.sess)
-        # images = ((images + 1.0) * 127.5).astype(np.int32)
-        # import matplotlib.pyplot as plt
-
-        # plt.imshow(images[0])
-        # plt.show()
-
     def train(self):
         batch = self.sample_batch()
 
@@ -320,7 +298,7 @@ class DDPG(object):
             if self.dimg != (0,):  # for multigoal environment - or states that do not change over episodes.
                 buffer_shapes["ag"] = (self.eps_length + 1, *self.dimg)
                 buffer_shapes["g"] = (self.eps_length, *self.dimg)
-            for key, val in self.input_dims.items():
+            for key, val in self.dims.items():
                 if key.startswith("info"):
                     buffer_shapes[key] = (self.eps_length, *val)
             
@@ -338,7 +316,7 @@ class DDPG(object):
                 buffer_shapes["g"] = self.dimg
                 buffer_shapes["ag_2"] = self.dimg
                 buffer_shapes["g_2"] = self.dimg
-            for key, val in self.input_dims.items():
+            for key, val in self.dims.items():
                 if key.startswith("info"):
                     buffer_shapes[key] = val
             # need the "done" signal for restarting from training
