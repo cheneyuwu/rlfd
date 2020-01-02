@@ -7,17 +7,23 @@ params_config = {
     "r_shift": 0.0,
     "eps_length": 30,
     "env_args": {},
+    "gamma": None,
     "fix_T": True,
     # DDPG config
     "ddpg": {
+        "num_epochs": int(4e3),
+        "num_cycles": 10,
+        "num_batches": 40,
         # replay buffer setup
         "buffer_size": int(1e5),
         # actor critic networks
         "scope": "ddpg",
-        "use_td3": 1,
+        "twin_delayed": True,
+        "policy_freq": 2,
+        "policy_noise": 0.2,
+        "policy_noise_clip": 0.5,
         "layer_sizes": [256, 256, 256],
-        "initializer_type": "glorot",  # ["zero", "glorot"]
-        "Q_lr": 0.001,
+        "q_lr": 0.001,
         "pi_lr": 0.001,
         "action_l2": 0.4,
         "batch_size": 256,
@@ -28,9 +34,10 @@ params_config = {
         "batch_size_demo": 128,
         "use_demo_reward": False,
         "num_demo": 30,
-        "demo_strategy": "none",  # ["none", "pure_bc", "bc", "nf", "gan"]
+        "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         "bc_params": {"q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
         "shaping_params": {
+            "num_epochs": int(1.2e4),
             "batch_size": 128,
             "nf": {
                 "num_ens": 2,
@@ -39,7 +46,6 @@ params_config = {
                 "num_masked": 4,
                 "num_bijectors": 4,
                 "layer_sizes": [256, 256],
-                "initializer_type": "glorot",  # ["zero", "glorot"]
                 "prm_loss_weight": 1.0,
                 "reg_loss_weight": 1000.0,
                 "potential_weight": 3.0,
@@ -47,7 +53,6 @@ params_config = {
             "gan": {
                 "num_ens": 4,
                 "layer_sizes": [256, 256, 256],
-                "initializer_type": "glorot",  # ["zero", "glorot"]
                 "latent_dim": 6,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
@@ -57,36 +62,25 @@ params_config = {
         # normalize observation
         "norm_eps": 0.01,
         "norm_clip": 5,
-        # i/o clippings
-        "clip_obs": 200.0,
-        "clip_pos_returns": False,
-        "clip_return": False,
     },
     # rollouts config
     "rollout": {
-        "rollout_batch_size": 4,
+        "num_episodes": 4,
+        "num_steps": None,
         "noise_eps": 0.2,
         "polyak_noise": 0.0,
         "random_eps": 0.2,
-        "compute_Q": False,
-        "history_len": 10,
+        "compute_q": False,
+        "history_len": 300,
     },
     "evaluator": {
-        "rollout_batch_size": 20,
+        "num_episodes": 10,
+        "num_steps": None,
         "noise_eps": 0.05,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
-        "compute_Q": True,
-        "history_len": 1,
-    },
-    # training config
-    "train": {
-        "n_epochs": int(4e3),
-        "n_cycles": 10,
-        "n_batches": 40,
-        "shaping_n_epochs": int(1.2e4),
-        "pure_bc_n_epochs": int(1e3),
-        "save_interval": 10,
+        "compute_q": True,
+        "history_len": 300,
     },
     "seed": tuple(range(2)),
 }

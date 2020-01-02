@@ -11,14 +11,17 @@ params_config = {
     "fix_T": True,
     # DDPG config
     "ddpg": {
-        "num_epochs": int(4e3),
+        "num_epochs": int(3e2),
         "num_cycles": 10,
         "num_batches": 40,
         # replay buffer setup
         "buffer_size": int(1e5),
         # actor critic networks
         "scope": "ddpg",
-        "use_td3": True,
+        "twin_delayed": True,
+        "policy_freq": 2,
+        "policy_noise": 0.2,
+        "policy_noise_clip": 0.5,
         "layer_sizes": [256, 256, 256],
         "q_lr": 0.001,
         "pi_lr": 0.001,

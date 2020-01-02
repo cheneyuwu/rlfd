@@ -25,7 +25,10 @@ default_params = {
         # actor critic networks
         "scope": "ddpg",
         "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layer
-        "use_td3": True,  # whether or not to use td3
+        "twin_delayed": True,
+        "policy_freq": 2,
+        "policy_noise": 0.2,
+        "policy_noise_clip": 0.5,
         "q_lr": 0.001,  # critic learning rate
         "pi_lr": 0.001,  # actor learning rate
         "action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)

@@ -12,7 +12,6 @@ from td3fd.memory import RingReplayBuffer, UniformReplayBuffer, iterbatches
 tfd = tfp.distributions
 
 
-
 class DDPG(object):
     def __init__(
         self,
@@ -25,7 +24,10 @@ class DDPG(object):
         # configuration
         dims,
         layer_sizes,
-        use_td3,
+        twin_delayed,
+        policy_freq,
+        policy_noise,
+        policy_noise_clip,
         q_lr,
         pi_lr,
         max_u,
@@ -101,7 +103,10 @@ class DDPG(object):
         # Parameters
         self.dims = dims
         self.layer_sizes = layer_sizes
-        self.use_td3 = use_td3
+        self.twin_delayed = twin_delayed
+        self.policy_freq = policy_freq
+        self.policy_noise = policy_noise
+        self.policy_noise_clip = policy_noise_clip
         self.polyak = polyak
         self.q_lr = q_lr
         self.pi_lr = pi_lr
@@ -109,7 +114,7 @@ class DDPG(object):
 
         self.norm_eps = norm_eps
         self.norm_clip = norm_clip
-        
+
         self.action_l2 = action_l2
 
         self.demo_strategy = demo_strategy
@@ -262,7 +267,7 @@ class DDPG(object):
         self.training_step = self.sess.run(self.update_training_step_op)
 
         feed = {self.inputs_tf[k]: batch[k] for k in self.inputs_tf.keys()}
-        if self.use_td3 and self.training_step % 2 == 1:
+        if self.training_step % self.policy_freq == 0:
             critic_loss, actor_loss, _ = self.sess.run(
                 [self.q_loss_tf, self.pi_loss_tf, self.q_update_op], feed_dict=feed
             )
@@ -301,11 +306,11 @@ class DDPG(object):
             for key, val in self.dims.items():
                 if key.startswith("info"):
                     buffer_shapes[key] = (self.eps_length, *val)
-            
+
             self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
             if self.demo_strategy != "none" or self.sample_demo_buffer:
                 self.demo_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
-        
+
         else:
             buffer_shapes["o"] = self.dimo
             buffer_shapes["o_2"] = self.dimo
@@ -361,39 +366,34 @@ class DDPG(object):
         self.main_critic = Critic(
             dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
         )
-        if self.use_td3:
+        if self.twin_delayed:
             self.main_critic_twin = Critic(
                 dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
             )
         # target networks
         self.target_actor = Actor(
-            dimo=self.dimo,
-            dimg=self.dimg,
-            dimu=self.dimu,
-            max_u=self.max_u,
-            layer_sizes=self.layer_sizes,
+            dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes,
         )
         self.target_critic = Critic(
             dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
         )
-        if self.use_td3:
+        if self.twin_delayed:
             self.target_critic_twin = Critic(
                 dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
             )
         # actor output
         self.main_pi_tf = self.main_actor(o=norm_input_o_tf, g=norm_input_g_tf)
         self.target_pi_tf = self.target_actor(o=norm_input_o_2_tf, g=norm_input_g_2_tf)
-        if self.use_td3:
-            # TODO pass noise scale as parameter
-            noise = tfd.Normal(loc=0.0, scale=0.2).sample(tf.shape(self.target_pi_tf))
-            noise = tf.clip_by_value(noise, -0.5, 0.5) * self.max_u
-            self.target_pi_tf = tf.clip_by_value(self.target_pi_tf + noise, -self.max_u, self.max_u)
+        # add noise to target policy output
+        noise = tfd.Normal(loc=0.0, scale=self.policy_noise).sample(tf.shape(self.target_pi_tf))
+        noise = tf.clip_by_value(noise, -self.policy_noise_clip, self.policy_noise_clip) * self.max_u
+        self.target_pi_tf = tf.clip_by_value(self.target_pi_tf + noise, -self.max_u, self.max_u)
         # critic output
         self.main_q_tf = self.main_critic(o=norm_input_o_tf, g=norm_input_g_tf, u=input_u_tf)
         self.main_q_pi_tf = self.main_critic(o=norm_input_o_tf, g=norm_input_g_tf, u=self.main_pi_tf)
         self.target_q_tf = self.target_critic(o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=input_u_tf)
         self.target_q_pi_tf = self.target_critic(o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=self.target_pi_tf)
-        if self.use_td3:
+        if self.twin_delayed:
             self.main_q2_tf = self.main_critic_twin(o=norm_input_o_tf, g=norm_input_g_tf, u=input_u_tf)
             self.main_q2_pi_tf = self.main_critic_twin(o=norm_input_o_tf, g=norm_input_g_tf, u=self.main_pi_tf)
             self.target_q2_tf = self.target_critic_twin(o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=input_u_tf)
@@ -453,13 +453,13 @@ class DDPG(object):
         if self.demo_shaping != None:
             target_tf += self.demo_critic_shaping
         # ddpg or td3 target with or without clipping
-        if self.use_td3:
+        if self.twin_delayed:
             target_tf += self.gamma * tf.minimum(self.target_q_pi_tf, self.target_q2_pi_tf)
         else:
             target_tf += self.gamma * self.target_q_pi_tf
         assert target_tf.shape[1] == 1
         # final ddpg or td3 loss
-        if self.use_td3:
+        if self.twin_delayed:
             rl_bellman_1_tf = tf.square(tf.stop_gradient(target_tf) - self.main_q_tf)
             rl_bellman_2_tf = tf.square(tf.stop_gradient(target_tf) - self.main_q2_tf)
             rl_bellman_tf = (rl_bellman_1_tf + rl_bellman_2_tf) / 2.0
@@ -528,7 +528,7 @@ class DDPG(object):
             + list(map(hard_copy_func, zip(self.target_critic.variables, self.main_critic.variables)))
             + (
                 list(map(hard_copy_func, zip(self.target_critic_twin.variables, self.main_critic_twin.variables)))
-                if self.use_td3
+                if self.twin_delayed
                 else []
             )
         )
@@ -537,7 +537,7 @@ class DDPG(object):
             + list(map(soft_copy_func, zip(self.target_critic.variables, self.main_critic.variables)))
             + (
                 list(map(soft_copy_func, zip(self.target_critic_twin.variables, self.main_critic_twin.variables)))
-                if self.use_td3
+                if self.twin_delayed
                 else []
             )
         )

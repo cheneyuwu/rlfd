@@ -18,7 +18,10 @@ params_config = {
         "buffer_size": int(1e6),
         # actor critic networks
         "scope": "ddpg",
-        "use_td3": True,
+        "twin_delayed": True,
+        "policy_freq": 2,
+        "policy_noise": 0.2,
+        "policy_noise_clip": 0.5,
         "layer_sizes": [256, 256, 256],
         "q_lr": 0.001,
         "pi_lr": 0.001,
