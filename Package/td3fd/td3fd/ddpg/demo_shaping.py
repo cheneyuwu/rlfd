@@ -39,7 +39,7 @@ class DemoShaping:
         if g != None:
             # for multigoal environments, we have goal as another states
             state_tf = tf.concat(axis=1, values=[state_tf, self.g_stats.normalize(g)])
-        state_tf = tf.concat(axis=1, values=[state_tf, u])
+        state_tf = tf.concat(axis=1, values=[state_tf, u / self.max_u])
         # note: shape of state_tf is (num_demo, k), where k is sum of dim o g u
         return state_tf
 
@@ -59,7 +59,7 @@ class DemoShaping:
         if g != None:
             # for multigoal environments, we have goal as another states
             state_tf = tf.concat(axis=1, values=[state_tf, tf.cast(self.g_stats.normalize(g), tf.float64)])
-        state_tf = tf.concat(axis=1, values=[state_tf, tf.cast(u, tf.float64)])
+        state_tf = tf.concat(axis=1, values=[state_tf, tf.cast(u / self.max_u, tf.float64)])
         # note: shape of state_tf is (num_demo, k), where k is sum of dim o g u
         return state_tf
 
@@ -79,6 +79,7 @@ class NFDemoShaping(DemoShaping):
         self,
         demo_inputs_tf,
         gamma,
+        max_u,
         o_stats,
         g_stats,
         nf_type,
@@ -98,6 +99,7 @@ class NFDemoShaping(DemoShaping):
             reg_loss_weight  (float)
             potential_weight (float)
         """
+        self.max_u = max_u
         self.o_stats = o_stats
         self.g_stats = g_stats
         self.demo_inputs_tf = demo_inputs_tf
@@ -160,6 +162,7 @@ class EnsNFDemoShaping(DemoShaping):
         self,
         demo_inputs_tf,
         num_ens,
+        max_u,
         gamma,
         o_stats,
         g_stats,
@@ -189,6 +192,7 @@ class EnsNFDemoShaping(DemoShaping):
                     demo_inputs_tf=demo_inputs_tf,
                     nf_type=nf_type,
                     gamma=gamma,
+                    max_u=max_u,
                     o_stats=o_stats,
                     g_stats=g_stats,
                     lr=lr,
@@ -224,6 +228,7 @@ class GANDemoShaping(DemoShaping):
         demo_inputs_tf,
         policy_inputs_tf,
         gamma,
+        max_u,
         o_stats,
         g_stats,
         potential_weight,
@@ -241,6 +246,7 @@ class GANDemoShaping(DemoShaping):
             potential_weight (float)
         """
         # Parameters
+        self.max_u = max_u
         self.o_stats = o_stats
         self.g_stats = g_stats
         self.demo_inputs_tf = demo_inputs_tf
@@ -258,14 +264,11 @@ class GANDemoShaping(DemoShaping):
             self.policy_inputs_tf["u"],
         )
 
-        # TODO: for pixel input
-        # demo_state_tf = (self.demo_inputs_tf["o"] / 127.5) - 1.0
         self.potential_weight = potential_weight
         self.critic_iter = critic_iter
         self.train_gen = 0  # counter
 
         # Generator & Discriminator
-        # TODO: images need multiple dim output
         self.generator = Generator(fc_layer_params=layer_sizes + [demo_state_tf.shape[-1]])
         self.discriminator = Discriminator(fc_layer_params=layer_sizes + [1])
 
@@ -298,15 +301,15 @@ class GANDemoShaping(DemoShaping):
         self.gen_cost = -tf.reduce_mean(disc_fake)
 
         # Train
-        self.disc_train_op = tf.compat.v1.train.AdamOptimizer(
-            learning_rate=1e-4, beta1=0.5, beta2=0.9
-        ).minimize(self.disc_cost, var_list=self.discriminator.trainable_variables)
+        self.disc_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
+            self.disc_cost, var_list=self.discriminator.trainable_variables
+        )
         self.disc_train_policy_op = tf.compat.v1.train.AdamOptimizer(
             learning_rate=1e-4, beta1=0.5, beta2=0.9
         ).minimize(self.disc_cost_policy, var_list=self.discriminator.trainable_variables)
-        self.gen_train_op = tf.compat.v1.train.AdamOptimizer(
-            learning_rate=1e-4, beta1=0.5, beta2=0.9
-        ).minimize(self.gen_cost, var_list=self.generator.trainable_variables)
+        self.gen_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
+            self.gen_cost, var_list=self.generator.trainable_variables
+        )
 
         # Evaluation
         self.eval_generator = self.generator(tf.random.uniform([10, latent_dim]))
@@ -318,8 +321,6 @@ class GANDemoShaping(DemoShaping):
         Use the output of the GAN's discriminator as potential.
         """
         state_tf = self._concat_normalize_inputs(o, g, u)  # remove _normalize to not normalize the inputs
-        # TODO: for pixel inputs
-        # state_tf = o
         potential = self.discriminator(state_tf)
         potential = potential * self.potential_weight
         return potential
@@ -337,7 +338,7 @@ class GANDemoShaping(DemoShaping):
         # train critic
         disc_cost, _ = sess.run([self.disc_cost_policy, self.disc_train_policy_op], feed_dict=feed_dict)
         return disc_cost
-        
+
 
 class EnsGANDemoShaping(DemoShaping):
     def __init__(
@@ -346,6 +347,7 @@ class EnsGANDemoShaping(DemoShaping):
         policy_inputs_tf,
         num_ens,
         gamma,
+        max_u,
         o_stats,
         g_stats,
         layer_sizes,
@@ -372,6 +374,7 @@ class EnsGANDemoShaping(DemoShaping):
                     demo_inputs_tf=demo_inputs_tf,
                     policy_inputs_tf=policy_inputs_tf,
                     gamma=gamma,
+                    max_u=max_u,
                     o_stats=o_stats,
                     g_stats=g_stats,
                     layer_sizes=layer_sizes,

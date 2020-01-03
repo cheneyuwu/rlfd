@@ -20,6 +20,7 @@ except ImportError:
 def train(root_dir, params):
 
     # Construct...
+    config.check_params(params, ddpg_config.default_params)
     params = config.add_env_params(params=params)
     policy = ddpg_config.configure_ddpg(params=params)
     rollout_worker = config.config_rollout(params=params, policy=policy)
@@ -41,7 +42,10 @@ def train(root_dir, params):
     if policy.demo_strategy != "none" or policy.sample_demo_buffer:
         demo_file = os.path.join(root_dir, "demo_data.npz")
         assert os.path.isfile(demo_file), "demonstration training set does not exist"
-        policy.init_demo_buffer(demo_file, update_stats=policy.sample_demo_buffer)
+        episode_batch = policy.init_demo_buffer(demo_file)
+        policy.update_demo_stats(episode_batch)
+        if policy.sample_demo_buffer:
+            policy.update_stats(episode_batch)
 
     # TODO: Incremental learning Option 1: dagger like method
     # if policy.demo_strategy in ["nf", "gan"]:
@@ -61,6 +65,7 @@ def train(root_dir, params):
     # for _ in range(10000):
     #     episode = rollout_worker.generate_rollouts(random=True)
     #     policy.store_episode(episode)
+    #     policy.update_stats(episode)
 
     # Train rl policy
     for epoch in range(num_epochs):
@@ -70,6 +75,7 @@ def train(root_dir, params):
             # print("cycle: {} completed!!".format(cyc))
             episode = rollout_worker.generate_rollouts()
             policy.store_episode(episode)
+            policy.update_stats(episode)
             for _ in range(num_batches):
                 policy.train()
             policy.update_target_net()
@@ -80,26 +86,26 @@ def train(root_dir, params):
 
         # TODO: Incremental learning
         # if policy.demo_strategy in ["nf", "gan"]:
-            # # Option 1: adding more experience (with correction) to the demonstration buffer
-            # o = episode["o"][:, :-1, ...].reshape(-1, *policy.dimo)
-            # g = episode["g"].reshape(-1, *policy.dimg)
-            # u = demo_policy.get_actions(o, g, compute_q=False)
-            # u = u.reshape(episode["u"].shape)
-            # episode["u"] = u
-            # policy.add_to_demo_buffer(episode)
-            # for epoch in range(shaping_num_epochs):
-            #     loss = policy.train_shaping()
-            #     if epoch % (shaping_num_epochs / 100) == (shaping_num_epochs / 100 - 1):
-            #         logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-            #         policy.evaluate_shaping()
-            # # Option 2: train gan discriminator using fake data from generator
-            # if epoch % 10 == 0:
-            #     for _ in range(2):
-            #         evaluator.clear_history()
-            #         episode = evaluator.generate_rollouts()
-            #         loss = policy.train_shaping_policy(episode)
-            #         logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-            #         policy.evaluate_shaping()
+        #     # Option 1: adding more experience (with correction) to the demonstration buffer
+        #     o = episode["o"][:, :-1, ...].reshape(-1, *policy.dimo)
+        #     g = episode["g"].reshape(-1, *policy.dimg)
+        #     u = demo_policy.get_actions(o, g, compute_q=False)
+        #     u = u.reshape(episode["u"].shape)
+        #     episode["u"] = u
+        #     policy.add_to_demo_buffer(episode)
+        #     for epoch in range(shaping_num_epochs):
+        #         loss = policy.train_shaping()
+        #         if epoch % (shaping_num_epochs / 100) == (shaping_num_epochs / 100 - 1):
+        #             logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
+        #             policy.evaluate_shaping()
+        #     # Option 2: train gan discriminator using fake data from generator
+        #     if epoch % 10 == 0:
+        #         for _ in range(2):
+        #             evaluator.clear_history()
+        #             episode = evaluator.generate_rollouts()
+        #             loss = policy.train_shaping_policy(episode)
+        #             logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
+        #             policy.evaluate_shaping()
 
         # log
         logger.record_tabular("epoch", epoch)

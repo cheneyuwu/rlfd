@@ -163,25 +163,20 @@ class DDPG(object):
         else:
             return ret[0]
 
-    def init_demo_buffer(self, demo_file, update_stats=True):
+    def init_demo_buffer(self, demo_file):
         """Initialize the demonstration buffer.
         """
-        # load the demonstration data from data file
         episode_batch = self.demo_buffer.load_from_file(data_file=demo_file, num_demo=self.num_demo)
-        self._update_demo_stats(episode_batch)
-        if update_stats:
-            self._update_stats(episode_batch)
+        return episode_batch
 
     def add_to_demo_buffer(self, episode_batch):
         self.demo_buffer.store_episode(episode_batch)
 
-    def store_episode(self, episode_batch, update_stats=True):
+    def store_episode(self, episode_batch):
         """
         episode_batch: array of batch_size x (T or T+1) x dim_key ('o' and 'ag' is of size T+1, others are of size T)
         """
         self.replay_buffer.store_episode(episode_batch)
-        if update_stats:
-            self._update_stats(episode_batch)
 
     def sample_batch(self):
         # use demonstration buffer to sample as well if demo flag is set TRUE
@@ -205,8 +200,8 @@ class DDPG(object):
     def train_shaping(self):
         assert self.demo_strategy in ["nf", "gan"]
         # train normalizing flow or gan for 1 epoch
-        losses = np.empty(0)
         demo_data = self.demo_buffer.sample()
+        losses = np.empty(0)
         if self.dimg != (0,):
             for (o, g, u) in iterbatches(
                 (demo_data["o"], demo_data["g"], demo_data["u"]), batch_size=self.shaping_params["batch_size"]
@@ -292,6 +287,38 @@ class DDPG(object):
             logs.append((prefix + "stats_g/mean", np.mean(self.sess.run([self.g_stats.mean_tf]))))
             logs.append((prefix + "stats_g/std", np.mean(self.sess.run([self.g_stats.std_tf]))))
         return logs
+
+    def update_stats(self, episode_batch):
+        # add transitions to normalizer
+        if self.fix_T:
+            episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
+            if self.dimg != (0,):
+                episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
+                episode_batch["g_2"] = episode_batch["g"][:, :, :]
+            num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
+            transitions = self.replay_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
+        else:
+            transitions = episode_batch.copy()
+
+        self.o_stats.update(transitions["o"])
+        if self.dimg != (0,):
+            self.g_stats.update(transitions["g"])
+
+    def update_demo_stats(self, episode_batch):
+        # add transitions to normalizer
+        if self.fix_T:
+            episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
+            if self.dimg != (0,):
+                episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
+                episode_batch["g_2"] = episode_batch["g"][:, :, :]
+            num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
+            transitions = self.demo_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
+        else:
+            transitions = episode_batch.copy()
+
+        self.demo_o_stats.update(transitions["o"])
+        if self.dimg != (0,):
+            self.demo_g_stats.update(transitions["g"])
 
     def _create_memory(self):
         # buffer shape
@@ -423,6 +450,7 @@ class DDPG(object):
             self.demo_shaping = EnsNFDemoShaping(
                 demo_inputs_tf=self.demo_inputs_tf,
                 gamma=self.gamma,
+                max_u=self.max_u,
                 o_stats=self.demo_o_stats,
                 g_stats=self.demo_g_stats,
                 **self.shaping_params["nf"]
@@ -432,6 +460,7 @@ class DDPG(object):
                 demo_inputs_tf=self.demo_inputs_tf,
                 policy_inputs_tf=self.policy_inputs_tf,
                 gamma=self.gamma,
+                max_u=self.max_u,
                 o_stats=self.demo_o_stats,
                 g_stats=self.demo_g_stats,
                 **self.shaping_params["gan"]
@@ -550,38 +579,6 @@ class DDPG(object):
         self.sess.run(tf.compat.v1.global_variables_initializer())
         self.initialize_target_net()
         self.training_step = self.sess.run(self.training_step_tf)
-
-    def _update_stats(self, episode_batch):
-        # add transitions to normalizer
-        if self.fix_T:
-            episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
-            if self.dimg != (0,):
-                episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
-                episode_batch["g_2"] = episode_batch["g"][:, :, :]
-            num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
-            transitions = self.replay_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
-        else:
-            transitions = episode_batch.copy()
-
-        self.o_stats.update(transitions["o"])
-        if self.dimg != (0,):
-            self.g_stats.update(transitions["g"])
-
-    def _update_demo_stats(self, episode_batch):
-        # add transitions to normalizer
-        if self.fix_T:
-            episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
-            if self.dimg != (0,):
-                episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
-                episode_batch["g_2"] = episode_batch["g"][:, :, :]
-            num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
-            transitions = self.demo_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
-        else:
-            transitions = episode_batch.copy()
-
-        self.demo_o_stats.update(transitions["o"])
-        if self.dimg != (0,):
-            self.demo_g_stats.update(transitions["g"])
 
     def __getstate__(self):
         """
