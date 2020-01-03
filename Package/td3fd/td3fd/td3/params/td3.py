@@ -2,6 +2,7 @@ import numpy as np
 
 params_config = {
     # config summary
+    "alg": "ddpg-torch",
     "config": "default",
     # environment config
     "env_name": "Reacher-v2",

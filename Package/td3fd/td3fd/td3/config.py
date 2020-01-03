@@ -8,7 +8,8 @@ from td3fd.td3.shaping import GANShaping
 # from td3fd.td3.shaping import ImgGANShaping as GANShaping  # This is for image
 
 default_params = {
-    # config summary
+    # config summary and implementation identifier
+    "alg": "ddpg-torch",
     "config": "default",
     # environment config
     "env_name": "FetchReach-v1",

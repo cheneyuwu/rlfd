@@ -1,5 +1,6 @@
 params_config = {
     # config summary
+    "alg": "ddpg-tf",
     "config": "default",
     # environment config
     "env_name": "YWFetchPickAndPlaceRandInit-v0",

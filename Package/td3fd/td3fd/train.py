@@ -9,12 +9,9 @@ import tensorflow as tf
 from td3fd import config, logger
 
 # pytorch
-from td3fd.td3.config import default_params as ddpg_default_params
-from td3fd.td3.train import train as ddpg_train
+from td3fd.td3.train import train as ddpg_torch_train
 # tensorflow
-# from td3fd.ddpg.config import default_params as ddpg_default_params
-# from td3fd.ddpg.train import train as ddpg_train
-# from td3fd.gail.config import default_params as gail_default_params
+from td3fd.ddpg.train import train as ddpg_tf_train
 # from td3fd.gail.train import train as gail_train
 
 from td3fd.util.cmd_util import ArgParser
@@ -42,12 +39,6 @@ def main(root_dir, **kwargs):
     assert os.path.isfile(param_file), param_file
     with open(param_file, "r") as f:
         params = json.load(f)
-    if "ddpg" in params.keys():
-        config.check_params(params, ddpg_default_params)
-    # elif "gail" in params.keys():
-    #     config.check_params(params, gail_default_params)
-    else:
-        assert False
 
     # seed everything.
     set_global_seeds(params["seed"])
@@ -55,8 +46,10 @@ def main(root_dir, **kwargs):
     tf.compat.v1.InteractiveSession()
 
     # Launch the training script
-    if "ddpg" in params.keys():
-        ddpg_train(root_dir=root_dir, params=params)
+    if params["alg"] == "ddpg-torch":
+        ddpg_torch_train(root_dir=root_dir, params=params)
+    elif params["alg"] == "ddpg-tf":
+        ddpg_tf_train(root_dir=root_dir, params=params)
     # elif "gail" in params.keys():
     #     gail_train(root_dir=root_dir, params=params)
     else:

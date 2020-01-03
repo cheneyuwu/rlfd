@@ -3,7 +3,8 @@ import numpy as np
 from td3fd.ddpg.ddpg import DDPG
 
 default_params = {
-    # config summary
+    # config summary and implementation identifier
+    "alg": "ddpg-tf",
     "config": "default",
     # environment config
     "env_name": "FetchReach-v1",
