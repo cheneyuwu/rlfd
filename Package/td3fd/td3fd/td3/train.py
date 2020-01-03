@@ -19,6 +19,9 @@ except ImportError:
 
 def train(root_dir, params):
 
+    # Check parameters
+    config.check_params(params, ddpg_config.default_params)
+
     # Training parameter
     save_interval = 4
     demo_strategy = params["demo_strategy"]
@@ -58,15 +61,17 @@ def train(root_dir, params):
         shaping = ddpg_config.configure_shaping(params)
         logger.info("Training the reward shaping potential.")
         demo_data = demo_memory.sample()
-        shaping.update_stats(demo_data) # TODO: compare to tf implementation, make sure this is correct
+        shaping.update_stats(demo_data) # Note: no need for image based envs
         for epoch in range(shaping_num_epochs):
+            losses = np.empty(0)
             for (o, g, u) in iterbatches(
                 (demo_data["o"], demo_data["g"], demo_data["u"]), batch_size=shaping_batch_size
             ):
                 batch = {"o": o, "g": g, "u": u}
                 d_loss, g_loss = shaping.train(batch)
+                losses = np.append(losses, d_loss.cpu().data.numpy())
             if epoch % (shaping_num_epochs / 100) == (shaping_num_epochs / 100 - 1):
-                logger.info("epoch: {} demo shaping loss: {}".format(epoch, d_loss))
+                logger.info("epoch: {} demo shaping loss: {}".format(epoch, np.mean(losses)))
                 shaping.evaluate()
         policy.shaping = shaping
 

@@ -54,6 +54,7 @@ class GANShaping(Shaping):
         self.dimg = self.dims["g"]
         self.dimu = self.dims["u"]
         self.max_u = max_u
+        self.layer_sizes = layer_sizes
         self.norm_obs = norm_obs
         self.norm_eps = norm_eps
         self.norm_clip = norm_clip
@@ -74,9 +75,9 @@ class GANShaping(Shaping):
         self.g_stats = Normalizer(self.dimg, norm_eps, norm_clip).to(device)
 
         state_dim = self.dimo[0] + self.dimg[0] + self.dimu[0]
-        self.G = Generator(self.latent_dim, state_dim).to(device)
+        self.G = Generator(self.latent_dim, state_dim, self.layer_sizes).to(device)
         summary(self.G, (self.latent_dim,))
-        self.D = Discriminator(state_dim).to(device)
+        self.D = Discriminator(state_dim, self.layer_sizes).to(device)
         summary(self.D, (state_dim,))
         self.C = None  # number of channels
 
