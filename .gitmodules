@@ -6,3 +6,6 @@
 	path = Package/gym
 	branch = yuchen
 	url = git@github.com:cheneyuwu/gym.git
+[submodule "Package/metaworld"]
+	path = Package/metaworld
+	url = git@github.com:cheneyuwu/metaworld.git

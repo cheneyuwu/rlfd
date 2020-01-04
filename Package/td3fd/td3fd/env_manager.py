@@ -18,9 +18,14 @@ except:
 
 
 try:
-    from metaworld.benchmarks import ML1 as mtw
+    from metaworld.envs.mujoco.env_dict import HARD_MODE_ARGS_KWARGS, HARD_MODE_CLS_DICT
+
+    mtw_envs = {**HARD_MODE_CLS_DICT["train"], **HARD_MODE_CLS_DICT["test"]}
+    mtw_args = {**HARD_MODE_ARGS_KWARGS["train"], **HARD_MODE_ARGS_KWARGS["test"]}
+
 except:
-    mtw = None
+    mtw_envs = None
+    mtw_args = None
 
 
 class EnvWrapper:
@@ -105,16 +110,18 @@ class EnvManager:
             try:
                 _ = gym.make(env_name, **env_args)
                 self.make_env = lambda: gym.make(env_name, **env_args)
-            except:
+            except gym.error.UnregisteredEnv:
                 pass
 
         # Search in MetaWorld Envs
-        if self.make_env is None and mtw is not None and env_name in mtw.available_tasks():
+        if self.make_env is None and mtw_envs is not None and env_name in mtw_envs.keys():
 
             def make_env():
-                env = mtw.get_train_tasks(env_name)  # Create an environment with task `pick_place`
-                tasks = env.sample_tasks(1)  # Sample a task (in this case, a goal variation)
-                env.set_task(tasks[0])  # Set task
+                args = mtw_args[env_name]["args"]
+                kwargs = mtw_args[env_name]["kwargs"]
+                kwargs["random_init"] = False  # disable random goal locations
+                kwargs["obs_type"] = "with_goal"  # disable random goal locations
+                env = mtw_envs[env_name](*args, **kwargs)
                 return env
 
             self.make_env = make_env
@@ -152,12 +159,12 @@ if __name__ == "__main__":
     #     action = np.random.randn(env.action_space.shape[0]) * env.action_space.high[0]  # sample random action
     #     state, r, done, info = env.step(action)
     #     # print(state, r, done, info)
-    #     print(state["pixel"][..., :3].shape)
-    #     plt.imshow(state["pixel"][..., 3] / 255.0)
-    #     plt.show()
-    #     # env.render()
+    #     # print(state["pixel"][..., :3].shape)
+    #     # plt.imshow(state["pixel"][..., 3] / 255.0)
+    #     # plt.show()
+    #     env.render(mode="rgb_array")
 
-    # # For a metaworld env
+    # For a metaworld env
     # env_manager = EnvManager("pick-place-v1", eps_length=50)
     # env = env_manager.get_env()
     # while True:
@@ -166,4 +173,26 @@ if __name__ == "__main__":
     #         a = env.action_space.sample()  # Sample an action
 
     #         obs, reward, done, info = env.step(a)  # Step the environoment with the sampled random action
+    #         print(reward)
     #         env.render()
+
+    env_manager = EnvManager("hammer-v1", eps_length=50)
+    env = env_manager.get_env()
+    for _ in range(1):
+        env.reset()
+        for _ in range(200):
+            env.render()
+            if _ < 20:
+                obs, r, done, info = env.step(np.array([0, 0, -1, 0]))
+            elif _ < 30:
+                obs, r, done, info = env.step(np.array([0, 0, 0, 1]))
+            elif _ < 40:
+                obs, r, done, info = env.step(np.array([0, 0, 1, 1]))
+            elif _ < 50:
+                obs, r, done, info = env.step(np.array([1, 0, 0, 1]))
+            elif _ < 60:
+                obs, r, done, info = env.step(np.array([0, 1, 0, 1]))
+            else:
+                obs, r, done, info = env.step(np.array([0, 0, 0, 1]))
+            print(done)
+            # print(r)
