@@ -38,7 +38,14 @@ class EnvWrapper:
         self.env = make_env()
         self.r_scale = r_scale
         self.r_shift = r_shift
-        self.eps_length = eps_length if eps_length else self.env._max_episode_steps
+        if eps_length:
+            self.eps_length = eps_length
+        elif "_max_episode_steps" in self.env.__dict__:
+            self.eps_length = self.env._max_episode_steps
+        elif "max_path_length" in self.env.__dict__:
+            self.eps_length = self.env.max_path_length
+        else:
+            assert False, "max episode length unknown."
         # need the following properties
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
