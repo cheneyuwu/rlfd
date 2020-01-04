@@ -9,3 +9,6 @@
 [submodule "Package/metaworld"]
 	path = Package/metaworld
 	url = git@github.com:cheneyuwu/metaworld.git
+[submodule "Package/sac_ae"]
+	path = Package/sac_ae
+	url = https://github.com/melfm/pytorch_sac_ae
