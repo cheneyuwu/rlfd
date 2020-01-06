@@ -173,6 +173,7 @@ def demo_pick_place(render=True):
 
     return demo_gen.dump_eps()
 
+
 def demo_drawer_close(render=True):
     env = EnvManager(env_name="drawer-close-v1").get_env()
     demo_gen = DemoGenerator(env, render)
@@ -247,7 +248,7 @@ def main(env_name, exp_dir, num_itr, render, **kwargs):
 
     result = None
     for epsd in range(num_itr):  # we initialize the whole demo buffer at the start of the training
-        obs, acts, goals, achieved_goals, rs = [], [], [], [], []
+        obs, acts, goals, achieved_goals, rs, dones = [], [], [], [], [], []
         info_keys = [key for key in dims.keys() if key.startswith("info")]
         info_values = [np.empty((T, *dims[key]), np.float32) for key in info_keys]
         for t in range(T):
@@ -256,13 +257,14 @@ def main(env_name, exp_dir, num_itr, render, **kwargs):
             achieved_goals.append(demo_data_obs[epsd][t].get("achieved_goal"))
             acts.append(demo_data_act[epsd][t])
             rs.append(demo_data_reward[epsd][t])
+            dones.append(demo_data_done[epsd][t])
             for idx, key in enumerate(info_keys):
                 info_values[idx][t] = demo_data_info[epsd][t][key.replace("info_", "")]
 
         obs.append(demo_data_obs[epsd][T].get("observation"))
         achieved_goals.append(demo_data_obs[epsd][T].get("achieved_goal"))
 
-        episode = dict(o=obs, u=acts, g=goals, ag=achieved_goals, r=rs)
+        episode = dict(o=obs, u=acts, g=goals, ag=achieved_goals, r=rs, done=dones)
         for key, value in zip(info_keys, info_values):
             episode[key] = value
 
@@ -301,7 +303,7 @@ if __name__ == "__main__":
         "--num_itr", help="number of iterations", type=int, default=10,
     )
     exp_parser.parser.add_argument(
-        "--render", help="render", type=bool, default=True,
+        "--render", help="render", type=int, default=0,
     )
     exp_parser.parse(sys.argv)
     main(**exp_parser.get_dict())

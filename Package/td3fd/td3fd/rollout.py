@@ -249,7 +249,9 @@ class ParallelRolloutWorker(RolloutWorkerBase):
                     r[i] = curr_r
                     done[i] = curr_done
                     if "is_success" in info:
-                        success[i] = info["is_success"]
+                        success[i] = info["is_success"] # gym envs
+                    if "success" in info:
+                        success[i] = info["success"] # metaworld envs
                     if "shaping_reward" in info:
                         shaping_reward[i] = info["shaping_reward"]
                     for idx, key in enumerate(self.info_keys):

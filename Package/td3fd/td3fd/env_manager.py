@@ -172,34 +172,13 @@ if __name__ == "__main__":
     #     env.render(mode="rgb_array")
 
     # For a metaworld env
-    # env_manager = EnvManager("pick-place-v1", eps_length=50)
-    # env = env_manager.get_env()
-    # while True:
-    #     obs = env.reset()  # Reset environment
-    #     for _ in range(1000):
-    #         a = env.action_space.sample()  # Sample an action
-
-    #         obs, reward, done, info = env.step(a)  # Step the environoment with the sampled random action
-    #         print(reward)
-    #         env.render()
-
-    env_manager = EnvManager("hammer-v1", eps_length=50)
+    env_manager = EnvManager("pick-place-v1")
     env = env_manager.get_env()
-    for _ in range(1):
-        env.reset()
-        for _ in range(200):
+    while True:
+        obs = env.reset()  # Reset environment
+        for _ in range(1000):
+            a = env.action_space.sample()  # Sample an action
+
+            obs, reward, done, info = env.step(a)  # Step the environoment with the sampled random action
+            print(reward)
             env.render()
-            if _ < 20:
-                obs, r, done, info = env.step(np.array([0, 0, -1, 0]))
-            elif _ < 30:
-                obs, r, done, info = env.step(np.array([0, 0, 0, 1]))
-            elif _ < 40:
-                obs, r, done, info = env.step(np.array([0, 0, 1, 1]))
-            elif _ < 50:
-                obs, r, done, info = env.step(np.array([1, 0, 0, 1]))
-            elif _ < 60:
-                obs, r, done, info = env.step(np.array([0, 1, 0, 1]))
-            else:
-                obs, r, done, info = env.step(np.array([0, 0, 0, 1]))
-            print(done)
-            # print(r)
