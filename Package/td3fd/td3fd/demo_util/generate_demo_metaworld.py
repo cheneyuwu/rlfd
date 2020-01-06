@@ -14,13 +14,6 @@ class DemoGenerator:
         self.render = render
         self.num_steps = 0
 
-        # store return from 1 episode
-        self.episode_obs = []
-        self.episode_act = []
-        self.episode_rwd = []
-        self.episode_done = []
-        self.episode_info = []
-
     def reset(self):
         # store return from 1 episode
         self.episode_obs = []
@@ -28,6 +21,7 @@ class DemoGenerator:
         self.episode_rwd = []
         self.episode_done = []
         self.episode_info = []
+        self.episode_crwd = 0.0
 
         # reset env and store initial observation
         obs = self.env.reset()
@@ -35,6 +29,7 @@ class DemoGenerator:
         return obs
 
     def dump_eps(self):
+        print("Episode cumulative reward: ", self.episode_crwd)
         return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_done, self.episode_info
 
     def move_to_goal(self, curr_pos, goal_pos, gripper):
@@ -75,6 +70,7 @@ class DemoGenerator:
         self.episode_rwd.append([reward])
         self.episode_done.append([done])
         self.episode_info.append(info)
+        self.episode_crwd += reward
         return obs, reward, done, info
 
 
