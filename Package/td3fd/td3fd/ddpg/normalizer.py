@@ -24,12 +24,12 @@ class Normalizer(tf.Module):
         self.sess = sess if sess is not None else tf.get_default_session()
 
         self.eps = tf.constant(eps, dtype=self.dtype)
-        self.sum_tf = tf.Variable(tf.zeros(self.shape), dtype=self.dtype)
-        self.sumsq_tf = tf.Variable(tf.zeros(self.shape), dtype=self.dtype)
-        self.count_tf = tf.Variable(0.0, dtype=self.dtype)
+        self.sum_tf = tf.Variable(tf.zeros(self.shape), dtype=self.dtype, trainable=False)
+        self.sumsq_tf = tf.Variable(tf.zeros(self.shape), dtype=self.dtype, trainable=False)
+        self.count_tf = tf.Variable(0.0, dtype=self.dtype, trainable=False)
 
-        self.mean_tf = tf.Variable(tf.zeros(self.shape), dtype=self.dtype)
-        self.std_tf = tf.Variable(tf.ones(self.shape), dtype=self.dtype)
+        self.mean_tf = tf.Variable(tf.zeros(self.shape), dtype=self.dtype, trainable=False)
+        self.std_tf = tf.Variable(tf.ones(self.shape), dtype=self.dtype, trainable=False)
 
         # update
         self.input = tf.compat.v1.placeholder(self.dtype, shape=(None, *self.shape))
