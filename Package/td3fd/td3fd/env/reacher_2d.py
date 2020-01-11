@@ -7,7 +7,7 @@ import numpy as np
 
 from gym import spaces
 
-matplotlib.use("TkAgg")  #  TkAgg Can change to 'Agg' for non-interactive mode
+matplotlib.use("Agg")  #  TkAgg Can change to 'Agg' for non-interactive mode
 
 
 def make(env_name, **env_args):

@@ -142,7 +142,7 @@ def demo_reach(render=True):
 
 
 def demo_pick_place(render=True):
-    env = EnvManager(env_name="reach-v1").get_env()
+    env = EnvManager(env_name="pick-place-v1").get_env()
     demo_gen = DemoGenerator(env, render)
 
     obs = demo_gen.reset()
@@ -150,10 +150,10 @@ def demo_pick_place(render=True):
     # control
     curr_pos = obs["observation"][:3]
     goal_pos = obs["observation"][3:6]
-    goal_pos[2] += 0.03
+    goal_pos[2] += 0.025
     obs, reward, done, info = demo_gen.move_to_goal(curr_pos, goal_pos, -1.0)
     assert not done
-    obs, reward, done, info = demo_gen.stay(1.0, 4)
+    obs, reward, done, info = demo_gen.stay(1.0, 10)
     assert not done
     curr_pos = obs["observation"][:3]
     goal_pos = obs["observation"][6:9]

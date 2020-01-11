@@ -11,7 +11,7 @@ from matplotlib import cm
 from td3fd.util.cmd_util import ArgParser
 from td3fd.util.reader_util import load_csv
 
-matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode
+matplotlib.use("Agg")  # Can change to 'Agg' for non-interactive mode
 matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["ps.fonttype"] = 42
 
@@ -50,6 +50,36 @@ def smooth_reward_curve(x, y, size=50):
     )
     return xsmoo, ysmoo
 
+
+# def load_results(root_dir_or_dirs):
+#     """
+#     Load summaries of runs from a list of directories (including subdirectories)
+#     Looking for directories with both params.json and progress.csv.
+
+#     Arguments:
+
+#     Returns:
+#         allresults - list of dicts that contains "progress" and "params".
+#     """
+#     if isinstance(root_dir_or_dirs, str):
+#         rootdirs = [osp.expanduser(root_dir_or_dirs)]
+#     else:
+#         rootdirs = [osp.expanduser(d) for d in root_dir_or_dirs]
+#     allresults = []
+#     for rootdir in rootdirs:
+#         assert osp.exists(rootdir), "%s doesn't exist" % rootdir
+#         for dirname, _, files in os.walk(rootdir):
+#             if all([file in files for file in ["variant.json", "progress.csv"]]):
+#                 result = {"dirname": dirname}
+#                 progcsv = os.path.join(dirname, "progress.csv")
+#                 result["progress"] = load_csv(progcsv)
+#                 if result["progress"] is None:
+#                     continue
+#                 paramsjson = os.path.join(dirname, "variant.json")
+#                 with open(paramsjson, "r") as f:
+#                     result["params"] = json.load(f)
+#                 allresults.append(result)
+#     return allresults
 
 def load_results(root_dir_or_dirs):
     """
@@ -171,6 +201,8 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 ax.set_ylabel(y_label)
                 ax.tick_params(axis="x", pad=5, length=5, width=1)
                 ax.tick_params(axis="y", pad=5, length=5, width=1)
+                ax.ticklabel_format(style='sci',scilimits=(-3,4),axis='both')
+                ax.set_title(env_id)
                 ax.spines["top"].set_visible(False)
                 ax.spines["right"].set_visible(False)
                 ax.spines["bottom"].set_visible(True)
