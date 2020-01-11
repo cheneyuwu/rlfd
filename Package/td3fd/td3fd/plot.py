@@ -81,6 +81,7 @@ def smooth_reward_curve(x, y, size=50):
 #                 allresults.append(result)
 #     return allresults
 
+
 def load_results(root_dir_or_dirs):
     """
     Load summaries of runs from a list of directories (including subdirectories)
@@ -131,7 +132,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
 
             # Process and smooth data.
             if smooth:
-                x, y = smooth_reward_curve(x, y)
+                x, y = smooth_reward_curve(x, y, int(len(x) / 500))
             assert x.shape == y.shape
 
             if env_id not in data:
@@ -143,7 +144,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
             data[env_id][xy][config].append((x, y))
 
     fig = plt.figure()
-    fig.subplots_adjust(left=0.15, right=0.98, bottom=0.27, top=0.9, wspace=0.25, hspace=0.25)
+    fig.subplots_adjust(left=0.1, right=0.95, bottom=0.2, top=0.9, wspace=0.25, hspace=0.25)
     # set sizes
     SMALL_SIZE = 14
     MEDIUM_SIZE = 14
@@ -163,7 +164,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
             # colors = ["r", "g", "b", "m", "c", "k", "y"]
             colors = cm.jet(np.linspace(0, 1.0, len(data[env_id][xy].keys())))
             markers = ["o", "v", "s", "d", "p", "h"]
-            ax = fig.add_subplot(len(data.keys()), len(xys), i + env_n * (len(data.keys()) - 1))
+            ax = fig.add_subplot(len(xys), len(data.keys()), i + env_n * (len(data.keys()) - 1))
             x_label = xy.split(":")[0]
             y_label = xy.split(":")[1]
             for j, config in enumerate(sorted(data[env_id][xy].keys())):
@@ -201,7 +202,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 ax.set_ylabel(y_label)
                 ax.tick_params(axis="x", pad=5, length=5, width=1)
                 ax.tick_params(axis="y", pad=5, length=5, width=1)
-                ax.ticklabel_format(style='sci',scilimits=(-3,4),axis='both')
+                ax.ticklabel_format(style="sci", scilimits=(-3, 4), axis="both")
                 ax.set_title(env_id)
                 ax.spines["top"].set_visible(False)
                 ax.spines["right"].set_visible(False)
@@ -210,14 +211,14 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 # use ax level legend
                 # ax.legend(fontsize=5)
             num_lines = len(data[env_id][xy].keys())
-        # use fig level legend
-        handles, labels = ax.get_legend_handles_labels()
-        fig.legend(handles, labels, loc="lower center", ncol=int(num_lines), frameon=False)
-        fig.set_size_inches(5 * len(xys), 5 * len(data.keys()))
-        save_path = os.path.join(target_dir, "Result_{}.png".format(env_id))
-        print("Saving image to " + save_path)
-        plt.savefig(save_path, dpi=200)
-        plt.show()
+    # use fig level legend
+    handles, labels = ax.get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=int(num_lines), frameon=False)
+    fig.set_size_inches(5 * len(data.keys()), 5 * len(xys))
+    save_path = os.path.join(target_dir, "Result_{}.png".format("plot_name"))
+    print("Saving image to " + save_path)
+    plt.savefig(save_path, dpi=200)
+    plt.show()
 
 
 def main(dirs, xys, save_path=None, smooth=0, **kwargs):
