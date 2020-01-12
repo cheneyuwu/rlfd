@@ -12,3 +12,6 @@
 [submodule "Package/pytorch_sac_ae"]
 	path = Package/pytorch_sac_ae
 	url = git@github.com:melfm/pytorch_sac_ae.git
+[submodule "Package/rlkit"]
+	path = Package/rlkit
+	url = git@github.com:cheneyuwu/rlkit.git
