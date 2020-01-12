@@ -189,6 +189,11 @@ class DDPG(object):
                 target_tc += self.shaping.reward(
                     shaping_o_tc, shaping_g_tc, u_tc, shaping_o_2_tc, shaping_g_2_tc, u_2_tc
                 )
+            # debug shaping
+            # if self.shaping != None:
+            #     target_tc += self.shaping.reward(
+            #         shaping_o_tc, shaping_g_tc, u_tc, shaping_o_2_tc, shaping_g_2_tc, u_2_tc
+            #     )
             if self.twin_delayed:
                 target_tc += (
                     (1.0 - done_tc)
@@ -220,14 +225,17 @@ class DDPG(object):
         # Actor update
         pi_tc = self.main_actor(o=o_tc, g=g_tc)
         actor_loss = -torch.mean(self.main_critic(o=o_tc, g=g_tc, u=pi_tc))
+        # debug shaping
+        # if self.shaping != None:
+        #     actor_loss += -torch.mean(self.shaping.potential(shaping_o_tc, shaping_g_tc, pi_tc))
         actor_loss += self.action_l2 * torch.mean((pi_tc / self.max_u) ** 2)
         if self.demo_strategy in ["gan", "nf"]:
             assert self.shaping != None
-            actor_loss += -torch.mean(self.shaping.potential(shaping_o_tc, shaping_g_tc, u_tc))
+            actor_loss += -torch.mean(self.shaping.potential(shaping_o_tc, shaping_g_tc, pi_tc))
             dpi_tc = self.main_actor(o=do_tc, g=dg_tc)
             actor_loss += -torch.mean(self.main_critic(o=do_tc, g=dg_tc, u=dpi_tc))
             actor_loss += self.action_l2 * torch.mean((dpi_tc / self.max_u) ** 2)
-            actor_loss += -torch.mean(self.shaping.potential(shaping_do_tc, shaping_dg_tc, du_tc))
+            actor_loss += -torch.mean(self.shaping.potential(shaping_do_tc, shaping_dg_tc, dpi_tc))
         if self.demo_strategy == "bc":
             dpi_tc = self.main_actor(o=do_tc, g=dg_tc)
             actor_loss += -torch.mean(self.main_critic(o=do_tc, g=dg_tc, u=dpi_tc))
