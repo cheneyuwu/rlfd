@@ -8,6 +8,7 @@ from torch import autograd
 from torchsummary import summary
 from torchvision import utils
 
+import td3fd.td3.normalizing_flow as fnn
 from td3fd.td3.gan_network import Discriminator, Generator
 from td3fd.td3.gan_network_img import Discriminator as DiscriminatorImg
 from td3fd.td3.gan_network_img import Generator as GeneratorImg
@@ -38,6 +39,163 @@ class Shaping:
         next_potential = self.potential(o_2, g_2, u_2)
         assert potential.shape[1] == next_potential.shape[1] == 1
         return self.gamma * next_potential - potential
+
+
+# debug shaping: only for reacher 2d environment
+# class DbgShaping(Shaping):
+#     def potential(self, o, g, u):
+#         return -20 * torch.norm(o-g, dim=1, keepdim=True)
+
+
+class NFShaping(Shaping):
+    def __init__(
+        self,
+        dims,
+        max_u,
+        gamma,
+        num_blocks,
+        num_hidden,
+        potential_weight,
+        norm_obs,
+        norm_eps,
+        norm_clip,
+        prm_loss_weight,
+        reg_loss_weight,
+        **kwargs
+    ):
+        # Store initial args passed into the function
+        self.init_args = locals()
+
+        super().__init__(gamma)
+
+        # Prepare parameters
+        self.dims = dims
+        self.dimo = self.dims["o"]
+        self.dimg = self.dims["g"]
+        self.dimu = self.dims["u"]
+        self.max_u = max_u
+        self.num_blocks = num_blocks
+        self.num_hidden = num_hidden
+        self.norm_obs = norm_obs
+        self.norm_eps = norm_eps
+        self.norm_clip = norm_clip
+        self.prm_loss_weight = prm_loss_weight
+        self.reg_loss_weight = reg_loss_weight
+        self.potential_weight = potential_weight
+
+        # WGAN values from paper
+        self.learning_rate = 1e-4
+        self.scale = torch.tensor(5.0).to(device)
+
+        # Normalizer for goal and clipervation.
+        self.o_stats = Normalizer(self.dimo, norm_eps, norm_clip).to(device)
+        self.g_stats = Normalizer(self.dimg, norm_eps, norm_clip).to(device)
+
+        # Normalizing flow
+        num_inputs = self.dimo[0] + self.dimu[0] + self.dimg[0]
+        modules = []
+        for _ in range(self.num_blocks):
+            modules += [
+                fnn.MADE(num_inputs, self.num_hidden),
+                # fnn.BatchNormFlow(num_inputs),
+                fnn.Reverse(num_inputs),
+            ]
+        self.model = fnn.FlowSequential(*modules)
+        for module in self.model.modules():
+            if isinstance(module, nn.Linear):
+                nn.init.orthogonal_(module.weight)
+                if hasattr(module, "bias") and module.bias is not None:
+                    module.bias.data.fill_(0)
+        self.model.to(device)
+
+        # optimizer
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate, weight_decay=1e-6)
+
+    def update_stats(self, batch):
+        # add transitions to normalizer
+        if not self.norm_obs:
+            return
+        self.o_stats.update(torch.tensor(batch["o"], dtype=torch.float).to(device))
+        self.g_stats.update(torch.tensor(batch["g"], dtype=torch.float).to(device))
+
+    def train(self, batch):
+
+        o_tc = torch.tensor(batch["o"], dtype=torch.float).to(device)
+        g_tc = torch.tensor(batch["g"], dtype=torch.float).to(device)
+        u_tc = torch.tensor(batch["u"], dtype=torch.float).to(device)
+
+        # Do not normalize input o/g for gym/mujoco envs
+        if self.norm_obs:
+            o_tc = self.o_stats.normalize(o_tc)
+            g_tc = self.g_stats.normalize(g_tc)
+        u_tc = u_tc / self.max_u
+
+        inputs = torch.cat((o_tc, g_tc, u_tc), axis=1)
+
+        prm_loss = -self.model.log_probs(inputs)
+        prm_loss = prm_loss.mean()
+        # calculate gradients of log prob with respect to inputs
+        inputs_grad = inputs.detach().requires_grad_()
+        log_prob = self.model.log_probs(inputs_grad)
+        gradients = autograd.grad(
+            outputs=log_prob,
+            inputs=inputs_grad,
+            grad_outputs=torch.ones_like(log_prob),
+            create_graph=True,
+            retain_graph=True,
+        )[0]
+        reg_loss = gradients.norm(2, dim=1).mean()
+        loss = reg_loss * 60.0 + prm_loss * self.prm_loss_weight
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        return loss, 0
+
+    def potential(self, o, g, u):
+        """
+        Use the output of the GAN's discriminator as potential.
+        """
+        # Do not normalize input o/g for gym/mujoco envs
+        if self.norm_obs:
+            o = self.o_stats.normalize(o)
+            g = self.g_stats.normalize(g)
+        u = u / self.max_u
+
+        inputs = torch.cat((o, g, u), axis=1)
+        potential = self.model.log_probs(inputs)
+        potential = torch.log(torch.exp(potential) + torch.exp(-self.scale))
+        potential = potential / self.scale + 1
+        potential = potential * self.potential_weight
+
+        return potential
+
+    def evaluate(self, batch):
+        o = torch.tensor(batch["o"], dtype=torch.float).to(device)
+        g = torch.tensor(batch["g"], dtype=torch.float).to(device)
+        u = torch.tensor(batch["u"], dtype=torch.float).to(device)        
+        print(self.potential(o, g, u).mean())
+
+    def __getstate__(self):
+        """
+        Our policies can be loaded from pkl, but after unpickling you cannot continue training.
+        """
+        state = {k: v for k, v in self.init_args.items() if not k == "self"}
+        state["tc"] = {
+            "o_stats": self.o_stats.state_dict(),
+            "g_stats": self.g_stats.state_dict(),
+            "model": self.model.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+        }
+        return state
+
+    def __setstate__(self, state):
+        state_dicts = state.pop("tc")
+        self.__init__(**state)
+        self.o_stats.load_state_dict(state_dicts["o_stats"])
+        self.g_stats.load_state_dict(state_dicts["g_stats"])
+        self.model.load_state_dict(state_dicts["model"])
+        self.optimizer.load_state_dict(state_dicts["optimizer"])
 
 
 class GANShaping(Shaping):
