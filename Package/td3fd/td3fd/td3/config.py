@@ -3,7 +3,7 @@ import numpy as np
 from td3fd.td3.ddpg import DDPG
 
 # TODO switch between Shaping for image input and state input. image assumed to be (3, 32, 32)
-from td3fd.td3.shaping import GANShaping
+from td3fd.td3.shaping import GANShaping, NFShaping
 
 # from td3fd.td3.shaping import ImgGANShaping as GANShaping  # This is for image
 
@@ -56,15 +56,11 @@ default_params = {
         "num_epochs": int(1e3),
         "batch_size": 64,  # batch size for training the potential function (gan and nf)
         "nf": {
-            "num_ens": 1,  # number of nf ensembles
-            "nf_type": "maf",  # choose between ["maf", "realnvp"]
-            "lr": 1e-4,
-            "num_masked": 2,  # used only when nf_type is set to realnvp
-            "num_bijectors": 6,  # number of bijectors in the normalizing flow
-            "layer_sizes": [512, 512],  # number of neurons in each hidden layer
+            "num_blocks": 4,
+            "num_hidden": 100,
             "prm_loss_weight": 1.0,
-            "reg_loss_weight": 500.0,
-            "potential_weight": 5.0,
+            "reg_loss_weight": 200.0,
+            "potential_weight": 3.0,
         },
         "gan": {
             "num_ens": 1,  # number of gan ensembles (not used right now)
@@ -127,8 +123,9 @@ def configure_ddpg(params):
 
 
 def configure_shaping(params):
+    shaping_cls = {"nf": NFShaping, "gan": GANShaping}
     # Extract relevant parameters.
-    shaping_params = params["shaping"]["gan"]  # TODO: nf
+    shaping_params = params["shaping"][params["demo_strategy"]]  # TODO: nf
     # Update parameters
     shaping_params.update(
         {
@@ -140,5 +137,5 @@ def configure_shaping(params):
             "norm_clip": params["norm_clip"],
         }
     )
-    policy = GANShaping(**shaping_params)
+    policy = shaping_cls[params["demo_strategy"]](**shaping_params)
     return policy
