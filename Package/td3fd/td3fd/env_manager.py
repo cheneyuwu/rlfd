@@ -20,6 +20,11 @@ except:
     gym = None
 
 try:
+    import dmc2gym as dmc
+except ModuleNotFoundError:
+    dmc = None
+
+try:
     from metaworld.envs.mujoco.env_dict import HARD_MODE_ARGS_KWARGS, HARD_MODE_CLS_DICT
 
     mtw_envs = {**HARD_MODE_CLS_DICT["train"], **HARD_MODE_CLS_DICT["test"]}
@@ -157,10 +162,47 @@ class EnvManager:
             env_args["block"] = True
             self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
 
+        # Search in DMC Envs
+        if self.make_env is None and dmc is not None and ":" in env_name:
+            # acrobot swingup
+            # acrobot swingup_sparse
+            # ball_in_cup catch
+            # cartpole balance
+            # cartpole balance_sparse
+            # cartpole swingup
+            # cartpole swingup_sparse
+            # cheetah run
+            # finger spin
+            # finger turn_easy
+            # finger turn_hard
+            # fish upright
+            # fish swim
+            # hopper stand
+            # hopper hop
+            # humanoid stand
+            # humanoid walk
+            # humanoid run
+            # manipulator bring_ball
+            # pendulum swingup
+            # point_mass easy
+            # reacher easy
+            # reacher hard
+            # swimmer swimmer6
+            # swimmer swimmer15
+            # walker stand
+            # walker walk
+            # walker run
+            domain_name, task_name = env_name.split(":")
+            try:
+                dmc.make(domain_name=domain_name, task_name=task_name)
+                self.make_env = lambda: dmc.make(domain_name=domain_name, task_name=task_name)
+            except ValueError:
+                pass
+
         # Search in Gym Envs
         if self.make_env is None and gym is not None:
             try:
-                _ = gym.make(env_name, **env_args)
+                gym.make(env_name, **env_args)
                 self.make_env = lambda: gym.make(env_name, **env_args)
             except gym.error.UnregisteredEnv:
                 pass
