@@ -63,7 +63,6 @@ default_params = {
             "potential_weight": 3.0,
         },
         "gan": {
-            "num_ens": 1,  # number of gan ensembles (not used right now)
             "layer_sizes": [256, 256],  # number of neurons in each hidden layer (both generator and discriminator)
             "potential_weight": 3.0,
         },

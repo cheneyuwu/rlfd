@@ -10,8 +10,8 @@ params_config = {
     "r_shift": 0.0,
     "eps_length": 0,
     "env_args": {},
-    "gamma": None,
-    "fix_T": True,
+    "gamma": 0.99,
+    "fix_T": False,
     # normalize observation
     "norm_obs": True,  # whethere or not to normalize observations
     "norm_eps": 0.01,  # epsilon used for observation normalization
@@ -22,38 +22,37 @@ params_config = {
     # DDPG config
     "ddpg": {
         "num_epochs": int(1e2),
-        "num_cycles": 10,
-        "num_batches": 40,
+        "num_cycles": 100,
+        "num_batches": 1,
         "batch_size": 256,
         "batch_size_demo": 128,
         # actor critic networks
-        "layer_sizes": [256, 256, 256],
+        "layer_sizes": [256, 256],
         "twin_delayed": True,
         "policy_freq": 2,
         "policy_noise": 0.2,
         "policy_noise_clip": 0.5,
-        "q_lr": 0.001,
-        "pi_lr": 0.001,
+        "q_lr": 3e-4,
+        "pi_lr": 3e-4,
         "action_l2": 0.4,
         # double q learning
-        "polyak": 0.95,
+        "polyak": 0.995,
         "bc_params": {"q_filter": False, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
     },
     "shaping": {
-        "num_epochs": int(4e3),
+        "num_epochs": int(3e3),
         "batch_size": 128,
         "nf": {
-            "num_ens": 2,
-            "nf_type": "maf",  # ["maf", "realnvp"]
-            "lr": 5e-4,
-            "num_masked": 2,
-            "num_bijectors": 4,
-            "layer_sizes": [256, 256],
+            "num_blocks": 4,
+            "num_hidden": 100,
             "prm_loss_weight": 1.0,
             "reg_loss_weight": 200.0,
+            "potential_weight": 500.0,
+        },
+        "gan": {
+            "layer_sizes": [256, 256, 256],
             "potential_weight": 3.0,
         },
-        "gan": {"num_ens": 1, "layer_sizes": [256, 256, 256], "potential_weight": 3.0,},
     },
     "memory": {
         # replay buffer setup
@@ -61,11 +60,11 @@ params_config = {
     },
     # rollouts config
     "rollout": {
-        "num_episodes": 4,
-        "num_steps": None,
-        "noise_eps": 0.2,
+        "num_episodes": None,
+        "num_steps": 1,
+        "noise_eps": 0.1,
         "polyak_noise": 0.0,
-        "random_eps": 0.2,
+        "random_eps": 0.0,
         "compute_q": False,
         "history_len": 300,
     },

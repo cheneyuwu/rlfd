@@ -53,7 +53,10 @@ params_config = {
             "reg_loss_weight": 500.0,
             "potential_weight": 3.0,
         },
-        "gan": {"num_ens": 1, "layer_sizes": [256, 256, 256], "potential_weight": 3.0,},
+        "gan": {
+            "layer_sizes": [256, 256, 256],
+            "potential_weight": 3.0,
+        },
     },
     "memory": {
         # replay buffer setup
