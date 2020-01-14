@@ -15,6 +15,7 @@ class RewardShaping:
     def __init__(self, env, demo_strategy, num_ensembles, discount, num_epochs, batch_size, **shaping_params):
 
         if demo_strategy not in shaping_cls.keys():
+            self.shaping = None
             return
 
         self.shaping_params = shaping_params[demo_strategy]

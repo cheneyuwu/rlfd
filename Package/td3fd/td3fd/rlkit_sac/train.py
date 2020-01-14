@@ -19,6 +19,11 @@ import os
 import numpy as np
 import pickle
 
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
+
 
 def experiment(root_dir, variant):
 
@@ -68,9 +73,9 @@ def experiment(root_dir, variant):
         qf2=qf2,
         target_qf1=target_qf1,
         target_qf2=target_qf2,
-        shaping=shaping,  # TODO
+        shaping=shaping,
         demo_strategy=variant["demo_strategy"],
-        demo_replay_buffer=demo_replay_buffer,  # TODO
+        demo_replay_buffer=demo_replay_buffer,
         **variant["trainer_kwargs"],
     )
     algorithm = TorchBatchRLAlgorithm(
@@ -88,7 +93,12 @@ def experiment(root_dir, variant):
 
 def main(root_dir, params):
     config.check_params(params, DEFAULT_PARAMS)
-    setup_logger(exp_name=params["config"], variant=params, log_dir=root_dir)
+    setup_logger(
+        exp_name=params["config"],
+        variant=params,
+        log_dir=root_dir,
+        suppress_std_out=not (MPI is None or MPI.COMM_WORLD.Get_rank() == 0),
+    )
     ptu.set_gpu_mode(True)  # optionally set the GPU (default=True)
     experiment(root_dir, params)
 
