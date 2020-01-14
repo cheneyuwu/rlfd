@@ -19,11 +19,19 @@ except ImportError:
 
 from td3fd import logger
 from td3fd.demo_util.generate_demo import main as demo_entry
+from td3fd.demo_util.generate_demo_rlkit import main as demo_rlkit_entry
 from td3fd.evaluate import main as evaluate_entry
+from td3fd.evaluate_rlkit import main as evaluate_rlkit_entry
 from td3fd.plot import main as plot_entry
 from td3fd.train import main as train_entry
 from td3fd.util.mpi_util import mpi_exit, mpi_input
 
+# tf debug
+# from td3fd.ddpg.debug.generate_query import main as generate_query_entry
+# from td3fd.ddpg.debug.visualize_query import main as visualize_query_entry
+# # torch debug
+from td3fd.td3.debug.generate_query import main as generate_query_entry
+from td3fd.td3.debug.visualize_query import main as visualize_query_entry
 
 def import_param_config(load_dir):
     """Assume that there is a gv called params_config that contains all the params
@@ -232,14 +240,32 @@ def main(targets, exp_dir, policy, **kwargs):
             logger.info("\n\n=================================================")
             logger.info("Using policy file from {} to generate demo data.".format(policy))
             logger.info("=================================================")
-            demo_entry(policy=policy, root_dir=exp_dir)
+            if rank == 0:
+                demo_entry(policy=policy, root_dir=exp_dir)
+
+        elif target == "demo_rlkit":
+            assert policy != None
+            logger.info("\n\n=================================================")
+            logger.info("Using policy file from {} to generate demo data.".format(policy))
+            logger.info("=================================================")
+            if rank == 0:
+                demo_rlkit_entry(policy=policy, root_dir=exp_dir)
 
         elif target == "evaluate":
             assert policy != None
             logger.info("\n\n=================================================")
             logger.info("Evaluating using policy file from {}.".format(policy))
             logger.info("=================================================")
-            evaluate_entry(policy=policy)
+            if rank == 0:
+                evaluate_entry(policy=policy)
+
+        elif target == "evaluate_rlkit":
+            assert policy != None
+            logger.info("\n\n=================================================")
+            logger.info("Evaluating using policy file from {}.".format(policy))
+            logger.info("=================================================")
+            if rank == 0:
+                evaluate_rlkit_entry(policy=policy)
 
         elif target == "plot":
             logger.info("\n\n=================================================")
@@ -256,6 +282,20 @@ def main(targets, exp_dir, policy, **kwargs):
                     ],
                     smooth=True,
                 )
+
+        elif target == "gen_query":
+            logger.info("\n\n=================================================")
+            logger.info("Generating queries at: {}".format(exp_dir))
+            logger.info("=================================================")
+            if rank == 0:
+                generate_query_entry(exp_dir=exp_dir, save=True)
+
+        elif target == "vis_query":
+            logger.info("\n\n=================================================")
+            logger.info("Visualizing queries.")
+            logger.info("=================================================")
+            if rank == 0:
+                visualize_query_entry(exp_dir=exp_dir, save=True)
 
         elif target == "copy_result":
             expdata_dir = os.path.abspath(os.path.expanduser(os.environ["EXPDATA"]))

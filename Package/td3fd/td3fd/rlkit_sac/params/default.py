@@ -49,8 +49,8 @@ params_config = dict(
             potential_weight=1000.0,
         ),
         gan = dict(
-            layer_sizes=[256, 256, 256],
-            potential_weight=3.0,
+            layer_sizes=[256, 256],
+            potential_weight=1.0,
         ),
     ),
 )
