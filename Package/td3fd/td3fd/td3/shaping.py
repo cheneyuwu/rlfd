@@ -173,7 +173,7 @@ class NFShaping(Shaping):
     def evaluate(self, batch):
         o = torch.tensor(batch["o"], dtype=torch.float).to(device)
         g = torch.tensor(batch["g"], dtype=torch.float).to(device)
-        u = torch.tensor(batch["u"], dtype=torch.float).to(device)        
+        u = torch.tensor(batch["u"], dtype=torch.float).to(device)
         print(self.potential(o, g, u).mean())
 
     def __getstate__(self):
@@ -337,7 +337,7 @@ class GANShaping(Shaping):
         potential = potential * self.potential_weight
         return potential
 
-    def evaluate(self):
+    def evaluate(self, *args, **kwargs):
         pass
 
     def __getstate__(self):
