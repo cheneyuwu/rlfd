@@ -11,8 +11,11 @@ from td3fd import config, logger
 # pytorch
 from td3fd.td3.train import train as ddpg_torch_train
 from td3fd.bc.train import train as bc_torch_train
+from td3fd.rlkit_sac.train import main as rlkit_sac_torch_train
+
 # tensorflow
 from td3fd.ddpg.train import train as ddpg_tf_train
+
 # from td3fd.gail.train import train as gail_train
 
 from td3fd.util.cmd_util import ArgParser
@@ -53,6 +56,8 @@ def main(root_dir, **kwargs):
         bc_torch_train(root_dir=root_dir, params=params)
     elif params["alg"] == "ddpg-tf":
         ddpg_tf_train(root_dir=root_dir, params=params)
+    elif params["alg"] == "rlkit-sac":
+        rlkit_sac_torch_train(root_dir=root_dir, params=params)
     # elif "gail" in params.keys():
     #     gail_train(root_dir=root_dir, params=params)
     else:
