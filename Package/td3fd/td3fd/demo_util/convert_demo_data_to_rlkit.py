@@ -25,8 +25,6 @@ if len(data["o"].shape) == 3:
     g = interm_data.pop("g")
     data["g"] = g
     data["g_2"] = g
-    # done signal
-    data["done"] = np.zeros_like(data["o"])
     # others which are the same
     for k, v in interm_data.items():
         data[k] = v
@@ -34,6 +32,9 @@ if len(data["o"].shape) == 3:
     # Now we need to convert them to 2D
     for k, v in data.items():
         data[k] = v.reshape(v.shape[0] * v.shape[1], v.shape[2])
+    
+    # the missed done signal
+    data["done"] = np.zeros_like(data["r"])
 
     print("Demo data shape after first conversion:")
     for k, v in data.items():

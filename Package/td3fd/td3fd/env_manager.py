@@ -119,7 +119,7 @@ class NoGoalEnvWrapper(EnvWrapper):
             assert len(self.observation_space["desired_goal"].low.shape) == 1
             assert len(self.observation_space["observation"].low.shape) == 1
             shape = (
-                self.observation_space["desired_goal"].high.shape[0]
+                self.observation_space["observation"].high.shape[0]
                 + self.observation_space["desired_goal"].high.shape[0],
             )
             self.observation_space = spaces.Box(-np.inf, np.inf, shape=shape, dtype="float32")
