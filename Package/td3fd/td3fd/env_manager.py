@@ -8,6 +8,9 @@ except:
     panda_env = None
 try:
     import gym
+    import gym.wrappers
+
+    from gym import spaces
 
     # Need this for getting observation in pixels (for vision based learning) (for future works)
     from mujoco_py import GlfwContext
@@ -16,6 +19,10 @@ try:
 except:
     gym = None
 
+try:
+    import dmc2gym as dmc
+except ModuleNotFoundError:
+    dmc = None
 
 try:
     from metaworld.envs.mujoco.env_dict import HARD_MODE_ARGS_KWARGS, HARD_MODE_CLS_DICT
@@ -46,6 +53,13 @@ class EnvWrapper:
             self.eps_length = self.env.max_path_length
         else:
             assert False, "max episode length unknown."
+        if isinstance(self.env, gym.wrappers.TimeLimit):
+            self.env = self.env.env
+            env_ = self.env
+            while isinstance(env_, gym.Wrapper):
+                if isinstance(env_, gym.wrappers.TimeLimit):
+                    raise ValueError("Can remove only top-level TimeLimit gym.Wrapper.")
+                    env_ = env_.env
         # need the following properties
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
@@ -74,6 +88,20 @@ class EnvWrapper:
     def close(self):
         return self.env.close()
 
+
+class GoalEnvWrapper(EnvWrapper):
+    def __init__(self, make_env, r_scale, r_shift, eps_length):
+        super().__init__(make_env, r_scale, r_shift, eps_length)
+
+        if not type(self.observation_space) == spaces.Dict:
+            self.observation_space = spaces.Dict(
+                dict(
+                    observation=self.env.observation_space,
+                    desired_goal=spaces.Box(-np.inf, np.inf, shape=np.empty(0).shape, dtype="float32"),
+                    achieved_goal=spaces.Box(-np.inf, np.inf, shape=np.empty(0).shape, dtype="float32"),
+                )
+            )
+
     def _transform_state(self, state):
         """
         modify state to contain: observation, achieved_goal, desired_goal
@@ -83,8 +111,30 @@ class EnvWrapper:
         return state
 
 
+class NoGoalEnvWrapper(EnvWrapper):
+    def __init__(self, make_env, r_scale, r_shift, eps_length):
+        super().__init__(make_env, r_scale, r_shift, eps_length)
+
+        if type(self.observation_space) is spaces.Dict:
+            assert len(self.observation_space["desired_goal"].low.shape) == 1
+            assert len(self.observation_space["observation"].low.shape) == 1
+            shape = (
+                self.observation_space["observation"].high.shape[0]
+                + self.observation_space["desired_goal"].high.shape[0],
+            )
+            self.observation_space = spaces.Box(-np.inf, np.inf, shape=shape, dtype="float32")
+
+    def _transform_state(self, state):
+        """
+        modify state to contain: observation, achieved_goal, desired_goal
+        """
+        if type(state) == dict:
+            state = np.concatenate((state["observation"], state["desired_goal"]))
+        return state
+
+
 class EnvManager:
-    def __init__(self, env_name, env_args={}, r_scale=1, r_shift=0.0, eps_length=0):
+    def __init__(self, env_name, env_args={}, r_scale=1, r_shift=0.0, eps_length=0, with_goal=True):
         self.make_env = None
         # Search from our own environments
         if env_name == "Reach2D":
@@ -112,10 +162,47 @@ class EnvManager:
             env_args["block"] = True
             self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
 
+        # Search in DMC Envs
+        if self.make_env is None and dmc is not None and ":" in env_name:
+            # acrobot swingup
+            # acrobot swingup_sparse
+            # ball_in_cup catch
+            # cartpole balance
+            # cartpole balance_sparse
+            # cartpole swingup
+            # cartpole swingup_sparse
+            # cheetah run
+            # finger spin
+            # finger turn_easy
+            # finger turn_hard
+            # fish upright
+            # fish swim
+            # hopper stand
+            # hopper hop
+            # humanoid stand
+            # humanoid walk
+            # humanoid run
+            # manipulator bring_ball
+            # pendulum swingup
+            # point_mass easy
+            # reacher easy
+            # reacher hard
+            # swimmer swimmer6
+            # swimmer swimmer15
+            # walker stand
+            # walker walk
+            # walker run
+            domain_name, task_name = env_name.split(":")
+            try:
+                dmc.make(domain_name=domain_name, task_name=task_name)
+                self.make_env = lambda: dmc.make(domain_name=domain_name, task_name=task_name)
+            except ValueError:
+                pass
+
         # Search in Gym Envs
         if self.make_env is None and gym is not None:
             try:
-                _ = gym.make(env_name, **env_args)
+                gym.make(env_name, **env_args)
                 self.make_env = lambda: gym.make(env_name, **env_args)
             except gym.error.UnregisteredEnv:
                 pass
@@ -145,9 +232,12 @@ class EnvManager:
         self.r_scale = r_scale
         self.r_shift = r_shift
         self.eps_length = eps_length
+        self.with_goal = with_goal
 
     def get_env(self):
-        return EnvWrapper(self.make_env, self.r_scale, self.r_shift, self.eps_length)
+        if self.with_goal:
+            return GoalEnvWrapper(self.make_env, self.r_scale, self.r_shift, self.eps_length)
+        return NoGoalEnvWrapper(self.make_env, self.r_scale, self.r_shift, self.eps_length)
 
 
 if __name__ == "__main__":

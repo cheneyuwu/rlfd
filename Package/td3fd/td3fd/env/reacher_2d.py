@@ -11,11 +11,6 @@ matplotlib.use("Agg")  #  TkAgg Can change to 'Agg' for non-interactive mode
 
 
 def make(env_name, **env_args):
-    # note: we only have one environment
-    try:
-        _ = eval(env_name)(**env_args)
-    except:
-        raise NotImplementedError
     return eval(env_name)(**env_args)
 
 
@@ -25,6 +20,8 @@ class Reacher:
     """
 
     def __init__(self, order=2, sparse=False, block=False, seed=0):
+        self.init_args = locals()
+        
         self.random = np.random.RandomState(seed)
         self.order = order
         self.sparse = sparse
@@ -133,8 +130,15 @@ class Reacher:
             self.speed = np.zeros(2)
 
         self.T = 0
-        self.history = {"position": [], "goal": [], "t": [], "r": [], "v": []}
-        return self._get_state()[0]
+        state, r, done, info = self._get_state()
+        self.history = {
+            "position": [self.curr_pos],
+            "goal": [self.goal],
+            "t": [self.T],
+            "r": [r],
+            "v": [info["is_success"]],
+        }
+        return state
 
     def seed(self, seed=0):
         self.random = np.random.RandomState(seed)
@@ -179,9 +183,19 @@ class Reacher:
         return (
             {"observation": obs, "desired_goal": g, "achieved_goal": ag},
             r,
-            0.0,
-            {"is_success": is_success, "shaping_reward": -distance},
+            0.0,  # float(is_success),
+            {"is_success": float(is_success), "shaping_reward": -distance},
         )
+
+    def __getstate__(self):
+        """
+        Our policies can be loaded from pkl, but after unpickling you cannot continue training.
+        """
+        state = {k: v for k, v in self.init_args.items() if not k == "self"}
+        return state
+
+    def __setstate__(self, state):
+        self.__init__(**state)
 
 
 if __name__ == "__main__":

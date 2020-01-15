@@ -3,7 +3,7 @@
 ## Install this package
 1. setup Mujoco
   - On cluster: https://docs.computecanada.ca/wiki/MuJoCo
-  - note: you need to manually install mujoco_py
+  - note: you need to manually install **mujoco_py**
 2. download the repo
   - `git clone git@github.com:cheneyuwu/RLProject` (modify .gitmodules if necessary!)
   - `git submodule init`
@@ -11,8 +11,18 @@
   - `git submodule update --remote`
 3. build virtual env
   - On cluster: `module load python/3.6` (make sure that you have the correct python version)
-  - create a folder `./.venv` and run `virtualenv venv` inside this folder
-4. enter virtual env and install packages: gym, yw, tensorflow, tensorflow_probability
+  - run `virtualenv venv` inside the root folder of the repo
+4. enter virtual env and install packages:
+  - install mujoco_py, mpi4py
+  - install tensorflow with
+    - `pip install tensorflow==1.14.0 tensorflow-probability==0.7.0`
+  - for tf, remember to install tfdeterminism package for reproducibility
+    - `pip install tensorflow-determinism`
+  - for pytorch on compute canada, use the following commands:
+    - `pip install --no-index torch torchvision torchtext torchaudio torchsummary`
+  - install gym and metaworld and other environments
+  - install td3fd and rlkit
+    - extra packages for rlkit: gtimer
   - note: on compute canada cluster you need to manually install tensorflow and use `module load mpi4py` to get the mpi python package
 5. Modify the directory of EXPRUN according to the true exp running directory
 6. change TkAgg to Agg for plot.py visualize_query.py and point_reach.py
@@ -40,7 +50,7 @@
 
 
 - [SLURM](https://www.rc.fas.harvard.edu/resources/documentation/convenient-slurm-commands/)
-  - Template
+  - Sbatch Template
   ```
   #!/bin/bash
   #SBATCH --gres=gpu:1        # request GPU "generic resource"
@@ -53,8 +63,8 @@
   source <directory to your virtual env>
   python ./tensorflow-test.py
   ```
-  - Run jobs
-    - `sbatch *.sh`
+  - Run jobs: `sbatch *.sh`
+  - Or use salloc: `salloc --mem-per-cpu=8G --ntasks 1 --nodes 1 --cpus-per-task=1 --gres=gpu:1`
 
   - Modules
     - `module list`

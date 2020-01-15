@@ -15,6 +15,11 @@ class Generator(nn.Module):
         layers.append(nn.Linear(layer_sizes[-1], output_dim))
         self.layers = nn.ModuleList(layers)
 
+        for l in self.layers:
+            if type(l) == nn.Linear:
+                nn.init.xavier_normal_(l.weight)
+                nn.init.zeros_(l.bias)
+
     def forward(self, x):
         for l in self.layers:
             x = l(x)
@@ -33,6 +38,11 @@ class Discriminator(nn.Module):
             layers.append(nn.ReLU())
         layers.append(nn.Linear(layer_sizes[-1], 1))
         self.layers = nn.ModuleList(layers)
+
+        for l in self.layers:
+            if type(l) == nn.Linear:
+                nn.init.xavier_normal_(l.weight)
+                nn.init.zeros_(l.bias)
 
     def forward(self, x):
         for l in self.layers:

@@ -91,6 +91,10 @@ class RolloutWorkerBase:
     def add_history_key(self, key):
         self.history[key] = deque(maxlen=self.history_len)
 
+    def add_history_keys(self, keys):
+        for key in keys:
+            self.history[key] = deque(maxlen=self.history_len)
+
     def clear_history(self):
         """Clears all histories that are used for statistics
         """
@@ -249,9 +253,9 @@ class ParallelRolloutWorker(RolloutWorkerBase):
                     r[i] = curr_r
                     done[i] = curr_done
                     if "is_success" in info:
-                        success[i] = info["is_success"] # gym envs
+                        success[i] = info["is_success"]  # gym envs
                     if "success" in info:
-                        success[i] = info["success"] # metaworld envs
+                        success[i] = info["success"]  # metaworld envs
                     if "shaping_reward" in info:
                         shaping_reward[i] = info["shaping_reward"]
                     for idx, key in enumerate(self.info_keys):
@@ -379,12 +383,10 @@ class SerialRolloutWorker(RolloutWorkerBase):
         )
 
         # add to history
-        for key in [
-            "reward_per_eps",
-            "Q",
-            "Q_plus_P",
-        ]:
-            self.add_history_key(key)
+        self.add_history_keys(["reward_per_eps", "Q", "Q_plus_P"])
+        self.add_history_keys(["info_" + x + "_mean" for x in self.info_keys])
+        self.add_history_keys(["info_" + x + "_min" for x in self.info_keys])
+        self.add_history_keys(["info_" + x + "_max" for x in self.info_keys])
 
         #
         assert any([num_steps, num_episodes]) and not all([num_steps, num_episodes])
@@ -492,6 +494,12 @@ class SerialRolloutWorker(RolloutWorkerBase):
         if self.compute_q:
             self.history["Q"].append(np.mean(Qs))
             self.history["Q_plus_P"].append(np.mean(QPs))
+        # info values
+        for key in self.info_keys:
+            self.history["info_" + key + "_mean"].append(np.mean(info_values[key]))
+            self.history["info_" + key + "_min"].append(np.min(info_values[key]))
+            self.history["info_" + key + "_max"].append(np.max(info_values[key]))
+        # number of steps
         self.total_num_episodes += current_episode
         self.total_num_steps += current_step
 

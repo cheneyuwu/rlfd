@@ -39,8 +39,10 @@ class ReplayBufferBase:
         """
         raise NotImplementedError
 
-    def load_from_file(self, data_file, num_demo=None):
-        raise NotImplementedError
+    def load_from_file(self, data_file):
+        episode_batch = dict(np.load(data_file))
+        self.store_episode(episode_batch)
+        return episode_batch
 
     def dump_to_file(self, path):
         if self.current_size == 0:
@@ -94,18 +96,6 @@ class RingReplayBuffer(ReplayBufferBase):
         # contains {key: array(transitions x dim_key)}
         self.pointer = 0
 
-    def load_from_file(self, data_file, num_demo=None):
-        episode_batch = {**np.load(data_file)}
-        assert "done" in episode_batch.keys()
-        dones = np.nonzero(episode_batch["done"])[0]
-        assert num_demo is None or num_demo <= len(dones)
-        last_idx = dones[num_demo - 1] if num_demo is not None else dones[-1]
-        for key in episode_batch.keys():
-            assert len(episode_batch[key].shape) >= 2
-            episode_batch[key] = episode_batch[key][: last_idx + 1]
-        self.store_episode(episode_batch)
-        return episode_batch
-
     def sample(self, batch_size=-1):
         """
         This function returns all when batch_size is set to -1
@@ -155,15 +145,6 @@ class UniformReplayBuffer(ReplayBufferBase):
 
         # self.buffers is {key: array(size_in_episodes x T or T+1 x dim_key)}
         self.T = T
-
-    def load_from_file(self, data_file, num_demo=None):
-        episode_batch = {**np.load(data_file)}
-        for key in episode_batch.keys():
-            assert len(episode_batch[key].shape) >= 3  # (eps x T x dim)
-            assert num_demo is None or num_demo <= episode_batch[key].shape[0], "No enough demonstration data!"
-            episode_batch[key] = episode_batch[key][:num_demo]
-        self.store_episode(episode_batch)
-        return episode_batch
 
     def sample(self, batch_size=-1):
         """ Returns a dict {key: array(batch_size x shapes[key])}
