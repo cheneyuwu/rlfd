@@ -11,6 +11,8 @@ from rlkit.core import logger
 from rlkit.torch.pytorch_util import set_gpu_mode
 from td3fd.util.util import set_global_seeds
 
+from td3fd.env_manager import EnvManager
+from rlkit.envs.wrappers import NormalizedBoxEnv
 
 DEFAULT_PARAMS = {
     "seed": 0,
@@ -94,7 +96,7 @@ def rollout(
     )
 
 
-def main(policy, root_dir, **kwargs):
+def main(policy, root_dir, env_name, **kwargs):
     # Get default params from config and update params.
     param_file = os.path.join(root_dir, "demo_config.json")
     if os.path.isfile(param_file):
@@ -113,7 +115,11 @@ def main(policy, root_dir, **kwargs):
     # Load policy.
     data = torch.load(policy)
     policy = data['evaluation/policy']
-    env = data['evaluation/env']
+    # for serializable envs
+    # env = data["evaluation/env"]
+    # for envs not serializable
+    env_manager = EnvManager(env_name=env_name, with_goal=False)
+    env = NormalizedBoxEnv(env_manager.get_env())
     print("Policy loaded")
     # comment the next two lines to not use cuda
     set_gpu_mode(True)
