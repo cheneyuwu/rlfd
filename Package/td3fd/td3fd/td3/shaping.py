@@ -420,15 +420,17 @@ class ImgGANShaping(Shaping):
         u_tc = torch.FloatTensor(batch["u"]).to(device)
 
         u_tc = u_tc / self.max_u
+
         # normalize the images with depth
         # images[:, :3, ...] = images[:, :3, ...].div(255.0 / 2).add(-1.0)
         # images[:, 3:4, ...] = (images[:, 3:4, ...] - images[:, 3:4, ...].mean()) / images[:, 3:4, ...].var()
         # normalize the image without depth
-        images = images[:, :3, ...].div(255.0 / 2).add(-1.0)
 
         # TODO:
-        assert False, "here we should find a proper way of concatenate observations and actions"
-        images = o_tc
+        # assert False, "here we should find a proper way of concatenate observations and actions"
+        # normalize the images without depth
+        images = o_tc[:, :3, ...].div(255.0 / 2).add(-1.0)
+
 
         # Train discriminator
         # requires grad, Generator requires_grad = False
