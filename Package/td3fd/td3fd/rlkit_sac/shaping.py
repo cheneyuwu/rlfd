@@ -6,6 +6,8 @@ import torch
 from td3fd.td3.shaping import GANShaping, NFShaping
 from td3fd.memory import iterbatches
 
+from rlkit.core.logging import logger
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 shaping_cls = {"nf": NFShaping, "gan": GANShaping}
@@ -76,10 +78,12 @@ class RewardShaping:
                 d_loss, g_loss = self.shaping.train(batch)
                 losses = np.append(losses, d_loss.cpu().data.numpy())
             if epoch % (self.num_epochs / 100) == (self.num_epochs / 100 - 1):
-                print("epoch: {} demo shaping loss: {}".format(epoch, np.mean(losses)))
+                logger.log("epoch: {} demo shaping loss: {}".format(epoch, np.mean(losses)))
+                # print("epoch: {} demo shaping loss: {}".format(epoch, np.mean(losses)))
                 self.shaping.evaluate(batch)
 
     def evaluate(self):
+        return
         # input data - used for both training and test set
         dim1 = 0
         dim2 = 1
