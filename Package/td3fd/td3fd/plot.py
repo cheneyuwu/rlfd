@@ -158,13 +158,13 @@ def plot_results(allresults, xys, target_dir, smooth=0):
     plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
     fig.clf()
-    for env_n, env_id in enumerate(sorted(data.keys())):
+    for env_n, env_id in enumerate(sorted(data.keys()), 1):
         print("Creating plots for environment: {}".format(env_id))
         for i, xy in enumerate(data[env_id].keys(), 1):
             # colors = ["r", "g", "b", "m", "c", "k", "y"]
             colors = cm.jet(np.linspace(0, 1.0, len(data[env_id][xy].keys())))
             markers = ["o", "v", "s", "d", "p", "h"]
-            ax = fig.add_subplot(len(xys), len(data.keys()), i + env_n * (len(data.keys()) - 1))
+            ax = fig.add_subplot(len(xys), len(data.keys()), env_n + i * (len(xys) - 1))
             x_label = xy.split(":")[0]
             y_label = xy.split(":")[1]
             for j, config in enumerate(sorted(data[env_id][xy].keys())):
