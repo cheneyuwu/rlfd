@@ -170,7 +170,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 ax.set_ylabel(y_label)
                 ax.tick_params(axis="x", pad=5, length=5, width=1)
                 ax.tick_params(axis="y", pad=5, length=5, width=1)
-                ax.ticklabel_format(style="sci", scilimits=(-3, 4), axis="both")
+                ax.ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
                 ax.set_title(env_id)
                 ax.spines["top"].set_visible(False)
                 ax.spines["right"].set_visible(False)
