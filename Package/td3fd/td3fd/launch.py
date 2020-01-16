@@ -248,7 +248,7 @@ def main(targets, exp_dir, policy, **kwargs):
             logger.info("\n\n=================================================")
             logger.info("Using policy file from {} to generate demo data.".format(policy))
             logger.info("=================================================")
-            config_file = target.replace("evaluate_rlkit:", "")
+            config_file = target.replace("demo_rlkit:", "")
             params_configs = import_param_config(config_file)
             env_name = params_configs[0]["env_name"]            
             if rank == 0:
