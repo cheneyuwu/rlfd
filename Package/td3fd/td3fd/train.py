@@ -12,6 +12,7 @@ from td3fd import config, logger
 from td3fd.td3.train import train as ddpg_torch_train
 from td3fd.bc.train import train as bc_torch_train
 from td3fd.rlkit_sac.train import main as rlkit_sac_torch_train
+from td3fd.rlkit_td3.train import main as rlkit_td3_torch_train
 
 # tensorflow
 from td3fd.ddpg.train import train as ddpg_tf_train
@@ -58,6 +59,8 @@ def main(root_dir, **kwargs):
         ddpg_tf_train(root_dir=root_dir, params=params)
     elif params["alg"] == "rlkit-sac":
         rlkit_sac_torch_train(root_dir=root_dir, params=params)
+    elif params["alg"] == "rlkit-td3":
+        rlkit_td3_torch_train(root_dir=root_dir, params=params)        
     # elif "gail" in params.keys():
     #     gail_train(root_dir=root_dir, params=params)
     else:

@@ -13,8 +13,43 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 shaping_cls = {"nf": NFShaping, "gan": GANShaping}
 
 
+class EnsembleRewardShapingWrapper:
+
+    def __init__(self, num_ensembles, *args, **kwargs):
+        self.shapings = [RewardShaping(*args, **kwargs) for _ in range(num_ensembles)]
+
+    def train(self, *args, **kwargs):
+        for i, shaping in enumerate(self.shapings):
+            logger.log("Training shaping function #{}...".format(i))
+            shaping.train(*args, **kwargs)
+
+    def evaluate(self, *args, **kwargs):
+        for i, shaping in enumerate(self.shapings):
+            logger.log("Evaluating shaping function #{}...".format(i))
+            shaping.evaluate(*args, **kwargs)
+
+    def potential(self, *args, **kwargs):
+        potentials = [x.potential(*args, **kwargs) for x in self.shapings]
+        return torch.mean(torch.stack(potentials), dim=0)
+
+    def reward(self, *args, **kwargs):
+        rewards = [x.reward(*args, **kwargs) for x in self.shapings]
+        return torch.mean(torch.stack(rewards), dim=0)
+
+    def __getstate__(self):
+        """
+        We only save the shaping class. after reloading, only potential and reward functions can be used.
+        """
+        state = {"shaping": self.shapings}
+        return state
+
+    def __setstate__(self, state):
+        self.shapings = state["shaping"]
+
+
+
 class RewardShaping:
-    def __init__(self, env, demo_strategy, num_ensembles, discount, num_epochs, batch_size, **shaping_params):
+    def __init__(self, env, demo_strategy, discount, num_epochs, batch_size, **shaping_params):
 
         if demo_strategy not in shaping_cls.keys():
             self.shaping = None
