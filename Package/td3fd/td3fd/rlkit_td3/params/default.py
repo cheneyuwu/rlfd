@@ -30,7 +30,7 @@ params_config = dict(
         hidden_sizes=[400, 300],
     ),
     replay_buffer_size=int(1E6),
-    demo_strategy="maf",
+    demo_strategy="nf",
     shaping=dict(
         num_ensembles=1,
         num_epochs=int(3e3),
