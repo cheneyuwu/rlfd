@@ -243,13 +243,16 @@ def main(targets, exp_dir, policy, **kwargs):
             if rank == 0:
                 demo_entry(policy=policy, root_dir=exp_dir)
 
-        elif target == "demo_rlkit":
+        elif "demo_rlkit:" in target:
             assert policy != None
             logger.info("\n\n=================================================")
             logger.info("Using policy file from {} to generate demo data.".format(policy))
             logger.info("=================================================")
+            config_file = target.replace("evaluate_rlkit:", "")
+            params_configs = import_param_config(config_file)
+            env_name = params_configs[0]["env_name"]            
             if rank == 0:
-                demo_rlkit_entry(policy=policy, root_dir=exp_dir)
+                demo_rlkit_entry(policy=policy, root_dir=exp_dir, env_name=env_name)
 
         elif target == "evaluate":
             assert policy != None
@@ -259,13 +262,16 @@ def main(targets, exp_dir, policy, **kwargs):
             if rank == 0:
                 evaluate_entry(policy=policy)
 
-        elif target == "evaluate_rlkit":
+        elif "evaluate_rlkit:" in target:
             assert policy != None
             logger.info("\n\n=================================================")
             logger.info("Evaluating using policy file from {}.".format(policy))
             logger.info("=================================================")
+            config_file = target.replace("evaluate_rlkit:", "")
+            params_configs = import_param_config(config_file)
+            env_name = params_configs[0]["env_name"]
             if rank == 0:
-                evaluate_rlkit_entry(policy=policy)
+                evaluate_rlkit_entry(policy=policy, env_name=env_name)
 
         elif target == "plot":
             logger.info("\n\n=================================================")
@@ -278,7 +284,9 @@ def main(targets, exp_dir, policy, **kwargs):
                         # "epoch:test/success_rate",
                         # "epoch:test/:reward_per_eps",
                         # "train/steps:test/success_rate",
-                        "train/steps:test/reward_per_eps",
+                        # "train/steps:test/reward_per_eps",
+                        "exploration/num steps total:evaluation/Average Returns"  # for rlkit
+                        # "train-steps:evaluation/episode-reward-mean",
                     ],
                     smooth=True,
                 )
@@ -351,6 +359,6 @@ if __name__ == "__main__":
         help="when target is evaluate or demodata, specify the policy file to be used, <policy name>.pkl",
         type=str,
         default=None,
-    )
+    ) 
     exp_parser.parse(sys.argv)
     main(**exp_parser.get_dict())
