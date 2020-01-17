@@ -9,6 +9,7 @@ params_config = dict(
     # rlkit default params
     algorithm_kwargs=dict(
         num_epochs=3000,
+        num_train_loops_per_epoch=1,
         num_eval_steps_per_epoch=5000,
         num_trains_per_train_loop=1000,
         num_expl_steps_per_train_loop=1000,
