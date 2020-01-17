@@ -173,14 +173,10 @@ class ParallelRolloutWorker(RolloutWorkerBase):
         )
 
         # add to history
-        for key in [
-            "success",
-            "reward_per_eps",
-            "dense_reward_per_eps",
-            "Q",
-            "Q_plus_P",
-        ]:
-            self.add_history_key(key)
+        self.add_history_keys(["reward_per_eps", "Q", "Q_plus_P"])
+        self.add_history_keys(["info_" + x + "_mean" for x in self.info_keys])
+        self.add_history_keys(["info_" + x + "_min" for x in self.info_keys])
+        self.add_history_keys(["info_" + x + "_max" for x in self.info_keys])
 
         # TODO parallelize environment
         self.eps_length = eps_length
@@ -205,11 +201,10 @@ class ParallelRolloutWorker(RolloutWorkerBase):
         """
 
         # Information to store
-        obs, achieved_goals, acts, goals, rewards, dones, successes, shaping_rewards = [], [], [], [], [], [], [], []
-        info_values = [
-            np.empty((self.eps_length, self.num_episodes, *self.dims["info_" + key]), np.float32)
-            for key in self.info_keys
-        ]
+        obs, achieved_goals, acts, goals, rewards, dones = [], [], [], [], [], []
+        info_values = {
+            key: np.empty((self.eps_length, self.num_episodes, *self.dims["info_" + key])) for key in self.info_keys
+        }
         Qs, QPs = [], []
 
         # Store initial observations and goals
@@ -242,8 +237,6 @@ class ParallelRolloutWorker(RolloutWorkerBase):
             ag_new = np.empty((self.num_episodes, *self.dims["g"]))  # ag_2
             r = np.empty((self.num_episodes, 1))  # reward
             done = np.empty((self.num_episodes, 1))  # done
-            success = np.zeros(self.num_episodes)  # from info
-            shaping_reward = np.zeros((self.num_episodes, 1))  # from info
             # compute new states and observations
             for i in range(self.num_episodes):
                 try:
@@ -252,14 +245,8 @@ class ParallelRolloutWorker(RolloutWorkerBase):
                     ag_new[i] = curr_o_new["achieved_goal"]
                     r[i] = curr_r
                     done[i] = curr_done
-                    if "is_success" in info:
-                        success[i] = info["is_success"]  # gym envs
-                    if "success" in info:
-                        success[i] = info["success"]  # metaworld envs
-                    if "shaping_reward" in info:
-                        shaping_reward[i] = info["shaping_reward"]
-                    for idx, key in enumerate(self.info_keys):
-                        info_values[idx][t, i] = info[key]
+                    for key in self.info_keys:
+                        info_values[key][t, i] = info[key]
                     if self.render:
                         self.envs[i].render()
                 except MujocoException:
@@ -276,8 +263,6 @@ class ParallelRolloutWorker(RolloutWorkerBase):
             acts.append(u.copy())
             rewards.append(r.copy())
             dones.append(done.copy())
-            successes.append(success.copy())
-            shaping_rewards.append(shaping_reward.copy())
             if self.compute_q:
                 Qs.append(Q.copy())
                 QPs.append(QP.copy())
@@ -288,30 +273,23 @@ class ParallelRolloutWorker(RolloutWorkerBase):
 
         # Store all information into an episode dict
         episode = dict(o=obs, u=acts, g=goals, ag=achieved_goals, r=rewards, done=dones)
-        for key, value in zip(self.info_keys, info_values):
-            episode["info_{}".format(key)] = value
+        for key in self.info_keys:
+            episode["info_" + key] = info_values[key]
         episode = self._convert_episode_to_batch_major(episode)
 
         # Store stats
-        # success rate
-        successful = np.array(successes)[-1, :]
-        assert successful.shape == (self.num_episodes,)
-        success_rate = np.mean(successful)
-        self.history["success"].append(success_rate)
-        # shaping reward
-        total_shaping_rewards = np.sum(np.array(shaping_rewards), axis=0).reshape(-1)
-        assert total_shaping_rewards.shape == (self.num_episodes,), total_shaping_rewards.shape
-        total_shaping_reward = np.mean(total_shaping_rewards)
-        self.history["dense_reward_per_eps"].append(total_shaping_reward)
-        # total reward
-        total_rewards = np.sum(np.array(rewards), axis=0).reshape(-1)
-        assert total_rewards.shape == (self.num_episodes,), total_rewards.shape
-        total_reward = np.mean(total_rewards)
-        self.history["reward_per_eps"].append(total_reward)
+        cumu_rewards = np.sum(np.array(rewards), axis=0).reshape(-1)
+        assert cumu_rewards.shape == (self.num_episodes,), cumu_rewards.shape
+        self.history["reward_per_eps"].append(np.mean(cumu_rewards))
         # Q output from critic networks
         if self.compute_q:
             self.history["Q"].append(np.mean(Qs))
             self.history["Q_plus_P"].append(np.mean(QPs))
+        # info values
+        for key in self.info_keys:
+            self.history["info_" + key + "_mean"].append(np.mean(info_values[key]))
+            self.history["info_" + key + "_min"].append(np.min(info_values[key]))
+            self.history["info_" + key + "_max"].append(np.max(info_values[key]))
         self.total_num_episodes += self.num_episodes
         self.total_num_steps += self.num_episodes * self.eps_length
 
