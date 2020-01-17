@@ -10,7 +10,7 @@ params_config = {
     "r_shift": 0.0,
     "eps_length": 0,
     "env_args": {},
-    "gamma": None,
+    "gamma": 0.95,
     "fix_T": True,
     # normalize observation
     "norm_obs": False,  # whethere or not to normalize observations
@@ -43,12 +43,8 @@ params_config = {
         "num_epochs": int(1e4),
         "batch_size": 128,
         "nf": {
-            "num_ens": 2,
-            "nf_type": "maf",  # ["maf", "realnvp"]
-            "lr": 2e-4,
-            "num_masked": 4,
-            "num_bijectors": 4,
-            "layer_sizes": [128, 128],
+            "num_blocks": 4,
+            "num_hidden": 100,
             "prm_loss_weight": 1.0,
             "reg_loss_weight": 500.0,
             "potential_weight": 3.0,
@@ -64,8 +60,8 @@ params_config = {
     },
     # rollouts config
     "rollout": {
-        "num_steps": None,
         "num_episodes": 4,
+        "num_steps": None,
         "noise_eps": 0.2,
         "polyak_noise": 0.0,
         "random_eps": 0.2,
