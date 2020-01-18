@@ -5,12 +5,11 @@ params_config = dict(
     alg="rlkit-sac",
     config="default",
     env_name="HalfCheetah-v3",
-    # rlkit params    
+    # rlkit params
     algorithm="SAC",
     version="normal",
     layer_size=256,
-    replay_buffer_size=int(1E6),
-    demo_strategy="nf",
+    demo_strategy="none",
     algorithm_kwargs=dict(
         num_epochs=3000,
         num_train_loops_per_epoch=1,
@@ -32,23 +31,24 @@ params_config = dict(
         demo_batch_size=128,
         prm_loss_weight=1.0,
         aux_loss_weight=1.0,
-        q_filter=True,        
+        q_filter=True,
     ),
+    replay_buffer_size=int(1E6),
     shaping=dict(
         num_ensembles=1,
-        num_epochs=int(4e3),
+        num_epochs=int(3e3),
         batch_size=128,
         norm_obs=True,
         norm_eps=0.01,
-        norm_clip=5,        
-        nf = dict(
+        norm_clip=5,
+        nf=dict(
             num_blocks=4,
             num_hidden=100,
-            prm_loss_weight=0.2,
-            reg_loss_weight=500.0,
-            potential_weight=1000.0,
+            prm_loss_weight=1.0,
+            reg_loss_weight=200.0,
+            potential_weight=500.0,
         ),
-        gan = dict(
+        gan=dict(
             layer_sizes=[256, 256],
             potential_weight=3.0,
         ),

@@ -5,7 +5,8 @@ params_config = dict(
     alg="rlkit-td3",
     config="default",
     env_name="HalfCheetah-v3",
-    # rlkit default params
+    # rlkit params
+    demo_strategy="none",
     algorithm_kwargs=dict(
         num_epochs=3000,
         num_train_loops_per_epoch=1,
@@ -30,7 +31,6 @@ params_config = dict(
         hidden_sizes=[400, 300],
     ),
     replay_buffer_size=int(1E6),
-    demo_strategy="nf",
     shaping=dict(
         num_ensembles=1,
         num_epochs=int(3e3),
@@ -46,7 +46,7 @@ params_config = dict(
             potential_weight=500.0,
         ),
         gan=dict(
-            layer_sizes=[256, 256, 256], 
+            layer_sizes=[256, 256],
             potential_weight=3.0,
         ),
     ),

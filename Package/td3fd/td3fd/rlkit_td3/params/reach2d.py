@@ -6,6 +6,7 @@ params_config = dict(
     config="default",
     env_name="Reach2DF",
     # rlkit default params
+    demo_strategy="none",
     algorithm_kwargs=dict(
         num_epochs=100,
         num_train_loops_per_epoch=10,
@@ -30,7 +31,6 @@ params_config = dict(
         hidden_sizes=[256, 256],
     ),
     replay_buffer_size=int(1E6),
-    demo_strategy="nf",
     shaping=dict(
         num_ensembles=2,
         num_epochs=int(3e3),
@@ -41,13 +41,13 @@ params_config = dict(
         nf=dict(
             num_blocks=4,
             num_hidden=64,
-            prm_loss_weight=1.0,
-            reg_loss_weight=1e3,
-            potential_weight=5e2,
+            prm_loss_weight=2e-1,
+            reg_loss_weight=5e2,
+            potential_weight=1e3,
         ),
         gan=dict(
-            layer_sizes=[256, 256], 
-            potential_weight=0.5,
+            layer_sizes=[256, 256],
+            potential_weight=1.0,
         ),
     ),
     seed=0,

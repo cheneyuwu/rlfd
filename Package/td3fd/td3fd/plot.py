@@ -100,7 +100,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
 
             # Process and smooth data.
             if smooth:
-                x, y = smooth_reward_curve(x, y, len(x) / 5)
+                x, y = smooth_reward_curve(x, y, max(3, len(x) / 10))
             assert x.shape == y.shape, (x.shape, y.shape)
 
             if env_id not in data:
