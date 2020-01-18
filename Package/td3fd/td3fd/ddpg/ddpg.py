@@ -166,7 +166,7 @@ class DDPG(object):
     def init_demo_buffer(self, demo_file):
         """Initialize the demonstration buffer.
         """
-        episode_batch = self.demo_buffer.load_from_file(data_file=demo_file, num_demo=self.num_demo)
+        episode_batch = self.demo_buffer.load_from_file(data_file=demo_file)
         return episode_batch
 
     def add_to_demo_buffer(self, episode_batch):
