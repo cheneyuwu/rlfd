@@ -24,7 +24,7 @@ def train(root_dir, params):
     config.check_params(params, ddpg_config.default_params)
 
     # Training parameter
-    save_interval = 4
+    save_interval = 50
     demo_strategy = params["demo_strategy"]
     shaping_num_epochs = params["shaping"]["num_epochs"]
     shaping_batch_size = params["shaping"]["batch_size"]
@@ -62,10 +62,7 @@ def train(root_dir, params):
             {"norm_obs": params["norm_obs"], "norm_eps": params["norm_eps"], "norm_clip": params["norm_clip"],}
         )
         shaping = EnsembleRewardShapingWrapper(
-            env=evaluator.env,
-            demo_strategy=demo_strategy,
-            discount=params["gamma"],
-            **params["shaping"]
+            env=evaluator.env, demo_strategy=demo_strategy, discount=params["gamma"], **params["shaping"]
         )
         demo_data = demo_memory.sample()
         shaping.train(demo_data)
