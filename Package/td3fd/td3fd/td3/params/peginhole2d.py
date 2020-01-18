@@ -21,7 +21,7 @@ params_config = {
     "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
     # DDPG config
     "ddpg": {
-        "num_epochs": int(4e2),
+        "num_epochs": int(2e2),
         "num_cycles": 10,
         "num_batches": 40,
         "batch_size": 256,
@@ -40,6 +40,7 @@ params_config = {
         "bc_params": {"q_filter": False, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
     },
     "shaping": {
+        "num_ensembles": 1,
         "num_epochs": int(1e4),
         "batch_size": 128,
         "nf": {

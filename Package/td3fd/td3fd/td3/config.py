@@ -53,6 +53,7 @@ default_params = {
     },
     # reward shaping
     "shaping": {
+        "num_ensembles": 1,
         "num_epochs": int(1e3),
         "batch_size": 64,  # batch size for training the potential function (gan and nf)
         "nf": {

@@ -8,6 +8,7 @@ import numpy as np
 from td3fd import config, logger
 from td3fd.memory import iterbatches
 from td3fd.td3 import config as ddpg_config
+from td3fd.td3.shaping import EnsembleRewardShapingWrapper
 from td3fd.util.cmd_util import ArgParser
 from td3fd.util.util import set_global_seeds
 
@@ -56,24 +57,24 @@ def train(root_dir, params):
         demo_memory = config.config_memory(params=params)
         demo_memory.load_from_file(demo_file)
 
-    # Train shaping potential
     if demo_strategy in ["nf", "gan"]:
-        shaping = ddpg_config.configure_shaping(params)
-        logger.info("Training the reward shaping potential.")
+        params["shaping"].update(
+            {"norm_obs": params["norm_obs"], "norm_eps": params["norm_eps"], "norm_clip": params["norm_clip"],}
+        )
+        shaping = EnsembleRewardShapingWrapper(
+            env=evaluator.env,
+            demo_strategy=demo_strategy,
+            discount=params["gamma"],
+            **params["shaping"]
+        )
         demo_data = demo_memory.sample()
-        shaping.update_stats(demo_data) # Note: no need for image based envs
-        for epoch in range(shaping_num_epochs):
-            losses = np.empty(0)
-            for (o, g, u) in iterbatches(
-                (demo_data["o"], demo_data["g"], demo_data["u"]), batch_size=shaping_batch_size
-            ):
-                batch = {"o": o, "g": g, "u": u}
-                d_loss, g_loss = shaping.train(batch)
-                losses = np.append(losses, d_loss.cpu().data.numpy())
-            if epoch % (shaping_num_epochs / 100) == (shaping_num_epochs / 100 - 1):
-                logger.info("epoch: {} demo shaping loss: {}".format(epoch, np.mean(losses)))
-                shaping.evaluate()
+        shaping.train(demo_data)
+        shaping.evaluate()
         policy.shaping = shaping
+
+    # debug shaping
+    # from td3fd.td3.shaping import DbgShaping
+    # policy.shaping = DbgShaping(policy.gamma)
 
     # Generate some random experiences before training (used by td3 for gym mujoco envs)
     # Comment this if running with Fetch Environments

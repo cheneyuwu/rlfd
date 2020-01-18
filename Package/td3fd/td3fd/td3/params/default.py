@@ -40,6 +40,7 @@ params_config = {
         "bc_params": {"q_filter": False, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
     },
     "shaping": {
+        "num_ensembles": 1,
         "num_epochs": int(30),
         "batch_size": 128,
         "nf": {

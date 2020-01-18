@@ -184,6 +184,7 @@ class ParallelRolloutWorker(RolloutWorkerBase):
         self.compute_q = compute_q
 
         self.envs = [self.make_env() for _ in range(self.num_episodes)]
+        self.env = self.envs[0]
         self.initial_o = np.empty((self.num_episodes, *self.dims["o"]), np.float32)  # observations
         self.initial_ag = np.empty((self.num_episodes, *self.dims["g"]), np.float32)  # achieved goals
         self.g = np.empty((self.num_episodes, *self.dims["g"]), np.float32)  # goals
