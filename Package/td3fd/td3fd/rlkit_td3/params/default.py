@@ -5,7 +5,6 @@ params_config = dict(
     alg="rlkit-td3",
     config="default",
     env_name="HalfCheetah-v3",
-    seed=0,
     # rlkit default params
     algorithm_kwargs=dict(
         num_epochs=3000,
@@ -51,4 +50,5 @@ params_config = dict(
             potential_weight=3.0,
         ),
     ),
+    seed=0,
 )

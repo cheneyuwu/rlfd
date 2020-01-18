@@ -5,7 +5,6 @@ params_config = dict(
     alg="rlkit-td3",
     config="default",
     env_name="YWFetchPegInHoleRandInit-v0",
-    seed=0,
     # rlkit default params
     demo_strategy="none",
     algorithm_kwargs=dict(
@@ -51,4 +50,5 @@ params_config = dict(
             potential_weight=1.0,
         ),
     ),
+    seed=0,
 )

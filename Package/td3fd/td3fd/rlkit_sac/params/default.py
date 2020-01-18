@@ -5,7 +5,6 @@ params_config = dict(
     alg="rlkit-sac",
     config="default",
     env_name="HalfCheetah-v3",
-    seed=0,
     # rlkit params    
     algorithm="SAC",
     version="normal",
@@ -54,4 +53,5 @@ params_config = dict(
             potential_weight=3.0,
         ),
     ),
+    seed=0,
 )

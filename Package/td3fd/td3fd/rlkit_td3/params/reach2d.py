@@ -5,11 +5,10 @@ params_config = dict(
     alg="rlkit-td3",
     config="default",
     env_name="Reach2DF",
-    seed=0,
     # rlkit default params
     algorithm_kwargs=dict(
-        num_epochs=3000,
-        num_train_loops_per_epoch=1,
+        num_epochs=100,
+        num_train_loops_per_epoch=10,
         num_eval_steps_per_epoch=100,
         num_trains_per_train_loop=20,
         num_expl_steps_per_train_loop=100,
@@ -34,7 +33,7 @@ params_config = dict(
     demo_strategy="nf",
     shaping=dict(
         num_ensembles=2,
-        num_epochs=int(2e3),
+        num_epochs=int(3e3),
         batch_size=128,
         norm_obs=True,
         norm_eps=0.01,
@@ -51,4 +50,5 @@ params_config = dict(
             potential_weight=0.5,
         ),
     ),
+    seed=0,
 )
