@@ -5,4 +5,4 @@ params_config = deepcopy(base_params)
 params_config["config"] = ("TD3_BC_QFilter",)
 params_config["demo_strategy"] = "bc"
 params_config["trainer_kwargs"]["q_filter"] = True
-params_config["seed"] = 0 # tuple(range(2))
+params_config["seed"] = tuple(range(2))
