@@ -2,7 +2,7 @@ from copy import deepcopy
 from td3fd.rlkit_sac.params.peginholerandinit import params_config as base_params
 
 params_config = deepcopy(base_params)
-params_config["config"] = ("SAC_BC",)
+params_config["config"] = ("SAC_BC_1e-2",)
 params_config["demo_strategy"] = "bc"
 params_config["seed"] = tuple(range(5))
 
