@@ -33,7 +33,7 @@ params_config = dict(
     replay_buffer_size=int(1E6),
     shaping=dict(
         num_ensembles=2,
-        num_epochs=int(4e3),
+        num_epochs=int(5e3),
         batch_size=128,
         norm_obs=True,
         norm_eps=0.01,
@@ -46,6 +46,8 @@ params_config = dict(
             potential_weight=1e3,
         ),
         gan=dict(
+            latent_dim=6,
+            lambda_term=0.1,            
             layer_sizes=[256, 256],
             potential_weight=1.0,
         ),

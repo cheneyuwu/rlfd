@@ -64,6 +64,8 @@ default_params = {
             "potential_weight": 3.0,
         },
         "gan": {
+            "latent_dim": 6,
+            "lambda_term": 0.1,
             "layer_sizes": [256, 256],  # number of neurons in each hidden layer (both generator and discriminator)
             "potential_weight": 3.0,
         },

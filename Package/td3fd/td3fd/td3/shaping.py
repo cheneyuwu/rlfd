@@ -201,7 +201,20 @@ class NFShaping(Shaping):
 
 
 class GANShaping(Shaping):
-    def __init__(self, dims, max_u, gamma, layer_sizes, potential_weight, norm_obs, norm_eps, norm_clip, **kwargs):
+    def __init__(
+        self,
+        dims,
+        max_u,
+        gamma,
+        layer_sizes,
+        potential_weight,
+        norm_obs,
+        norm_eps,
+        norm_clip,
+        latent_dim,
+        lambda_term,
+        **kwargs
+    ):
 
         # Store initial args passed into the function
         self.init_args = locals()
@@ -221,13 +234,13 @@ class GANShaping(Shaping):
         self.potential_weight = potential_weight
 
         # WGAN values from paper
+        self.latent_dim = latent_dim  # 100 for images, use a smaller value for state based environments
+        # lambda set to 10 for images, but we use a smaller value for faster convergence when output dim is low
+        self.lambda_term = lambda_term
         self.learning_rate = 1e-4
-        self.latent_dim = 6  # 100 for images, use a smaller value for state based environments
         self.b1 = 0.5
         self.b2 = 0.999
         self.critic_iter = 5
-        # lambda set to 10 for images, but we use a smaller value for faster convergence when output dim is low
-        self.lambda_term = 0.1
         self.batch_size = 64
 
         # Normalizer for goal and clipervation.
@@ -502,13 +515,13 @@ class ImgGANShaping(Shaping):
         return potential
 
     def evaluate(self):
-        n = 16
-        z = torch.randn(n, self.latent_dim, 1, 1).to(device)
-        samples = self.G(z)
-        samples = samples.mul(0.5).add(0.5)
+        n = 16  # generate 16 images
+        z = torch.randn(n, self.latent_dim, 1, 1).to(device)  # latent vector
+        samples = self.G(z)  # pass to generator
+        samples = samples.mul(0.5).add(0.5)  # change output from (-1, 1) to (0, 1)
         samples = samples.data.cpu()
         grid = utils.make_grid(samples[:, :3, ...])
-        print("Grid of 8x8 images saved to 'dgan_model_image.png'.")
+        print("Grid of 2x8 images saved to 'dgan_model_image.png'.")
         utils.save_image(grid, "dgan_model_image.png")
 
     def real_images(self, images, number_of_images):
