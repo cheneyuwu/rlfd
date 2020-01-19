@@ -4,7 +4,7 @@ from td3fd.rlkit_sac.params.peginholerandinit import params_config as base_param
 params_config = deepcopy(base_params)
 params_config["config"] = ("SAC_BC",)
 params_config["demo_strategy"] = "bc"
-params_config["seed"] = 0 # tuple(range(2))
+params_config["seed"] = tuple(range(5))
 
 # tune parameters
-params_config["trainer_kwargs"]["prm_loss_weight"] = (1e-4,)
+params_config["trainer_kwargs"]["prm_loss_weight"] = (1e-2,)
