@@ -147,7 +147,7 @@ class NFShaping(Shaping):
             retain_graph=True,
         )[0]
         reg_loss = gradients.norm(2, dim=1).mean()
-        loss = reg_loss * 60.0 + prm_loss * self.prm_loss_weight
+        loss = reg_loss * self.reg_loss_weight + prm_loss * self.prm_loss_weight
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
