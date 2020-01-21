@@ -147,6 +147,12 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 xs, ys = strip(xs, required_length), strip(ys, required_length)
                 assert xs.shape == ys.shape
 
+                # in case you want to cut 
+                last_idx = None
+                xs = xs[..., :last_idx]
+                ys = ys[..., :last_idx]
+
+                # select the first x since they ar all same
                 x = xs[0]
                 # plot percentile
                 # ax.plot(x, np.nanmedian(ys, axis=0), label=config)
@@ -167,6 +173,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 ax.fill_between(
                     x, mean_y - 1.0 * stddev_y, mean_y + 1.0 * stddev_y, alpha=0.2, color=colors[j % len(colors)]
                 )
+                #
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_label)
                 ax.tick_params(axis="x", pad=5, length=5, width=1)
@@ -184,7 +191,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
     handles, labels = ax.get_legend_handles_labels()
     fig.legend(handles, labels, loc="lower center", ncol=min(2, int(num_lines)), frameon=False)
     fig.set_size_inches(5 * len(data.keys()), 1 + 5 * len(xys))
-    now = datetime.now() # current date and time
+    now = datetime.now()  # current date and time
     date_time = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     save_path = os.path.join(target_dir, "Result_{}_{}.png".format("plot_name", date_time))
     print("Saving image to " + save_path)
