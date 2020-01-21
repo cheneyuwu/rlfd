@@ -181,7 +181,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
             num_lines = len(data[env_id][xy].keys())
     # use fig level legend
     handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=min(3, int(num_lines)), frameon=False)
+    fig.legend(handles, labels, loc="lower center", ncol=min(2, int(num_lines)), frameon=False)
     fig.set_size_inches(5 * len(data.keys()), 1 + 5 * len(xys))
     save_path = os.path.join(target_dir, "Result_{}.png".format("plot_name"))
     print("Saving image to " + save_path)
