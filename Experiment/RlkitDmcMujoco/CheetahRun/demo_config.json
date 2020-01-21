@@ -1,9 +1,9 @@
 {
     "seed": 0,
-    "num_eps": 5,
+    "num_eps": 10,
     "demo": {
         "random_eps": 0.0,
-        "noise_eps": 0.1,
+        "noise_eps": 0.2,
         "render": false
     },
     "filename": "demo_data.npz"
