@@ -46,7 +46,7 @@ params_config = dict(
             potential_weight=2e3,
         ),
         gan=dict(
-            latent_dim=29,
+            latent_dim=16,
             lambda_term=0.1,            
             layer_sizes=[256, 256],
             potential_weight=1.0,
