@@ -10,6 +10,7 @@ from matplotlib import cm
 
 from td3fd.util.cmd_util import ArgParser
 from td3fd.util.reader_util import load_csv
+from datetime import datetime
 
 matplotlib.use("Agg")  # Can change to 'Agg' for non-interactive mode
 matplotlib.rcParams["pdf.fonttype"] = 42
@@ -183,22 +184,24 @@ def plot_results(allresults, xys, target_dir, smooth=0):
     handles, labels = ax.get_legend_handles_labels()
     fig.legend(handles, labels, loc="lower center", ncol=min(2, int(num_lines)), frameon=False)
     fig.set_size_inches(5 * len(data.keys()), 1 + 5 * len(xys))
-    save_path = os.path.join(target_dir, "Result_{}.png".format("plot_name"))
+    now = datetime.now() # current date and time
+    date_time = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
+    save_path = os.path.join(target_dir, "Result_{}_{}.png".format("plot_name", date_time))
     print("Saving image to " + save_path)
     plt.savefig(save_path, dpi=200)
     plt.show()
 
 
-def main(dirs, xys, save_path=None, smooth=0, **kwargs):
+def main(dirs, xys, save_dir=None, smooth=0, **kwargs):
     results = load_results(dirs)
     # get directory to save results
-    target_dir = save_path if save_path else dirs[0]
+    target_dir = save_dir if save_dir else dirs[0]
     plot_results(results, xys, target_dir, smooth)
 
 
 ap = ArgParser()
 ap.parser.add_argument("--dirs", help="target or list of dirs", type=str, nargs="+", default=[os.getcwd()])
-ap.parser.add_argument("--save_path", help="plot saving directory", type=str, default=os.getcwd())
+ap.parser.add_argument("--save_dir", help="plot saving directory", type=str, default=os.getcwd())
 ap.parser.add_argument(
     "--xy",
     help="value on x and y axis, splitted by :",

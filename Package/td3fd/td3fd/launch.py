@@ -126,7 +126,7 @@ def transform_config_name(config_name):
     return config_name
 
 
-def main(targets, exp_dir, policy, **kwargs):
+def main(targets, exp_dir, policy, save_dir, **kwargs):
 
     # Consider rank as pid.
     comm = MPI.COMM_WORLD if MPI is not None else None
@@ -250,7 +250,7 @@ def main(targets, exp_dir, policy, **kwargs):
             logger.info("=================================================")
             config_file = target.replace("demo_rlkit:", "")
             params_configs = import_param_config(config_file)
-            env_name = params_configs[0]["env_name"]            
+            env_name = params_configs[0]["env_name"]
             if rank == 0:
                 demo_rlkit_entry(policy=policy, root_dir=exp_dir, env_name=env_name)
 
@@ -280,6 +280,7 @@ def main(targets, exp_dir, policy, **kwargs):
             if rank == 0:  # plot does not need to be run on all threads
                 plot_entry(
                     dirs=[exp_dir],
+                    save_dir=save_dir,
                     xys=[
                         # "epoch:test/success_rate",
                         # "epoch:test/:reward_per_eps",
@@ -349,6 +350,9 @@ if __name__ == "__main__":
         "--exp_dir", help="top level directory to store experiment results", type=str, default=os.getcwd()
     )
     exp_parser.parser.add_argument(
+        "--save_dir", help="top level directory to store plots", type=str, default=os.getcwd()
+    )
+    exp_parser.parser.add_argument(
         "--targets",
         help="target or list of targets in [demo_data, train:<parameter file>.py, plot, evaluate]",
         type=str,
@@ -359,6 +363,6 @@ if __name__ == "__main__":
         help="when target is evaluate or demodata, specify the policy file to be used, <policy name>.pkl",
         type=str,
         default=None,
-    ) 
+    )
     exp_parser.parse(sys.argv)
     main(**exp_parser.get_dict())
