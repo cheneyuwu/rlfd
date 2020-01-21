@@ -42,7 +42,7 @@ def strip(xs, length=0):
 
 
 def smooth_reward_curve(x, y, size=50):
-    k = int(np.ceil(len(x) / size)) # half width
+    k = int(np.ceil(len(x) / size))  # half width
     xsmoo = x
     ysmoo = np.convolve(y, np.ones(2 * k + 1), mode="same") / np.convolve(
         np.ones_like(y), np.ones(2 * k + 1), mode="same"
@@ -112,7 +112,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
             data[env_id][xy][config].append((x, y))
 
     fig = plt.figure()
-    fig.subplots_adjust(left=0.1, right=0.95, bottom=0.2, top=0.9, wspace=0.25, hspace=0.25)
+    fig.subplots_adjust(left=0.15, right=0.9, bottom=0.35, top=0.9, wspace=0.25, hspace=0.25)
     # set sizes
     SMALL_SIZE = 14
     MEDIUM_SIZE = 14
@@ -161,7 +161,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                     lw=2,
                     marker=markers[j % len(markers)],
                     ms=8,
-                    markevery=int(10),
+                    markevery=max(1, int(x.shape[0] / 20)),
                 )
                 ax.fill_between(
                     x, mean_y - 1.0 * stddev_y, mean_y + 1.0 * stddev_y, alpha=0.2, color=colors[j % len(colors)]
@@ -181,8 +181,8 @@ def plot_results(allresults, xys, target_dir, smooth=0):
             num_lines = len(data[env_id][xy].keys())
     # use fig level legend
     handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=int(num_lines), frameon=False)
-    fig.set_size_inches(5 * len(data.keys()), 5 * len(xys))
+    fig.legend(handles, labels, loc="lower center", ncol=min(3, int(num_lines)), frameon=False)
+    fig.set_size_inches(5 * len(data.keys()), 1 + 5 * len(xys))
     save_path = os.path.join(target_dir, "Result_{}.png".format("plot_name"))
     print("Saving image to " + save_path)
     plt.savefig(save_path, dpi=200)
