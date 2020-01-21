@@ -27,7 +27,7 @@ def main(policy, env_name):
     policy.cuda()
     #
     while True:
-        path = rollout(env, policy, max_path_length=env.eps_length, render=True,)
+        path = rollout(env, policy, max_path_length=env.eps_length, render=True, render_kwargs={"mode": "human"})
         if hasattr(env, "log_diagnostics"):
             env.log_diagnostics([path])
         logger.dump_tabular()

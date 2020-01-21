@@ -21,13 +21,19 @@ DEFAULT_PARAMS = {
     "filename": "demo_data.npz",
 }
 
-def rollout(
-        env,
-        agent,
-        max_path_length=np.inf,
-        render=False,
-        render_kwargs=None,
-):
+
+def add_noise_to_action(env, a, noise_eps, random_eps):
+    # add noise to a
+    gauss_noise = noise_eps * np.random.randn(*a.shape)
+    a = a + gauss_noise
+    a = np.clip(a, -1.0, 1.0)
+    # add random noise to a
+    random_act = env.action_space.sample()
+    a += np.random.binomial(1, random_eps) * (random_act - a)
+    return a
+
+
+def rollout(env, agent, max_path_length=np.inf, render=False, render_kwargs=None, noise_eps=0.0, random_eps=0.0):
     """
     The following value for the following keys will be a 2D array, with the
     first dimension corresponding to the time dimension.
@@ -58,6 +64,7 @@ def rollout(
         env.render(**render_kwargs)
     while path_length < max_path_length:
         a, agent_info = agent.get_action(o)
+        a = add_noise_to_action(env, a, noise_eps=noise_eps, random_eps=random_eps)
         next_o, r, d, env_info = env.step(a)
         observations.append(o)
         rewards.append(r)
@@ -79,12 +86,7 @@ def rollout(
     if len(observations.shape) == 1:
         observations = np.expand_dims(observations, 1)
         next_o = np.array([next_o])
-    next_observations = np.vstack(
-        (
-            observations[1:, :],
-            np.expand_dims(next_o, 0)
-        )
-    )
+    next_observations = np.vstack((observations[1:, :], np.expand_dims(next_o, 0)))
     return dict(
         observations=observations,
         actions=actions,
@@ -114,7 +116,7 @@ def main(policy, root_dir, env_name, **kwargs):
 
     # Load policy.
     data = torch.load(policy)
-    policy = data['evaluation/policy']
+    policy = data["evaluation/policy"]
     # for serializable envs
     # env = data["evaluation/env"]
     # for envs not serializable
@@ -126,13 +128,9 @@ def main(policy, root_dir, env_name, **kwargs):
     policy.cuda()
     paths = []
     for _ in range(params["num_eps"]):
-        path = rollout(
-            env,
-            policy,
-            max_path_length=env.eps_length,
-            render=False,
-        )
+        path = rollout(env, policy, max_path_length=env.eps_length, **params["demo"])
         paths.append(path)
+        print("Cumulative reward of this episode: {}".format(path["rewards"].sum()))
         if hasattr(env, "log_diagnostics"):
             env.log_diagnostics([path])
         logger.dump_tabular()
@@ -140,7 +138,7 @@ def main(policy, root_dir, env_name, **kwargs):
     # Store demonstration data (only the main thread)
     os.makedirs(root_dir, exist_ok=True)
     file_name = os.path.join(root_dir, params["filename"])
-    pickle.dump(paths, open(file_name, "wb" ))
+    pickle.dump(paths, open(file_name, "wb"))
     print("Demo file has been stored into {}.".format(file_name))
 
 
