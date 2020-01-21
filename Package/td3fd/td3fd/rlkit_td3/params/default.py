@@ -32,8 +32,8 @@ params_config = dict(
     ),
     replay_buffer_size=int(1E6),
     shaping=dict(
-        num_ensembles=1,
-        num_epochs=int(3e3),
+        num_ensembles=2,
+        num_epochs=int(5e3),
         batch_size=128,
         norm_obs=True,
         norm_eps=0.01,
@@ -42,8 +42,8 @@ params_config = dict(
             num_blocks=4,
             num_hidden=100,
             prm_loss_weight=1.0,
-            reg_loss_weight=200.0,
-            potential_weight=500.0,
+            reg_loss_weight=50.0,
+            potential_weight=2e3,
         ),
         gan=dict(
             latent_dim=6,
