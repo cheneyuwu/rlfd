@@ -14,15 +14,21 @@
   - run `virtualenv venv` inside the root folder of the repo
 4. enter virtual env and install packages:
   - install mujoco_py, mpi4py
+    - `pip install mujoco_py==1.50.1.68`
   - install tensorflow with
-    - `pip install tensorflow==1.14.0 tensorflow-probability==0.7.0`
-  - for tf, remember to install tfdeterminism package for reproducibility
-    - `pip install tensorflow-determinism`
-  - for pytorch on compute canada, use the following commands:
-    - `pip install --no-index torch torchvision torchtext torchaudio torchsummary`
+    - `pip install tensorflow-gpu==1.14.1 tensorflow-probability==0.7.0 tensorflow-determinism`
+  - install pytorch with
+    - `pip install --no-index torch==1.3.1 torchvision torchtext torchaudio && pip install torchsummary==1.5.1`
   - install gym and metaworld and other environments
+    - cd to gym and metaworld then
+    - `pip install -e . --no-deps`
+    - for dm_control, install it directly via `pip install dm_control --no-deps`
+    - also install the dmc to gym wrapper included in the submodule of this repo
   - install td3fd and rlkit
-    - extra packages for rlkit: gtimer
+    - extra packages for rlkit:
+      - `pip install gtimer`
+  - extra packages that should be installed:
+    - `pip install black certifi chardet urllib3 requests idna dm-env dm-control gtimer --no-deps`
   - note: on compute canada cluster you need to manually install tensorflow and use `module load mpi4py` to get the mpi python package
 5. Modify the directory of EXPRUN according to the true exp running directory
 6. change TkAgg to Agg for plot.py visualize_query.py and point_reach.py
