@@ -115,7 +115,8 @@ class RewardShaping:
             if epoch % (self.num_epochs / 100) == (self.num_epochs / 100 - 1):
                 logger.log("epoch: {} demo shaping loss: {}".format(epoch, np.mean(losses)))
                 # print("epoch: {} demo shaping loss: {}".format(epoch, np.mean(losses)))
-                self.shaping.evaluate(batch)
+                mean_pot = self.shaping.evaluate(batch)
+                logger.log("epoch: {} mean potential on demo data: {}".format(epoch, mean_pot))
 
     def evaluate(self):
         return
