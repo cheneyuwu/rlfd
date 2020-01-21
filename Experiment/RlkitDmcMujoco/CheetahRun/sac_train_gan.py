@@ -8,4 +8,4 @@ params_config["demo_strategy"] = "gan"
 params_config["seed"] = tuple(range(5))
 
 # tune params
-params_config["shaping"]["gan"]["latent_dim"] = 17
+params_config["shaping"]["gan"]["latent_dim"] = 23
