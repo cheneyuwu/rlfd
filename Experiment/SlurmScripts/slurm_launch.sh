@@ -6,7 +6,7 @@
 #SBATCH --ntasks=20                       # number of MPI processes
 #SBATCH --mem-per-cpu=4G                  # memory per node
 #SBATCH --time=00-10:00:00                # time format: day-hour:min:sec
-#SBATCH --output=fetchreach-%N-%j.out     # %N for node name, %j for jobID
+#SBATCH --output=exp_name-%N-%j.out     # %N for node name, %j for jobID
 #SBATCH --account=def-florian7
 
 #SBATCH --mail-user=cheney.wu@mail.utoronto.ca
