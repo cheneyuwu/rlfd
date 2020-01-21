@@ -6,3 +6,6 @@ params_config["config"] = ("SAC_GAN_Shaping",)
 params_config["env_name"] = "cheetah:run"
 params_config["demo_strategy"] = "gan"
 params_config["seed"] = tuple(range(5))
+
+# tune params
+params_config["shaping"]["gan"]["latent_dim"] = 17
