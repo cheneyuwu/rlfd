@@ -49,7 +49,7 @@ def rollout(env, agent, max_path_length=np.inf, render=False, render_kwargs=None
      - env_infos
     """
     if render_kwargs is None:
-        render_kwargs = {}
+        render_kwargs = {"mode": "human"}
     observations = []
     actions = []
     rewards = []
