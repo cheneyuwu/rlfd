@@ -5,7 +5,7 @@ params_config = dict(
     alg="rlkit-sac",
     config="default",
     env_name="YWFetchPegInHoleRandInit-v0",
-    # rlkit params    
+    # rlkit params
     algorithm="SAC",
     version="normal",
     layer_size=256,
@@ -22,12 +22,12 @@ params_config = dict(
     ),
     trainer_kwargs=dict(
         discount=0.99,
-        soft_target_tau=5e-2,
+        soft_target_tau=5e-3,
         target_update_period=1,
         policy_lr=3E-4,
         qf_lr=3E-4,
         reward_scale=1,
-        use_automatic_entropy_tuning=False,
+        use_automatic_entropy_tuning=True,
         demo_batch_size=128,
         prm_loss_weight=1e-2,
         aux_loss_weight=1.0,
@@ -43,10 +43,10 @@ params_config = dict(
         norm_clip=5,
         nf=dict(
             num_blocks=4,
-            num_hidden=100,
-            prm_loss_weight=0.2,
-            reg_loss_weight=500.0,
-            potential_weight=1000.0,
+            num_hidden=64,
+            prm_loss_weight=1.0,
+            reg_loss_weight=60.0,
+            potential_weight=2e3,
         ),
         gan=dict(
             latent_dim=6,

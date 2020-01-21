@@ -41,9 +41,9 @@ params_config = dict(
         nf=dict(
             num_blocks=4,
             num_hidden=64,
-            prm_loss_weight=2e-1,
-            reg_loss_weight=5e2,
-            potential_weight=1e3,
+            prm_loss_weight=1.0,
+            reg_loss_weight=60.0,
+            potential_weight=2e3,
         ),
         gan=dict(
             latent_dim=6,

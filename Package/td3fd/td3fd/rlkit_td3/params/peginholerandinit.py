@@ -5,14 +5,14 @@ params_config = dict(
     alg="rlkit-td3",
     config="default",
     env_name="YWFetchPegInHoleRandInit-v0",
-    # rlkit default params
+    # rlkit params
     demo_strategy="none",
     algorithm_kwargs=dict(
         num_epochs=1000,
         num_train_loops_per_epoch=10,
         num_eval_steps_per_epoch=200,
         num_trains_per_train_loop=40,
-        num_expl_steps_per_train_loop=200,
+        num_expl_steps_per_train_loop=160,
         min_num_steps_before_training=0,
         max_path_length=40,
         batch_size=256,
@@ -42,8 +42,8 @@ params_config = dict(
             num_blocks=4,
             num_hidden=64,
             prm_loss_weight=1.0,
-            reg_loss_weight=1e3,
-            potential_weight=5e2,
+            reg_loss_weight=60.0,
+            potential_weight=2e3,
         ),
         gan=dict(
             latent_dim=6,
