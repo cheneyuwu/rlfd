@@ -120,6 +120,9 @@ class NFShaping(Shaping):
         self.o_stats.update(torch.tensor(batch["o"], dtype=torch.float).to(device))
         self.g_stats.update(torch.tensor(batch["g"], dtype=torch.float).to(device))
 
+    # def update_potential_mean(self, batch):
+    #     return 0.0
+
     def train(self, batch):
 
         o_tc = torch.tensor(batch["o"], dtype=torch.float).to(device)
@@ -213,6 +216,7 @@ class GANShaping(Shaping):
         norm_clip,
         latent_dim,
         lambda_term,
+        gp_target,
         **kwargs
     ):
 
@@ -237,6 +241,7 @@ class GANShaping(Shaping):
         self.latent_dim = latent_dim  # 100 for images, use a smaller value for state based environments
         # lambda set to 10 for images, but we use a smaller value for faster convergence when output dim is low
         self.lambda_term = lambda_term
+        self.gp_target = gp_target
         self.learning_rate = 1e-4
         self.b1 = 0.5
         self.b2 = 0.999
@@ -260,12 +265,22 @@ class GANShaping(Shaping):
 
         self.current_critic_iter = 0
 
+        # add running mean output
+        # self.potential_mean = 0.0
+
     def update_stats(self, batch):
         # add transitions to normalizer
         if not self.norm_obs:
             return
         self.o_stats.update(torch.tensor(batch["o"], dtype=torch.float).to(device))
         self.g_stats.update(torch.tensor(batch["g"], dtype=torch.float).to(device))
+
+    # def update_potential_mean(self, batch):
+    #     o = torch.tensor(batch["o"], dtype=torch.float).to(device)
+    #     g = torch.tensor(batch["g"], dtype=torch.float).to(device)
+    #     u = torch.tensor(batch["u"], dtype=torch.float).to(device)
+    #     self.potential_mean = self.potential(o, g, u).mean().cpu().data
+    #     return self.potential_mean
 
     def train(self, batch):
 
@@ -313,7 +328,7 @@ class GANShaping(Shaping):
             create_graph=True,
             retain_graph=True,
         )[0]
-        grad_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * self.lambda_term
+        grad_penalty = ((gradients.norm(2, dim=1) - self.gp_target) ** 2).mean() * self.lambda_term
         d_loss = d_loss_fake + d_loss_real + grad_penalty
 
         self.D.zero_grad()
@@ -349,6 +364,7 @@ class GANShaping(Shaping):
 
         inputs = torch.cat((o, g, u), axis=1)
         potential = self.D(inputs)
+        # potential = potential - self.potential_mean
         potential = potential * self.potential_weight
         return potential
 
@@ -639,25 +655,29 @@ class RewardShaping:
         # print(self.shaping_params)
         self.shaping = shaping_cls[demo_strategy](**self.shaping_params)
 
+    def _convert_rlkit_to_td3fd(self, demo_data):
+        converted_demo_data = dict()
+        keys = demo_data[0].keys()
+        for path in demo_data:
+            for key in keys:
+                if key in converted_demo_data.keys():
+                    if type(path[key]) == list:
+                        converted_demo_data[key] += path[key]
+                    else:
+                        converted_demo_data[key] = np.concatenate((converted_demo_data[key], path[key]), axis=0)
+                else:
+                    converted_demo_data[key] = path[key]
+        demo_data = converted_demo_data
+
+        demo_data["o"] = demo_data["observations"]
+        demo_data["u"] = demo_data["actions"]
+        assert len(demo_data["o"].shape) == 2
+        demo_data["g"] = np.empty((demo_data["o"].shape[0], 0))
+        return demo_data
+
     def train(self, demo_data):
         # for rlkit
-        # converted_demo_data = dict()
-        # keys = demo_data[0].keys()
-        # for path in demo_data:
-        #     for key in keys:
-        #         if key in converted_demo_data.keys():
-        #             if type(path[key]) == list:
-        #                 converted_demo_data[key] += path[key]
-        #             else:
-        #                 converted_demo_data[key] = np.concatenate((converted_demo_data[key], path[key]), axis=0)
-        #         else:
-        #             converted_demo_data[key] = path[key]
-        # demo_data = converted_demo_data
-
-        # demo_data["o"] = demo_data["observations"]
-        # demo_data["u"] = demo_data["actions"]
-        # assert len(demo_data["o"].shape) == 2
-        # demo_data["g"] = np.empty((demo_data["o"].shape[0], 0))
+        demo_data = self._convert_rlkit_to_td3fd(demo_data)
         #
         self.shaping.update_stats(demo_data)
 
@@ -672,6 +692,8 @@ class RewardShaping:
                 # print("epoch: {} demo shaping loss: {}".format(epoch, np.mean(losses)))
                 mean_pot = self.shaping.evaluate(batch)
                 logger.info("epoch: {} mean potential on demo data: {}".format(epoch, mean_pot))
+
+        # self.shaping.update_potential_mean(demo_data)
 
     def evaluate(self):
         return

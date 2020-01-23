@@ -32,6 +32,7 @@ params_config = dict(
         prm_loss_weight=1.0,
         aux_loss_weight=1.0,
         q_filter=True,
+        bc_criterion="mse", # choose between mse and logprob
     ),
     replay_buffer_size=int(1E6),
     shaping=dict(
@@ -51,6 +52,7 @@ params_config = dict(
         gan=dict(
             latent_dim=6,
             lambda_term=0.1,
+            gp_target=1.0,
             layer_sizes=[256, 256],
             potential_weight=3.0,
         ),

@@ -166,6 +166,7 @@ DEFAULT_PARAMS = dict(
         prm_loss_weight=1.0,
         aux_loss_weight=1.0,
         q_filter=True,
+        bc_criterion="mse", # choose between mse and logprob
     ),
     shaping=dict(
         num_ensembles=1,
@@ -183,7 +184,8 @@ DEFAULT_PARAMS = dict(
         ),
         gan=dict(
             latent_dim=6,
-            lambda_term=0.1,            
+            lambda_term=0.1,   
+            gp_target=1.0,         
             layer_sizes=[256, 256, 256], 
             potential_weight=3.0,
         ),

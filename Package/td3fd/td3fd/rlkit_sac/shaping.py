@@ -14,7 +14,6 @@ shaping_cls = {"nf": NFShaping, "gan": GANShaping}
 
 
 class EnsembleRewardShapingWrapper:
-
     def __init__(self, num_ensembles, *args, **kwargs):
         self.shapings = [RewardShaping(*args, **kwargs) for _ in range(num_ensembles)]
 
@@ -45,7 +44,6 @@ class EnsembleRewardShapingWrapper:
 
     def __setstate__(self, state):
         self.shapings = state["shaping"]
-
 
 
 class RewardShaping:
@@ -81,11 +79,9 @@ class RewardShaping:
                 "norm_clip": shaping_params["norm_clip"],
             }
         )
-        print(self.shaping_params)
         self.shaping = shaping_cls[demo_strategy](**self.shaping_params)
 
-    def train(self, demo_data):
-        # for rlkit
+    def _convert_rlkit_to_td3fd(self, demo_data):
         converted_demo_data = dict()
         keys = demo_data[0].keys()
         for path in demo_data:
@@ -103,6 +99,11 @@ class RewardShaping:
         demo_data["u"] = demo_data["actions"]
         assert len(demo_data["o"].shape) == 2
         demo_data["g"] = np.empty((demo_data["o"].shape[0], 0))
+        return demo_data
+
+    def train(self, demo_data):
+        # for rlkit
+        demo_data = self._convert_rlkit_to_td3fd(demo_data)
         #
         self.shaping.update_stats(demo_data)
 
@@ -117,6 +118,9 @@ class RewardShaping:
                 # print("epoch: {} demo shaping loss: {}".format(epoch, np.mean(losses)))
                 mean_pot = self.shaping.evaluate(batch)
                 logger.log("epoch: {} mean potential on demo data: {}".format(epoch, mean_pot))
+
+        # Subtract mean, do this if needed
+        # self.shaping.update_potential_mean(demo_data)
 
     def evaluate(self):
         return

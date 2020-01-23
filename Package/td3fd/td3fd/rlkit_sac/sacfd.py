@@ -11,6 +11,8 @@ from rlkit.torch.torch_rl_algorithm import TorchTrainer
 
 from rlkit.torch.core import np_to_pytorch_batch
 
+from rlkit.torch.distributions import TanhNormal
+
 
 class SACFDTrainer(TorchTrainer):
     def __init__(
@@ -42,6 +44,7 @@ class SACFDTrainer(TorchTrainer):
             prm_loss_weight=1.0,
             aux_loss_weight=1.0,
             q_filter=True,
+            bc_criterion="mse",
             demo_replay_buffer=None,
             shaping=None,
     ):
@@ -75,6 +78,7 @@ class SACFDTrainer(TorchTrainer):
         self.prm_loss_weight = prm_loss_weight
         self.aux_loss_weight = aux_loss_weight
         self.q_filter = q_filter
+        self.bc_criterion = bc_criterion
         self.demo_replay_buffer = demo_replay_buffer
         self.shaping = shaping
 
@@ -146,9 +150,20 @@ class SACFDTrainer(TorchTrainer):
         if self.demo_strategy in ["gan", "nf"]:
             policy_loss += -self.shaping.potential(comb_obs, None, new_obs_actions).mean()
         if self.demo_strategy == "bc":
-            new_demo_obs_actions, *_ = self.policy(
+            new_demo_obs_actions, new_demo_obs_mean, _, _, _, new_demo_obs_std, _ , _ = self.policy(
                 demo_obs, reparameterize=True, return_log_prob=True,
             )
+            # MSE loss
+            if self.bc_criterion == "mse":
+                bc_loss = (new_demo_obs_actions - demo_actions) ** 2
+            # Log prob loss
+            elif self.bc_criterion == "logprob":
+                tanh_normal = TanhNormal(new_demo_obs_mean, new_demo_obs_std)
+                demo_actions = torch.clamp(demo_actions, -0.99, 0.99)
+                bc_loss = -tanh_normal.log_prob(demo_actions)
+            else:
+                assert False, "unknown criterion."
+
             if self.q_filter:
                 q_demo_actions = torch.min(
                     self.qf1(demo_obs, demo_actions),
@@ -160,13 +175,14 @@ class SACFDTrainer(TorchTrainer):
                 ).detach()
                 masked_bc_loss = torch.where(
                     q_demo_actions > q_new_demo_actions, 
-                    (new_demo_obs_actions - demo_actions) ** 2, 
+                    bc_loss, 
                     torch.zeros_like(demo_actions)
                 )
                 bc_loss = torch.mean(masked_bc_loss)
             else: 
-                bc_loss = torch.mean((new_demo_obs_actions - demo_actions) ** 2)
-            policy_loss = self.aux_loss_weight * bc_loss + self.prm_loss_weight * policy_loss # TODO
+                bc_loss = torch.mean(bc_loss)
+
+            policy_loss = self.aux_loss_weight * bc_loss + self.prm_loss_weight * policy_loss
 
         """
         QF Loss
