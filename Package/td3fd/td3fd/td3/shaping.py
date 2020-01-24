@@ -42,6 +42,17 @@ class Shaping:
         assert potential.shape[1] == next_potential.shape[1] == 1
         return self.gamma * next_potential - potential
 
+    def train(self, batch):
+        pass
+
+    def evaluate(self, batch):
+        pass
+
+    def post_training_update(self, batch):
+        """
+        """
+        pass
+
 
 # debug shaping: only for reacher 2d environment
 # class DbgShaping(Shaping):
@@ -120,9 +131,6 @@ class NFShaping(Shaping):
         self.o_stats.update(torch.tensor(batch["o"], dtype=torch.float).to(device))
         self.g_stats.update(torch.tensor(batch["g"], dtype=torch.float).to(device))
 
-    # def update_potential_mean(self, batch):
-    #     return 0.0
-
     def train(self, batch):
 
         o_tc = torch.tensor(batch["o"], dtype=torch.float).to(device)
@@ -142,6 +150,7 @@ class NFShaping(Shaping):
         # calculate gradients of log prob with respect to inputs
         inputs_grad = inputs.detach().requires_grad_()
         log_prob = self.model.log_probs(inputs_grad)
+        assert not any(torch.isnan(log_prob)), "Found NaN in log_prob {}.".format(log_prob)
         gradients = autograd.grad(
             outputs=log_prob,
             inputs=inputs_grad,
@@ -169,8 +178,12 @@ class NFShaping(Shaping):
 
         inputs = torch.cat((o, g, u), axis=1)
         potential = self.model.log_probs(inputs)
+        # clip the potential and shift it to [0, inf]
         potential = torch.log(torch.exp(potential) + torch.exp(-self.scale))
         potential = potential / self.scale + 1
+        # treat NaN as 0
+        potential = torch.where(torch.isnan(potential), torch.zeros_like(potential), potential)
+        # scale up
         potential = potential * self.potential_weight
 
         return potential
@@ -217,6 +230,7 @@ class GANShaping(Shaping):
         latent_dim,
         lambda_term,
         gp_target,
+        sub_potential_mean,
         **kwargs
     ):
 
@@ -266,7 +280,8 @@ class GANShaping(Shaping):
         self.current_critic_iter = 0
 
         # add running mean output
-        # self.potential_mean = 0.0
+        self.sub_potential_mean = sub_potential_mean
+        self.potential_mean = 0.0
 
     def update_stats(self, batch):
         # add transitions to normalizer
@@ -275,12 +290,12 @@ class GANShaping(Shaping):
         self.o_stats.update(torch.tensor(batch["o"], dtype=torch.float).to(device))
         self.g_stats.update(torch.tensor(batch["g"], dtype=torch.float).to(device))
 
-    # def update_potential_mean(self, batch):
-    #     o = torch.tensor(batch["o"], dtype=torch.float).to(device)
-    #     g = torch.tensor(batch["g"], dtype=torch.float).to(device)
-    #     u = torch.tensor(batch["u"], dtype=torch.float).to(device)
-    #     self.potential_mean = self.potential(o, g, u).mean().cpu().data
-    #     return self.potential_mean
+    def post_training_update(self, batch):
+        o = torch.tensor(batch["o"], dtype=torch.float).to(device)
+        g = torch.tensor(batch["g"], dtype=torch.float).to(device)
+        u = torch.tensor(batch["u"], dtype=torch.float).to(device)
+        if self.sub_potential_mean:
+            self.potential_mean = self.potential(o, g, u).mean().cpu().data
 
     def train(self, batch):
 
@@ -364,7 +379,7 @@ class GANShaping(Shaping):
 
         inputs = torch.cat((o, g, u), axis=1)
         potential = self.D(inputs)
-        # potential = potential - self.potential_mean
+        potential = potential - self.potential_mean
         potential = potential * self.potential_weight
         return potential
 
@@ -386,6 +401,7 @@ class GANShaping(Shaping):
             "G": self.G.state_dict(),
             "d_optimizer": self.d_optimizer.state_dict(),
             "g_optimizer": self.g_optimizer.state_dict(),
+            "potential_mean": self.potential_mean,
         }
         return state
 
@@ -398,6 +414,7 @@ class GANShaping(Shaping):
         self.G.load_state_dict(state_dicts["G"])
         self.d_optimizer.load_state_dict(state_dicts["d_optimizer"])
         self.g_optimizer.load_state_dict(state_dicts["g_optimizer"])
+        self.potential_mean = state_dicts["potential_mean"]
 
 
 class ImgGANShaping(Shaping):
@@ -693,7 +710,7 @@ class RewardShaping:
                 mean_pot = self.shaping.evaluate(batch)
                 logger.info("epoch: {} mean potential on demo data: {}".format(epoch, mean_pot))
 
-        # self.shaping.update_potential_mean(demo_data)
+        self.shaping.post_training_update(demo_data)
 
     def evaluate(self):
         return

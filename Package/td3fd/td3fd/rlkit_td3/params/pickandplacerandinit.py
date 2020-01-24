@@ -49,6 +49,7 @@ params_config = dict(
             latent_dim=16,
             lambda_term=0.1,          
             gp_target=1.0,  
+            sub_potential_mean=False,
             layer_sizes=[256, 256],
             potential_weight=1.0,
         ),

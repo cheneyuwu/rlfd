@@ -120,7 +120,7 @@ class RewardShaping:
                 logger.log("epoch: {} mean potential on demo data: {}".format(epoch, mean_pot))
 
         # Subtract mean, do this if needed
-        # self.shaping.update_potential_mean(demo_data)
+        self.shaping.post_training_update(demo_data)
 
     def evaluate(self):
         return
