@@ -202,7 +202,8 @@ DEFAULT_PARAMS = dict(
         ),
         gan=dict(
             latent_dim=6,
-            lambda_term=0.1,            
+            lambda_term=0.1,  
+            gp_target=1.0,          
             layer_sizes=[256, 256, 256], 
             potential_weight=3.0,
         ),
