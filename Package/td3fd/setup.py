@@ -10,7 +10,7 @@ setup(
     packages=["td3fd"],
     install_requires=[
         "matplotlib",
-        "tensorflow==1.15.0",
+        "tensorflow==1.15.2",
         "tensorflow_probability==0.7.0",
         "pandas",
     ],
