@@ -97,9 +97,9 @@ class Reacher:
         return distance
 
     def render(self):
-        plt.clf()
+        plt.clf()      
         # plot the environment visualization
-        ax = plt.subplot(211)
+        ax = plt.subplot(121)
         ax.axis([-self.boundary, self.boundary, -self.boundary, self.boundary])
         ax.plot(
             self.history["position"][-1][0], self.history["position"][-1][1], "o", color="r", label="current position"
@@ -107,17 +107,17 @@ class Reacher:
         ax.plot(self.history["goal"][-1][0], self.history["goal"][-1][1], "o", color="g", label="goal position")
         for block in self.blocks:
             block.plot(ax)
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        ax.set_title("state")
+        ax.set_xlabel("s_1")
+        ax.set_ylabel("s_2")
+        ax.set_title("Render Env")
         ax.legend(loc="upper right")
         # plot reward and success info
-        ax = plt.subplot(212)
+        ax = plt.subplot(122)
         ax.axis([0, self._max_episode_steps, -2, 2])
-        ax.plot(self.history["t"], self.history["r"], color="g", label="reward")
-        ax.plot(self.history["t"], self.history["v"], color="r", label="is_success")
+        ax.plot(self.history["t"], self.history["r"], color="g", label="Reward")
+        ax.plot(self.history["t"], self.history["v"], color="r", label="Succeed")
         ax.legend()
-        ax.set_title("info")
+        ax.set_title("Env Info")
 
         plt.show()
         plt.pause(0.05)
