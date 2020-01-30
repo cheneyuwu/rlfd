@@ -284,14 +284,14 @@ class GANDemoShaping(DemoShaping):
         )
         interpolates = alpha * demo_state_tf + (1.0 - alpha) * fake_data
         disc_interpolates = self.discriminator(interpolates)
-        gradients = tf.gradients(disc_interpolates, [interpolates][0])
+        gradients = tf.gradients(disc_interpolates, interpolates)[0]
         slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
         gradient_penalty = tf.reduce_mean((slopes - 1) ** 2)
         self.disc_cost = tf.reduce_mean(disc_fake) - tf.reduce_mean(disc_real) + gp_lambda * gradient_penalty
         # discriminator loss on policy (including gp loss)
         interpolates = alpha * demo_state_tf + (1.0 - alpha) * policy_state_tf
         disc_interpolates = self.discriminator(interpolates)
-        gradients = tf.gradients(disc_interpolates, [interpolates][0])
+        gradients = tf.gradients(disc_interpolates, interpolates)[0]
         slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
         gradient_penalty = tf.reduce_mean((slopes - 1) ** 2)
         self.disc_cost_policy = (
