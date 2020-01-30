@@ -694,7 +694,7 @@ class RewardShaping:
 
     def train(self, demo_data):
         # for rlkit
-        demo_data = self._convert_rlkit_to_td3fd(demo_data)
+        # demo_data = self._convert_rlkit_to_td3fd(demo_data)
         #
         self.shaping.update_stats(demo_data)
 
