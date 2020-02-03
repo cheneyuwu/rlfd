@@ -27,24 +27,22 @@ params_config = {
         "norm_clip": 5,
         # actor critic networks
         "scope": "ddpg",
+        "layer_sizes": [256, 256, 256],
         "twin_delayed": True,
         "policy_freq": 2,
         "policy_noise": 0.2,
         "policy_noise_clip": 0.5,
-        "layer_sizes": [256, 256, 256],
         "q_lr": 1e-3,
         "pi_lr": 1e-3,
         "action_l2": 0.4,
         # double q learning
         "polyak": 0.95,
-        "bc_params": {"q_filter": 1, "prm_loss_weight": 0.1, "aux_loss_weight": 1.0},
+        "bc_params": {"q_filter": False, "prm_loss_weight": 0.1, "aux_loss_weight": 1.0},
         "shaping_params": {
             "num_epochs": int(3e3),
             "batch_size": 128,
+            "num_ensembles": 2,
             "nf": {
-                "num_ens": 1,
-                "nf_type": "maf",  # ["maf", "realnvp"]
-                "lr": 5e-4,
                 "num_masked": 2,
                 "num_bijectors": 4,
                 "layer_sizes": [256, 256],
@@ -53,7 +51,6 @@ params_config = {
                 "potential_weight": 3.0,
             },
             "gan": {
-                "num_ens": 1,
                 "layer_sizes": [256, 256, 256],
                 "latent_dim": 6,
                 "gp_lambda": 0.1,

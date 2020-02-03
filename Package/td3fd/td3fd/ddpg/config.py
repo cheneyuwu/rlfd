@@ -21,8 +21,15 @@ default_params = {
         "num_cycles": 10,  # per epoch
         "num_batches": 40,  # training batches per cycle
         "batch_size": 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
-        # replay buffer setup
-        "buffer_size": int(1e6),
+        # use demonstrations
+        "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread
+        "sample_demo_buffer": False,  # whether or not to sample from demonstration buffer
+        "use_demo_reward": False,  # whether or not to assume that demonstrations have rewards, and train it on the critic
+        "num_demo": 0,  # number of expert demo episodes
+        "demo_strategy": "none",  # choose between ["none", "bc", "nf", "gan"]
+        # normalize observation
+        "norm_eps": 0.01,  # epsilon used for observation normalization
+        "norm_clip": 5,  # normalized observations are cropped to this value
         # actor critic networks
         "scope": "ddpg",
         "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layer
@@ -35,12 +42,6 @@ default_params = {
         "action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
-        # use demonstrations
-        "sample_demo_buffer": False,  # whether or not to sample from demonstration buffer
-        "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread
-        "use_demo_reward": False,  # whether or not to assume that demonstrations have rewards, and train it on the critic
-        "num_demo": 0,  # number of expert demo episodes
-        "demo_strategy": "none",  # choose between ["none", "bc", "nf", "gan"]
         "bc_params": {
             "q_filter": True,  # whether or not a Q value filter should be used on the actor outputs
             "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
@@ -49,10 +50,8 @@ default_params = {
         "shaping_params": {
             "num_epochs": int(1e3),
             "batch_size": 128,  # batch size for training the potential function (gan and nf)
+            "num_ensembles": 2,
             "nf": {
-                "num_ens": 1,  # number of nf ensembles
-                "nf_type": "maf",  # choose between ["maf", "realnvp"]
-                "lr": 1e-4,
                 "num_masked": 2,  # used only when nf_type is set to realnvp
                 "num_bijectors": 6,  # number of bijectors in the normalizing flow
                 "layer_sizes": [512, 512],  # number of neurons in each hidden layer
@@ -61,7 +60,6 @@ default_params = {
                 "potential_weight": 5.0,
             },
             "gan": {
-                "num_ens": 1,  # number of gan ensembles
                 "layer_sizes": [256, 256],  # number of neurons in each hidden layer (both generator and discriminator)
                 "latent_dim": 6,  # generator latent space dimension
                 "gp_lambda": 0.1,  # weight on gradient penalty (refer to WGAN-GP)
@@ -69,9 +67,8 @@ default_params = {
                 "potential_weight": 3.0,
             },
         },
-        # normalize observation
-        "norm_eps": 0.01,  # epsilon used for observation normalization
-        "norm_clip": 5,  # normalized observations are cropped to this value
+        # replay buffer setup
+        "buffer_size": int(1e6),
     },
     # rollouts config
     "rollout": {

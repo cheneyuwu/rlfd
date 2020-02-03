@@ -19,18 +19,21 @@ except ImportError:
 
 def train(root_dir, params):
 
-    # Construct...
+    # Check parameters
     config.check_params(params, ddpg_config.default_params)
-    params = config.add_env_params(params=params)
-    policy = ddpg_config.configure_ddpg(params=params)
-    rollout_worker = config.config_rollout(params=params, policy=policy)
-    evaluator = config.config_evaluator(params=params, policy=policy)
 
-    save_interval = 4
-    shaping_num_epochs = policy.shaping_params["num_epochs"]
-    num_epochs = policy.num_epochs
-    num_batches = policy.num_batches
-    num_cycles = policy.num_cycles
+    # Construct...
+    save_interval = 10
+    demo_strategy = params["ddpg"]["demo_strategy"]
+    shaping_num_epochs = params["ddpg"]["num_epochs"]
+    num_epochs = params["ddpg"]["num_epochs"]
+    num_batches = params["ddpg"]["num_batches"]
+    num_cycles = params["ddpg"]["num_cycles"]
+
+    # Seed everything.
+    set_global_seeds(params["seed"])
+    # get a new default session for the current default graph
+    tf.InteractiveSession()
 
     # Setup paths
     policy_save_path = os.path.join(root_dir, "policies")
@@ -38,27 +41,22 @@ def train(root_dir, params):
     latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
     periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")
 
+    # Construct ...
+    config.add_env_params(params=params)
+    policy = ddpg_config.configure_ddpg(params=params)
+    rollout_worker = config.config_rollout(params=params, policy=policy)
+    evaluator = config.config_evaluator(params=params, policy=policy)
     # adding demonstration data to the demonstration buffer
-    if policy.demo_strategy != "none" or policy.sample_demo_buffer:
+    if demo_strategy != "none" or policy.sample_demo_buffer:
         demo_file = os.path.join(root_dir, "demo_data.npz")
         assert os.path.isfile(demo_file), "demonstration training set does not exist"
         episode_batch = policy.init_demo_buffer(demo_file)
-        policy.update_demo_stats(episode_batch)
         if policy.sample_demo_buffer:
             policy.update_stats(episode_batch)
 
-    # TODO: Incremental learning Option 1: dagger like method
-    # if policy.demo_strategy in ["nf", "gan"]:
-    #     with open("demo_policy.pkl", "rb") as f:
-    #         demo_policy = pickle.load(f)
-
-    # Train shaping potential
-    if policy.demo_strategy in ["nf", "gan"]:
-        logger.info("Training the reward shaping potential.")
-        for epoch in range(shaping_num_epochs):
-            loss = policy.train_shaping()
-            if epoch % (shaping_num_epochs / 100) == (shaping_num_epochs / 100 - 1):
-                logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
+    # Train shaping potential (new)
+    if demo_strategy in ["nf", "gan"]:
+        policy.train_shaping()
 
     # Generate some random experiences before training (used by td3 for gym mujoco envs)
     # Comment this if running with Fetch Environments
@@ -84,29 +82,6 @@ def train(root_dir, params):
         evaluator.clear_history()
         episode = evaluator.generate_rollouts()
 
-        # TODO: Incremental learning
-        # if policy.demo_strategy in ["nf", "gan"]:
-        #     # Option 1: adding more experience (with correction) to the demonstration buffer
-        #     o = episode["o"][:, :-1, ...].reshape(-1, *policy.dimo)
-        #     g = episode["g"].reshape(-1, *policy.dimg)
-        #     u = demo_policy.get_actions(o, g, compute_q=False)
-        #     u = u.reshape(episode["u"].shape)
-        #     episode["u"] = u
-        #     policy.add_to_demo_buffer(episode)
-        #     for epoch in range(shaping_num_epochs):
-        #         loss = policy.train_shaping()
-        #         if epoch % (shaping_num_epochs / 100) == (shaping_num_epochs / 100 - 1):
-        #             logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-        #             policy.evaluate_shaping()
-        #     # Option 2: train gan discriminator using fake data from generator
-        #     if epoch % 10 == 0:
-        #         for _ in range(2):
-        #             evaluator.clear_history()
-        #             episode = evaluator.generate_rollouts()
-        #             loss = policy.train_shaping_policy(episode)
-        #             logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
-        #             policy.evaluate_shaping()
-
         # log
         logger.record_tabular("epoch", epoch)
         for key, val in evaluator.logs("test"):
@@ -118,6 +93,8 @@ def train(root_dir, params):
         logger.dump_tabular()
 
         # save the policy
+        # success_rate = evaluator.current_success_rate()
+        # logger.info("Current success rate: {}".format(success_rate))
         save_msg = ""
         if save_interval > 0 and epoch % save_interval == (save_interval - 1):
             policy_path = periodic_policy_path.format(epoch)
@@ -126,6 +103,8 @@ def train(root_dir, params):
         policy.save(latest_policy_path)
         save_msg += "latest"
         logger.info("Saving", save_msg, "policy.")
+
+    tf.get_default_session().close()
 
 
 def main(root_dir, **kwargs):
@@ -151,17 +130,8 @@ def main(root_dir, **kwargs):
     with open(comp_param_file, "w") as f:
         json.dump(params, f)
 
-    # reset default graph (must be called before setting seed)
-    tf.reset_default_graph()
-    # seed everything.
-    set_global_seeds(params["seed"])
-    # get a new default session for the current default graph
-    tf.InteractiveSession()
-
     # Launch the training script
     train(root_dir=root_dir, params=params)
-
-    tf.get_default_session().close()
 
 
 if __name__ == "__main__":

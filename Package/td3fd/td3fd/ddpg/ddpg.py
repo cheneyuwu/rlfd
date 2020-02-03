@@ -5,7 +5,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from td3fd.ddpg.actorcritic_network import Actor, Critic
-from td3fd.ddpg.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping
+from td3fd.ddpg.shaping import EnsembleRewardShapingWrapper
 from td3fd.ddpg.normalizer import Normalizer
 from td3fd.memory import RingReplayBuffer, UniformReplayBuffer, iterbatches
 
@@ -201,60 +201,8 @@ class DDPG(object):
         assert self.demo_strategy in ["nf", "gan"]
         # train normalizing flow or gan for 1 epoch
         demo_data = self.demo_buffer.sample()
-        losses = np.empty(0)
-        if self.dimg != (0,):
-            for (o, g, u) in iterbatches(
-                (demo_data["o"], demo_data["g"], demo_data["u"]), batch_size=self.shaping_params["batch_size"]
-            ):
-                feed = {self.demo_inputs_tf["o"]: o, self.demo_inputs_tf["g"]: g, self.demo_inputs_tf["u"]: u}
-                loss = self.demo_shaping.train(sess=self.sess, feed_dict=feed)
-                losses = np.append(losses, loss)
-        else:
-            for (o, u) in iterbatches((demo_data["o"], demo_data["u"]), batch_size=self.shaping_params["batch_size"]):
-                feed = {self.demo_inputs_tf["o"]: o, self.demo_inputs_tf["u"]: u}
-                loss = self.demo_shaping.train(sess=self.sess, feed_dict=feed)
-                losses = np.append(losses, loss)
-        return np.mean(losses)
-
-    def train_shaping_policy(self, episode):
-        assert self.demo_strategy in ["nf", "gan"]
-        # train normalizing flow or gan for 1 epoch
-        losses = np.empty(0)
-        demo_data = self.demo_buffer.sample()
-        episode["o"] = episode["o"][:, :-1, ...].reshape(-1, *self.dimo)
-        if self.dimg != (0,):
-            episode["g"] = episode["g"].reshape(-1, *self.dimg)
-        episode["u"] = episode["u"].reshape(-1, *self.dimu)
-        assert episode["u"].shape == demo_data["u"].shape
-        if self.dimg != (0,):
-            for (o, g, u, po, pg, pu) in iterbatches(
-                (demo_data["o"], demo_data["g"], demo_data["u"], episode["o"], episode["g"], episode["u"]),
-                batch_size=self.shaping_params["batch_size"],
-            ):
-                feed = {
-                    self.demo_inputs_tf["o"]: o,
-                    self.demo_inputs_tf["g"]: g,
-                    self.demo_inputs_tf["u"]: u,
-                    self.policy_inputs_tf["o"]: po,
-                    self.policy_inputs_tf["g"]: pg,
-                    self.policy_inputs_tf["u"]: pu,
-                }
-                loss = self.demo_shaping.train_on_policy(sess=self.sess, feed_dict=feed)
-                losses = np.append(losses, loss)
-        else:
-            for (o, u, po, pu) in iterbatches(
-                (demo_data["o"], demo_data["u"], episode["o"], episode["u"]),
-                batch_size=self.shaping_params["batch_size"],
-            ):
-                feed = {
-                    self.demo_inputs_tf["o"]: o,
-                    self.demo_inputs_tf["u"]: u,
-                    self.policy_inputs_tf["o"]: po,
-                    self.policy_inputs_tf["u"]: pu,
-                }
-                loss = self.demo_shaping.train_on_policy(sess=self.sess, feed_dict=feed)
-                losses = np.append(losses, loss)
-        return np.mean(losses)
+        self.demo_shaping.train(demo_data)
+        self.demo_shaping.evaluate()
 
     def train(self):
         batch = self.sample_batch()
@@ -304,21 +252,6 @@ class DDPG(object):
         if self.dimg != (0,):
             self.g_stats.update(transitions["g"])
 
-    def update_demo_stats(self, episode_batch):
-        # add transitions to normalizer
-        if self.fix_T:
-            episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
-            if self.dimg != (0,):
-                episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
-                episode_batch["g_2"] = episode_batch["g"][:, :, :]
-            num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
-            transitions = self.demo_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
-        else:
-            transitions = episode_batch.copy()
-
-        self.demo_o_stats.update(transitions["o"])
-        if self.dimg != (0,):
-            self.demo_g_stats.update(transitions["g"])
 
     def _create_memory(self):
         # buffer shape
@@ -327,9 +260,8 @@ class DDPG(object):
             buffer_shapes["o"] = (self.eps_length + 1, *self.dimo)
             buffer_shapes["u"] = (self.eps_length, *self.dimu)
             buffer_shapes["r"] = (self.eps_length, 1)
-            if self.dimg != (0,):  # for multigoal environment - or states that do not change over episodes.
-                buffer_shapes["ag"] = (self.eps_length + 1, *self.dimg)
-                buffer_shapes["g"] = (self.eps_length, *self.dimg)
+            buffer_shapes["ag"] = (self.eps_length + 1, *self.dimg)
+            buffer_shapes["g"] = (self.eps_length, *self.dimg)
             for key, val in self.dims.items():
                 if key.startswith("info"):
                     buffer_shapes[key] = (self.eps_length, *val)
@@ -343,11 +275,10 @@ class DDPG(object):
             buffer_shapes["o_2"] = self.dimo
             buffer_shapes["u"] = self.dimu
             buffer_shapes["r"] = (1,)
-            if self.dimg != (0,):  # for multigoal environment - or states that do not change over episodes.
-                buffer_shapes["ag"] = self.dimg
-                buffer_shapes["g"] = self.dimg
-                buffer_shapes["ag_2"] = self.dimg
-                buffer_shapes["g_2"] = self.dimg
+            buffer_shapes["ag"] = self.dimg
+            buffer_shapes["g"] = self.dimg
+            buffer_shapes["ag_2"] = self.dimg
+            buffer_shapes["g_2"] = self.dimg
             for key, val in self.dims.items():
                 if key.startswith("info"):
                     buffer_shapes[key] = val
@@ -441,29 +372,18 @@ class DDPG(object):
         if self.dimg != (0,):
             self.policy_inputs_tf["g"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimg))
 
-        # Add shaping reward
-        # normalizer for goal and observation.
-        self.demo_o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
-        self.demo_g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
-        # potential function approximator, nf or gan
-        if self.demo_strategy == "nf":
-            self.demo_shaping = EnsNFDemoShaping(
-                demo_inputs_tf=self.demo_inputs_tf,
-                gamma=self.gamma,
+        # Add shapin reward (new)
+        if self.demo_strategy in ["nf", "gan"]:
+            self.demo_shaping = EnsembleRewardShapingWrapper(
+                sess=self.sess,
+                dims=self.dims,
                 max_u=self.max_u,
-                o_stats=self.demo_o_stats,
-                g_stats=self.demo_g_stats,
-                **self.shaping_params["nf"]
-            )
-        elif self.demo_strategy == "gan":
-            self.demo_shaping = EnsGANDemoShaping(
-                demo_inputs_tf=self.demo_inputs_tf,
-                policy_inputs_tf=self.policy_inputs_tf,
                 gamma=self.gamma,
-                max_u=self.max_u,
-                o_stats=self.demo_o_stats,
-                g_stats=self.demo_g_stats,
-                **self.shaping_params["gan"]
+                demo_strategy=self.demo_strategy,
+                norm_obs=True,
+                norm_eps=self.norm_eps,
+                norm_clip=self.norm_clip,
+                **self.shaping_params.copy()
             )
         else:
             self.demo_shaping = None
