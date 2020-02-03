@@ -1,5 +1,3 @@
-import numpy as np
-
 params_config = {
     # config summary
     "alg": "ddpg-torch",
@@ -21,7 +19,7 @@ params_config = {
     "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
     # DDPG config
     "ddpg": {
-        "num_epochs": int(2e2),
+        "num_epochs": int(4e2),
         "num_cycles": 10,
         "num_batches": 40,
         "batch_size": 256,
@@ -37,7 +35,7 @@ params_config = {
         "action_l2": 0.0,
         # double q learning
         "polyak": 0.95,
-        "bc_params": {"q_filter": False, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
+        "bc_params": {"q_filter": False, "prm_loss_weight": 1e-2, "aux_loss_weight": 1.0},
     },
     "shaping": {
         "num_ensembles": 1,
@@ -61,7 +59,7 @@ params_config = {
     },
     "memory": {
         # replay buffer setup
-        "buffer_size": int(1e4),
+        "buffer_size": int(1e5),
     },
     # rollouts config
     "rollout": {

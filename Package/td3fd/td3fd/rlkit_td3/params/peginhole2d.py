@@ -8,7 +8,7 @@ params_config = dict(
     # rlkit default params
     demo_strategy="none",
     algorithm_kwargs=dict(
-        num_epochs=200,
+        num_epochs=400,
         num_train_loops_per_epoch=10,
         num_eval_steps_per_epoch=200,
         num_trains_per_train_loop=40,
@@ -18,7 +18,7 @@ params_config = dict(
         batch_size=256,
     ),
     trainer_kwargs=dict(
-        discount=0.99,
+        discount=0.95,
         demo_batch_size=128,
         prm_loss_weight=1e-2,
         aux_loss_weight=1.0,
@@ -30,7 +30,7 @@ params_config = dict(
     policy_kwargs=dict(
         hidden_sizes=[256, 256],
     ),
-    replay_buffer_size=int(1E6),
+    replay_buffer_size=int(1E5),
     shaping=dict(
         num_ensembles=2,
         num_epochs=int(5e3),

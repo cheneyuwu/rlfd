@@ -60,7 +60,7 @@ def main(root_dir, **kwargs):
     elif params["alg"] == "rlkit-sac":
         rlkit_sac_torch_train(root_dir=root_dir, params=params)
     elif params["alg"] == "rlkit-td3":
-        rlkit_td3_torch_train(root_dir=root_dir, params=params)        
+        rlkit_td3_torch_train(root_dir=root_dir, params=params)
     # elif "gail" in params.keys():
     #     gail_train(root_dir=root_dir, params=params)
     else:
