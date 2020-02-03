@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# A SAMPLE SLURM SCRIPT
+
 #SBATCH --nodes=2
 #SBATCH --gres=gpu:2                      # request GPU "generic resource"
 #SBATCH --cpus-per-task=1                 # maximum CPU cores per GPU request: 6 on Cedar, 16 on Graham.
@@ -29,6 +31,12 @@ TRAINING_FILE="*.py"
 
 mpiexec -n ${N_TASKS} python -m td3fd.launch --exp_dir ${LAUNCH_EXP_DIR} --targets train:${TRAINING_FILE}
 
-# Extra
-# useful command for changing the config name for seeds that succeeded
+
+# SOME USEFUL COMMANDS
+
+# 1. change config name for seeds that succeeded
 # find . -name log.txt | xargs grep -il -m 1 "new best success rate: 1.0" | sed -e "s/log.txt/params_renamed.json/" | xargs sed -i 's/", "env_name/-succeed", "env_name/'
+
+# 2. recursively find a string on certain file then change:
+# find . -name '*.py' | xargs grep 'source'
+# find . -name '*.py' | xargs sed -i 's/source/target/'
