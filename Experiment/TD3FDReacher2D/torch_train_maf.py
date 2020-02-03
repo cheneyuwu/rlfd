@@ -1,5 +1,5 @@
 from copy import deepcopy
-from td3fd.td3.params.ddpg_reacher import params_config as base_params
+from td3fd.td3.params.reach2d import params_config as base_params
 
 # td3fd via normalizing flow (MAF) shaping
 params_config = deepcopy(base_params)
