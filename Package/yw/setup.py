@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name="td3fd",
+    name="yw",
     version="0.0",
     description="TD3fD through Shaping using Generative Models",
     author="Yuchen Wu",

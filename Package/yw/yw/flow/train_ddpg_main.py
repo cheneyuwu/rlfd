@@ -2,15 +2,19 @@ import json
 import os
 import pickle
 import sys
-from itertools import combinations  # for dimension projection
 
 import numpy as np
 import tensorflow as tf
 
 from yw.ddpg_main import config
 from yw.tool import logger
+
 from yw.util.mpi_util import mpi_average
-from yw.util.util import set_global_seeds
+# from yw.util.util import set_global_seeds
+from td3fd.util.util import set_global_seeds
+
+from yw.util.cmd_util import ArgParser
+
 
 try:
     from mpi4py import MPI
@@ -259,21 +263,13 @@ def main(root_dir, comm=None, **kwargs):
         logger.info("Changing comm to None since single thread.")
 
     # Get default params from config and update params.
-    param_file = os.path.join(root_dir, "copied_params.json")
-    if os.path.isfile(param_file):
-        with open(param_file, "r") as f:
-            params = json.load(f)
-        config.check_params(params)
-    else:
-        logger.warn("WARNING: params.json not found! using the default parameters.")
-        params = config.DEFAULT_PARAMS.copy()
-    if rank == 0:
-        comp_param_file = os.path.join(root_dir, "params.json")
-        with open(comp_param_file, "w") as f:
-            json.dump(params, f)
+    param_file = os.path.join(root_dir, "params.json")
+    with open(param_file, "r") as f:
+        params = json.load(f)
+    config.check_params(params)
 
-    # Reset default graph (must be called before setting seed)
-    tf.reset_default_graph()
+    # # Reset default graph (must be called before setting seed)
+    # tf.reset_default_graph()
     # seed everything.
     set_global_seeds(params["seed"])
     # get a new default session for the current default graph
@@ -301,8 +297,6 @@ def main(root_dir, comm=None, **kwargs):
 
 
 if __name__ == "__main__":
-
-    from yw.util.cmd_util import ArgParser
 
     ap = ArgParser()
     # logging and saving path
