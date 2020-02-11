@@ -6,8 +6,8 @@ import numpy as np
 import tensorflow as tf
 
 from yw.ddpg_main import config
-from yw.tool import logger
-from yw.util.util import set_global_seeds
+from td3fd import logger
+from td3fd.util.util import set_global_seeds
 
 try:
     from mpi4py import MPI
@@ -19,12 +19,12 @@ DEFAULT_PARAMS = {
     "seed": 0,
     "num_eps": 10,
     "fix_T": False,
-    "demo": {"random_eps": 0.0, "noise_eps": 0.1, "compute_Q": True, "render": 1, "rollout_batch_size": 1},
+    "demo": {"random_eps": 0.0, "noise_eps": 0.1, "compute_Q": True, "render": True, "rollout_batch_size": 1},
 }
 
 
-def main(policy_file, **kwargs):
-    assert policy_file is not None, "must provide the policy_file"
+def main(policy, **kwargs):
+    assert policy is not None, "must provide the policy"
 
     # Setup
     logger.configure()
@@ -32,25 +32,19 @@ def main(policy_file, **kwargs):
     rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
 
     params = DEFAULT_PARAMS.copy()
-    # reset default graph every time this function is called.
-    tf.reset_default_graph()
     # Seed everything
     set_global_seeds(params["seed"])
     tf.InteractiveSession()
 
     # Load policy.
-    with open(policy_file, "rb") as f:
+    with open(policy, "rb") as f:
         policy = pickle.load(f)
 
-    # Extract environment construction information
-    env_name = policy.info["env_name"].replace("Dense", "")  # the reward should be sparse
-    T = policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T
-
-    # Prepare params.
-    params["env_name"] = env_name
+    # Extract env info
+    params["env_name"] = policy.info["env_name"].replace("Dense", "")  # the reward should be sparse
     params["r_scale"] = policy.info["r_scale"]
     params["r_shift"] = policy.info["r_shift"]
-    params["eps_length"] = T
+    params["eps_length"] = policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T
     if "env_args" not in params.keys():
         params["env_args"] = policy.info["env_args"]
     params = config.add_env_params(params=params)
@@ -61,21 +55,21 @@ def main(policy_file, **kwargs):
     for _ in range(params["num_eps"]):
         demo.generate_rollouts()
 
-    # record logs
+    # Log
     for key, val in demo.logs("test"):
         logger.record_tabular(key, np.mean(val))
     if rank == 0:
         logger.dump_tabular()
 
-    tf.get_default_session().close()
+    tf.compat.v1.get_default_session().close()
 
 
 if __name__ == "__main__":
 
-    from yw.util.cmd_util import ArgParser
+    from td3fd.util.cmd_util import ArgParser
 
     ap = ArgParser()
-    ap.parser.add_argument("--policy_file", help="demonstration training dataset", type=str, default=None)
+    ap.parser.add_argument("--policy", help="demonstration training dataset", type=str, default=None)
     ap.parse(sys.argv)
 
     main(**ap.get_dict())

@@ -17,12 +17,14 @@ try:
 except ImportError:
     MPI = None
 
-from yw.tool import logger
 from yw.flow.generate_demo import main as demo_entry
 from yw.flow.run_agent import main as evaluate_entry
-from yw.flow.plot import main as plot_entry
 from yw.flow.train_ddpg_main import main as train_entry
-from yw.util.mpi_util import mpi_exit, mpi_input
+
+
+from td3fd import logger
+from td3fd.plot import main as plot_entry
+from td3fd.util.mpi_util import mpi_exit, mpi_input
 
 
 def import_param_config(load_dir):
