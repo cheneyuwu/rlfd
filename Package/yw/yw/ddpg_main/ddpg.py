@@ -143,9 +143,9 @@ class DDPG(object):
             vals.append(self.demo_actor_shaping)
         # feed
         feed = {}
-        feed[self.inputs_tf["o"]] = o.reshape(-1, self.dimo)
-        if self.dimg != 0:
-            feed[self.inputs_tf["g"]] = g.reshape(-1, self.dimg)
+        feed[self.inputs_tf["o"]] = o.reshape(-1, *self.dimo)
+        if self.dimg != (0,):
+            feed[self.inputs_tf["g"]] = g.reshape(-1, *self.dimg)
         # compute
         ret = self.sess.run(vals, feed_dict=feed)
         # post processing
@@ -245,7 +245,7 @@ class DDPG(object):
         # add transitions to normalizer
         if self.fix_T:
             episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
-            if self.dimg != 0:
+            if self.dimg != (0,):
                 episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
                 episode_batch["g_2"] = episode_batch["g"][:, :, :]
             num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
@@ -254,14 +254,14 @@ class DDPG(object):
             transitions = episode_batch.copy()
 
         self.o_stats.update(transitions["o"])
-        if self.dimg != 0:
+        if self.dimg != (0,):
             self.g_stats.update(transitions["g"])
 
     def update_demo_stats(self, episode_batch):
         # add transitions to normalizer
         if self.fix_T:
             episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
-            if self.dimg != 0:
+            if self.dimg != (0,):
                 episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
                 episode_batch["g_2"] = episode_batch["g"][:, :, :]
             num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
@@ -270,7 +270,7 @@ class DDPG(object):
             transitions = episode_batch.copy()
 
         self.demo_o_stats.update(transitions["o"])
-        if self.dimg != 0:
+        if self.dimg != (0,):
             self.demo_g_stats.update(transitions["g"])
 
     def _create_memory(self):
@@ -280,71 +280,68 @@ class DDPG(object):
         # buffer shape
         buffer_shapes = {}
         if self.fix_T:
-            buffer_shapes["o"] = (self.T + 1, self.dimo)
-            buffer_shapes["u"] = (self.T, self.dimu)
+            buffer_shapes["o"] = (self.T + 1, *self.dimo)
+            buffer_shapes["u"] = (self.T, *self.dimu)
             buffer_shapes["r"] = (self.T, 1)
-            if self.dimg != 0:
-                buffer_shapes["ag"] = (self.T + 1, self.dimg)
-                buffer_shapes["g"] = (self.T, self.dimg)
+            if self.dimg != (0,):
+                buffer_shapes["ag"] = (self.T + 1, *self.dimg)
+                buffer_shapes["g"] = (self.T, *self.dimg)
             for key, val in self.dims.items():
                 if key.startswith("info"):
-                    buffer_shapes[key] = (self.T, *(tuple([val]) if val > 0 else tuple()))
-            self.replay_buffer = UniformReplayBuffer(
-                buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
-            )
+                    buffer_shapes[key] = (self.T, *val)
+            self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.T)
             if self.demo_strategy != "none" or self.sample_demo_buffer:
-                self.demo_buffer = UniformReplayBuffer(
-                    buffer_shapes, self.buffer_size, self.T, **self.replay_strategy["args"]
-                )
+                self.demo_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.T)
         else:
-            buffer_shapes["o"] = (self.dimo,)
-            buffer_shapes["o_2"] = (self.dimo,)
-            buffer_shapes["u"] = (self.dimu,)
+            buffer_shapes["o"] = self.dimo
+            buffer_shapes["o_2"] = self.dimo
+            buffer_shapes["u"] = self.dimu
             buffer_shapes["r"] = (1,)
-            if self.dimg != 0:
-                buffer_shapes["ag"] = (self.dimg,)
-                buffer_shapes["g"] = (self.dimg,)
-                buffer_shapes["ag_2"] = (self.dimg,)
-                buffer_shapes["g_2"] = (self.dimg,)
+            if self.dimg != (0,):
+                buffer_shapes["ag"] = self.dimg
+                buffer_shapes["g"] = self.dimg
+                buffer_shapes["ag_2"] = self.dimg
+                buffer_shapes["g_2"] = self.dimg
             for key, val in self.dims.items():
                 if key.startswith("info"):
-                    buffer_shapes[key] = tuple([val]) if val > 0 else tuple()
+                    buffer_shapes[key] = val
             # need the "done" signal for restarting from training
             buffer_shapes["done"] = (1,)
 
-            self.replay_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size, **self.replay_strategy["args"])
+            self.replay_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
             if self.demo_strategy != "none" or self.sample_demo_buffer:
-                self.demo_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size, **self.replay_strategy["args"])
+                self.demo_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
 
     def _create_network(self):
         # Inputs to DDPG
         self.inputs_tf = {}
-        self.inputs_tf["o"] = tf.compat.v1.placeholder(tf.float32, shape=(None, self.dimo))
-        self.inputs_tf["o_2"] = tf.compat.v1.placeholder(tf.float32, shape=(None, self.dimo))
-        self.inputs_tf["u"] = tf.compat.v1.placeholder(tf.float32, shape=(None, self.dimu))
+        self.inputs_tf["o"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimo))
+        self.inputs_tf["o_2"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimo))
+        self.inputs_tf["u"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimu))
         self.inputs_tf["r"] = tf.compat.v1.placeholder(tf.float32, shape=(None, 1))
-        if self.dimg != 0:
-            self.inputs_tf["g"] = tf.compat.v1.placeholder(tf.float32, shape=(None, self.dimg))
-            self.inputs_tf["g_2"] = tf.compat.v1.placeholder(tf.float32, shape=(None, self.dimg))
+        if self.dimg != (0,):
+            self.inputs_tf["g"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimg))
+            self.inputs_tf["g_2"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimg))
+
         # create a variable for each o, g, u key in the inputs_tf dict
         input_o_tf = self.inputs_tf["o"]
         input_o_2_tf = self.inputs_tf["o_2"]
-        input_g_tf = self.inputs_tf["g"] if self.dimg != 0 else None
-        input_g_2_tf = self.inputs_tf["g_2"] if self.dimg != 0 else None
+        input_g_tf = self.inputs_tf["g"] if self.dimg != (0,) else None
+        input_g_2_tf = self.inputs_tf["g_2"] if self.dimg != (0,) else None
         input_u_tf = self.inputs_tf["u"]
 
         # Normalizer for goal and observation.
         with tf.variable_scope("o_stats"):
-            self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm)
+            self.o_stats = Normalizer(self.dimo[0], self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm)
         with tf.variable_scope("g_stats"):
-            self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm)
+            self.g_stats = Normalizer(self.dimg[0], self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm)
 
         # Input Dataset that loads from demonstration buffer. Used for BC and Potential
         demo_shapes = {}
-        demo_shapes["o"] = (self.dimo,)
-        if self.dimg != 0:
-            demo_shapes["g"] = (self.dimg,)
-        demo_shapes["u"] = (self.dimu,)
+        demo_shapes["o"] = self.dimo
+        if self.dimg != (0,):
+            demo_shapes["g"] = self.dimg
+        demo_shapes["u"] = self.dimu
         max_num_transitions = self.num_demo * self.T
 
         def generate_demo_data():
@@ -367,15 +364,15 @@ class DDPG(object):
         self.bc_demo_iter_tf = bc_demo_dataset.make_initializable_iterator()
         self.bc_demo_inputs_tf = self.bc_demo_iter_tf.get_next()
         bc_demo_input_o_tf = self.bc_demo_inputs_tf["o"]
-        bc_demo_input_g_tf = self.bc_demo_inputs_tf["g"] if self.dimg != 0 else None
+        bc_demo_input_g_tf = self.bc_demo_inputs_tf["g"] if self.dimg != (0,) else None
         bc_demo_input_u_tf = self.bc_demo_inputs_tf["u"]
 
         # Models
         with tf.variable_scope("main"):
             self.main = ActorCritic(
-                dimo=self.dimo,
-                dimg=self.dimg,
-                dimu=self.dimu,
+                dimo=self.dimo[0],
+                dimg=self.dimg[0],
+                dimu=self.dimu[0],
                 max_u=self.max_u,
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
@@ -396,9 +393,9 @@ class DDPG(object):
             self.main_bc_tf = self.main.actor(o=bc_demo_input_o_tf, g=bc_demo_input_g_tf)
         with tf.variable_scope("target"):
             self.target = ActorCritic(
-                dimo=self.dimo,
-                dimg=self.dimg,
-                dimu=self.dimu,
+                dimo=self.dimo[0],
+                dimg=self.dimg[0],
+                dimu=self.dimu[0],
                 max_u=self.max_u,
                 o_stats=self.o_stats,
                 g_stats=self.g_stats,
@@ -422,11 +419,11 @@ class DDPG(object):
             # normalizer for goal and observation.
             with tf.variable_scope("demo_o_stats"):
                 self.demo_o_stats = Normalizer(
-                    self.dimo, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm
+                    self.dimo[0], self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm
                 )
             with tf.variable_scope("demo_g_stats"):
                 self.demo_g_stats = Normalizer(
-                    self.dimg, self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm
+                    self.dimg[0], self.norm_eps, self.norm_clip, sess=self.sess, comm=self.comm
                 )
             # potential function approximator, nf or gan
             if self.demo_strategy == "nf":

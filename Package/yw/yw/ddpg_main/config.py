@@ -107,11 +107,6 @@ DEFAULT_PARAMS = {
 }
 
 
-def log_params(params):
-    for key in sorted(params.keys()):
-        logger.info("{:<30}{}".format(key, params[key]))
-
-
 def check_params(params, default_params=DEFAULT_PARAMS):
     """make sure that the keys match"""
     assert type(params) == dict
@@ -124,29 +119,11 @@ def check_params(params, default_params=DEFAULT_PARAMS):
         assert key in default_params.keys(), "provided params has an extra key: {}".format(key)
 
 
-# Helper Functions for Configuration
-# =====================================
-
-
-class EnvCache:
-    """Only creates a new environment from the provided function if one has not yet already been
-    created.
-
-    This is useful here because we need to infer certain properties of the env, e.g.
-    its observation and action spaces, without any intend of actually using it.
-
-    """
-
-    cached_envs = {}
-
-    @staticmethod
-    def get_env(make_env):
-        if make_env not in EnvCache.cached_envs.keys():
-            EnvCache.cached_envs[make_env] = make_env()
-        return EnvCache.cached_envs[make_env]
-
-
 def add_env_params(params):
+    """
+    Add the following environment parameters to params:
+        make_env, eps_length, gamma, max_u, dims
+    """
     env_manager = EnvManager(
         env_name=params["env_name"],
         env_args=params["env_args"],
@@ -154,64 +131,35 @@ def add_env_params(params):
         r_shift=params["r_shift"],
         eps_length=params["eps_length"],
     )
-    logger.info(
-        "Using environment {} with r scale down by {} shift by {} and max episode {}".format(
-            params["env_name"], params["r_scale"], params["r_shift"], params["eps_length"]
-        )
-    )
     params["make_env"] = env_manager.get_env
-    tmp_env = EnvCache.get_env(params["make_env"])
-    assert hasattr(tmp_env, "_max_episode_steps")
+    tmp_env = params["make_env"]()
     params["T"] = tmp_env._max_episode_steps
     params["gamma"] = 1.0 - 1.0 / params["T"]
-    assert hasattr(tmp_env, "max_u")
+    # limit on the magnitude of actions
     params["max_u"] = np.array(tmp_env.max_u) if isinstance(tmp_env.max_u, list) else tmp_env.max_u
-    # get environment dimensions
+    # get environment observation & action dimensions
     tmp_env.reset()
     obs, _, _, info = tmp_env.step(tmp_env.action_space.sample())
     dims = {
-        "o": obs["observation"].shape[0],  # the state
-        "u": tmp_env.action_space.shape[0],
-        "g": obs["desired_goal"].shape[0],  # extra state that does not change within 1 episode
+        "o": obs["observation"].shape,  # observation
+        "g": obs["desired_goal"].shape,  # goal (may be of shape (0,) if not exist)
+        "u": tmp_env.action_space.shape,
     }
-    # temporarily put here as we never run multigoal jobs
-    assert dims["g"] == 0
     for key, value in info.items():
+        if type(value) == str: # Note: for now, do not add info str to memory (replay buffer)
+            continue
         value = np.array(value)
         if value.ndim == 0:
             value = value.reshape(1)
-        dims["info_{}".format(key)] = value.shape[0]
+        dims["info_{}".format(key)] = value.shape
     params["dims"] = dims
     return params
 
 
-def configure_her(params):
-    env = EnvCache.get_env(params["make_env"])
-    env.reset()
-
-    def reward_fun(ag_2, g_2, info):  # vectorized
-        return env.compute_reward(achieved_goal=ag_2, desired_goal=g_2, info=info)
-
-    # Prepare configuration for HER.
-    her_params = params["her"]
-    her_params["reward_fun"] = reward_fun
-
-    logger.info("*** her_params ***")
-    log_params(her_params)
-    logger.info("*** her_params ***")
-
-    return her_params
-
-
-def configure_ddpg(params, comm=None):
+def configure_ddpg(params):
     # Extract relevant parameters.
-    ddpg_params = params["ddpg"]
-
-    if ddpg_params["replay_strategy"] == "her":
-        sample_params = configure_her(params)
-    else:
-        sample_params = {}
-    ddpg_params["replay_strategy"] = {"strategy": ddpg_params["replay_strategy"], "args": sample_params}
+    ddpg_params = params["ddpg"] # replay strategy has to be her
+    ddpg_params["replay_strategy"] = {"strategy": ddpg_params["replay_strategy"], "args": {}}
 
     # Update parameters
     ddpg_params.update(
@@ -232,21 +180,13 @@ def configure_ddpg(params, comm=None):
         }
     )
 
-    logger.info("*** ddpg_params ***")
-    log_params(ddpg_params)
-    logger.info("*** ddpg_params ***")
-
-    policy = DDPG(**ddpg_params, comm=comm)
+    policy = DDPG(**ddpg_params, comm=None)
     return policy
 
 
 def config_rollout(params, policy):
     rollout_params = params["rollout"]
     rollout_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
-
-    logger.info("\n*** rollout_params ***")
-    log_params(rollout_params)
-    logger.info("*** rollout_params ***")
 
     if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
         rollout_worker = RolloutWorker(params["make_env"], policy, **rollout_params)
@@ -261,10 +201,6 @@ def config_evaluator(params, policy):
     eval_params = params["evaluator"]
     eval_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
 
-    logger.info("*** eval_params ***")
-    log_params(eval_params)
-    logger.info("*** eval_params ***")
-
     if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
         evaluator = RolloutWorker(params["make_env"], policy, **eval_params)
     else:
@@ -277,10 +213,6 @@ def config_evaluator(params, policy):
 def config_demo(params, policy):
     demo_params = params["demo"]
     demo_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
-
-    logger.info("*** demo_params ***")
-    log_params(demo_params)
-    logger.info("*** demo_params ***")
 
     if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
         demo = RolloutWorker(params["make_env"], policy, **demo_params)

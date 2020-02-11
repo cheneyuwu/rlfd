@@ -70,6 +70,7 @@ def train(root_dir, params):
             for _ in range(n_batches):
                 policy.train()
             policy.update_target_net()
+
         # test
         evaluator.clear_history()
         episode = evaluator.generate_rollouts()
@@ -97,6 +98,7 @@ def train(root_dir, params):
         logger.info("Saving", save_msg, "policy.")
 
     tf.get_default_session().close()
+
 
 def main(root_dir, **kwargs):
 
