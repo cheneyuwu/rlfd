@@ -113,7 +113,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
             data[env_id][xy][config].append((x, y))
 
     fig = plt.figure()
-    fig.subplots_adjust(left=0.15, right=0.9, bottom=0.35, top=0.9, wspace=0.25, hspace=0.25)
+    fig.subplots_adjust(left=0.1, right=0.9, bottom=0.25, top=0.9, wspace=0.25, hspace=0.25)
     # set sizes
     SMALL_SIZE = 14
     MEDIUM_SIZE = 14
@@ -127,13 +127,13 @@ def plot_results(allresults, xys, target_dir, smooth=0):
     plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
     fig.clf()
-    for env_n, env_id in enumerate(sorted(data.keys()), 1):
+    for env_n, env_id in enumerate(sorted(data.keys())):
         print("Creating plots for environment: {}".format(env_id))
-        for i, xy in enumerate(data[env_id].keys(), 1):
+        for i, xy in enumerate(data[env_id].keys()):
             # colors = ["r", "g", "b", "m", "c", "k", "y"]
             colors = cm.jet(np.linspace(0, 1.0, len(data[env_id][xy].keys())))
             markers = ["o", "v", "s", "d", "p", "h"]
-            ax = fig.add_subplot(len(xys), len(data.keys()), env_n + i * (len(xys) - 1))
+            ax = fig.add_subplot(len(xys), len(data.keys()), env_n * len(data.keys()) + i + 1)
             x_label = xy.split(":")[0]
             y_label = xy.split(":")[1]
             for j, config in enumerate(sorted(data[env_id][xy].keys())):
@@ -147,7 +147,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 xs, ys = strip(xs, required_length), strip(ys, required_length)
                 assert xs.shape == ys.shape
 
-                # in case you want to cut 
+                # in case you want to cut
                 last_idx = None
                 xs = xs[..., :last_idx]
                 ys = ys[..., :last_idx]
@@ -176,6 +176,8 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 #
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_label)
+                # ax.set_xlabel("Number of Env Steps")
+                # ax.set_ylabel("Average Return")
                 ax.tick_params(axis="x", pad=5, length=5, width=1)
                 ax.tick_params(axis="y", pad=5, length=5, width=1)
                 ax.ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
@@ -189,8 +191,8 @@ def plot_results(allresults, xys, target_dir, smooth=0):
             num_lines = len(data[env_id][xy].keys())
     # use fig level legend
     handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=min(2, int(num_lines)), frameon=False)
-    fig.set_size_inches(5 * len(data.keys()), 1 + 5 * len(xys))
+    fig.legend(handles, labels, loc="lower center", ncol=min(4, int(num_lines)), frameon=False)
+    fig.set_size_inches(4.7 * len(data.keys()), 5 * len(xys))
     now = datetime.now()  # current date and time
     date_time = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     save_path = os.path.join(target_dir, "Result_{}_{}.png".format("plot_name", date_time))
