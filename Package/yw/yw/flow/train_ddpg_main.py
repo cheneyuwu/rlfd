@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 
 from td3fd import logger
-from yw.ddpg_main import config
+from yw.ddpg_main import config as ddpg_config
 from td3fd.util.cmd_util import ArgParser
 from td3fd.util.util import set_global_seeds
 
@@ -20,14 +20,13 @@ except ImportError:
 def train(root_dir, params):
 
     # Check parameters
-    config.check_params(params)
+    ddpg_config.check_params(params)
     # Construct...
     save_interval = 10
     shaping_n_epochs = params["train"]["shaping_n_epochs"]
-    pure_bc_n_epochs = params["train"]["pure_bc_n_epochs"]
-    n_epochs = params["train"]["n_epochs"]
-    n_batches = params["train"]["n_batches"]
-    n_cycles = params["train"]["n_cycles"]
+    num_epochs = params["train"]["n_epochs"]
+    num_cycles = params["train"]["n_cycles"]
+    num_batches = params["train"]["n_batches"]
 
     # Seed everything.
     set_global_seeds(params["seed"])
@@ -41,15 +40,17 @@ def train(root_dir, params):
     periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")
 
     # Construct ...
-    params = config.add_env_params(params=params)
-    policy = config.configure_ddpg(params=params)
-    rollout_worker = config.config_rollout(params=params, policy=policy)
-    evaluator = config.config_evaluator(params=params, policy=policy)
+    ddpg_config.add_env_params(params=params)
+    policy = ddpg_config.configure_ddpg(params=params)
+    rollout_worker = ddpg_config.config_rollout(params=params, policy=policy)
+    evaluator = ddpg_config.config_evaluator(params=params, policy=policy)
     # adding demonstration data to the demonstration buffer
     if policy.demo_strategy != "none" or policy.sample_demo_buffer:
         demo_file = os.path.join(root_dir, "demo_data.npz")
         assert os.path.isfile(demo_file), "demonstration training set does not exist"
-        policy.init_demo_buffer(demo_file, update_stats=policy.sample_demo_buffer)
+        episode_batch = policy.init_demo_buffer(demo_file)
+        if policy.sample_demo_buffer:
+            policy.update_stats(episode_batch)
 
     # Train shaping potential (new)
     if policy.demo_strategy in ["nf", "gan"]:
@@ -60,14 +61,15 @@ def train(root_dir, params):
                 logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
 
     # Train rl policy
-    for epoch in range(n_epochs):
+    for epoch in range(num_epochs):
         # train
         rollout_worker.clear_history()
-        for _ in range(n_cycles):
+        for cyc in range(num_cycles):
             # print("cycle: {} completed!!".format(cyc))
             episode = rollout_worker.generate_rollouts()
             policy.store_episode(episode)
-            for _ in range(n_batches):
+            policy.update_stats(episode)
+            for _ in range(num_batches):
                 policy.train()
             policy.update_target_net()
 

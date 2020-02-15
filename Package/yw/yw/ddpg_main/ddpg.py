@@ -18,11 +18,11 @@ class DDPG(object):
         batch_size,
         batch_size_demo,
         # configuration
-        input_dims,
+        dims,
         layer_sizes,
         use_td3,
         initializer_type,
-        Q_lr,
+        q_lr,
         pi_lr,
         max_u,
         polyak,
@@ -31,22 +31,16 @@ class DDPG(object):
         norm_eps,
         norm_clip,
         scope,
-        T,
+        eps_length,
         buffer_size,
         fix_T,
-        clip_obs,
-        clip_pos_returns,
-        clip_return,
         sample_demo_buffer,
         use_demo_reward,
         num_demo,
         demo_strategy,
         bc_params,
         shaping_params,
-        replay_strategy,
         info,
-        comm,
-        **kwargs
     ):
         """
         Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER). Added functionality
@@ -93,32 +87,28 @@ class DDPG(object):
         self.use_demo_reward = use_demo_reward
         self.sample_demo_buffer = sample_demo_buffer
         self.batch_size_demo = batch_size_demo
-        self.T = T
+        self.eps_length = eps_length
         self.fix_T = fix_T
 
         # Parameters
-        self.dims = input_dims
+        self.dims = dims
         self.layer_sizes = layer_sizes
         self.use_td3 = use_td3
         self.initializer_type = initializer_type
         self.polyak = polyak
-        self.Q_lr = Q_lr
+        self.q_lr = q_lr
         self.pi_lr = pi_lr
         self.max_u = max_u
         self.norm_eps = norm_eps
         self.norm_clip = norm_clip
         self.action_l2 = action_l2
-        self.clip_obs = clip_obs
-        self.clip_pos_returns = clip_pos_returns
-        self.clip_return = clip_return
         self.demo_strategy = demo_strategy
         assert self.demo_strategy in ["none", "bc", "gan", "nf"]
         self.bc_params = bc_params
         self.shaping_params = shaping_params
-        self.replay_strategy = replay_strategy
         self.gamma = gamma
         self.info = info
-        self.comm = comm
+        self.comm = None
 
         # Prepare parameters
         self.dimo = self.dims["o"]
@@ -136,7 +126,7 @@ class DDPG(object):
             tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name)
         )
 
-    def get_actions(self, o, g, compute_Q=False):
+    def get_actions(self, o, g, compute_q=False):
         # values to compute
         vals = [self.main_pi_tf, self.main_q_pi_tf]
         if self.demo_shaping != None:
@@ -154,26 +144,23 @@ class DDPG(object):
         else:
             ret.append(ret[1])
         # return u only if compute_q is set to false
-        if compute_Q:
+        if compute_q:
             return ret
         else:
             return ret[0]
 
-    def init_demo_buffer(self, demo_file, update_stats=True):
+    def init_demo_buffer(self, demo_file):
         """Initialize the demonstration buffer.
         """
         episode_batch = self.demo_buffer.load_from_file(data_file=demo_file, num_demo=self.num_demo)
         self.update_demo_stats(episode_batch)
-        if update_stats:
-            self.update_stats(episode_batch)
+        return episode_batch
 
-    def store_episode(self, episode_batch, update_stats=True):
+    def store_episode(self, episode_batch):
         """
         episode_batch: array of batch_size x (T or T+1) x dim_key ('o' and 'ag' is of size T+1, others are of size T)
         """
         self.replay_buffer.store_episode(episode_batch)
-        if update_stats:
-            self.update_stats(episode_batch)
 
     def sample_batch(self):
         # use demonstration buffer to sample as well if demo flag is set TRUE
@@ -274,24 +261,23 @@ class DDPG(object):
             self.demo_g_stats.update(transitions["g"])
 
     def _create_memory(self):
-
-        if self.replay_strategy is None:
-            pass
         # buffer shape
         buffer_shapes = {}
         if self.fix_T:
-            buffer_shapes["o"] = (self.T + 1, *self.dimo)
-            buffer_shapes["u"] = (self.T, *self.dimu)
-            buffer_shapes["r"] = (self.T, 1)
+            buffer_shapes["o"] = (self.eps_length + 1, *self.dimo)
+            buffer_shapes["u"] = (self.eps_length, *self.dimu)
+            buffer_shapes["r"] = (self.eps_length, 1)
             if self.dimg != (0,):
-                buffer_shapes["ag"] = (self.T + 1, *self.dimg)
-                buffer_shapes["g"] = (self.T, *self.dimg)
+                buffer_shapes["ag"] = (self.eps_length + 1, *self.dimg)
+                buffer_shapes["g"] = (self.eps_length, *self.dimg)
             for key, val in self.dims.items():
                 if key.startswith("info"):
-                    buffer_shapes[key] = (self.T, *val)
-            self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.T)
+                    buffer_shapes[key] = (self.eps_length, *val)
+
+            self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
             if self.demo_strategy != "none" or self.sample_demo_buffer:
-                self.demo_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.T)
+                self.demo_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
+
         else:
             buffer_shapes["o"] = self.dimo
             buffer_shapes["o_2"] = self.dimo
@@ -342,7 +328,7 @@ class DDPG(object):
         if self.dimg != (0,):
             demo_shapes["g"] = self.dimg
         demo_shapes["u"] = self.dimu
-        max_num_transitions = self.num_demo * self.T
+        max_num_transitions = self.num_demo * self.eps_length
 
         def generate_demo_data():
             demo_data = self.demo_buffer.sample_all()
@@ -467,8 +453,6 @@ class DDPG(object):
             target_tf += self.gamma * tf.minimum(self.target_q_pi_tf, self.target_q2_pi_tf)
         else:
             target_tf += self.gamma * self.target_q_pi_tf
-        clip_range = (-self.clip_return, 0.0 if self.clip_pos_returns else self.clip_return)
-        target_tf = tf.clip_by_value(target_tf, *clip_range)
         assert target_tf.shape[1] == 1
         # final ddpg or td3 loss
         if self.use_td3:
@@ -525,7 +509,7 @@ class DDPG(object):
             pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main_pi_tf / self.max_u))
         self.pi_loss_tf = pi_loss_tf
 
-        self.q_update_op = tf.compat.v1.train.AdamOptimizer(learning_rate=self.Q_lr).minimize(
+        self.q_update_op = tf.compat.v1.train.AdamOptimizer(learning_rate=self.q_lr).minimize(
             self.q_loss_tf, var_list=self.main.critic_vars
         )
         self.pi_update_op = tf.compat.v1.train.AdamOptimizer(learning_rate=self.pi_lr).minimize(
@@ -554,18 +538,16 @@ class DDPG(object):
         """
         Our policies can be loaded from pkl, but after unpickling you cannot continue training.
         """
-        state = {k: v for k, v in self.init_args.items() if not k in ["self", "comm", "replay_strategy"]}
-        state["tf"] = self.sess.run([x for x in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)])
+        state = {k: v for k, v in self.init_args.items() if not k == "self"}
+        state["tf"] = self.sess.run(
+            [x for x in tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name)]
+        )
         return state
 
     def __setstate__(self, state):
-        state["comm"] = None
-        state["replay_strategy"] = None
-        kwargs = state["kwargs"]
-        del state["kwargs"]
-
-        self.__init__(**state, **kwargs)
-        vars = [x for x in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)]
-        assert len(vars) == len(state["tf"])
-        node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
+        stored_vars = state.pop("tf")
+        self.__init__(**state)
+        vars = [x for x in tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope=self.scope.name)]
+        assert len(vars) == len(stored_vars)
+        node = [tf.compat.v1.assign(var, val) for var, val in zip(vars, stored_vars)]
         self.sess.run(node)

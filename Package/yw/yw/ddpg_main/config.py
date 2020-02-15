@@ -1,10 +1,9 @@
 import numpy as np
 import tensorflow as tf
 
-from yw.ddpg_main.ddpg import DDPG
+from td3fd.env_manager import EnvManager
 from yw.ddpg_main.rollout import RolloutWorker, SerialRolloutWorker
-from yw.env.env_manager import EnvManager
-from yw.tool import logger
+from yw.ddpg_main.ddpg import DDPG
 
 DEFAULT_PARAMS = {
     # config summary
@@ -14,19 +13,19 @@ DEFAULT_PARAMS = {
     "r_scale": 1.0,  # scale the reward of the environment down
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 0,  # overwrite the default length of the episode provided in _max_episode_steps
+    "gamma": None,  # the discount rate
     "env_args": {},  # extra arguments passed to the environment
     "fix_T": True,  # whether or not to fix episode length for all rollouts (if false, then use the ring buffer)
     # DDPG config
     "ddpg": {
         # replay buffer setup
         "buffer_size": int(1e6),
-        "replay_strategy": "none",  # choose between ["her", "none"] (her for hindsight exp replay)
         # actor critic networks
         "scope": "ddpg",
-        "use_td3": 1,  # whether or not to use td3
+        "use_td3": True,  # whether or not to use td3
         "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layer
         "initializer_type": "glorot",  # choose between ["zero", "glorot"]
-        "Q_lr": 0.001,  # critic learning rate
+        "q_lr": 0.001,  # critic learning rate
         "pi_lr": 0.001,  # actor learning rate
         "action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)
         "batch_size": 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
@@ -70,20 +69,14 @@ DEFAULT_PARAMS = {
         # normalize observation
         "norm_eps": 0.01,  # epsilon used for observation normalization
         "norm_clip": 5,  # normalized observations are cropped to this values
-        # i/o clippings
-        "clip_obs": 200.0,
-        "clip_pos_returns": False,  # whether or not this environment has positive return.
-        "clip_return": False,
     },
-    # HER config
-    "her": {"k": 4},  # number of additional goals used for replay
     # rollouts config
     "rollout": {
         "rollout_batch_size": 4,
         "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
         "polyak_noise": 0.0,  # use polyak_noise * last_noise + (1 - polyak_noise) * curr_noise
         "random_eps": 0.3,  # percentage of time a random action is taken
-        "compute_Q": False,
+        "compute_q": False,
         "history_len": 10,  # make sure that this is same as number of cycles
     },
     "evaluator": {
@@ -91,7 +84,7 @@ DEFAULT_PARAMS = {
         "noise_eps": 0.0,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
-        "compute_Q": True,
+        "compute_q": True,
         "history_len": 1,
     },
     # training config
@@ -101,7 +94,6 @@ DEFAULT_PARAMS = {
         "n_batches": 40,  # training batches per cycle
         "shaping_n_epochs": 100,
         "pure_bc_n_epochs": 100,
-        "save_interval": 2,
     },
     "seed": 0,
 }
@@ -133,8 +125,10 @@ def add_env_params(params):
     )
     params["make_env"] = env_manager.get_env
     tmp_env = params["make_env"]()
-    params["T"] = tmp_env._max_episode_steps
-    params["gamma"] = 1.0 - 1.0 / params["T"]
+    # maximum number of simulation steps per episode
+    params["eps_length"] = tmp_env.eps_length
+    # calculate discount factor gamma based on episode length
+    params["gamma"] = 1.0 - 1.0 / params["eps_length"] if params["gamma"] is None else params["gamma"]
     # limit on the magnitude of actions
     params["max_u"] = np.array(tmp_env.max_u) if isinstance(tmp_env.max_u, list) else tmp_env.max_u
     # get environment observation & action dimensions
@@ -159,16 +153,13 @@ def add_env_params(params):
 def configure_ddpg(params):
     # Extract relevant parameters.
     ddpg_params = params["ddpg"] # replay strategy has to be her
-    ddpg_params["replay_strategy"] = {"strategy": ddpg_params["replay_strategy"], "args": {}}
-
     # Update parameters
     ddpg_params.update(
         {
+            "dims": params["dims"].copy(),  # agent takes an input observations
             "max_u": params["max_u"],
-            "input_dims": params["dims"].copy(),  # agent takes an input observations
-            "T": params["T"],
+            "eps_length": params["eps_length"],
             "fix_T": params["fix_T"],
-            "clip_return": (1.0 / (1.0 - params["gamma"])) if params["ddpg"]["clip_return"] else np.inf,
             "gamma": params["gamma"],
             "info": {
                 "env_name": params["env_name"],
@@ -176,48 +167,39 @@ def configure_ddpg(params):
                 "r_shift": params["r_shift"],
                 "eps_length": params["eps_length"],
                 "env_args": params["env_args"],
+                "gamma": params["gamma"],
             },
         }
     )
 
-    policy = DDPG(**ddpg_params, comm=None)
+    policy = DDPG(**ddpg_params)
     return policy
 
 
 def config_rollout(params, policy):
     rollout_params = params["rollout"]
-    rollout_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
-
-    if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
-        rollout_worker = RolloutWorker(params["make_env"], policy, **rollout_params)
-    else:
-        rollout_worker = SerialRolloutWorker(params["make_env"], policy, **rollout_params)
-    rollout_worker.seed(params["seed"])
-
-    return rollout_worker
+    rollout_params.update({"dims": params["dims"], "T": params["eps_length"], "max_u": params["max_u"]})
+    return _config_rollout_worker(params["make_env"], params["fix_T"], params["seed"], policy, rollout_params)
 
 
 def config_evaluator(params, policy):
-    eval_params = params["evaluator"]
-    eval_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
-
-    if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
-        evaluator = RolloutWorker(params["make_env"], policy, **eval_params)
-    else:
-        evaluator = SerialRolloutWorker(params["make_env"], policy, **eval_params)
-    evaluator.seed(params["seed"])
-
-    return evaluator
+    rollout_params = params["evaluator"]
+    rollout_params.update({"dims": params["dims"], "T": params["eps_length"], "max_u": params["max_u"]})
+    return _config_rollout_worker(params["make_env"], params["fix_T"], params["seed"], policy, rollout_params)
 
 
 def config_demo(params, policy):
-    demo_params = params["demo"]
-    demo_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
+    rollout_params = params["demo"]
+    rollout_params.update({"dims": params["dims"], "T": params["eps_length"], "max_u": params["max_u"]})
+    return _config_rollout_worker(params["make_env"], params["fix_T"], params["seed"], policy, rollout_params)
 
-    if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
-        demo = RolloutWorker(params["make_env"], policy, **demo_params)
+
+def _config_rollout_worker(make_env, fix_T, seed, policy, rollout_params):
+
+    if fix_T:  # fix the time horizon, so use the parrallel virtual envs
+        rollout = RolloutWorker(make_env, policy, **rollout_params)
     else:
-        demo = SerialRolloutWorker(params["make_env"], policy, **demo_params)
-    demo.seed(params["seed"])
+        rollout = SerialRolloutWorker(make_env, policy, **rollout_params)
+    rollout.seed(seed)
 
-    return demo
+    return rollout
