@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
+from td3fd import logger
 from yw.ddpg_main.actor_critic import ActorCritic
 from yw.ddpg_main.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping
 from yw.ddpg_main.normalizer import Normalizer
@@ -16,7 +17,6 @@ class DDPG(object):
     def __init__(
         self,
         batch_size,
-        batch_size_demo,
         # configuration
         dims,
         layer_sizes,
@@ -34,6 +34,7 @@ class DDPG(object):
         eps_length,
         buffer_size,
         fix_T,
+        batch_size_demo,
         sample_demo_buffer,
         use_demo_reward,
         num_demo,
@@ -81,8 +82,10 @@ class DDPG(object):
         """
         # Store initial args passed into the function
         self.init_args = locals()
+
         self.buffer_size = buffer_size
         self.batch_size = batch_size
+
         self.num_demo = num_demo
         self.use_demo_reward = use_demo_reward
         self.sample_demo_buffer = sample_demo_buffer
@@ -156,24 +159,14 @@ class DDPG(object):
         self.update_demo_stats(episode_batch)
         return episode_batch
 
+    def add_to_demo_buffer(self, episode_batch):
+        self.demo_buffer.store_episode(episode_batch)
+
     def store_episode(self, episode_batch):
         """
         episode_batch: array of batch_size x (T or T+1) x dim_key ('o' and 'ag' is of size T+1, others are of size T)
         """
         self.replay_buffer.store_episode(episode_batch)
-
-    def sample_batch(self):
-        # use demonstration buffer to sample as well if demo flag is set TRUE
-        if self.sample_demo_buffer:
-            transitions = {}
-            transition_rollout = self.replay_buffer.sample(self.batch_size)
-            transition_demo = self.demo_buffer.sample(self.batch_size_demo)
-            assert transition_rollout.keys() == transition_demo.keys()
-            for k in transition_rollout.keys():
-                transitions[k] = np.concatenate((transition_rollout[k], transition_demo[k]))
-        else:
-            transitions = self.replay_buffer.sample(self.batch_size)  # otherwise only sample from primary buffer
-        return transitions
 
     def save(self, path):
         """Pickles the current policy for later inspection.
@@ -197,9 +190,16 @@ class DDPG(object):
         return loss
 
     def train(self):
-        batch = self.sample_batch()
+        batch = self.replay_buffer.sample(self.batch_size)
 
-        self.training_step = self.sess.run(self.update_training_step_op)
+        if self.sample_demo_buffer:
+            rollout_batch = batch
+            demo_batch = self.demo_buffer.sample(self.batch_size_demo)
+            assert rollout_batch.keys() == demo_batch.keys()
+            for k in rollout_batch.keys():
+                batch[k] = np.concatenate((rollout_batch[k], demo_batch[k]))
+
+        self.training_step += 1
 
         feed = {self.inputs_tf[k]: batch[k] for k in self.inputs_tf.keys()}
         if self.use_td3 and self.training_step % 2 == 1:
@@ -346,13 +346,6 @@ class DDPG(object):
             .repeat(1)
         )
 
-        bc_demo_dataset = demo_dataset.batch(self.batch_size_demo)
-        self.bc_demo_iter_tf = bc_demo_dataset.make_initializable_iterator()
-        self.bc_demo_inputs_tf = self.bc_demo_iter_tf.get_next()
-        bc_demo_input_o_tf = self.bc_demo_inputs_tf["o"]
-        bc_demo_input_g_tf = self.bc_demo_inputs_tf["g"] if self.dimg != (0,) else None
-        bc_demo_input_u_tf = self.bc_demo_inputs_tf["u"]
-
         # Models
         with tf.variable_scope("main"):
             self.main = ActorCritic(
@@ -367,16 +360,6 @@ class DDPG(object):
                 use_td3=self.use_td3,
                 add_pi_noise=0,
             )
-            # actor output
-            self.main_pi_tf = self.main.actor(o=input_o_tf, g=input_g_tf)
-            # critic output
-            self.main_q_tf = self.main.critic1(o=input_o_tf, g=input_g_tf, u=input_u_tf)
-            self.main_q_pi_tf = self.main.critic1(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
-            if self.use_td3:
-                self.main_q2_tf = self.main.critic2(o=input_o_tf, g=input_g_tf, u=input_u_tf)
-                self.main_q2_pi_tf = self.main.critic2(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
-            # bc actor output
-            self.main_bc_tf = self.main.actor(o=bc_demo_input_o_tf, g=bc_demo_input_g_tf)
         with tf.variable_scope("target"):
             self.target = ActorCritic(
                 dimo=self.dimo[0],
@@ -390,15 +373,20 @@ class DDPG(object):
                 use_td3=self.use_td3,
                 add_pi_noise=self.use_td3,
             )
-            # actor output
-            self.target_pi_tf = self.target.actor(o=input_o_2_tf, g=input_g_2_tf)
-            # critic output
-            self.target_q_tf = self.target.critic1(o=input_o_2_tf, g=input_g_2_tf, u=input_u_tf)
-            self.target_q_pi_tf = self.target.critic1(o=input_o_2_tf, g=input_g_2_tf, u=self.target_pi_tf)
-            if self.use_td3:
-                self.target_q2_tf = self.target.critic2(o=input_o_2_tf, g=input_g_2_tf, u=input_u_tf)
-                self.target_q2_pi_tf = self.target.critic2(o=input_o_2_tf, g=input_g_2_tf, u=self.target_pi_tf)
         assert len(self.main.vars) == len(self.target.vars)
+        # actor output
+        self.main_pi_tf = self.main.actor(o=input_o_tf, g=input_g_tf)
+        self.target_pi_tf = self.target.actor(o=input_o_2_tf, g=input_g_2_tf)
+        # critic output
+        self.main_q_tf = self.main.critic1(o=input_o_tf, g=input_g_tf, u=input_u_tf)
+        self.main_q_pi_tf = self.main.critic1(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
+        self.target_q_tf = self.target.critic1(o=input_o_2_tf, g=input_g_2_tf, u=input_u_tf)
+        self.target_q_pi_tf = self.target.critic1(o=input_o_2_tf, g=input_g_2_tf, u=self.target_pi_tf)
+        if self.use_td3:
+            self.main_q2_tf = self.main.critic2(o=input_o_tf, g=input_g_tf, u=input_u_tf)
+            self.main_q2_pi_tf = self.main.critic2(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
+            self.target_q2_tf = self.target.critic2(o=input_o_2_tf, g=input_g_2_tf, u=input_u_tf)
+            self.target_q2_pi_tf = self.target.critic2(o=input_o_2_tf, g=input_g_2_tf, u=self.target_pi_tf)
 
         # Add shaping reward
         with tf.variable_scope("shaping"):
@@ -440,7 +428,6 @@ class DDPG(object):
                     o=input_o_tf, g=input_g_tf, u=input_u_tf, o_2=input_o_2_tf, g_2=input_g_2_tf, u_2=self.target_pi_tf
                 )
                 self.demo_actor_shaping = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
-                self.demo_shaping_check = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=input_u_tf)
 
         # Critic loss
         # immediate reward
@@ -517,22 +504,15 @@ class DDPG(object):
         )
 
         # Polyak averaging
-        self.initialize_target_net_op = list(map(lambda v: v[0].assign(v[1]), zip(self.target.vars, self.main.vars)))
-        self.update_target_net_op = list(
-            map(
-                lambda v: v[0].assign(self.polyak * v[0] + (1.0 - self.polyak) * v[1]),
-                zip(self.target.vars, self.main.vars),
-            )
-        )
-
-        # extra variable for guarding the training
-        self.training_step_tf = tf.Variable(0, trainable=False, dtype=tf.int32)
-        self.update_training_step_op = self.training_step_tf.assign_add(1)
+        hard_copy_func = lambda v: v[0].assign(v[1])
+        soft_copy_func = lambda v: v[0].assign(self.polyak * v[0] + (1.0 - self.polyak) * v[1])
+        self.initialize_target_net_op = list(map(hard_copy_func, zip(self.target.vars, self.main.vars)))
+        self.update_target_net_op = list(map(soft_copy_func, zip(self.target.vars, self.main.vars)))
 
         # Initialize all variables
         self.sess.run(tf.compat.v1.global_variables_initializer())
         self.initialize_target_net()
-        self.training_step = self.sess.run(self.training_step_tf)
+        self.training_step = 0  # for td3 training
 
     def __getstate__(self):
         """

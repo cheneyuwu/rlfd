@@ -8,12 +8,12 @@ params_config = {
     "r_shift": 0.0,
     "eps_length": 40,
     "env_args": {},
-    "gamma": None,
+    "gamma": 0.99,
     "fix_T": True,
     # DDPG config
     "ddpg": {
         # replay buffer setup
-        "buffer_size": int(5e5),
+        "buffer_size": int(1e6),
         # actor critic networks
         "scope": "ddpg",
         "use_td3": True,
@@ -26,11 +26,11 @@ params_config = {
         # double q learning
         "polyak": 0.95,
         # use demonstrations
-        "sample_demo_buffer": 0,
+        "sample_demo_buffer": False,
         "batch_size_demo": 128,
-        "use_demo_reward": 0,
+        "use_demo_reward": False,
         "num_demo": 50,
-        "demo_strategy": "none",  # ["none", "pure_bc", "bc", "nf", "gan"]
+        "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         "bc_params": {"q_filter": True, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
         "shaping_params": {
             "batch_size": 128,
@@ -68,16 +68,16 @@ params_config = {
         "polyak_noise": 0.0,
         "random_eps": 0.2,
         "compute_q": False,
-        "history_len": 300,
+        "history_len": 10,
     },
     "evaluator": {
         "num_episodes": 10,
         "num_steps": None,
-        "noise_eps": 0.05,
+        "noise_eps": 0.1,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
         "compute_q": True,
-        "history_len": 300,
+        "history_len": 1,
     },
     # training config
     "train": {

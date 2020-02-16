@@ -5,7 +5,7 @@ from td3fd.env_manager import EnvManager
 from yw.ddpg_main.rollout import RolloutWorker, SerialRolloutWorker
 from yw.ddpg_main.ddpg import DDPG
 
-DEFAULT_PARAMS = {
+default_params = {
     # config summary
     "config": "default",
     # environment config
@@ -72,7 +72,8 @@ DEFAULT_PARAMS = {
     },
     # rollouts config
     "rollout": {
-        "rollout_batch_size": 4,
+        "num_episodes": 4,
+        "num_steps": None,
         "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
         "polyak_noise": 0.0,  # use polyak_noise * last_noise + (1 - polyak_noise) * curr_noise
         "random_eps": 0.3,  # percentage of time a random action is taken
@@ -80,7 +81,8 @@ DEFAULT_PARAMS = {
         "history_len": 10,  # make sure that this is same as number of cycles
     },
     "evaluator": {
-        "rollout_batch_size": 20,
+        "num_episodes": 10,
+        "num_steps": None,
         "noise_eps": 0.0,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
@@ -99,7 +101,7 @@ DEFAULT_PARAMS = {
 }
 
 
-def check_params(params, default_params=DEFAULT_PARAMS):
+def check_params(params, default_params=default_params):
     """make sure that the keys match"""
     assert type(params) == dict
     assert type(default_params) == dict

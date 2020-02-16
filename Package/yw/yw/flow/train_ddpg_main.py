@@ -6,7 +6,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from td3fd import logger
+from td3fd import config, logger
 from yw.ddpg_main import config as ddpg_config
 from td3fd.util.cmd_util import ArgParser
 from td3fd.util.util import set_global_seeds
@@ -20,9 +20,11 @@ except ImportError:
 def train(root_dir, params):
 
     # Check parameters
-    ddpg_config.check_params(params)
+    config.check_params(params, ddpg_config.default_params)
+
     # Construct...
     save_interval = 10
+    demo_strategy = params["ddpg"]["demo_strategy"]
     shaping_n_epochs = params["train"]["shaping_n_epochs"]
     num_epochs = params["train"]["n_epochs"]
     num_cycles = params["train"]["n_cycles"]
@@ -36,24 +38,25 @@ def train(root_dir, params):
     # Setup paths
     policy_save_path = os.path.join(root_dir, "policies")
     os.makedirs(policy_save_path, exist_ok=True)
+    initial_policy_path = os.path.join(policy_save_path, "policy_initial.pkl")
     latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
     periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")
 
     # Construct ...
-    ddpg_config.add_env_params(params=params)
+    config.add_env_params(params=params)
     policy = ddpg_config.configure_ddpg(params=params)
-    rollout_worker = ddpg_config.config_rollout(params=params, policy=policy)
-    evaluator = ddpg_config.config_evaluator(params=params, policy=policy)
+    rollout_worker = config.config_rollout(params=params, policy=policy)
+    evaluator = config.config_evaluator(params=params, policy=policy)
     # adding demonstration data to the demonstration buffer
-    if policy.demo_strategy != "none" or policy.sample_demo_buffer:
+    if demo_strategy != "none" or policy.sample_demo_buffer:
         demo_file = os.path.join(root_dir, "demo_data.npz")
         assert os.path.isfile(demo_file), "demonstration training set does not exist"
         episode_batch = policy.init_demo_buffer(demo_file)
         if policy.sample_demo_buffer:
             policy.update_stats(episode_batch)
 
-    # Train shaping potential (new)
-    if policy.demo_strategy in ["nf", "gan"]:
+    # Train shaping potential
+    if demo_strategy in ["nf", "gan"]:
         logger.info("Training the policy for reward shaping.")
         for epoch in range(shaping_n_epochs):
             loss = policy.train_shaping()
@@ -88,8 +91,6 @@ def train(root_dir, params):
         logger.dump_tabular()
 
         # save the policy
-        # success_rate = evaluator.current_success_rate()
-        # logger.info("Current success rate: {}".format(success_rate))
         save_msg = ""
         if save_interval > 0 and epoch % save_interval == (save_interval - 1):
             policy_path = periodic_policy_path.format(epoch)
