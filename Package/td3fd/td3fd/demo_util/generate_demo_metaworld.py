@@ -188,7 +188,7 @@ def demo_drawer_close(render=True):
     assert not done
     curr_pos = obs["observation"][:3]
     goal_pos = obs["observation"][6:9]
-    goal_pos[2] += 0.05
+    goal_pos[2] += 0.1
     obs, reward, done, info = demo_gen.move_to_goal(curr_pos, goal_pos, 1.0)
 
     # stay until episode ends and then return
