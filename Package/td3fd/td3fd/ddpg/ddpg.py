@@ -8,7 +8,7 @@ from td3fd import logger
 from td3fd.ddpg.actorcritic_network import Actor, Critic
 from td3fd.ddpg.shaping import EnsembleRewardShapingWrapper
 from td3fd.ddpg.normalizer import Normalizer
-from td3fd.memory import RingReplayBuffer, UniformReplayBuffer, iterbatches
+from td3fd.memory import RingReplayBuffer, UniformReplayBuffer, MultiStepReplayBuffer, iterbatches
 
 tfd = tfp.distributions
 
@@ -21,25 +21,31 @@ class DDPG(object):
         num_cycles,
         num_batches,
         batch_size,
-        # configuration
+        # environment configuration
         dims,
+        max_u,
+        gamma,
+        eps_length,
+        fix_T,
+        norm_eps,
+        norm_clip,
+        # networks
+        scope,
         layer_sizes,
+        q_lr,
+        pi_lr,
+        action_l2,
+        # td3
         twin_delayed,
         policy_freq,
         policy_noise,
         policy_noise_clip,
-        q_lr,
-        pi_lr,
-        max_u,
+        # double q
         polyak,
-        gamma,
-        action_l2,
-        norm_eps,
-        norm_clip,
-        scope,
-        eps_length,
+        # multistep return
+        use_n_step_return,
+        # play with demonstrations
         buffer_size,
-        fix_T,
         batch_size_demo,
         sample_demo_buffer,
         use_demo_reward,
@@ -109,21 +115,26 @@ class DDPG(object):
 
         # Parameters
         self.dims = dims
+        self.max_u = max_u
+        self.q_lr = q_lr
+        self.pi_lr = pi_lr
+        self.action_l2 = action_l2
+        self.polyak = polyak
+
+        self.norm_eps = norm_eps
+        self.norm_clip = norm_clip
+
         self.layer_sizes = layer_sizes
         self.twin_delayed = twin_delayed
         self.policy_freq = policy_freq
         self.policy_noise = policy_noise
         self.policy_noise_clip = policy_noise_clip
-        self.polyak = polyak
-        self.q_lr = q_lr
-        self.pi_lr = pi_lr
-        self.max_u = max_u
 
-        self.norm_eps = norm_eps
-        self.norm_clip = norm_clip
+        # multistep return
+        self.use_n_step_return = use_n_step_return
+        self.n_step_return_steps = eps_length // 5
 
-        self.action_l2 = action_l2
-
+        # play with demonstrations
         self.demo_strategy = demo_strategy
         assert self.demo_strategy in ["none", "bc", "gan", "nf"]
         self.bc_params = bc_params
@@ -184,6 +195,13 @@ class DDPG(object):
         episode_batch: array of batch_size x (T or T+1) x dim_key ('o' and 'ag' is of size T+1, others are of size T)
         """
         self.replay_buffer.store_episode(episode_batch)
+        if self.use_n_step_return:
+            self.n_step_replay_buffer.store_episode(episode_batch)
+
+    def clear_n_step_replay_buffer(self):
+        if not self.use_n_step_return:
+            return
+        self.n_step_replay_buffer.clear_buffer()
 
     def save(self, path):
         """Pickles the current policy for later inspection.
@@ -221,7 +239,15 @@ class DDPG(object):
         self.demo_shaping.evaluate()
 
     def train(self):
-        batch = self.replay_buffer.sample(self.batch_size)
+        if self.use_n_step_return:
+            one_step_batch = self.replay_buffer.sample(self.batch_size // 2)
+            n_step_batch = self.n_step_replay_buffer.sample(self.batch_size - self.batch_size // 2)
+            assert one_step_batch.keys() == n_step_batch.keys()
+            batch = dict()
+            for k in one_step_batch.keys():
+                batch[k] = np.concatenate((one_step_batch[k], n_step_batch[k]))
+        else:
+            batch = self.replay_buffer.sample(self.batch_size)
 
         if self.sample_demo_buffer:
             rollout_batch = batch
@@ -230,17 +256,12 @@ class DDPG(object):
             for k in rollout_batch.keys():
                 batch[k] = np.concatenate((rollout_batch[k], demo_batch[k]))
 
-        self.training_step += 1
-
         feed = {self.inputs_tf[k]: batch[k] for k in self.inputs_tf.keys()}
+        critic_loss, actor_loss, _ = self.sess.run([self.q_loss_tf, self.pi_loss_tf, self.q_update_op], feed_dict=feed)
         if self.training_step % self.policy_freq == 0:
-            critic_loss, actor_loss, _ = self.sess.run(
-                [self.q_loss_tf, self.pi_loss_tf, self.q_update_op], feed_dict=feed
-            )
-        else:
-            critic_loss, actor_loss, _, _ = self.sess.run(
-                [self.q_loss_tf, self.pi_loss_tf, self.q_update_op, self.pi_update_op], feed_dict=feed
-            )
+            actor_loss, _ = self.sess.run([self.pi_loss_tf, self.pi_update_op], feed_dict=feed)
+
+        self.training_step += 1
 
         return critic_loss, actor_loss
 
@@ -276,7 +297,6 @@ class DDPG(object):
             self.g_stats.update(transitions["g"])
 
     def _create_memory(self):
-        # buffer shape
         buffer_shapes = {}
         if self.fix_T:
             buffer_shapes["o"] = (self.eps_length + 1, *self.dimo)
@@ -284,11 +304,12 @@ class DDPG(object):
             buffer_shapes["r"] = (self.eps_length, 1)
             buffer_shapes["ag"] = (self.eps_length + 1, *self.dimg)
             buffer_shapes["g"] = (self.eps_length, *self.dimg)
-            for key, val in self.dims.items():
-                if key.startswith("info"):
-                    buffer_shapes[key] = (self.eps_length, *val)
 
             self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
+            if self.use_n_step_return:
+                self.n_step_replay_buffer = MultiStepReplayBuffer(
+                    buffer_shapes, self.buffer_size, self.eps_length, self.n_step_return_steps, self.gamma
+                )
             if self.demo_strategy != "none" or self.sample_demo_buffer:
                 self.demo_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
 
@@ -301,13 +322,10 @@ class DDPG(object):
             buffer_shapes["g"] = self.dimg
             buffer_shapes["ag_2"] = self.dimg
             buffer_shapes["g_2"] = self.dimg
-            for key, val in self.dims.items():
-                if key.startswith("info"):
-                    buffer_shapes[key] = val
-            # need the "done" signal for restarting from training
-            buffer_shapes["done"] = (1,)
+            buffer_shapes["done"] = (1,)  # need the "done" signal for restarting from training
 
             self.replay_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
+            assert not self.use_n_step_return, "not implemented yet"
             if self.demo_strategy != "none" or self.sample_demo_buffer:
                 self.demo_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
 
@@ -318,6 +336,7 @@ class DDPG(object):
         self.inputs_tf["o_2"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimo))
         self.inputs_tf["u"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimu))
         self.inputs_tf["r"] = tf.compat.v1.placeholder(tf.float32, shape=(None, 1))
+        self.inputs_tf["n"] = tf.compat.v1.placeholder(tf.float32, shape=(None, 1))  # for multiple step returns
         if self.dimg != (0,):
             self.inputs_tf["g"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimg))
             self.inputs_tf["g_2"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimg))
@@ -398,9 +417,11 @@ class DDPG(object):
             self.demo_shaping = None
 
         if self.demo_shaping != None:
-            self.demo_critic_shaping = self.demo_shaping.reward(
-                o=input_o_tf, g=input_g_tf, u=input_u_tf, o_2=input_o_2_tf, g_2=input_g_2_tf, u_2=self.target_pi_tf
-            )
+            # demo critic shaping
+            potential_curr = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=input_u_tf)
+            potential_next = self.demo_shaping.potential(o=input_o_2_tf, g=input_g_2_tf, u=self.target_pi_tf)
+            self.demo_critic_shaping = tf.pow(self.gamma, self.inputs_tf["n"]) * potential_next - potential_curr
+            # demo actor shaping
             self.demo_actor_shaping = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
 
         # Critic loss
@@ -411,9 +432,11 @@ class DDPG(object):
             target_tf += self.demo_critic_shaping
         # ddpg or td3 target with or without clipping
         if self.twin_delayed:
-            target_tf += self.gamma * tf.minimum(self.target_q_pi_tf, self.target_q2_pi_tf)
+            target_tf += tf.pow(self.gamma, self.inputs_tf["n"]) * tf.minimum(
+                self.target_q_pi_tf, self.target_q2_pi_tf
+            )
         else:
-            target_tf += self.gamma * self.target_q_pi_tf
+            target_tf += tf.pow(self.gamma, self.inputs_tf["n"]) * self.target_q_pi_tf
         assert target_tf.shape[1] == 1
         # final ddpg or td3 loss
         if self.twin_delayed:

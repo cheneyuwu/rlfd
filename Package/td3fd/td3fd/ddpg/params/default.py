@@ -39,6 +39,8 @@ params_config = {
         "action_l2": 0.0,
         # double q learning
         "polyak": 0.995,
+        # multi step return
+        "use_n_step_return": False,
         "bc_params": {"q_filter": 1, "prm_loss_weight": 0.1, "aux_loss_weight": 1.0},
         "shaping_params": {
             "num_epochs": int(4e3),

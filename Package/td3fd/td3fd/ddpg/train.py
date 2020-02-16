@@ -93,6 +93,7 @@ def train(root_dir, params):
             for _ in range(num_batches):
                 policy.train()
             policy.update_target_net()
+            policy.clear_n_step_replay_buffer()
 
         # test
         evaluator.clear_history()

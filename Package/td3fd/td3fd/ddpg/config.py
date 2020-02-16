@@ -44,6 +44,8 @@ default_params = {
         "action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
+        # multi step return
+        "use_n_step_return": False,
         "bc_params": {
             "q_filter": True,  # whether or not a Q value filter should be used on the actor outputs
             "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
