@@ -215,6 +215,7 @@ class EnvManager:
                 kwargs = mtw_args[env_name]["kwargs"]
                 kwargs["random_init"] = False  # disable random goal locations
                 kwargs["obs_type"] = "with_goal"  # disable random goal locations
+                kwargs["rewMode"] = "sparse"  # use sparse reward mode by default
                 env = mtw_envs[env_name](*args, **kwargs)
                 return env
 
