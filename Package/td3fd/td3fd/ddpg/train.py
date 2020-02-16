@@ -27,17 +27,18 @@ def train(root_dir, params):
     demo_strategy = params["ddpg"]["demo_strategy"]
     shaping_num_epochs = params["ddpg"]["num_epochs"]
     num_epochs = params["ddpg"]["num_epochs"]
-    num_batches = params["ddpg"]["num_batches"]
     num_cycles = params["ddpg"]["num_cycles"]
+    num_batches = params["ddpg"]["num_batches"]
 
     # Seed everything.
     set_global_seeds(params["seed"])
     # get a new default session for the current default graph
-    tf.InteractiveSession()
+    tf.compat.v1.InteractiveSession()
 
     # Setup paths
     policy_save_path = os.path.join(root_dir, "policies")
     os.makedirs(policy_save_path, exist_ok=True)
+    initial_policy_path = os.path.join(policy_save_path, "policy_initial.pkl")
     latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
     periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")
 
@@ -54,12 +55,27 @@ def train(root_dir, params):
         if policy.sample_demo_buffer:
             policy.update_stats(episode_batch)
 
-    # Train shaping potential (new)
+    # Train shaping potential
     if demo_strategy in ["nf", "gan"]:
         policy.train_shaping()
 
+    if policy.initialize_with_bc:
+        policy.train_bc()
+
+        # test
+        evaluator.clear_history()
+        episode = evaluator.generate_rollouts()
+
+        # log
+        for key, val in evaluator.logs("test"):
+            logger.record_tabular(key, val)
+        logger.dump_tabular()
+
+        # save the policy
+        policy.save(initial_policy_path)
+        logger.info("Saving initial policy.")
+
     # Generate some random experiences before training (used by td3 for gym mujoco envs)
-    # Comment this if running with Fetch Environments
     # for _ in range(10000):
     #     episode = rollout_worker.generate_rollouts(random=True)
     #     policy.store_episode(episode)
@@ -93,8 +109,6 @@ def train(root_dir, params):
         logger.dump_tabular()
 
         # save the policy
-        # success_rate = evaluator.current_success_rate()
-        # logger.info("Current success rate: {}".format(success_rate))
         save_msg = ""
         if save_interval > 0 and epoch % save_interval == (save_interval - 1):
             policy_path = periodic_policy_path.format(epoch)

@@ -3,16 +3,16 @@ params_config = {
     "alg": "ddpg-tf",
     "config": "default",
     # environment config
-    "env_name": "YWFetchPegInHole2D-v0",
+    "env_name": "reach-v1",
     "r_scale": 1.0,
     "r_shift": 0.0,
     "eps_length": 0,
     "env_args": {},
-    "gamma": 0.95,
+    "gamma": 0.99,
     "fix_T": True,
     # DDPG config
     "ddpg": {
-        "num_epochs": int(4e2),
+        "num_epochs": int(4e3),
         "num_cycles": 10,
         "num_batches": 40,
         "batch_size": 256,
@@ -22,20 +22,20 @@ params_config = {
         "initialize_with_bc": False,
         "initialize_num_epochs": 0,
         "use_demo_reward": False,
-        "num_demo": 40,
+        "num_demo": 10,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         # normalize observation
         "norm_eps": 0.01,
         "norm_clip": 5,
         # actor critic networks
         "scope": "ddpg",
-        "layer_sizes": [256, 256],
+        "layer_sizes": [256, 256, 256],
         "twin_delayed": True,
         "policy_freq": 2,
         "policy_noise": 0.2,
         "policy_noise_clip": 0.5,
-        "q_lr": 1e-3,
-        "pi_lr": 1e-3,
+        "q_lr": 0.001,
+        "pi_lr": 0.001,
         "action_l2": 0.0,
         # double q learning
         "polyak": 0.95,
@@ -47,27 +47,27 @@ params_config = {
             "nf": {
                 "num_masked": 4,
                 "num_bijectors": 4,
-                "layer_sizes": [128, 128],
+                "layer_sizes": [256, 256],
                 "prm_loss_weight": 1.0,
-                "reg_loss_weight": 500.0,
-                "potential_weight": 3.0,
+                "reg_loss_weight": 400.0,
+                "potential_weight": 10.0,
             },
             "gan": {
                 "layer_sizes": [256, 256, 256],
-                "latent_dim": 6,
+                "latent_dim": 16,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
-                "potential_weight": 3.0,
+                "potential_weight": 1.0,
             },
         },
         # replay buffer setup
-        "buffer_size": int(1e5),
+        "buffer_size": int(1e6),
     },
     # rollouts config
     "rollout": {
         "num_episodes": 4,
         "num_steps": None,
-        "noise_eps": 0.1,
+        "noise_eps": 0.2,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
         "compute_q": False,
@@ -82,5 +82,5 @@ params_config = {
         "compute_q": True,
         "history_len": 300,
     },
-    "seed": 0,
+    "seed": tuple(range(2)),
 }

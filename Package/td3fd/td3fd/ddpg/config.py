@@ -24,6 +24,8 @@ default_params = {
         # use demonstrations
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread
         "sample_demo_buffer": False,  # whether or not to sample from demonstration buffer
+        "initialize_with_bc": False,  # whether or not to initialize policy using bc
+        "initialize_num_epochs": 0,  # number of epochs initilize with bc
         "use_demo_reward": False,  # whether or not to assume that demonstrations have rewards, and train it on the critic
         "num_demo": 0,  # number of expert demo episodes
         "demo_strategy": "none",  # choose between ["none", "bc", "nf", "gan"]

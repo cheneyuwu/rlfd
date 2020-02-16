@@ -19,6 +19,8 @@ params_config = {
         # use demonstrations
         "batch_size_demo": 128,
         "sample_demo_buffer": False,
+        "initialize_with_bc": False,
+        "initialize_num_epochs": 0,
         "use_demo_reward": False,
         "num_demo": 40,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]

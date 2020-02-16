@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
+from td3fd import logger
 from td3fd.ddpg.actorcritic_network import Actor, Critic
 from td3fd.ddpg.shaping import EnsembleRewardShapingWrapper
 from td3fd.ddpg.normalizer import Normalizer
@@ -20,7 +21,6 @@ class DDPG(object):
         num_cycles,
         num_batches,
         batch_size,
-        batch_size_demo,
         # configuration
         dims,
         layer_sizes,
@@ -40,8 +40,11 @@ class DDPG(object):
         eps_length,
         buffer_size,
         fix_T,
+        batch_size_demo,
         sample_demo_buffer,
         use_demo_reward,
+        initialize_with_bc,
+        initialize_num_epochs,
         num_demo,
         demo_strategy,
         bc_params,
@@ -93,10 +96,14 @@ class DDPG(object):
         self.num_batches = num_batches
         self.buffer_size = buffer_size
         self.batch_size = batch_size
+
         self.num_demo = num_demo
         self.use_demo_reward = use_demo_reward
         self.sample_demo_buffer = sample_demo_buffer
         self.batch_size_demo = batch_size_demo
+        self.initialize_with_bc = initialize_with_bc
+        self.initialize_num_epochs = initialize_num_epochs
+
         self.eps_length = eps_length
         self.fix_T = fix_T
 
@@ -178,24 +185,33 @@ class DDPG(object):
         """
         self.replay_buffer.store_episode(episode_batch)
 
-    def sample_batch(self):
-        # use demonstration buffer to sample as well if demo flag is set TRUE
-        if self.sample_demo_buffer:
-            transitions = {}
-            transition_rollout = self.replay_buffer.sample(self.batch_size)
-            transition_demo = self.demo_buffer.sample(self.batch_size_demo)
-            assert transition_rollout.keys() == transition_demo.keys()
-            for k in transition_rollout.keys():
-                transitions[k] = np.concatenate((transition_rollout[k], transition_demo[k]))
-        else:
-            transitions = self.replay_buffer.sample(self.batch_size)  # otherwise only sample from primary buffer
-        return transitions
-
     def save(self, path):
         """Pickles the current policy for later inspection.
         """
         with open(path, "wb") as f:
             pickle.dump(self, f)
+
+    def train_bc(self):
+
+        if not self.initialize_with_bc:
+            return
+
+        demo_data = self.demo_buffer.sample()
+
+        for epoch in range(self.initialize_num_epochs):
+            for (o, g, u) in iterbatches(
+                (demo_data["o"], demo_data["g"], demo_data["u"]), batch_size=self.batch_size_demo
+            ):
+                batch = {"o": o, "g": g, "u": u}
+                feed = {}
+                feed[self.inputs_tf["o"]] = o
+                feed[self.inputs_tf["u"]] = u
+                if self.dimg != (0,):
+                    feed[self.inputs_tf["g"]] = g
+
+                bc_loss, _ = self.sess.run([self.bc_loss_tf, self.bc_update_op], feed_dict=feed)
+            if epoch % (self.initialize_num_epochs / 100) == (self.initialize_num_epochs / 100 - 1):
+                logger.info("epoch: {} policy initialization loss: {}".format(epoch, bc_loss))
 
     def train_shaping(self):
         assert self.demo_strategy in ["nf", "gan"]
@@ -205,9 +221,16 @@ class DDPG(object):
         self.demo_shaping.evaluate()
 
     def train(self):
-        batch = self.sample_batch()
+        batch = self.replay_buffer.sample(self.batch_size)
 
-        self.training_step = self.sess.run(self.update_training_step_op)
+        if self.sample_demo_buffer:
+            rollout_batch = batch
+            demo_batch = self.demo_buffer.sample(self.batch_size_demo)
+            assert rollout_batch.keys() == demo_batch.keys()
+            for k in rollout_batch.keys():
+                batch[k] = np.concatenate((rollout_batch[k], demo_batch[k]))
+
+        self.training_step += 1
 
         feed = {self.inputs_tf[k]: batch[k] for k in self.inputs_tf.keys()}
         if self.training_step % self.policy_freq == 0:
@@ -251,7 +274,6 @@ class DDPG(object):
         self.o_stats.update(transitions["o"])
         if self.dimg != (0,):
             self.g_stats.update(transitions["g"])
-
 
     def _create_memory(self):
         # buffer shape
@@ -359,19 +381,6 @@ class DDPG(object):
                 o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=self.target_pi_tf
             )
 
-        # Demonstration Inputs
-        self.demo_inputs_tf = {}
-        self.demo_inputs_tf["o"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimo))
-        self.demo_inputs_tf["u"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimu))
-        if self.dimg != (0,):
-            self.demo_inputs_tf["g"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimg))
-        # Policy Inputs
-        self.policy_inputs_tf = {}
-        self.policy_inputs_tf["o"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimo))
-        self.policy_inputs_tf["u"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimu))
-        if self.dimg != (0,):
-            self.policy_inputs_tf["g"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimg))
-
         # Add shapin reward (new)
         if self.demo_strategy in ["nf", "gan"]:
             self.demo_shaping = EnsembleRewardShapingWrapper(
@@ -393,7 +402,6 @@ class DDPG(object):
                 o=input_o_tf, g=input_g_tf, u=input_u_tf, o_2=input_o_2_tf, g_2=input_g_2_tf, u_2=self.target_pi_tf
             )
             self.demo_actor_shaping = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
-            self.demo_shaping_check = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=input_u_tf)
 
         # Critic loss
         # immediate reward
@@ -469,6 +477,14 @@ class DDPG(object):
             self.pi_loss_tf, var_list=self.main_actor.trainable_variables
         )
 
+        # Behavioral cloning loss (for initializing the policy or pure behavior cloning)
+        if self.initialize_with_bc:
+            assert self.sample_demo_buffer, "must sample from the demonstration buffer to use behavior cloning"
+            self.bc_loss_tf = tf.reduce_mean(tf.square(self.main_pi_tf - input_u_tf))
+            self.bc_update_op = tf.compat.v1.train.AdamOptimizer(learning_rate=self.pi_lr).minimize(
+                self.bc_loss_tf, var_list=self.main_actor.trainable_variables
+            )
+
         # Polyak averaging
         hard_copy_func = lambda v: v[0].assign(v[1])
         soft_copy_func = lambda v: v[0].assign(self.polyak * v[0] + (1.0 - self.polyak) * v[1])
@@ -491,14 +507,10 @@ class DDPG(object):
             )
         )
 
-        # extra variable for guarding the training
-        self.training_step_tf = tf.Variable(0, trainable=False, dtype=tf.int32)
-        self.update_training_step_op = self.training_step_tf.assign_add(1)
-
         # Initialize all variables
         self.sess.run(tf.compat.v1.global_variables_initializer())
         self.initialize_target_net()
-        self.training_step = self.sess.run(self.training_step_tf)
+        self.training_step = 0  # for td3 training
 
     def __getstate__(self):
         """
