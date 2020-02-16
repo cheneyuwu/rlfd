@@ -45,11 +45,6 @@ def main(root_dir, **kwargs):
     with open(param_file, "r") as f:
         params = json.load(f)
 
-    # seed everything.
-    set_global_seeds(params["seed"])
-    # get a new default session for the current default graph
-    tf.compat.v1.InteractiveSession()
-
     # Launch the training script
     if params["alg"] == "ddpg-torch":
         ddpg_torch_train(root_dir=root_dir, params=params)
@@ -65,8 +60,6 @@ def main(root_dir, **kwargs):
     #     gail_train(root_dir=root_dir, params=params)
     else:
         assert False
-
-    tf.compat.v1.get_default_session().close()
 
 
 if __name__ == "__main__":
