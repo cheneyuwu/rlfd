@@ -4,6 +4,7 @@ from td3fd.ddpg.params.metaworld import params_config as base_params
 params_config = deepcopy(base_params)
 
 params_config["config"] = ("TD3_BC_1e-2",)
+
 params_config["env_name"] = ("button-press_topdown-v1",)
 
 params_config["ddpg"]["demo_strategy"] = "bc"

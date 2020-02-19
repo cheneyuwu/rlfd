@@ -14,4 +14,4 @@ params_config["ddpg"]["use_n_step_return"] = True
 params_config["ddpg"]["shaping_params"]["nf"]["reg_loss_weight"] = (400.0,)
 params_config["ddpg"]["shaping_params"]["nf"]["potential_weight"] = (10.0,)
 params_config["train"]["shaping_n_epochs"] = (int(1e4),)
-params_config["seed"] = tuple(range(5))
+params_config["seed"] = tuple(range(1))

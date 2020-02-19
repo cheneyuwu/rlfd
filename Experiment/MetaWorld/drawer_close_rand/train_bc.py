@@ -10,7 +10,7 @@ params_config["env_args"] = {"random_init": True}
 
 params_config["ddpg"]["demo_strategy"] = "bc"
 params_config["ddpg"]["sample_demo_buffer"] = True
-params_config["ddpg"]["num_demo"] = 50
+params_config["ddpg"]["num_demo"] = 30
 
 params_config["ddpg"]["use_n_step_return"] = True
 
