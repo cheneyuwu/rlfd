@@ -25,10 +25,10 @@ def train(root_dir, params):
     # Construct...
     save_interval = 10
     demo_strategy = params["ddpg"]["demo_strategy"]
-    shaping_n_epochs = params["train"]["shaping_n_epochs"]
-    num_epochs = params["train"]["n_epochs"]
-    num_cycles = params["train"]["n_cycles"]
-    num_batches = params["train"]["n_batches"]
+    shaping_num_epochs = params["ddpg"]["shaping_params"]["num_epochs"]
+    num_epochs = params["ddpg"]["num_epochs"]
+    num_cycles = params["ddpg"]["num_cycles"]
+    num_batches = params["ddpg"]["num_batches"]
 
     # Seed everything.
     set_global_seeds(params["seed"])
@@ -58,9 +58,9 @@ def train(root_dir, params):
     # Train shaping potential
     if demo_strategy in ["nf", "gan"]:
         logger.info("Training the policy for reward shaping.")
-        for epoch in range(shaping_n_epochs):
+        for epoch in range(shaping_num_epochs):
             loss = policy.train_shaping()
-            if epoch % (shaping_n_epochs / 100) == (shaping_n_epochs / 100 - 1):
+            if epoch % (shaping_num_epochs / 100) == (shaping_num_epochs / 100 - 1):
                 logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
 
     # Train rl policy

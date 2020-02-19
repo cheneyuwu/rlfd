@@ -16,6 +16,10 @@ tfd = tfp.distributions
 class DDPG(object):
     def __init__(
         self,
+        # for learning
+        num_epochs,
+        num_cycles,
+        num_batches,
         batch_size,
         # environment configuration
         dims,
@@ -28,12 +32,15 @@ class DDPG(object):
         # networks
         scope,
         layer_sizes,
-        initializer_type,
         q_lr,
         pi_lr,
         action_l2,
         # td3
-        use_td3,
+        twin_delayed,
+        policy_freq,
+        policy_noise,
+        policy_noise_clip,
+        # double q
         polyak,
         # play with demonstrations
         buffer_size,
@@ -86,6 +93,9 @@ class DDPG(object):
         # Store initial args passed into the function
         self.init_args = locals()
 
+        self.num_epochs = num_epochs
+        self.num_cycles = num_cycles
+        self.num_batches = num_batches
         self.buffer_size = buffer_size
         self.batch_size = batch_size
 
@@ -108,10 +118,10 @@ class DDPG(object):
         self.norm_clip = norm_clip
 
         self.layer_sizes = layer_sizes
-        self.twin_delayed = True
-        self.policy_freq = 2
-        self.policy_noise = 0.1
-        self.policy_noise_clip = 0.5
+        self.twin_delayed = twin_delayed
+        self.policy_freq = policy_freq
+        self.policy_noise = policy_noise
+        self.policy_noise_clip = policy_noise_clip
 
         # play with demonstrations
         self.demo_strategy = demo_strategy
@@ -166,6 +176,22 @@ class DDPG(object):
         episode_batch = self.demo_buffer.load_from_file(data_file=demo_file)
         self.update_demo_stats(episode_batch)
         return episode_batch
+
+    def update_demo_stats(self, episode_batch):
+        # add transitions to normalizer
+        if self.fix_T:
+            episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
+            if self.dimg != (0,):
+                episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
+                episode_batch["g_2"] = episode_batch["g"][:, :, :]
+            num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
+            transitions = self.demo_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
+        else:
+            transitions = episode_batch.copy()
+
+        self.demo_o_stats.update(transitions["o"])
+        if self.dimg != (0,):
+            self.demo_g_stats.update(transitions["g"])
 
     def add_to_demo_buffer(self, episode_batch):
         self.demo_buffer.store_episode(episode_batch)
@@ -246,22 +272,6 @@ class DDPG(object):
         self.o_stats.update(transitions["o"])
         if self.dimg != (0,):
             self.g_stats.update(transitions["g"])
-
-    def update_demo_stats(self, episode_batch):
-        # add transitions to normalizer
-        if self.fix_T:
-            episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
-            if self.dimg != (0,):
-                episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
-                episode_batch["g_2"] = episode_batch["g"][:, :, :]
-            num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
-            transitions = self.demo_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
-        else:
-            transitions = episode_batch.copy()
-
-        self.demo_o_stats.update(transitions["o"])
-        if self.dimg != (0,):
-            self.demo_g_stats.update(transitions["g"])
 
     def _create_memory(self):
         buffer_shapes = {}
@@ -414,9 +424,11 @@ class DDPG(object):
                 self.demo_shaping = None
 
             if self.demo_shaping != None:
+                # demo critic shaping
                 self.demo_critic_shaping = self.demo_shaping.reward(
                     o=input_o_tf, g=input_g_tf, u=input_u_tf, o_2=input_o_2_tf, g_2=input_g_2_tf, u_2=self.target_pi_tf
                 )
+                # demo actor shaping
                 self.demo_actor_shaping = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
 
         # Critic loss
