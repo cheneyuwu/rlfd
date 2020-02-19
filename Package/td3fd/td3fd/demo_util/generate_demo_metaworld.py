@@ -150,7 +150,7 @@ def demo_pick_place(render=True, random_init=False):
     # control
     curr_pos = obs["observation"][:3]
     goal_pos = obs["observation"][3:6]
-    goal_pos[2] += 0.025
+    goal_pos[2] += 0.02
     obs, reward, done, info = demo_gen.move_to_goal(curr_pos, goal_pos, -1.0)
     assert not done
     obs, reward, done, info = demo_gen.stay(1.0, 10)
@@ -158,11 +158,11 @@ def demo_pick_place(render=True, random_init=False):
     curr_pos = obs["observation"][:3]
     goal_pos = obs["observation"][6:9]
     goal_pos[2] += 0.05
-    obs, reward, done, info = demo_gen.move_to_goal(curr_pos, goal_pos, 1.0)
+    obs, reward, done, info = demo_gen.move_to_goal(curr_pos, goal_pos, 0.5)
 
     # stay until episode ends and then return
     if not done:
-        obs, reward, done, info = demo_gen.stay(1.0)
+        obs, reward, done, info = demo_gen.stay(0.5)
     assert info["success"] == 1.0
     if render:
         close(env.env)
@@ -201,11 +201,38 @@ def demo_drawer_close(render=True, random_init=False):
     return demo_gen.dump_eps()
 
 
+def demo_button_press_top_down(render=True, random_init=False):
+    env = EnvManager(env_name="button-press_topdown-v1", env_args={"random_init": random_init}).get_env()
+    demo_gen = DemoGenerator(env, render)
+
+    obs = demo_gen.reset()
+
+    # control
+    curr_pos = obs["observation"][:3]
+    goal_pos = obs["observation"][3:6]
+    goal_pos[2] += 0.1
+    obs, reward, done, info = demo_gen.move_to_goal(curr_pos, goal_pos, 0.8)
+    assert not done
+    curr_pos = obs["observation"][:3]
+    goal_pos = obs["observation"][6:9]
+    goal_pos[2] += 0.05
+    obs, reward, done, info = demo_gen.move_to_goal(curr_pos, goal_pos, 0.8)
+    # stay until episode ends and then return
+    # if not done:
+    obs, reward, done, info = demo_gen.stay(0.8)
+    assert info["success"] == 1.0
+    if render:
+        close(env.env)
+
+    return demo_gen.dump_eps()
+
+
 demos = {
     "hammer-v1": demo_hammer,
     "reach-v1": demo_reach,
     "pick-place-v1": demo_pick_place,
     "drawer-close-v1": demo_drawer_close,
+    "button-press_topdown-v1": demo_button_press_top_down,
 }
 
 
