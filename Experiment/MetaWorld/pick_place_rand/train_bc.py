@@ -4,10 +4,13 @@ from td3fd.ddpg.params.metaworld import params_config as base_params
 params_config = deepcopy(base_params)
 
 params_config["config"] = ("TD3_BC_1e-2",)
-params_config["env_name"] = ("drawer-close-v1",)
+
+params_config["env_name"] = ("pick-place-v1",)
+params_config["env_args"] = {"random_init": True}
 
 params_config["ddpg"]["demo_strategy"] = "bc"
 params_config["ddpg"]["sample_demo_buffer"] = True
+params_config["ddpg"]["num_demo"] = 50
 
 params_config["ddpg"]["use_n_step_return"] = True
 
