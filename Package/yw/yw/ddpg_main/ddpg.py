@@ -5,7 +5,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from td3fd import logger
-from yw.ddpg_main.actor_critic import ActorCritic
+from td3fd.ddpg.actorcritic_network import Actor, Critic
 from yw.ddpg_main.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping
 from td3fd.ddpg.normalizer import Normalizer
 from td3fd.memory import RingReplayBuffer, UniformReplayBuffer, MultiStepReplayBuffer, iterbatches
@@ -108,8 +108,12 @@ class DDPG(object):
         self.norm_clip = norm_clip
 
         self.layer_sizes = layer_sizes
-        self.use_td3 = use_td3
-        self.initializer_type = initializer_type
+        self.twin_delayed = True
+        self.policy_freq = 2
+        self.policy_noise = 0.1
+        self.policy_noise_clip = 0.5
+
+        # play with demonstrations
         self.demo_strategy = demo_strategy
         assert self.demo_strategy in ["none", "bc", "gan", "nf"]
         self.bc_params = bc_params
@@ -205,7 +209,7 @@ class DDPG(object):
 
         feed = {self.inputs_tf[k]: batch[k] for k in self.inputs_tf.keys()}
         critic_loss, actor_loss, _ = self.sess.run([self.q_loss_tf, self.pi_loss_tf, self.q_update_op], feed_dict=feed)
-        if self.use_td3 and self.training_step % 2 == 0:
+        if self.training_step % self.policy_freq == 0:
             actor_loss, _ = self.sess.run([self.pi_loss_tf, self.pi_update_op], feed_dict=feed)
 
         self.training_step += 1
@@ -308,7 +312,54 @@ class DDPG(object):
         # Normalizer for goal and observation.
         self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
         self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
+        # normalized o g
+        norm_input_o_tf = self.o_stats.normalize(input_o_tf)
+        norm_input_o_2_tf = self.o_stats.normalize(input_o_2_tf)
+        norm_input_g_tf = self.g_stats.normalize(input_g_tf) if self.dimg != (0,) else None
+        norm_input_g_2_tf = self.g_stats.normalize(input_g_2_tf) if self.dimg != (0,) else None
 
+        # Actor Critic Models
+        # main networks
+        self.main_actor = Actor(
+            dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
+        )
+        self.main_critic = Critic(
+            dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
+        )
+        if self.twin_delayed:
+            self.main_critic_twin = Critic(
+                dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
+            )
+        # target networks
+        self.target_actor = Actor(
+            dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes,
+        )
+        self.target_critic = Critic(
+            dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
+        )
+        if self.twin_delayed:
+            self.target_critic_twin = Critic(
+                dimo=self.dimo, dimg=self.dimg, dimu=self.dimu, max_u=self.max_u, layer_sizes=self.layer_sizes
+            )
+        # actor output
+        self.main_pi_tf = self.main_actor(o=norm_input_o_tf, g=norm_input_g_tf)
+        self.target_pi_tf = self.target_actor(o=norm_input_o_2_tf, g=norm_input_g_2_tf)
+        # add noise to target policy output
+        noise = tfd.Normal(loc=0.0, scale=self.policy_noise).sample(tf.shape(self.target_pi_tf))
+        noise = tf.clip_by_value(noise, -self.policy_noise_clip, self.policy_noise_clip) * self.max_u
+        self.target_pi_tf = tf.clip_by_value(self.target_pi_tf + noise, -self.max_u, self.max_u)
+        # critic output
+        self.main_q_tf = self.main_critic(o=norm_input_o_tf, g=norm_input_g_tf, u=input_u_tf)
+        self.main_q_pi_tf = self.main_critic(o=norm_input_o_tf, g=norm_input_g_tf, u=self.main_pi_tf)
+        self.target_q_tf = self.target_critic(o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=input_u_tf)
+        self.target_q_pi_tf = self.target_critic(o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=self.target_pi_tf)
+        if self.twin_delayed:
+            self.main_q2_tf = self.main_critic_twin(o=norm_input_o_tf, g=norm_input_g_tf, u=input_u_tf)
+            self.main_q2_pi_tf = self.main_critic_twin(o=norm_input_o_tf, g=norm_input_g_tf, u=self.main_pi_tf)
+            self.target_q2_tf = self.target_critic_twin(o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=input_u_tf)
+            self.target_q2_pi_tf = self.target_critic_twin(
+                o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=self.target_pi_tf
+            )
         # Input Dataset that loads from demonstration buffer. Used for BC and Potential
         demo_shapes = {}
         demo_shapes["o"] = self.dimo
@@ -332,48 +383,6 @@ class DDPG(object):
             .shuffle(max_num_transitions)
             .repeat(1)
         )
-
-        # Models
-        with tf.variable_scope("main"):
-            self.main = ActorCritic(
-                dimo=self.dimo[0],
-                dimg=self.dimg[0],
-                dimu=self.dimu[0],
-                max_u=self.max_u,
-                o_stats=self.o_stats,
-                g_stats=self.g_stats,
-                layer_sizes=self.layer_sizes,
-                initializer_type=self.initializer_type,
-                use_td3=self.use_td3,
-                add_pi_noise=0,
-            )
-        with tf.variable_scope("target"):
-            self.target = ActorCritic(
-                dimo=self.dimo[0],
-                dimg=self.dimg[0],
-                dimu=self.dimu[0],
-                max_u=self.max_u,
-                o_stats=self.o_stats,
-                g_stats=self.g_stats,
-                layer_sizes=self.layer_sizes,
-                initializer_type=self.initializer_type,
-                use_td3=self.use_td3,
-                add_pi_noise=self.use_td3,
-            )
-        assert len(self.main.vars) == len(self.target.vars)
-        # actor output
-        self.main_pi_tf = self.main.actor(o=input_o_tf, g=input_g_tf)
-        self.target_pi_tf = self.target.actor(o=input_o_2_tf, g=input_g_2_tf)
-        # critic output
-        self.main_q_tf = self.main.critic1(o=input_o_tf, g=input_g_tf, u=input_u_tf)
-        self.main_q_pi_tf = self.main.critic1(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
-        self.target_q_tf = self.target.critic1(o=input_o_2_tf, g=input_g_2_tf, u=input_u_tf)
-        self.target_q_pi_tf = self.target.critic1(o=input_o_2_tf, g=input_g_2_tf, u=self.target_pi_tf)
-        if self.use_td3:
-            self.main_q2_tf = self.main.critic2(o=input_o_tf, g=input_g_tf, u=input_u_tf)
-            self.main_q2_pi_tf = self.main.critic2(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
-            self.target_q2_tf = self.target.critic2(o=input_o_2_tf, g=input_g_2_tf, u=input_u_tf)
-            self.target_q2_pi_tf = self.target.critic2(o=input_o_2_tf, g=input_g_2_tf, u=self.target_pi_tf)
 
         # Add shaping reward
         with tf.variable_scope("shaping"):
@@ -417,13 +426,13 @@ class DDPG(object):
         if self.demo_shaping != None:
             target_tf += self.demo_critic_shaping
         # ddpg or td3 target with or without clipping
-        if self.use_td3:
+        if self.twin_delayed:
             target_tf += self.gamma * tf.minimum(self.target_q_pi_tf, self.target_q2_pi_tf)
         else:
             target_tf += self.gamma * self.target_q_pi_tf
         assert target_tf.shape[1] == 1
         # final ddpg or td3 loss
-        if self.use_td3:
+        if self.twin_delayed:
             rl_bellman_1_tf = tf.square(tf.stop_gradient(target_tf) - self.main_q_tf)
             rl_bellman_2_tf = tf.square(tf.stop_gradient(target_tf) - self.main_q2_tf)
             rl_bellman_tf = (rl_bellman_1_tf + rl_bellman_2_tf) / 2.0
@@ -478,17 +487,33 @@ class DDPG(object):
         self.pi_loss_tf = pi_loss_tf
 
         self.q_update_op = tf.compat.v1.train.AdamOptimizer(learning_rate=self.q_lr).minimize(
-            self.q_loss_tf, var_list=self.main.critic_vars
+            self.q_loss_tf, var_list=self.main_critic.trainable_variables
         )
         self.pi_update_op = tf.compat.v1.train.AdamOptimizer(learning_rate=self.pi_lr).minimize(
-            self.pi_loss_tf, var_list=self.main.actor_vars
+            self.pi_loss_tf, var_list=self.main_actor.trainable_variables
         )
 
         # Polyak averaging
         hard_copy_func = lambda v: v[0].assign(v[1])
         soft_copy_func = lambda v: v[0].assign(self.polyak * v[0] + (1.0 - self.polyak) * v[1])
-        self.initialize_target_net_op = list(map(hard_copy_func, zip(self.target.vars, self.main.vars)))
-        self.update_target_net_op = list(map(soft_copy_func, zip(self.target.vars, self.main.vars)))
+        self.initialize_target_net_op = (
+            list(map(hard_copy_func, zip(self.target_actor.variables, self.main_actor.variables)))
+            + list(map(hard_copy_func, zip(self.target_critic.variables, self.main_critic.variables)))
+            + (
+                list(map(hard_copy_func, zip(self.target_critic_twin.variables, self.main_critic_twin.variables)))
+                if self.twin_delayed
+                else []
+            )
+        )
+        self.update_target_net_op = (
+            list(map(soft_copy_func, zip(self.target_actor.variables, self.main_actor.variables)))
+            + list(map(soft_copy_func, zip(self.target_critic.variables, self.main_critic.variables)))
+            + (
+                list(map(soft_copy_func, zip(self.target_critic_twin.variables, self.main_critic_twin.variables)))
+                if self.twin_delayed
+                else []
+            )
+        )
 
         # Initialize all variables
         self.sess.run(tf.compat.v1.global_variables_initializer())
