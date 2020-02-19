@@ -19,7 +19,7 @@ def check_params(params, default_params):
             check_params(params[key], value)
     for key, value in params.items():
         # assert key in default_params.keys(), "provided params has an extra key: {}".format(key)
-        if key in default_params.keys():
+        if not key in default_params.keys():
             from termcolor import colored
 
             print(colored("Warning: provided params has an extra key: {}".format(key), "red"))
