@@ -82,8 +82,8 @@ def close(env):
     env.viewer = None
 
 
-def demo_hammer(render=True):
-    env = EnvManager(env_name="hammer-v1").get_env()
+def demo_hammer(render=True, random_init=False):
+    env = EnvManager(env_name="hammer-v1", env_args={"random_init": random_init}).get_env()
     demo_gen = DemoGenerator(env, render)
 
     obs = demo_gen.reset()
@@ -118,8 +118,8 @@ def demo_hammer(render=True):
     return demo_gen.dump_eps()
 
 
-def demo_reach(render=True):
-    env = EnvManager(env_name="reach-v1").get_env()
+def demo_reach(render=True, random_init=False):
+    env = EnvManager(env_name="reach-v1", env_args={"random_init": random_init}).get_env()
     demo_gen = DemoGenerator(env, render)
 
     obs = demo_gen.reset()
@@ -141,8 +141,8 @@ def demo_reach(render=True):
     return demo_gen.dump_eps()
 
 
-def demo_pick_place(render=True):
-    env = EnvManager(env_name="pick-place-v1").get_env()
+def demo_pick_place(render=True, random_init=False):
+    env = EnvManager(env_name="pick-place-v1", env_args={"random_init": random_init}).get_env()
     demo_gen = DemoGenerator(env, render)
 
     obs = demo_gen.reset()
@@ -170,8 +170,8 @@ def demo_pick_place(render=True):
     return demo_gen.dump_eps()
 
 
-def demo_drawer_close(render=True):
-    env = EnvManager(env_name="drawer-close-v1").get_env()
+def demo_drawer_close(render=True, random_init=False):
+    env = EnvManager(env_name="drawer-close-v1", env_args={"random_init": random_init}).get_env()
     demo_gen = DemoGenerator(env, render)
 
     obs = demo_gen.reset()
@@ -188,9 +188,9 @@ def demo_drawer_close(render=True):
     assert not done
     curr_pos = obs["observation"][:3]
     goal_pos = obs["observation"][6:9]
-    goal_pos[2] += 0.1
+    goal_pos[1] -= 0.05
+    goal_pos[2] += 0.08
     obs, reward, done, info = demo_gen.move_to_goal(curr_pos, goal_pos, 1.0)
-
     # stay until episode ends and then return
     # if not done:
     obs, reward, done, info = demo_gen.stay(1.0)
@@ -209,7 +209,7 @@ demos = {
 }
 
 
-def main(env_name, exp_dir, num_itr, render, **kwargs):
+def main(env_name, exp_dir, num_itr, render, random_init, **kwargs):
 
     assert env_name in demos.keys(), "unregistered environment."
 
@@ -221,7 +221,9 @@ def main(env_name, exp_dir, num_itr, render, **kwargs):
 
     for i in range(num_itr):
         print("Iteration: ", i)
-        episode_obs, episode_act, episode_rwd, episode_done, episode_info = demos[env_name](render=render)
+        episode_obs, episode_act, episode_rwd, episode_done, episode_info = demos[env_name](
+            render=render, random_init=bool(random_init)
+        )
         demo_data_obs.append(episode_obs)
         demo_data_act.append(episode_act)
         demo_data_reward.append(episode_rwd)
@@ -300,6 +302,9 @@ if __name__ == "__main__":
     )
     exp_parser.parser.add_argument(
         "--render", help="render", type=int, default=0,
+    )
+    exp_parser.parser.add_argument(
+        "--random_init", help="render", type=int, default=0,
     )
     exp_parser.parse(sys.argv)
     main(**exp_parser.get_dict())

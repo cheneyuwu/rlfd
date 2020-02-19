@@ -213,7 +213,9 @@ class EnvManager:
             def make_env():
                 args = mtw_args[env_name]["args"]
                 kwargs = mtw_args[env_name]["kwargs"]
-                kwargs["random_init"] = False  # disable random goal locations
+                kwargs["random_init"] = (
+                    env_args["random_init"] if "random_init" in env_args.keys() else False
+                )  # disable random goal locations
                 kwargs["obs_type"] = "with_goal"  # disable random goal locations
                 kwargs["rewMode"] = "sparse"  # use sparse reward mode by default
                 env = mtw_envs[env_name](*args, **kwargs)

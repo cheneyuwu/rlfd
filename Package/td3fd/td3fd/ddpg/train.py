@@ -62,15 +62,6 @@ def train(root_dir, params):
     if policy.initialize_with_bc:
         policy.train_bc()
 
-        # test
-        evaluator.clear_history()
-        episode = evaluator.generate_rollouts()
-
-        # log
-        for key, val in evaluator.logs("test"):
-            logger.record_tabular(key, val)
-        logger.dump_tabular()
-
         # save the policy
         policy.save(initial_policy_path)
         logger.info("Saving initial policy.")

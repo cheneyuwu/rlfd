@@ -18,7 +18,11 @@ def check_params(params, default_params):
         if type(value) == dict:
             check_params(params[key], value)
     for key, value in params.items():
-        assert key in default_params.keys(), "provided params has an extra key: {}".format(key)
+        # assert key in default_params.keys(), "provided params has an extra key: {}".format(key)
+        if key in default_params.keys():
+            from termcolor import colored
+
+            print(colored("Warning: provided params has an extra key: {}".format(key), "red"))
 
 
 def add_env_params(params):
@@ -50,7 +54,7 @@ def add_env_params(params):
         "u": tmp_env.action_space.shape,
     }
     for key, value in info.items():
-        if type(value) == str: # Note: for now, do not add info str to memory (replay buffer)
+        if type(value) == str:  # Note: for now, do not add info str to memory (replay buffer)
             continue
         value = np.array(value)
         if value.ndim == 0:
