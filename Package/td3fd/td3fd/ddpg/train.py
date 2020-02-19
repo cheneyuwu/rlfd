@@ -25,7 +25,6 @@ def train(root_dir, params):
     # Construct...
     save_interval = 10
     demo_strategy = params["ddpg"]["demo_strategy"]
-    shaping_num_epochs = params["ddpg"]["num_epochs"]
     num_epochs = params["ddpg"]["num_epochs"]
     num_cycles = params["ddpg"]["num_cycles"]
     num_batches = params["ddpg"]["num_batches"]

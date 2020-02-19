@@ -192,8 +192,8 @@ def demo_drawer_close(render=True, random_init=False):
     goal_pos[2] += 0.08
     obs, reward, done, info = demo_gen.move_to_goal(curr_pos, goal_pos, 1.0)
     # stay until episode ends and then return
-    # if not done:
-    obs, reward, done, info = demo_gen.stay(1.0)
+    if not done:
+        obs, reward, done, info = demo_gen.stay(1.0)
     assert info["success"] == 1.0
     if render:
         close(env.env)
@@ -210,16 +210,16 @@ def demo_button_press_top_down(render=True, random_init=False):
     # control
     curr_pos = obs["observation"][:3]
     goal_pos = obs["observation"][3:6]
-    goal_pos[2] += 0.1
-    obs, reward, done, info = demo_gen.move_to_goal(curr_pos, goal_pos, 0.8)
+    goal_pos[2] += 0.07
+    obs, reward, done, info = demo_gen.move_to_goal(curr_pos, goal_pos, 1.0)
     assert not done
     curr_pos = obs["observation"][:3]
     goal_pos = obs["observation"][6:9]
     goal_pos[2] += 0.05
-    obs, reward, done, info = demo_gen.move_to_goal(curr_pos, goal_pos, 0.8)
+    obs, reward, done, info = demo_gen.move_to_goal(curr_pos, goal_pos, 1.0)
     # stay until episode ends and then return
-    # if not done:
-    obs, reward, done, info = demo_gen.stay(0.8)
+    if not done:
+        obs, reward, done, info = demo_gen.stay(1.0)
     assert info["success"] == 1.0
     if render:
         close(env.env)
