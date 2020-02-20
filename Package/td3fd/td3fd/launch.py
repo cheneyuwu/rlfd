@@ -27,11 +27,12 @@ from td3fd.train import main as train_entry
 from td3fd.util.mpi_util import mpi_exit, mpi_input
 
 # tf debug
-# from td3fd.ddpg.debug.generate_query import main as generate_query_entry
-# from td3fd.ddpg.debug.visualize_query import main as visualize_query_entry
+from td3fd.ddpg.debug.generate_query import main as generate_query_entry
+from td3fd.ddpg.debug.visualize_query import main as visualize_query_entry
+from td3fd.ddpg.debug.check_potential import main as check_potential_entry
 # # torch debug
-from td3fd.td3.debug.generate_query import main as generate_query_entry
-from td3fd.td3.debug.visualize_query import main as visualize_query_entry
+# from td3fd.td3.debug.generate_query import main as generate_query_entry
+# from td3fd.td3.debug.visualize_query import main as visualize_query_entry
 
 def import_param_config(load_dir):
     """Assume that there is a gv called params_config that contains all the params
@@ -305,6 +306,13 @@ def main(targets, exp_dir, policy, save_dir, **kwargs):
             logger.info("=================================================")
             if rank == 0:
                 visualize_query_entry(exp_dir=exp_dir, save=True)
+
+        elif target == "check_potential":
+            logger.info("\n\n=================================================")
+            logger.info("Check potential.")
+            logger.info("=================================================")
+            if rank == 0:
+                check_potential_entry(exp_dir=exp_dir, policy=policy)
 
         elif target == "copy_result":
             expdata_dir = os.path.abspath(os.path.expanduser(os.environ["EXPDATA"]))

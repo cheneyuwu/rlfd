@@ -132,9 +132,8 @@ class NFShaping(Shaping):
         self.potential_weight = tf.constant(potential_weight, dtype=tf.float64)
 
         #
-        self.learning_rate = 2e-4 # TODO this is different from the td3 implementation, check this!
+        self.learning_rate = 2e-4  # TODO this is different from the td3 implementation, check this!
         self.scale = tf.constant(5, dtype=tf.float64)
-
 
         self.demo_inputs_tf = {}
         self.demo_inputs_tf["o"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimo))
@@ -170,6 +169,13 @@ class NFShaping(Shaping):
         # optimizers
         self.train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
 
+        # evaluations
+        if self.dimg != (0,):
+            self.potential_output = self.potential(
+                self.demo_inputs_tf["o"], self.demo_inputs_tf["g"], self.demo_inputs_tf["u"]
+            )
+        else:
+            self.potential_output = self.potential(self.demo_inputs_tf["o"], None, self.demo_inputs_tf["u"])
 
     def potential(self, o, g, u):
         state_tf = self._cast_concat_normalize_inputs(o, g, u)
@@ -196,6 +202,16 @@ class NFShaping(Shaping):
             feed_dict[self.demo_inputs_tf["g"]] = batch["g"]
         loss, _ = self.sess.run([self.loss, self.train_op], feed_dict=feed_dict)
         return loss, _
+
+    def evaluate(self, batch):
+        feed_dict = {}
+        feed_dict[self.demo_inputs_tf["o"]] = batch["o"]
+        feed_dict[self.demo_inputs_tf["u"]] = batch["u"]
+        if self.dimg != (0,):
+            feed_dict[self.demo_inputs_tf["g"]] = batch["g"]
+        potential = self.sess.run(self.potential_output, feed_dict=feed_dict)
+        potential = np.mean(potential)
+        return potential
 
 
 class GANShaping(Shaping):
@@ -354,7 +370,7 @@ class EnsembleRewardShapingWrapper:
 
 
 class RewardShaping:
-    def __init__(self,sess, dims, max_u, gamma, demo_strategy, num_epochs, batch_size, **shaping_params):
+    def __init__(self, sess, dims, max_u, gamma, demo_strategy, num_epochs, batch_size, **shaping_params):
 
         if demo_strategy not in shaping_cls.keys():
             self.shaping = None
@@ -378,7 +394,6 @@ class RewardShaping:
             }
         )
         self.shaping = shaping_cls[demo_strategy](**self.shaping_params)
-
 
     def train(self, demo_data):
         self.shaping.update_stats(demo_data)
