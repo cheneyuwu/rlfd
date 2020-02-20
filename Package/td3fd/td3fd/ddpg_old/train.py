@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 
 from td3fd import config, logger
-from td3fd.ddpg import config as ddpg_config
+from td3fd.ddpg_old import config as ddpg_config
 from td3fd.util.cmd_util import ArgParser
 from td3fd.util.util import set_global_seeds
 
@@ -25,6 +25,7 @@ def train(root_dir, params):
     # Construct...
     save_interval = 10
     demo_strategy = params["ddpg"]["demo_strategy"]
+    shaping_num_epochs = params["ddpg"]["shaping_params"]["num_epochs"]
     num_epochs = params["ddpg"]["num_epochs"]
     num_cycles = params["ddpg"]["num_cycles"]
     num_batches = params["ddpg"]["num_batches"]
@@ -56,14 +57,11 @@ def train(root_dir, params):
 
     # Train shaping potential
     if demo_strategy in ["nf", "gan"]:
-        policy.train_shaping()
-
-    if policy.initialize_with_bc:
-        policy.train_bc()
-
-        # save the policy
-        policy.save(initial_policy_path)
-        logger.info("Saving initial policy.")
+        logger.info("Training the policy for reward shaping.")
+        for epoch in range(shaping_num_epochs):
+            loss = policy.train_shaping()
+            if epoch % (shaping_num_epochs / 100) == (shaping_num_epochs / 100 - 1):
+                logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
 
     # Generate some random experiences before training (used by td3 for gym mujoco envs)
     # for _ in range(10000):
@@ -83,7 +81,6 @@ def train(root_dir, params):
             for _ in range(num_batches):
                 policy.train()
             policy.update_target_net()
-            policy.clear_n_step_replay_buffer()
 
         # test
         evaluator.clear_history()
