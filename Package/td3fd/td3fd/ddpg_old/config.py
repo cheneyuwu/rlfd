@@ -24,6 +24,8 @@ default_params = {
         # use demonstrations
         "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread
         "sample_demo_buffer": False,  # whether or not to sample from demonstration buffer
+        "initialize_with_bc": False,  # whether or not to initialize policy using bc
+        "initialize_num_epochs": 0,  # number of epochs initilize with bc
         "use_demo_reward": False,  # whether or not to assume that demonstrations have rewards, and train it on the critic
         "num_demo": 0,  # number of expert demo episodes
         "demo_strategy": "none",  # choose between ["none", "bc", "nf", "gan"]
@@ -42,6 +44,8 @@ default_params = {
         "action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
+        # multi step return
+        "use_n_step_return": False,
         "bc_params": {
             "q_filter": True,  # whether or not a Q value filter should be used on the actor outputs
             "prm_loss_weight": 0.001,  # weight corresponding to the primary loss

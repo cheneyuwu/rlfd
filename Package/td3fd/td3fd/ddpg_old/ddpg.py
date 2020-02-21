@@ -6,7 +6,7 @@ import tensorflow_probability as tfp
 
 from td3fd import logger
 from td3fd.ddpg.actorcritic_network import Actor, Critic
-from td3fd.ddpg_old.demo_shaping import EnsGANShaping, EnsNFShaping
+from td3fd.ddpg_old.shaping import EnsGANShaping, EnsNFShaping
 from td3fd.ddpg.normalizer import Normalizer
 from td3fd.memory import RingReplayBuffer, UniformReplayBuffer, MultiStepReplayBuffer, iterbatches
 
@@ -42,11 +42,15 @@ class DDPG(object):
         policy_noise_clip,
         # double q
         polyak,
+        # multistep return
+        use_n_step_return,
         # play with demonstrations
         buffer_size,
         batch_size_demo,
         sample_demo_buffer,
         use_demo_reward,
+        initialize_with_bc,
+        initialize_num_epochs,
         num_demo,
         demo_strategy,
         bc_params,
@@ -103,6 +107,9 @@ class DDPG(object):
         self.use_demo_reward = use_demo_reward
         self.sample_demo_buffer = sample_demo_buffer
         self.batch_size_demo = batch_size_demo
+        self.initialize_with_bc = initialize_with_bc
+        self.initialize_num_epochs = initialize_num_epochs
+
         self.eps_length = eps_length
         self.fix_T = fix_T
 
@@ -122,6 +129,10 @@ class DDPG(object):
         self.policy_freq = policy_freq
         self.policy_noise = policy_noise
         self.policy_noise_clip = policy_noise_clip
+
+        # multistep return
+        self.use_n_step_return = use_n_step_return
+        self.n_step_return_steps = eps_length // 5
 
         # play with demonstrations
         self.demo_strategy = demo_strategy
@@ -174,24 +185,7 @@ class DDPG(object):
         """Initialize the demonstration buffer.
         """
         episode_batch = self.demo_buffer.load_from_file(data_file=demo_file)
-        self.update_demo_stats(episode_batch)
         return episode_batch
-
-    def update_demo_stats(self, episode_batch):
-        # add transitions to normalizer
-        if self.fix_T:
-            episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
-            if self.dimg != (0,):
-                episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
-                episode_batch["g_2"] = episode_batch["g"][:, :, :]
-            num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
-            transitions = self.demo_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
-        else:
-            transitions = episode_batch.copy()
-
-        self.demo_o_stats.update(transitions["o"])
-        if self.dimg != (0,):
-            self.demo_g_stats.update(transitions["g"])
 
     def add_to_demo_buffer(self, episode_batch):
         self.demo_buffer.store_episode(episode_batch)
@@ -201,6 +195,13 @@ class DDPG(object):
         episode_batch: array of batch_size x (T or T+1) x dim_key ('o' and 'ag' is of size T+1, others are of size T)
         """
         self.replay_buffer.store_episode(episode_batch)
+        if self.use_n_step_return:
+            self.n_step_replay_buffer.store_episode(episode_batch)
+
+    def clear_n_step_replay_buffer(self):
+        if not self.use_n_step_return:
+            return
+        self.n_step_replay_buffer.clear_buffer()
 
     def save(self, path):
         """Pickles the current policy for later inspection.
@@ -208,9 +209,37 @@ class DDPG(object):
         with open(path, "wb") as f:
             pickle.dump(self, f)
 
+    def train_bc(self):
+
+        if not self.initialize_with_bc:
+            return
+
+        demo_data = self.demo_buffer.sample()
+
+        for epoch in range(self.initialize_num_epochs):
+            for (o, g, u) in iterbatches(
+                (demo_data["o"], demo_data["g"], demo_data["u"]), batch_size=self.batch_size_demo
+            ):
+                batch = {"o": o, "g": g, "u": u}
+                feed = {}
+                feed[self.inputs_tf["o"]] = o
+                feed[self.inputs_tf["u"]] = u
+                if self.dimg != (0,):
+                    feed[self.inputs_tf["g"]] = g
+
+                bc_loss, _ = self.sess.run([self.bc_loss_tf, self.bc_update_op], feed_dict=feed)
+            if epoch % (self.initialize_num_epochs / 100) == (self.initialize_num_epochs / 100 - 1):
+                logger.info("epoch: {} policy initialization loss: {}".format(epoch, bc_loss))
+
     def train_shaping(self):
         assert self.demo_strategy in ["nf", "gan"]
         logger.info("Training the policy for reward shaping.")
+        # Update normalizer
+        demo_data = self.demo_buffer.sample()
+        self.demo_o_stats.update(demo_data["o"])
+        if self.dimg != (0,):
+            self.demo_g_stats.update(demo_data["g"])
+        # Train
         num_epochs = self.shaping_params["num_epochs"]
         for epoch in range(num_epochs):
             self.demo_shaping.initialize_dataset()
@@ -227,7 +256,15 @@ class DDPG(object):
                 logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
 
     def train(self):
-        batch = self.replay_buffer.sample(self.batch_size)
+        if self.use_n_step_return:
+            one_step_batch = self.replay_buffer.sample(self.batch_size // 2)
+            n_step_batch = self.n_step_replay_buffer.sample(self.batch_size - self.batch_size // 2)
+            assert one_step_batch.keys() == n_step_batch.keys()
+            batch = dict()
+            for k in one_step_batch.keys():
+                batch[k] = np.concatenate((one_step_batch[k], n_step_batch[k]))
+        else:
+            batch = self.replay_buffer.sample(self.batch_size)
 
         if self.sample_demo_buffer:
             rollout_batch = batch
@@ -263,10 +300,10 @@ class DDPG(object):
     def update_stats(self, episode_batch):
         # add transitions to normalizer
         if self.fix_T:
-            episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
+            episode_batch["o_2"] = episode_batch["o"][:, 1:, ...]
             if self.dimg != (0,):
-                episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
-                episode_batch["g_2"] = episode_batch["g"][:, :, :]
+                episode_batch["ag_2"] = episode_batch["ag"][:, 1:, ...]
+                episode_batch["g_2"] = episode_batch["g"][:, :, ...]
             num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
             transitions = self.replay_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
         else:
@@ -286,6 +323,10 @@ class DDPG(object):
             buffer_shapes["g"] = (self.eps_length, *self.dimg)
 
             self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
+            if self.use_n_step_return:
+                self.n_step_replay_buffer = MultiStepReplayBuffer(
+                    buffer_shapes, self.buffer_size, self.eps_length, self.n_step_return_steps, self.gamma
+                )
             if self.demo_strategy != "none" or self.sample_demo_buffer:
                 self.demo_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
 
@@ -301,6 +342,7 @@ class DDPG(object):
             buffer_shapes["done"] = (1,)  # need the "done" signal for restarting from training
 
             self.replay_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
+            assert not self.use_n_step_return, "not implemented yet"
             if self.demo_strategy != "none" or self.sample_demo_buffer:
                 self.demo_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
 
@@ -311,6 +353,7 @@ class DDPG(object):
         self.inputs_tf["o_2"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimo))
         self.inputs_tf["u"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimu))
         self.inputs_tf["r"] = tf.compat.v1.placeholder(tf.float32, shape=(None, 1))
+        self.inputs_tf["n"] = tf.compat.v1.placeholder(tf.float32, shape=(None, 1))  # for multiple step returns
         if self.dimg != (0,):
             self.inputs_tf["g"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimg))
             self.inputs_tf["g_2"] = tf.compat.v1.placeholder(tf.float32, shape=(None, *self.dimg))
@@ -435,7 +478,7 @@ class DDPG(object):
             # demo critic shaping
             potential_curr = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=input_u_tf)
             potential_next = self.demo_shaping.potential(o=input_o_2_tf, g=input_g_2_tf, u=self.target_pi_tf)
-            self.demo_critic_shaping = self.gamma * potential_next - potential_curr
+            self.demo_critic_shaping = tf.pow(self.gamma, self.inputs_tf["n"]) * potential_next - potential_curr
             # demo actor shaping
             self.demo_actor_shaping = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
 
@@ -447,9 +490,11 @@ class DDPG(object):
             target_tf += self.demo_critic_shaping
         # ddpg or td3 target with or without clipping
         if self.twin_delayed:
-            target_tf += self.gamma * tf.minimum(self.target_q_pi_tf, self.target_q2_pi_tf)
+            target_tf += tf.pow(self.gamma, self.inputs_tf["n"]) * tf.minimum(
+                self.target_q_pi_tf, self.target_q2_pi_tf
+            )
         else:
-            target_tf += self.gamma * self.target_q_pi_tf
+            target_tf += tf.pow(self.gamma, self.inputs_tf["n"]) * self.target_q_pi_tf
         assert target_tf.shape[1] == 1
         # final ddpg or td3 loss
         if self.twin_delayed:
@@ -512,6 +557,14 @@ class DDPG(object):
         self.pi_update_op = tf.compat.v1.train.AdamOptimizer(learning_rate=self.pi_lr).minimize(
             self.pi_loss_tf, var_list=self.main_actor.trainable_variables
         )
+
+        # Behavioral cloning loss (for initializing the policy or pure behavior cloning)
+        if self.initialize_with_bc:
+            assert self.sample_demo_buffer, "must sample from the demonstration buffer to use behavior cloning"
+            self.bc_loss_tf = tf.reduce_mean(tf.square(self.main_pi_tf - input_u_tf))
+            self.bc_update_op = tf.compat.v1.train.AdamOptimizer(learning_rate=self.pi_lr).minimize(
+                self.bc_loss_tf, var_list=self.main_actor.trainable_variables
+            )
 
         # Polyak averaging
         hard_copy_func = lambda v: v[0].assign(v[1])

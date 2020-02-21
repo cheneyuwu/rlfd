@@ -233,7 +233,6 @@ class DDPG(object):
 
     def train_shaping(self):
         assert self.demo_strategy in ["nf", "gan"]
-        # train normalizing flow or gan for 1 epoch
         demo_data = self.demo_buffer.sample()
         self.demo_shaping.train(demo_data)
         self.demo_shaping.evaluate()
@@ -283,10 +282,10 @@ class DDPG(object):
     def update_stats(self, episode_batch):
         # add transitions to normalizer
         if self.fix_T:
-            episode_batch["o_2"] = episode_batch["o"][:, 1:, :]
+            episode_batch["o_2"] = episode_batch["o"][:, 1:, ...]
             if self.dimg != (0,):
-                episode_batch["ag_2"] = episode_batch["ag"][:, :, :]
-                episode_batch["g_2"] = episode_batch["g"][:, :, :]
+                episode_batch["ag_2"] = episode_batch["ag"][:, 1:, ...]
+                episode_batch["g_2"] = episode_batch["g"][:, :, ...]
             num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch["u"].shape[1]
             transitions = self.replay_buffer.sample_transitions(episode_batch, num_normalizing_transitions)
         else:

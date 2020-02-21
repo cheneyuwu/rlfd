@@ -32,7 +32,7 @@ params_config = {
         "layer_sizes": [256, 256, 256],
         "twin_delayed": True,
         "policy_freq": 2,
-        "policy_noise": 0.2,
+        "policy_noise": 0.1,
         "policy_noise_clip": 0.5,
         "q_lr": 0.001,
         "pi_lr": 0.001,

@@ -19,6 +19,8 @@ params_config = {
         # use demonstrations
         "batch_size_demo": 128,
         "sample_demo_buffer": False,
+        "initialize_with_bc": False,
+        "initialize_num_epochs": 0,
         "use_demo_reward": False,
         "num_demo": 10,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
@@ -37,6 +39,8 @@ params_config = {
         "action_l2": 0.0,
         # double q learning
         "polyak": 0.95,
+        # multi step return
+        "use_n_step_return": False,
         "bc_params": {"q_filter": False, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
         "shaping_params": {
             "num_epochs": int(1e4),

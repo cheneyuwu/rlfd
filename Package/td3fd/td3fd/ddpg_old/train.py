@@ -58,6 +58,13 @@ def train(root_dir, params):
     if demo_strategy in ["nf", "gan"]:
         policy.train_shaping()
 
+    if policy.initialize_with_bc:
+        policy.train_bc()
+
+        # save the policy
+        policy.save(initial_policy_path)
+        logger.info("Saving initial policy.")
+
     # Generate some random experiences before training (used by td3 for gym mujoco envs)
     # for _ in range(10000):
     #     episode = rollout_worker.generate_rollouts(random=True)
@@ -76,6 +83,7 @@ def train(root_dir, params):
             for _ in range(num_batches):
                 policy.train()
             policy.update_target_net()
+            policy.clear_n_step_replay_buffer()
 
         # test
         evaluator.clear_history()

@@ -19,6 +19,8 @@ params_config = {
         # use demonstrations
         "batch_size_demo": 128,
         "sample_demo_buffer": False,
+        "initialize_with_bc": False,
+        "initialize_num_epochs": 0,
         "use_demo_reward": False,
         "num_demo": 50,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
@@ -37,6 +39,8 @@ params_config = {
         "action_l2": 0.4,
         # double q learning
         "polyak": 0.95,
+        # multi step return
+        "use_n_step_return": False,
         "bc_params": {"q_filter": False, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
         "shaping_params": {
             "num_epochs": int(1e4),
@@ -52,10 +56,10 @@ params_config = {
             },
             "gan": {
                 "layer_sizes": [256, 256, 256],
-                "latent_dim": 25,
+                "latent_dim": 6,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
-                "potential_weight": 0.5,
+                "potential_weight": 3.0,
             },
         },
         # replay buffer setup
