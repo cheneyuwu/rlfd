@@ -1,0 +1,19 @@
+Demo Data Info
+Environment name:  button-press_topdown-v1
+Random Init:  0
+Number of demonstrations:  10
+Demonstration Key and Shapes: 
+   o (10, 151, 9)
+   u (10, 150, 4)
+   g (10, 150, 0)
+   ag (10, 151, 0)
+   r (10, 150, 1)
+   done (10, 150, 1)
+   info_reachDist (10, 150, 1)
+   info_goalDist (10, 150, 1)
+   info_epRew (10, 150, 1)
+   info_pickRew (10, 150, 1)
+   info_success (10, 150, 1)
+   info_goal (10, 150, 3)
+Extra Noise Added:  1.0
+Demonstration Average Cumu. Reward:  -58.0
