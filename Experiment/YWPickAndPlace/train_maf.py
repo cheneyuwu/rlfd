@@ -1,5 +1,5 @@
 from copy import deepcopy
-from yw.ddpg_main.params.pickandplacerandinit import params_config as base_params
+from td3fd.ddpg_old.params.pickandplacerandinit import params_config as base_params
 
 params_config = deepcopy(base_params)
 params_config["config"] = ("TD3_MAF_Shaping",)

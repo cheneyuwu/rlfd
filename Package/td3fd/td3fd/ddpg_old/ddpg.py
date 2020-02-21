@@ -6,7 +6,7 @@ import tensorflow_probability as tfp
 
 from td3fd import logger
 from td3fd.ddpg.actorcritic_network import Actor, Critic
-from td3fd.ddpg_old.demo_shaping import EnsGANDemoShaping, EnsNFDemoShaping
+from td3fd.ddpg_old.demo_shaping import EnsGANShaping, EnsNFShaping
 from td3fd.ddpg.normalizer import Normalizer
 from td3fd.memory import RingReplayBuffer, UniformReplayBuffer, MultiStepReplayBuffer, iterbatches
 
@@ -210,18 +210,21 @@ class DDPG(object):
 
     def train_shaping(self):
         assert self.demo_strategy in ["nf", "gan"]
-        # train normalizing flow or gan for 1 epoch
-        loss = 0
-        self.demo_shaping.initialize_dataset(sess=self.sess)
-        losses = np.empty(0)
-        while True:
-            try:
-                loss = self.demo_shaping.train(sess=self.sess)
-                losses = np.append(losses, loss)
-            except tf.errors.OutOfRangeError:
-                loss = np.mean(losses)
-                break
-        return loss
+        logger.info("Training the policy for reward shaping.")
+        num_epochs = self.shaping_params["num_epochs"]
+        for epoch in range(num_epochs):
+            self.demo_shaping.initialize_dataset()
+            loss = 0
+            losses = np.empty(0)
+            while True:
+                try:
+                    loss = self.demo_shaping.train()
+                    losses = np.append(losses, loss)
+                except tf.errors.OutOfRangeError:
+                    loss = np.mean(losses)
+                    break
+            if epoch % (num_epochs / 100) == (num_epochs / 100 - 1):
+                logger.info("epoch: {} demo shaping loss: {}".format(epoch, loss))
 
     def train(self):
         batch = self.replay_buffer.sample(self.batch_size)
@@ -370,6 +373,7 @@ class DDPG(object):
             self.target_q2_pi_tf = self.target_critic_twin(
                 o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=self.target_pi_tf
             )
+
         # Input Dataset that loads from demonstration buffer. Used for BC and Potential
         demo_shapes = {}
         demo_shapes["o"] = self.dimo
@@ -394,42 +398,46 @@ class DDPG(object):
             .repeat(1)
         )
 
+        # normalizer for goal and observation.
+        self.demo_o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
+        self.demo_g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
         # Add shaping reward
-        with tf.variable_scope("shaping"):
-            # normalizer for goal and observation.
-            self.demo_o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
-            self.demo_g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
-            # potential function approximator, nf or gan
-            if self.demo_strategy == "nf":
-                self.demo_shaping = EnsNFDemoShaping(
-                    gamma=self.gamma,
-                    max_num_transitions=max_num_transitions,
-                    batch_size=self.shaping_params["batch_size"],
-                    demo_dataset=demo_dataset,
-                    o_stats=self.demo_o_stats,
-                    g_stats=self.demo_g_stats,
-                    **self.shaping_params["nf"]
-                )
-            elif self.demo_strategy == "gan":
-                self.demo_shaping = EnsGANDemoShaping(
-                    gamma=self.gamma,
-                    max_num_transitions=max_num_transitions,
-                    batch_size=self.shaping_params["batch_size"],
-                    demo_dataset=demo_dataset,
-                    o_stats=self.demo_o_stats,
-                    g_stats=self.demo_g_stats,
-                    **self.shaping_params["gan"]
-                )
-            else:
-                self.demo_shaping = None
+        if self.demo_strategy == "nf":
+            self.demo_shaping = EnsNFShaping(
+                sess=self.sess,
+                max_u=self.max_u,
+                gamma=self.gamma,
+                max_num_transitions=max_num_transitions,
+                batch_size=self.shaping_params["batch_size"],
+                demo_dataset=demo_dataset,
+                o_stats=self.demo_o_stats,
+                g_stats=self.demo_g_stats,
+                num_ens=self.shaping_params["num_ensembles"],
+                **self.shaping_params["nf"]
+            )
+        elif self.demo_strategy == "gan":
+            self.demo_shaping = EnsGANShaping(
+                sess=self.sess,
+                max_u=self.max_u,
+                gamma=self.gamma,
+                max_num_transitions=max_num_transitions,
+                batch_size=self.shaping_params["batch_size"],
+                demo_dataset=demo_dataset,
+                o_stats=self.demo_o_stats,
+                g_stats=self.demo_g_stats,
+                num_ens=self.shaping_params["num_ensembles"],
+                **self.shaping_params["gan"]
+            )
+        else:
+            self.demo_shaping = None
 
-            if self.demo_shaping != None:
-                # demo critic shaping
-                self.demo_critic_shaping = self.demo_shaping.reward(
-                    o=input_o_tf, g=input_g_tf, u=input_u_tf, o_2=input_o_2_tf, g_2=input_g_2_tf, u_2=self.target_pi_tf
-                )
-                # demo actor shaping
-                self.demo_actor_shaping = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
+        if self.demo_shaping != None:
+            # demo critic shaping
+            potential_curr = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=input_u_tf)
+            potential_next = self.demo_shaping.potential(o=input_o_2_tf, g=input_g_2_tf, u=self.target_pi_tf)
+            self.demo_critic_shaping = self.gamma * potential_next - potential_curr
+            # demo actor shaping
+            self.demo_actor_shaping = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
 
         # Critic loss
         # immediate reward

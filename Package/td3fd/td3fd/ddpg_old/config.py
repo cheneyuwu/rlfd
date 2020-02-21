@@ -50,22 +50,17 @@ default_params = {
         "shaping_params": {
             "num_epochs": int(1e3),
             "batch_size": 128,  # batch size for training the potential function (gan and nf)
+            "num_ensembles": 2,
             "nf": {
-                "num_ens": 1,  # number of nf ensembles
-                "nf_type": "maf",  # choose between ["maf", "realnvp"]
-                "lr": 1e-4,
                 "num_masked": 2,  # used only when nf_type is set to realnvp
                 "num_bijectors": 6,  # number of bijectors in the normalizing flow
                 "layer_sizes": [512, 512],  # number of neurons in each hidden layer
-                "initializer_type": "glorot",  # choose between ["zero", "glorot"]
                 "prm_loss_weight": 1.0,
                 "reg_loss_weight": 500.0,
                 "potential_weight": 5.0,
             },
             "gan": {
-                "num_ens": 1,  # number of gan ensembles
                 "layer_sizes": [256, 256],  # number of neurons in each hidden layer (both generator and discriminator)
-                "initializer_type": "glorot",  # choose between ["zero", "glorot"]
                 "latent_dim": 6,  # generator latent space dimension
                 "gp_lambda": 0.1,  # weight on gradient penalty (refer to WGAN-GP)
                 "critic_iter": 5,

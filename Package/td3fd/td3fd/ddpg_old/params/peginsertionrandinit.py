@@ -37,26 +37,21 @@ params_config = {
         "action_l2": 0.4,
         # double q learning
         "polyak": 0.95,
-        "bc_params": {"q_filter": True, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
+        "bc_params": {"q_filter": False, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
         "shaping_params": {
             "num_epochs": int(1e4),
             "batch_size": 128,
+            "num_ensembles": 2,
             "nf": {
-                "num_ens": 2,
-                "nf_type": "maf",  # ["maf", "realnvp"]
-                "lr": 2e-4,
                 "num_masked": 4,
                 "num_bijectors": 4,
                 "layer_sizes": [256, 256],
-                "initializer_type": "glorot",  # ["zero", "glorot"]
                 "prm_loss_weight": 1.0,
                 "reg_loss_weight": 400.0,
                 "potential_weight": 10.0,
             },
             "gan": {
-                "num_ens": 4,
                 "layer_sizes": [256, 256, 256],
-                "initializer_type": "glorot",  # ["zero", "glorot"]
                 "latent_dim": 25,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,

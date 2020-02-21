@@ -132,7 +132,7 @@ class NFShaping(Shaping):
         self.potential_weight = tf.constant(potential_weight, dtype=tf.float64)
 
         #
-        self.learning_rate = 2e-4  # TODO this is different from the td3 implementation, check this!
+        self.learning_rate = 2e-4
         self.scale = tf.constant(5, dtype=tf.float64)
 
         self.demo_inputs_tf = {}
@@ -300,9 +300,6 @@ class GANShaping(Shaping):
         self.disc_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.disc_cost, var_list=self.discriminator.trainable_variables
         )
-        self.disc_train_policy_op = tf.compat.v1.train.AdamOptimizer(
-            learning_rate=1e-4, beta1=0.5, beta2=0.9
-        ).minimize(self.disc_cost_policy, var_list=self.discriminator.trainable_variables)
         self.gen_train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.9).minimize(
             self.gen_cost, var_list=self.generator.trainable_variables
         )
@@ -334,10 +331,10 @@ class GANShaping(Shaping):
         if self.dimg != (0,):
             feed_dict[self.demo_inputs_tf["g"]] = batch["g"]
         # train critic
-        disc_cost, _ = sess.run([self.disc_cost, self.disc_train_op], feed_dict=feed_dict)
+        disc_cost, _ = self.sess.run([self.disc_cost, self.disc_train_op], feed_dict=feed_dict)
         # train generator
         if self.train_gen == 0:
-            sess.run(self.gen_train_op, feed_dict=feed_dict)
+            self.sess.run(self.gen_train_op, feed_dict=feed_dict)
         self.train_gen = np.mod(self.train_gen + 1, self.critic_iter)
         return disc_cost, _
 

@@ -400,7 +400,7 @@ class DDPG(object):
                 o=norm_input_o_2_tf, g=norm_input_g_2_tf, u=self.target_pi_tf
             )
 
-        # Add shapin reward (new)
+        # Add shaping reward
         if self.demo_strategy in ["nf", "gan"]:
             self.demo_shaping = EnsembleRewardShapingWrapper(
                 sess=self.sess,

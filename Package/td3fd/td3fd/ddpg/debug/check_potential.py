@@ -49,7 +49,7 @@ def check_potential(exp_dir, policy):
 
     x = []
     y = []
-    for var in np.arange(0, 1, 0.1):
+    for var in np.arange(0, 1e-2, 1e-4):
         feed = {}
         feed[inputs_tf["o"]] = o + np.random.normal(0.0, var, o.shape)
         feed[inputs_tf["u"]] = u + np.random.normal(0.0, var, u.shape)
