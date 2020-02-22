@@ -12,7 +12,7 @@ params_config = {
     "fix_T": True,
     # DDPG config
     "ddpg": {
-        "num_epochs": int(4e3),
+        "num_epochs": int(1e4),
         "num_cycles": 10,
         "num_batches": 40,
         "batch_size": 256,
