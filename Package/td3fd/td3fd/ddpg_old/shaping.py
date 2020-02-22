@@ -283,8 +283,9 @@ class GANShaping(Shaping):
         self.sess = sess
         self.max_u = max_u
         self.layer_sizes = layer_sizes
-        self.potential_weight = potential_weight
         self.critic_iter = critic_iter
+        self.grad_target = 0.1
+        self.potential_weight = potential_weight
 
         demo_dataset = demo_dataset.shuffle(max_num_transitions).batch(batch_size)
         demo_iter_tf = demo_dataset.make_initializable_iterator()
@@ -321,7 +322,7 @@ class GANShaping(Shaping):
         disc_interpolates = self.discriminator(interpolates)
         gradients = tf.gradients(disc_interpolates, interpolates)[0]
         slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
-        gradient_penalty = tf.reduce_mean((slopes - 1) ** 2)
+        gradient_penalty = tf.reduce_mean((slopes - self.grad_target) ** 2)
         self.disc_cost = tf.reduce_mean(disc_fake) - tf.reduce_mean(disc_real) + gp_lambda * gradient_penalty
         # generator loss
         self.gen_cost = -tf.reduce_mean(disc_fake)
@@ -382,6 +383,7 @@ class EnsGANShaping(Shaping):
             potential_weight (float)
         """
         # Parameters for training
+        self.sess = sess
         self.critic_iter = critic_iter
         self.train_gen = 0  # counter
         # Setup ensemble
