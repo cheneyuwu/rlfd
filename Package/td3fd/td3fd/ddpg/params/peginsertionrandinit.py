@@ -3,7 +3,7 @@ params_config = {
     "alg": "ddpg-tf",
     "config": "default",
     # environment config
-    "env_name": "YWFetchPegInHole2D-v0",
+    "env_name": "YWFetchPegInHoleRandInit-v0",
     "r_scale": 1.0,
     "r_shift": 0.0,
     "eps_length": 40,
@@ -12,47 +12,49 @@ params_config = {
     "fix_T": True,
     # DDPG config
     "ddpg": {
-        "num_epochs": int(4e2),
+        "num_epochs": int(4e3),
         "num_cycles": 10,
         "num_batches": 40,
-        # replay buffer setup
-        "buffer_size": int(1e5),
+        "batch_size": 256,
+        # use demonstrations
+        "batch_size_demo": 128,
+        "sample_demo_buffer": False,
+        "initialize_with_bc": False,
+        "initialize_num_epochs": 0,
+        "use_demo_reward": False,
+        "num_demo": 50,
+        "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
+        # normalize observation
+        "norm_eps": 0.01,
+        "norm_clip": 5,
         # actor critic networks
         "scope": "ddpg",
+        "layer_sizes": [256, 256, 256],
         "twin_delayed": True,
         "policy_freq": 2,
-        "policy_noise": 0.2,
+        "policy_noise": 0.1,
         "policy_noise_clip": 0.5,
-        "layer_sizes": [256, 256, 256],
         "q_lr": 0.001,
         "pi_lr": 0.001,
         "action_l2": 0.4,
-        "batch_size": 256,
         # double q learning
         "polyak": 0.95,
-        # use demonstrations
-        "sample_demo_buffer": False,
-        "batch_size_demo": 128,
-        "use_demo_reward": False,
-        "num_demo": 40,
-        "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
-        "bc_params": {"q_filter": 1, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
+        # multi step return
+        "use_n_step_return": False,
+        "bc_params": {"q_filter": False, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
         "shaping_params": {
             "num_epochs": int(1e4),
             "batch_size": 128,
+            "num_ensembles": 2,
             "nf": {
-                "num_ens": 2,
-                "nf_type": "maf",  # ["maf", "realnvp"]
-                "lr": 2e-4,
                 "num_masked": 4,
                 "num_bijectors": 4,
-                "layer_sizes": [128, 128],
+                "layer_sizes": [256, 256],
                 "prm_loss_weight": 1.0,
-                "reg_loss_weight": 500.0,
-                "potential_weight": 3.0,
+                "reg_loss_weight": 400.0,
+                "potential_weight": 10.0,
             },
             "gan": {
-                "num_ens": 4,
                 "layer_sizes": [256, 256, 256],
                 "latent_dim": 6,
                 "gp_lambda": 0.1,
@@ -60,9 +62,8 @@ params_config = {
                 "potential_weight": 3.0,
             },
         },
-        # normalize observation
-        "norm_eps": 0.01,
-        "norm_clip": 5,
+        # replay buffer setup
+        "buffer_size": int(5e5),
     },
     # rollouts config
     "rollout": {

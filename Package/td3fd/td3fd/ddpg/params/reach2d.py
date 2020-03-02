@@ -9,7 +9,7 @@ params_config = {
     "eps_length": 0,
     "env_args": {},
     "gamma": None,
-    "fix_T": False,
+    "fix_T": True,
     # DDPG config
     "ddpg": {
         "num_epochs": int(1e2),
