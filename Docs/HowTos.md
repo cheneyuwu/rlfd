@@ -5,7 +5,8 @@
   - On cluster: https://docs.computecanada.ca/wiki/MuJoCo
   - note: you need to manually install **mujoco_py**
 2. download the repo
-  - `git clone git@github.com:cheneyuwu/RLProject` (modify .gitmodules if necessary!)
+  - `git clone git@github.com:cheneyuwu/TD3fD-through-Shaping-using-Generative-Models`
+    - (modify .gitmodules if necessary!)
   - `git submodule init`
   - `git submodule sync`
   - `git submodule update --remote`
@@ -23,12 +24,10 @@
     - cd to gym and metaworld then
     - `pip install -e . --no-deps`
     - for dm_control, install it directly via `pip install dm_control --no-deps`
-    - also install the dmc to gym wrapper included in the submodule of this repo
+    - also install the dmc to gym wrapper (dmc2gym) included in the submodule of this repo
   - install td3fd and rlkit
-    - extra packages for rlkit:
-      - `pip install gtimer`
   - extra packages that should be installed:
-    - `pip install black certifi chardet urllib3 requests idna dm-env dm-control gtimer --no-deps`
+    - `pip install black certifi chardet urllib3 requests idna dm-env dm-control gtimer matplotlib --no-deps`
   - note: on compute canada cluster you need to manually install tensorflow and use `module load mpi4py` to get the mpi python package
 5. Modify the directory of EXPRUN according to the true exp running directory
 6. change TkAgg to Agg for plot.py visualize_query.py and point_reach.py
