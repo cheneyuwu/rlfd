@@ -17,7 +17,7 @@ except ImportError:
 
 DEFAULT_PARAMS = {
     "seed": 0,
-    "num_eps": 5,
+    "num_eps": 10,
     "fix_T": False,
     "demo": {"random_eps": 0.0, "noise_eps": 0.0, "compute_Q": True, "render": True, "num_episodes": 1},
 }
@@ -34,7 +34,7 @@ def main(policy, **kwargs):
     params = DEFAULT_PARAMS.copy()
     # Seed everything
     set_global_seeds(params["seed"])
-    tf.InteractiveSession()
+    tf.compat.v1.InteractiveSession()
 
     # Load policy.
     with open(policy, "rb") as f:
