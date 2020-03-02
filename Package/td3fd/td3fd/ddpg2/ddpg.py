@@ -6,8 +6,7 @@ import tensorflow_probability as tfp
 
 from td3fd import logger
 from td3fd.ddpg2.actorcritic_network import Actor, Critic
-
-# from td3fd.ddpg.shaping import EnsembleRewardShapingWrapper
+from td3fd.ddpg2.shaping import EnsembleRewardShapingWrapper
 from td3fd.ddpg2.normalizer import Normalizer
 from td3fd.memory import RingReplayBuffer, UniformReplayBuffer, MultiStepReplayBuffer, iterbatches
 
@@ -229,15 +228,13 @@ class DDPG(object):
             if epoch % (self.initialize_num_epochs / 100) == (self.initialize_num_epochs / 100 - 1):
                 logger.info("epoch: {} policy initialization loss: {}".format(epoch, bc_loss))
 
-    # def train_shaping(self):
-    #     assert self.demo_strategy in ["nf", "gan"]
-    #     demo_data = self.demo_buffer.sample()
-    #     self.demo_shaping.train(demo_data)
-    #     self.demo_shaping.evaluate()
+    def train_shaping(self):
+        assert self.demo_strategy in ["nf", "gan"]
+        demo_data = self.demo_buffer.sample()
+        self.shaping.train(demo_data)
+        self.shaping.evaluate()
 
     def train(self):
-
-        self.training_step += 1
 
         if self.use_n_step_return:
             one_step_batch = self.replay_buffer.sample(self.batch_size // 2)
@@ -265,37 +262,42 @@ class DDPG(object):
         n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
         # done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32) # TODO
 
+        self.training_step.assign_add(1)
+
         # normalize observations
-        o_tf = self.o_stats.normalize(o_tf)
-        g_tf = self.g_stats.normalize(g_tf)
-        o_2_tf = self.o_stats.normalize(o_2_tf)
-        g_2_tf = self.g_stats.normalize(g_2_tf)
+        norm_o_tf = self.o_stats.normalize(o_tf)
+        norm_g_tf = self.g_stats.normalize(g_tf)
+        norm_o_2_tf = self.o_stats.normalize(o_2_tf)
+        norm_g_2_tf = self.g_stats.normalize(g_2_tf)
 
         # add noise to target policy output
         noise = tfd.Normal(loc=0.0, scale=self.policy_noise).sample(tf.shape(u_tf))
         noise = tf.clip_by_value(noise, -self.policy_noise_clip, self.policy_noise_clip) * self.max_u
-        u_2_tf = tf.clip_by_value(self.target_actor([o_2_tf, g_2_tf]) + noise, -self.max_u, self.max_u)
+        u_2_tf = tf.clip_by_value(self.target_actor([norm_o_2_tf, norm_g_2_tf]) + noise, -self.max_u, self.max_u)
 
         # Critic loss
         # immediate reward
         target_tf = r_tf
         # demo shaping reward
-        # if self.demo_shaping != None:
-        #     target_tf += self.demo_critic_shaping
+        if self.demo_strategy in ["gan", "nf"]:
+            potential_curr = self.shaping.potential(o=o_tf, g=g_tf, u=u_tf)
+            potential_next = self.shaping.potential(o=o_2_tf, g=g_2_tf, u=u_2_tf)
+            target_tf += tf.pow(self.gamma, n_tf) * potential_next - potential_curr
         # ddpg or td3 target with or without clipping
         if self.twin_delayed:
             target_tf += tf.pow(self.gamma, n_tf) * tf.minimum(
-                self.target_critic([o_2_tf, g_2_tf, u_2_tf]), self.target_critic_twin([o_2_tf, g_2_tf, u_2_tf])
+                self.target_critic([norm_o_2_tf, norm_g_2_tf, u_2_tf]),
+                self.target_critic_twin([norm_o_2_tf, norm_g_2_tf, u_2_tf]),
             )
         else:
-            target_tf += tf.pow(self.gamma, n_tf) * self.target_critic([o_2_tf, g_2_tf, u_2_tf])
+            target_tf += tf.pow(self.gamma, n_tf) * self.target_critic([norm_o_2_tf, norm_g_2_tf, u_2_tf])
         with tf.GradientTape(persistent=True) as tape:
             if self.twin_delayed:
-                rl_bellman_tf = tf.square(target_tf - self.main_critic([o_tf, g_tf, u_tf])) + tf.square(
-                    target_tf - self.main_critic_twin([o_tf, g_tf, u_tf])
+                rl_bellman_tf = tf.square(target_tf - self.main_critic([norm_o_tf, norm_g_tf, u_tf])) + tf.square(
+                    target_tf - self.main_critic_twin([norm_o_tf, norm_g_tf, u_tf])
                 )
             else:
-                rl_bellman_tf = tf.square(target_tf - self.main_critic([o_tf, g_tf, u_tf]))
+                rl_bellman_tf = tf.square(target_tf - self.main_critic([norm_o_tf, norm_g_tf, u_tf]))
             # whether or not to train the critic on demo reward (if sample from demonstration buffer)
             if self.sample_demo_buffer and not self.use_demo_reward:
                 # mask off entries from demonstration dataset
@@ -315,9 +317,11 @@ class DDPG(object):
 
         # Actor Loss
         with tf.GradientTape(persistent=True) as tape:
-            pi_tf = self.main_actor([o_tf, g_tf])
-            actor_loss_tf = -tf.reduce_mean(self.main_critic([o_tf, g_tf, pi_tf]))
+            pi_tf = self.main_actor([norm_o_tf, norm_g_tf])
+            actor_loss_tf = -tf.reduce_mean(self.main_critic([norm_o_tf, norm_g_tf, pi_tf]))
             actor_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(pi_tf / self.max_u))
+            if self.demo_strategy in ["gan", "nf"]:
+                actor_loss_tf += -tf.reduce_mean(self.shaping.potential(o=o_tf, g=g_tf, u=pi_tf))
             if self.demo_strategy == "bc":
                 assert self.sample_demo_buffer, "must sample from the demonstration buffer to use behavior cloning"
                 # define the cloning loss on the actor's actions only on the samples which adhere to the above masks
@@ -325,8 +329,8 @@ class DDPG(object):
                 demo_pi_tf = tf.boolean_mask((pi_tf), mask)
                 demo_u_tf = tf.boolean_mask((u_tf), mask)
                 if self.bc_params["q_filter"]:
-                    q_u_tf = self.main_critic([o_tf, g_tf, u_tf])
-                    q_pi_tf = self.main_critic([o_tf, g_tf, pi_tf])
+                    q_u_tf = self.main_critic([norm_o_tf, norm_g_tf, u_tf])
+                    q_pi_tf = self.main_critic([norm_o_tf, norm_g_tf, pi_tf])
                     q_filter_mask = tf.reshape(tf.boolean_mask(q_u_tf > q_pi_tf, mask), [-1])
                     # use to be tf.reduce_sum, however, use tf.reduce_mean makes the loss function independent from number
                     # of demonstrations
@@ -455,39 +459,31 @@ class DDPG(object):
             self.critic_twin_optimizer = tf.keras.optimizers.Adam(learning_rate=self.q_lr)
         self.bc_optimizer = tf.keras.optimizers.Adam(learning_rate=self.pi_lr)
 
-        # # Add shaping reward
-        # if self.demo_strategy in ["nf", "gan"]:
-        #     self.demo_shaping = EnsembleRewardShapingWrapper(
-        #         sess=self.sess,
-        #         dims=self.dims,
-        #         max_u=self.max_u,
-        #         gamma=self.gamma,
-        #         demo_strategy=self.demo_strategy,
-        #         norm_obs=True,
-        #         norm_eps=self.norm_eps,
-        #         norm_clip=self.norm_clip,
-        #         **self.shaping_params.copy()
-        #     )
-        # else:
-        #     self.demo_shaping = None
-
-        # if self.demo_shaping != None:
-        #     # demo critic shaping
-        #     potential_curr = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=input_u_tf)
-        #     potential_next = self.demo_shaping.potential(o=input_o_2_tf, g=input_g_2_tf, u=self.target_pi_tf)
-        #     self.demo_critic_shaping = tf.pow(self.gamma, self.inputs_tf["n"]) * potential_next - potential_curr
-        #     # demo actor shaping
-        #     self.demo_actor_shaping = self.demo_shaping.potential(o=input_o_tf, g=input_g_tf, u=self.main_pi_tf)
+        # Add shaping reward
+        if self.demo_strategy in ["nf", "gan"]:
+            self.shaping = EnsembleRewardShapingWrapper(
+                dims=self.dims,
+                max_u=self.max_u,
+                gamma=self.gamma,
+                demo_strategy=self.demo_strategy,
+                norm_obs=True,
+                norm_eps=self.norm_eps,
+                norm_clip=self.norm_clip,
+                **self.shaping_params.copy()
+            )
+        else:
+            self.shaping = None
 
         # Initialize all variables
         self.initialize_target_net()
-        self.training_step = 0  # for td3 training
+        self.training_step = tf.Variable(0, trainable=False)
 
     def __getstate__(self):
         """
         Our policies can be loaded from pkl, but after unpickling you cannot continue training.
         """
         state = {k: v for k, v in self.init_args.items() if not k == "self"}
+        state["shaping"] = self.shaping
         state["tf"] = {
             "o_stats": self.o_stats.get_weights(),
             "g_stats": self.g_stats.get_weights(),
@@ -502,6 +498,7 @@ class DDPG(object):
 
     def __setstate__(self, state):
         stored_vars = state.pop("tf")
+        shaping = state.pop("shaping")
         self.__init__(**state)
         self.o_stats.set_weights(stored_vars["o_stats"])
         self.g_stats.set_weights(stored_vars["g_stats"])
@@ -511,3 +508,4 @@ class DDPG(object):
         self.target_critic.set_weights(stored_vars["target_critic"])
         self.main_critic_twin.set_weights(stored_vars["main_critic_twin"])
         self.target_critic_twin.set_weights(stored_vars["target_critic_twin"])
+        self.shaping = shaping
