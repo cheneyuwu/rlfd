@@ -262,7 +262,7 @@ class DDPG(object):
         n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
         # done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32) # TODO
 
-        self.training_step.assign_add(1)
+        self.training_step.assign((self.training_step + 1) % self.policy_freq)
 
         # normalize observations
         norm_o_tf = self.o_stats.normalize(o_tf)
@@ -312,8 +312,8 @@ class DDPG(object):
 
         critic_loss = critic_loss_tf.numpy()
 
-        if self.training_step % self.policy_freq:
-            return critic_loss, None
+        if self.training_step % self.policy_freq != 0:
+            return critic_loss, 0.0
 
         # Actor Loss
         with tf.GradientTape(persistent=True) as tape:

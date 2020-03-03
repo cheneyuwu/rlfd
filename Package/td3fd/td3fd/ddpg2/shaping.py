@@ -164,6 +164,25 @@ class NFShaping(Shaping):
         self.optimizer.apply_gradients(zip(grads, self.nf.trainable_variables))
         return loss_tf
 
+    def __getstate__(self):
+        """
+        Our policies can be loaded from pkl, but after unpickling you cannot continue training.
+        """
+        state = {k: v for k, v in self.init_args.items() if not k in ["self", "__class__"]}
+        state["tf"] = {
+            "o_stats": self.o_stats.get_weights(),
+            "g_stats": self.g_stats.get_weights(),
+            "nf": list(map(lambda v: v.numpy(), self.nf.variables)),
+        }
+        return state
+
+    def __setstate__(self, state):
+        stored_vars = state.pop("tf")
+        self.__init__(**state)
+        self.o_stats.set_weights(stored_vars["o_stats"])
+        self.g_stats.set_weights(stored_vars["g_stats"])
+        list(map(lambda v: v[0].assign(v[1]), zip(self.nf.variables, stored_vars["nf"])))
+
 
 class GANShaping(Shaping):
     def __init__(
