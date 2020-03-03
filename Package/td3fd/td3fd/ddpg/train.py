@@ -23,7 +23,7 @@ def train(root_dir, params):
     config.check_params(params, ddpg_config.default_params)
 
     # Construct...
-    save_interval = 10
+    save_interval = 0
     demo_strategy = params["ddpg"]["demo_strategy"]
     num_epochs = params["ddpg"]["num_epochs"]
     num_cycles = params["ddpg"]["num_cycles"]
