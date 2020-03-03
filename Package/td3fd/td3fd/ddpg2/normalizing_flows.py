@@ -18,6 +18,7 @@ def create_maf(dim, num_bijectors=6, layer_sizes=[512, 512]):
                     hidden_units=layer_sizes,
                     kernel_initializer=tf.initializers.glorot_normal(),
                     bias_initializer=None,
+                    dtype=tf.float64,
                 )
             )
         )
@@ -25,6 +26,6 @@ def create_maf(dim, num_bijectors=6, layer_sizes=[512, 512]):
     # discard the last Permute layer.
     chained_bijectors = tfb.Chain(list(reversed(bijectors[:-1])))
     trans_dist = tfd.TransformedDistribution(
-        distribution=tfd.MultivariateNormalDiag(loc=tf.zeros([dim])), bijector=chained_bijectors
+        distribution=tfd.MultivariateNormalDiag(loc=tf.zeros([dim], dtype=tf.float64)), bijector=chained_bijectors
     )
     return trans_dist

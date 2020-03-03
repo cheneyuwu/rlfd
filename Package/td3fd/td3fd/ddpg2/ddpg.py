@@ -234,33 +234,10 @@ class DDPG(object):
         self.shaping.train(demo_data)
         self.shaping.evaluate()
 
-    def train(self):
-
-        if self.use_n_step_return:
-            one_step_batch = self.replay_buffer.sample(self.batch_size // 2)
-            n_step_batch = self.n_step_replay_buffer.sample(self.batch_size - self.batch_size // 2)
-            assert one_step_batch.keys() == n_step_batch.keys()
-            batch = dict()
-            for k in one_step_batch.keys():
-                batch[k] = np.concatenate((one_step_batch[k], n_step_batch[k]))
-        else:
-            batch = self.replay_buffer.sample(self.batch_size)
-
-        if self.sample_demo_buffer:
-            rollout_batch = batch
-            demo_batch = self.demo_buffer.sample(self.batch_size_demo)
-            assert rollout_batch.keys() == demo_batch.keys()
-            for k in rollout_batch.keys():
-                batch[k] = np.concatenate((rollout_batch[k], demo_batch[k]))
-
-        o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-        g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
-        o_2_tf = tf.convert_to_tensor(batch["o_2"], dtype=tf.float32)
-        g_2_tf = tf.convert_to_tensor(batch["g_2"], dtype=tf.float32)
-        u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
-        r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
-        n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
-        # done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32) # TODO
+    @tf.function
+    def train_tf(
+        self, o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf,
+    ):
 
         self.training_step.assign((self.training_step + 1) % self.policy_freq)
 
@@ -310,10 +287,8 @@ class DDPG(object):
             critic_twin_grads = tape.gradient(critic_loss_tf, self.main_critic_twin.trainable_weights)
             self.critic_twin_optimizer.apply_gradients(zip(critic_twin_grads, self.main_critic_twin.trainable_weights))
 
-        critic_loss = critic_loss_tf.numpy()
-
         if self.training_step % self.policy_freq != 0:
-            return critic_loss, 0.0
+            return critic_loss_tf, tf.constant(0.0)
 
         # Actor Loss
         with tf.GradientTape(persistent=True) as tape:
@@ -350,9 +325,38 @@ class DDPG(object):
         actor_grads = tape.gradient(actor_loss_tf, self.main_actor.trainable_weights)
         self.actor_optimizer.apply_gradients(zip(actor_grads, self.main_actor.trainable_weights))
 
-        actor_loss = actor_loss_tf.numpy()
+        return critic_loss_tf, actor_loss_tf
 
-        return critic_loss, actor_loss
+    def train(self):
+
+        if self.use_n_step_return:
+            one_step_batch = self.replay_buffer.sample(self.batch_size // 2)
+            n_step_batch = self.n_step_replay_buffer.sample(self.batch_size - self.batch_size // 2)
+            assert one_step_batch.keys() == n_step_batch.keys()
+            batch = dict()
+            for k in one_step_batch.keys():
+                batch[k] = np.concatenate((one_step_batch[k], n_step_batch[k]))
+        else:
+            batch = self.replay_buffer.sample(self.batch_size)
+
+        if self.sample_demo_buffer:
+            rollout_batch = batch
+            demo_batch = self.demo_buffer.sample(self.batch_size_demo)
+            assert rollout_batch.keys() == demo_batch.keys()
+            for k in rollout_batch.keys():
+                batch[k] = np.concatenate((rollout_batch[k], demo_batch[k]))
+
+        o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
+        g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
+        o_2_tf = tf.convert_to_tensor(batch["o_2"], dtype=tf.float32)
+        g_2_tf = tf.convert_to_tensor(batch["g_2"], dtype=tf.float32)
+        u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
+        r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
+        n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
+        # done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32) # TODO
+        critic_loss_tf, actor_loss_tf = self.train_tf(o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf)
+
+        return critic_loss_tf.numpy(), actor_loss_tf.numpy()
 
     def initialize_target_net(self):
         hard_copy_func = lambda v: v[0].assign(v[1])

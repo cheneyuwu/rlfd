@@ -90,11 +90,11 @@ class NFShaping(Shaping):
         self.norm_clip = norm_clip
         self.prm_loss_weight = prm_loss_weight
         self.reg_loss_weight = reg_loss_weight
-        self.potential_weight = potential_weight
+        self.potential_weight = tf.constant(potential_weight, dtype=tf.float64)
 
         #
         self.learning_rate = 2e-4
-        self.scale = 5.0
+        self.scale = tf.constant(5.0, dtype=tf.float64)
 
         # normalizer for goal and observation.
         self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip)
@@ -112,10 +112,15 @@ class NFShaping(Shaping):
         g = self.g_stats.normalize(g)
         state_tf = tf.concat(axis=1, values=[o, g, u / self.max_u])
 
+        state_tf = tf.cast(state_tf, tf.float64)
+
         potential = tf.reshape(self.nf.prob(state_tf), (-1, 1))
         potential = tf.math.log(potential + tf.exp(-self.scale))
         potential = potential + self.scale  # shift
         potential = self.potential_weight * potential / self.scale  # scale
+
+        potential = tf.cast(potential, tf.float32)
+
         return potential
 
     def update_stats(self, batch):
@@ -149,7 +154,9 @@ class NFShaping(Shaping):
         g_tf = self.g_stats.normalize(g_tf)
         state_tf = tf.concat(axis=1, values=[o_tf, g_tf, u_tf / self.max_u])
 
-        with tf.GradientTape() as tape1:
+        state_tf = tf.cast(state_tf, tf.float64)
+
+        with tf.GradientTape() as tape:
             with tf.GradientTape() as tape2:
                 tape2.watch(state_tf)
                 # loss function that tries to maximize log prob
@@ -160,8 +167,11 @@ class NFShaping(Shaping):
             jacobian = tape2.gradient(neg_log_prob, state_tf)
             regularizer = tf.norm(jacobian, ord=2)
             loss_tf = self.prm_loss_weight * neg_log_prob + self.reg_loss_weight * regularizer
-        grads = tape1.gradient(loss_tf, self.nf.trainable_variables)
+        grads = tape.gradient(loss_tf, self.nf.trainable_variables)
         self.optimizer.apply_gradients(zip(grads, self.nf.trainable_variables))
+
+        loss_tf = tf.cast(loss_tf, tf.float32)
+
         return loss_tf
 
     def __getstate__(self):
@@ -356,12 +366,12 @@ class EnsembleRewardShapingWrapper:
             logger.log("Evaluating shaping function #{}...".format(i))
             shaping.evaluate(*args, **kwargs)
 
-    def potential(self, *args, **kwargs):
-        potential = tf.reduce_mean([x.potential(*args, **kwargs) for x in self.shapings], axis=0)
+    def potential(self, o, g, u):
+        potential = tf.reduce_mean([x.potential(o, g, u) for x in self.shapings], axis=0)
         return potential
 
-    def reward(self, *args, **kwargs):
-        reward = tf.reduce_mean([x.reward(*args, **kwargs) for x in self.shapings], axis=0)
+    def reward(self, o, g, u, o_2, g_2, u_2):
+        reward = tf.reduce_mean([x.reward(o, g, u, o_2, g_2, u_2) for x in self.shapings], axis=0)
         return reward
 
 
