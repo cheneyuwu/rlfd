@@ -49,8 +49,8 @@ def train(root_dir, params):
         demo_file = os.path.join(root_dir, "demo_data.npz")
         assert os.path.isfile(demo_file), "demonstration training set does not exist"
         episode_batch = policy.init_demo_buffer(demo_file)
-        # if policy.sample_demo_buffer:
-        #     policy.update_stats(episode_batch)
+        if policy.sample_demo_buffer:
+            policy.update_stats(episode_batch)
 
     # Train shaping potential
     if demo_strategy in ["nf", "gan"]:
@@ -77,7 +77,7 @@ def train(root_dir, params):
             # print("cycle: {} completed!!".format(cyc))
             episode = rollout_worker.generate_rollouts()
             policy.store_episode(episode)
-            # policy.update_stats(episode)
+            policy.update_stats(episode)
             for _ in range(num_batches):
                 policy.train()
             policy.update_target_net()
