@@ -500,7 +500,7 @@ class DDPG(object):
         if self.twin_delayed:
             rl_bellman_1_tf = tf.square(tf.stop_gradient(target_tf) - self.main_q_tf)
             rl_bellman_2_tf = tf.square(tf.stop_gradient(target_tf) - self.main_q2_tf)
-            rl_bellman_tf = (rl_bellman_1_tf + rl_bellman_2_tf) / 2.0
+            rl_bellman_tf = rl_bellman_1_tf + rl_bellman_2_tf
         else:
             rl_bellman_tf = tf.square(tf.stop_gradient(target_tf) - self.main_q_tf)
         # whether or not to train the critic on demo reward (if sample from demonstration buffer)
