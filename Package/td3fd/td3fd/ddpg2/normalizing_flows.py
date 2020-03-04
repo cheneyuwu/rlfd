@@ -7,6 +7,7 @@ import tensorflow_probability as tfp
 tfd = tfp.distributions
 tfb = tfp.bijectors
 
+
 def create_maf(dim, num_bijectors=6, layer_sizes=[512, 512]):
     # build layers
     bijectors = []
@@ -16,8 +17,9 @@ def create_maf(dim, num_bijectors=6, layer_sizes=[512, 512]):
                 shift_and_log_scale_fn=tfb.AutoregressiveNetwork(
                     params=2,
                     hidden_units=layer_sizes,
-                    kernel_initializer=tf.initializers.glorot_normal(),
-                    bias_initializer=None,
+                    kernel_initializer="glorot_normal",
+                    bias_initializer="zeros",
+                    activation="relu",
                     dtype=tf.float64,
                 )
             )
