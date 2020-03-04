@@ -150,28 +150,37 @@ class DDPG(object):
         self._create_memory()
         self._create_network()
 
+    @tf.function
+    def get_actions_tf(self, o_tf, g_tf):
+
+        norm_o_tf = self.o_stats.normalize(o_tf)
+        norm_g_tf = self.g_stats.normalize(g_tf)
+
+        u_tf = self.main_actor([norm_o_tf, norm_g_tf])
+
+        q_tf = self.main_critic([norm_o_tf, norm_g_tf, u_tf])
+        if self.shaping != None:
+            p_tf = self.shaping.potential(o=o_tf, g=g_tf, u=u_tf)
+        else:
+            p_tf = tf.zeros_like(q_tf)
+
+        if tf.shape(o_tf)[0] == 1:
+            u_tf = u_tf[0]
+
+        return u_tf, q_tf, p_tf
+
     def get_actions(self, o, g, compute_q=False):
         o = o.reshape((-1, *self.dimo))
         g = g.reshape((o.shape[0], *self.dimg))
         o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
         g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
 
-        o_tf = self.o_stats.normalize(o_tf)
-        g_tf = self.g_stats.normalize(g_tf)
-
-        u_tf = self.main_actor([o_tf, g_tf])
+        u_tf, q_tf, p_tf = self.get_actions_tf(o_tf, g_tf)
 
         if compute_q:
-            q = self.main_critic([o_tf, g_tf, u_tf]).numpy()
-            p = 0.0
-        u = u_tf.numpy()
-        if o.shape[0] == 1:
-            u = u[0]
-
-        if compute_q:
-            return [u, q, p + q]
+            return [u_tf.numpy(), q_tf.numpy(), p_tf.numpy() + q_tf.numpy()]
         else:
-            return u
+            return u_tf.numpy()
 
     def init_demo_buffer(self, demo_file):
         """Initialize the demonstration buffer.
