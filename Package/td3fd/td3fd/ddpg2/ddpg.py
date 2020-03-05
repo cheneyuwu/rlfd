@@ -241,7 +241,7 @@ class DDPG(object):
         assert self.demo_strategy in ["nf", "gan"]
         demo_data = self.demo_buffer.sample()
         self.shaping.train(demo_data)
-        self.shaping.evaluate()
+        self.shaping.evaluate(demo_data)
 
     @tf.function
     def train_tf(

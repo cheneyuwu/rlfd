@@ -103,6 +103,8 @@ class NFShaping(Shaping):
         # normalizing flow
         state_dim = self.dimo[0] + self.dimg[0] + self.dimu[0]
         self.nf = create_maf(dim=state_dim, num_bijectors=num_bijectors, layer_sizes=layer_sizes)
+        # create weights
+        self.nf.sample()
         # optimizers
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate)
 
@@ -366,10 +368,12 @@ class EnsembleRewardShapingWrapper:
             logger.log("Evaluating shaping function #{}...".format(i))
             shaping.evaluate(*args, **kwargs)
 
+    @tf.function
     def potential(self, o, g, u):
         potential = tf.reduce_mean([x.potential(o, g, u) for x in self.shapings], axis=0)
         return potential
 
+    @tf.function
     def reward(self, o, g, u, o_2, g_2, u_2):
         reward = tf.reduce_mean([x.reward(o, g, u, o_2, g_2, u_2) for x in self.shapings], axis=0)
         return reward
@@ -416,11 +420,37 @@ class RewardShaping:
 
         self.shaping.post_training_update(demo_data)
 
-    def evaluate(self):
+    def evaluate(self, demo_data):
         return
 
+        import matplotlib.pyplot as plt
+
+        x = []
+        y = []
+        for var in np.arange(0, 1e-2, 1e-4):
+            o_tf = tf.convert_to_tensor(
+                demo_data["o"] + np.random.normal(0.0, var, demo_data["o"].shape), dtype=tf.float32
+            )
+            g_tf = tf.convert_to_tensor(
+                demo_data["g"] + np.random.normal(0.0, var, demo_data["g"].shape), dtype=tf.float32
+            )
+            u_tf = tf.convert_to_tensor(
+                demo_data["u"] + np.random.normal(0.0, var, demo_data["u"].shape), dtype=tf.float32
+            )
+            p_tf = self.shaping.potential(o=o_tf, g=g_tf, u=u_tf)
+            x.append(var)
+            y.append(np.mean(p_tf.numpy()))
+
+        plt.plot(x, y)
+        plt.xlabel("var")
+        plt.ylabel("potential")
+        plt.savefig("evaluate_potential.png", dpi=200)
+        plt.show()
+
+    @tf.function
     def potential(self, o, g, u):
         return self.shaping.potential(o, g, u)
 
+    @tf.function
     def reward(self, o, g, u, o_2, g_2, u_2):
         return self.shaping.reward(o, g, u, o_2, g_2, u_2)
