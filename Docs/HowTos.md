@@ -16,8 +16,10 @@
 4. enter virtual env and install packages:
   - install mujoco_py, mpi4py
     - `pip install mujoco_py==1.50.1.68`
+    - `pip install mpi4py`
   - install tensorflow with
     - `pip install tensorflow-gpu==1.14.1 tensorflow-probability==0.7.0 tensorflow-determinism`
+    - For tf2: `pip install tensorflow tensorflow_probability`
   - install pytorch with
     - `pip install --no-index torch==1.3.1 torchvision torchtext torchaudio && pip install torchsummary==1.5.1`
   - install gym and metaworld and other environments
