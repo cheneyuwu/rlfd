@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from td3fd.demo_util.generate_demo_fetch_policy import FetchDemoGenerator, store_demo_data
+from td3fd.demo_util.generate_demo_fetch import FetchDemoGenerator, store_demo_data
 from td3fd.env_manager import EnvManager
 from td3fd.util.cmd_util import ArgParser
 
@@ -44,16 +44,16 @@ class PickAndPlaceDemoGenerator(FetchDemoGenerator):
 
         self.num_itr += 1
         assert self.episode_info[-1]["is_success"]
-        return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_info
+        return self.episode_obs, self.episode_act, self.episode_rwd, self.episode_done, self.episode_info
 
 
 def main(policy_file=None, **kwargs):
 
     # Change the following parameters
     num_itr = 50
-    render = False
+    render = True
     env_name = "YWFetchPickAndPlaceRandInit-v0"
-    env = EnvManager(env_name=env_name, env_args={}, r_scale=1.0, r_shift=0.0, eps_length=40).get_env()
+    env = EnvManager(env_name=env_name, eps_length=0).get_env()
     system_noise_level = 0.0
     sub_opt_level = 0.0
     variance_level = 0.0
@@ -71,13 +71,14 @@ def main(policy_file=None, **kwargs):
     demo_data_obs = []
     demo_data_acs = []
     demo_data_rewards = []
+    demo_data_dones = []
     demo_data_info = []
 
     generator = PickAndPlaceDemoGenerator(env=env, policy=policy, system_noise_level=system_noise_level, render=render)
 
     for i in range(num_itr):
         print("Iteration number: ", i)
-        episode_obs, episode_act, episode_rwd, episode_info = generator.generate_pick_place(
+        episode_obs, episode_act, episode_rwd, episode_done, episode_info = generator.generate_pick_place(
             sub_opt_level=sub_opt_level, variance_level=variance_level
         )
         print("observation: ", episode_obs)
@@ -85,14 +86,16 @@ def main(policy_file=None, **kwargs):
         demo_data_obs.append(episode_obs)
         demo_data_acs.append(episode_act)
         demo_data_rewards.append(episode_rwd)
+        demo_data_dones.append(episode_done)
         demo_data_info.append(episode_info)
 
     store_demo_data(
-        T=env._max_episode_steps,
+        T=env.eps_length,
         num_itr=num_itr,
         demo_data_obs=demo_data_obs,
         demo_data_acs=demo_data_acs,
         demo_data_rewards=demo_data_rewards,
+        demo_data_dones=demo_data_dones,
         demo_data_info=demo_data_info,
     )
 
