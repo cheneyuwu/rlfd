@@ -210,6 +210,17 @@ class DDPG(object):
         with open(path, "wb") as f:
             pickle.dump(self, f)
 
+    @tf.function
+    def train_bc_tf(self, o_tf, g_tf, u_tf):
+        o_tf = self.o_stats.normalize(o_tf)
+        g_tf = self.g_stats.normalize(g_tf)
+        with tf.GradientTape() as tape:
+            pi_tf = self.main_actor([o_tf, g_tf])
+            bc_loss_tf = tf.reduce_mean(tf.square(pi_tf - u_tf))
+        actor_grads = tape.gradient(bc_loss_tf, self.main_actor.trainable_weights)
+        self.bc_optimizer.apply_gradients(zip(actor_grads, self.main_actor.trainable_weights))
+        return bc_loss_tf
+
     def train_bc(self):
 
         if not self.initialize_with_bc:
@@ -225,13 +236,7 @@ class DDPG(object):
                 o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
                 g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
                 u_tf = tf.convert_to_tensor(u, dtype=tf.float32)
-                o_tf = self.o_stats.normalize(o_tf)
-                g_tf = self.g_stats.normalize(g_tf)
-                with tf.GradientTape() as tape:
-                    pi_tf = self.main_actor([o_tf, g_tf])
-                    bc_loss_tf = tf.reduce_mean(tf.square(pi_tf - u_tf))
-                actor_grads = tape.gradient(bc_loss_tf, self.main_actor.trainable_weights)
-                self.bc_optimizer.apply_gradients(zip(actor_grads, self.main_actor.trainable_weights))
+                bc_loss_tf = self.train_bc_tf(o_tf, g_tf, u_tf)
                 bc_loss = bc_loss_tf.numpy()
 
             if epoch % (self.initialize_num_epochs / 100) == (self.initialize_num_epochs / 100 - 1):
