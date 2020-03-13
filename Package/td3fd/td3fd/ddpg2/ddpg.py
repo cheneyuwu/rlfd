@@ -160,7 +160,7 @@ class DDPG(object):
 
         q_tf = self.main_critic([norm_o_tf, norm_g_tf, u_tf])
         if self.shaping != None:
-            p_tf = self.shaping.potential(o=o_tf, g=g_tf, u=u_tf)
+            p_tf = self.potential_weight * self.shaping.potential(o=o_tf, g=g_tf, u=u_tf)
         else:
             p_tf = tf.zeros_like(q_tf)
 
@@ -271,8 +271,8 @@ class DDPG(object):
         target_tf = r_tf
         # demo shaping reward
         if self.demo_strategy in ["gan", "nf"]:
-            potential_curr = self.shaping.potential(o=o_tf, g=g_tf, u=u_tf)
-            potential_next = self.shaping.potential(o=o_2_tf, g=g_2_tf, u=u_2_tf)
+            potential_curr = self.potential_weight * self.shaping.potential(o=o_tf, g=g_tf, u=u_tf)
+            potential_next = self.potential_weight * self.shaping.potential(o=o_2_tf, g=g_2_tf, u=u_2_tf)
             target_tf += tf.pow(self.gamma, n_tf) * potential_next - potential_curr
         # ddpg or td3 target with or without clipping
         if self.twin_delayed:
@@ -296,9 +296,11 @@ class DDPG(object):
                 rl_bellman_tf = tf.boolean_mask(rl_bellman_tf, mask)
             critic_loss_tf = tf.reduce_mean(rl_bellman_tf)
         critic_grads = tape.gradient(critic_loss_tf, self.main_critic.trainable_weights)
-        self.critic_optimizer.apply_gradients(zip(critic_grads, self.main_critic.trainable_weights))
         if self.twin_delayed:
             critic_twin_grads = tape.gradient(critic_loss_tf, self.main_critic_twin.trainable_weights)
+
+        self.critic_optimizer.apply_gradients(zip(critic_grads, self.main_critic.trainable_weights))
+        if self.twin_delayed:
             self.critic_twin_optimizer.apply_gradients(zip(critic_twin_grads, self.main_critic_twin.trainable_weights))
 
         if self.training_step % self.policy_freq != 0:
@@ -310,7 +312,9 @@ class DDPG(object):
             actor_loss_tf = -tf.reduce_mean(self.main_critic([norm_o_tf, norm_g_tf, pi_tf]))
             actor_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(pi_tf / self.max_u))
             if self.demo_strategy in ["gan", "nf"]:
-                actor_loss_tf += -tf.reduce_mean(self.shaping.potential(o=o_tf, g=g_tf, u=pi_tf))
+                actor_loss_tf += -tf.reduce_mean(
+                    self.potential_weight * self.shaping.potential(o=o_tf, g=g_tf, u=pi_tf)
+                )
             if self.demo_strategy == "bc":
                 assert self.sample_demo_buffer, "must sample from the demonstration buffer to use behavior cloning"
                 # define the cloning loss on the actor's actions only on the samples which adhere to the above masks
@@ -336,13 +340,13 @@ class DDPG(object):
                 actor_loss_tf = (
                     self.bc_params["prm_loss_weight"] * actor_loss_tf + self.bc_params["aux_loss_weight"] * bc_loss_tf
                 )
+
         actor_grads = tape.gradient(actor_loss_tf, self.main_actor.trainable_weights)
         self.actor_optimizer.apply_gradients(zip(actor_grads, self.main_actor.trainable_weights))
 
         return critic_loss_tf, actor_loss_tf
 
-    def train(self):
-
+    def sample_batch(self):
         if self.use_n_step_return:
             one_step_batch = self.replay_buffer.sample(self.batch_size // 2)
             n_step_batch = self.n_step_replay_buffer.sample(self.batch_size - self.batch_size // 2)
@@ -360,6 +364,12 @@ class DDPG(object):
             for k in rollout_batch.keys():
                 batch[k] = np.concatenate((rollout_batch[k], demo_batch[k]))
 
+        return batch
+
+    def train(self):
+
+        batch = self.sample_batch()
+
         o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
         g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
         o_2_tf = tf.convert_to_tensor(batch["o_2"], dtype=tf.float32)
@@ -371,6 +381,10 @@ class DDPG(object):
         critic_loss_tf, actor_loss_tf = self.train_tf(o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf)
 
         return critic_loss_tf.numpy(), actor_loss_tf.numpy()
+
+    def update_potential_weight(self):
+        potential_weight_tf = self.potential_weight.assign(self.potential_weight * self.decay)
+        return potential_weight_tf.numpy()
 
     def initialize_target_net(self):
         hard_copy_func = lambda v: v[0].assign(v[1])
@@ -491,6 +505,11 @@ class DDPG(object):
             )
         else:
             self.shaping = None
+
+        # Meta-learning for weight on potential
+        self.potential_weight = tf.Variable(1.0, trainable=False)
+        self.decay = 0.99
+        # self.meta_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
         # Initialize all variables
         self.initialize_target_net()

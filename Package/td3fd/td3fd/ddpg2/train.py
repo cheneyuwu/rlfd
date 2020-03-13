@@ -58,6 +58,7 @@ def train(root_dir, params):
 
     if policy.initialize_with_bc:
         policy.train_bc()
+        # policy.initialize_target_net()
 
         # save the policy
         policy.save(initial_policy_path)
@@ -82,6 +83,11 @@ def train(root_dir, params):
                 policy.train()
             policy.update_target_net()
             policy.clear_n_step_replay_buffer()
+
+        # update meta parameters
+        if epoch > 200:
+            potential_weight = policy.update_potential_weight()
+            logger.info("Current potential weight: ", potential_weight)
 
         # test
         evaluator.clear_history()
