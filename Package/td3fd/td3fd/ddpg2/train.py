@@ -6,6 +6,19 @@ import sys
 import numpy as np
 import tensorflow as tf
 
+# Important: limit gpu memory growth for tensorflow
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        # Currently, memory growth needs to be the same across GPUs
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+    except RuntimeError as e:
+        # Memory growth must be set before GPUs have been initialized
+        print(e)
+
 from td3fd import config, logger
 from td3fd.ddpg2 import config as ddpg_config
 from td3fd.util.cmd_util import ArgParser
