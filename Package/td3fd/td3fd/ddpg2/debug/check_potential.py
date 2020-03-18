@@ -28,15 +28,10 @@ def check_potential(exp_dir, policy):
     print(o.shape, g.shape, u.shape)
     assert policy.shaping != None
 
-    o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
-    g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
-    u_tf = tf.convert_to_tensor(u, dtype=tf.float32)
-
-    p_tf = policy.shaping.potential(o=o_tf, g=g_tf, u=u_tf)
 
     x = []
     y = []
-    for var in np.arange(0, 1e-2, 1e-4):
+    for var in np.arange(0, 1, 1e-2):
         o_tf = tf.convert_to_tensor(o + np.random.normal(0.0, var, o.shape), dtype=tf.float32)
         g_tf = tf.convert_to_tensor(g + np.random.normal(0.0, var, g.shape), dtype=tf.float32)
         u_tf = tf.convert_to_tensor(u + np.random.normal(0.0, var, u.shape), dtype=tf.float32)
