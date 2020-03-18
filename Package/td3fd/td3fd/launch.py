@@ -286,9 +286,11 @@ def main(targets, exp_dir, policy, save_dir, **kwargs):
                         # "epoch:test/success_rate",
                         # "epoch:test/:reward_per_eps",
                         # "train/steps:test/success_rate",
-                        # "train/steps:test/reward_per_eps",
-                        "exploration/num steps total:evaluation/Average Returns"  # for rlkit
-                        # "train-steps:evaluation/episode-reward-mean",
+                        "train/steps:test/reward_per_eps",
+                        # for rlkit
+                        # "exploration/num steps total:evaluation/Average Returns"
+                        # "exploration/num steps total:trainer/Policy Loss"
+                        # "train-steps:evaluation/episode-reward-mean",  # for soft learning
                     ],
                     smooth=True,
                 )

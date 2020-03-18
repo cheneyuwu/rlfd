@@ -6,17 +6,19 @@ try:
     from td3fd.env.franka_env import panda_env
 except:
     panda_env = None
+
 try:
     import gym
     import gym.wrappers
 
     from gym import spaces
+    from mujoco_py.cymj import GlfwError
 
-    # Need this for getting observation in pixels (for vision based learning) (for future works)
-    from mujoco_py import GlfwContext
+    # # Need this for getting observation in pixels (for vision based learning) (for future works)
+    # from mujoco_py import GlfwContext
 
-    GlfwContext(offscreen=True)  # Create a window to init GLFW.
-except:
+    # GlfwContext(offscreen=True)  # Create a window to init GLFW.
+except ImportError or GlfwError:
     gym = None
 
 try:
