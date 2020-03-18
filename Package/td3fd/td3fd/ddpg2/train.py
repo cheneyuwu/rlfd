@@ -98,9 +98,8 @@ def train(root_dir, params):
             policy.clear_n_step_replay_buffer()
 
         # update meta parameters
-        if epoch > 200:
-            potential_weight = policy.update_potential_weight()
-            logger.info("Current potential weight: ", potential_weight)
+        potential_weight = policy.update_potential_weight()
+        logger.info("Current potential weight: ", potential_weight)
 
         # test
         evaluator.clear_history()

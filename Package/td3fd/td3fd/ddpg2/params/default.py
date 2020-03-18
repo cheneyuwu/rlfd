@@ -43,6 +43,9 @@ params_config = {
         "use_n_step_return": False,
         "bc_params": {"q_filter": 1, "prm_loss_weight": 0.1, "aux_loss_weight": 1.0},
         "shaping_params": {
+            # potential weight decay
+            "potential_decay_scale": 1.0,
+            "potential_decay_epoch": 0,
             "num_epochs": int(4e3),
             "batch_size": 128,
             "nf": {

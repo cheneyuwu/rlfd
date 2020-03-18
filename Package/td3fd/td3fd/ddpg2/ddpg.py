@@ -383,7 +383,10 @@ class DDPG(object):
         return critic_loss_tf.numpy(), actor_loss_tf.numpy()
 
     def update_potential_weight(self):
-        potential_weight_tf = self.potential_weight.assign(self.potential_weight * self.decay)
+        if self.potential_decay_epoch < self.shaping_params["potential_decay_epoch"]:
+            self.potential_decay_epoch += 1
+            return self.potential_weight.numpy()
+        potential_weight_tf = self.potential_weight.assign(self.potential_weight * self.potential_decay_scale)
         return potential_weight_tf.numpy()
 
     def initialize_target_net(self):
@@ -508,7 +511,8 @@ class DDPG(object):
 
         # Meta-learning for weight on potential
         self.potential_weight = tf.Variable(1.0, trainable=False)
-        self.decay = 0.99
+        self.potential_decay_scale = self.shaping_params["potential_decay_scale"]
+        self.potential_decay_epoch = 0  # eventually becomes self.shaping_params["potential_decay_epoch"]
         # self.meta_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
         # Initialize all variables

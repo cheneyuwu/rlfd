@@ -52,6 +52,9 @@ default_params = {
             "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss (also called the cloning loss)
         },
         "shaping_params": {
+            # potential weight decay
+            "potential_decay_scale": 1.0,
+            "potential_decay_epoch": 0,
             "num_epochs": int(1e3),
             "batch_size": 128,  # batch size for training the potential function (gan and nf)
             "num_ensembles": 2,
