@@ -548,6 +548,7 @@ class ImgGANShaping(Shaping):
         return potential
 
     def evaluate(self):
+        pass
         # TODO: fix utils imports on cluster
         # n = 16  # generate 16 images
         # z = torch.randn(n, self.latent_dim, 1, 1).to(device)  # latent vector
