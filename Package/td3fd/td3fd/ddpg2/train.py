@@ -71,7 +71,7 @@ def train(root_dir, params):
 
     if policy.initialize_with_bc:
         policy.train_bc()
-        # policy.initialize_target_net()
+        policy.initialize_target_net()
 
         # save the policy
         policy.save(initial_policy_path)
