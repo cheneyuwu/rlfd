@@ -3,7 +3,7 @@ params_config = {
     "alg": "ddpg2-tf",
     "config": "default",
     # environment config
-    "env_name": "Reach2DFDense",
+    "env_name": "Reach2DF",
     "r_scale": 1.0,
     "r_shift": 0.0,
     "eps_length": 0,
