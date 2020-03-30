@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import autograd
 from torchsummary import summary
-from torchvision import utils
+# from torchvision import utils
 
 import td3fd.td3.normalizing_flow as fnn
 from td3fd import logger
@@ -548,14 +548,15 @@ class ImgGANShaping(Shaping):
         return potential
 
     def evaluate(self):
-        n = 16  # generate 16 images
-        z = torch.randn(n, self.latent_dim, 1, 1).to(device)  # latent vector
-        samples = self.G(z)  # pass to generator
-        samples = samples.mul(0.5).add(0.5)  # change output from (-1, 1) to (0, 1)
-        samples = samples.data.cpu()
-        grid = utils.make_grid(samples[:, :3, ...])
-        print("Grid of 2x8 images saved to 'dgan_model_image.png'.")
-        utils.save_image(grid, "dgan_model_image.png")
+        # TODO: fix utils imports on cluster
+        # n = 16  # generate 16 images
+        # z = torch.randn(n, self.latent_dim, 1, 1).to(device)  # latent vector
+        # samples = self.G(z)  # pass to generator
+        # samples = samples.mul(0.5).add(0.5)  # change output from (-1, 1) to (0, 1)
+        # samples = samples.data.cpu()
+        # grid = utils.make_grid(samples[:, :3, ...])
+        # print("Grid of 2x8 images saved to 'dgan_model_image.png'.")
+        # utils.save_image(grid, "dgan_model_image.png")
 
     def real_images(self, images, number_of_images):
         if self.C == 3:

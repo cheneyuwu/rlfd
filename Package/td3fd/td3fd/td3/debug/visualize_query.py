@@ -5,7 +5,7 @@ import pickle
 
 import matplotlib
 
-matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode
+matplotlib.use("Agg")  # Can change to 'Agg' for non-interactive mode
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pl
 from mpl_toolkits.mplot3d import Axes3D
