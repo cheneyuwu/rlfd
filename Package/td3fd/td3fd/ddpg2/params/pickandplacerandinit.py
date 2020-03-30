@@ -79,13 +79,13 @@ params_config = {
         "history_len": 300,
     },
     "evaluator": {
-        "num_episodes": 10,
+        "num_episodes": 4,
         "num_steps": None,
-        "noise_eps": 0.05,
+        "noise_eps": 0.0,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
         "compute_q": True,
         "history_len": 300,
     },
-    "seed": tuple(range(2)),
+    "seed": tuple(range(5)),
 }
