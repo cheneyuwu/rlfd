@@ -7,13 +7,13 @@ import numpy as np
 import tensorflow as tf
 
 # Important: limit gpu memory growth for tensorflow
-gpus = tf.config.experimental.list_physical_devices('GPU')
+gpus = tf.config.experimental.list_physical_devices("GPU")
 if gpus:
     try:
         # Currently, memory growth needs to be the same across GPUs
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
-        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        logical_gpus = tf.config.experimental.list_logical_devices("GPU")
         print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
     except RuntimeError as e:
         # Memory growth must be set before GPUs have been initialized
@@ -90,12 +90,14 @@ def train(root_dir, params):
         for cyc in range(num_cycles):
             # print("cycle: {} completed!!".format(cyc))
             episode = rollout_worker.generate_rollouts()
-            policy.store_episode(episode)
-            policy.update_stats(episode)
+            if num_batches != 0: # policy is being updated
+                policy.store_episode(episode)
+                policy.update_stats(episode)
             for _ in range(num_batches):
                 policy.train()
-            policy.update_target_net()
-            policy.clear_n_step_replay_buffer()
+            if num_batches != 0: # policy is being updated
+                policy.update_target_net()
+                policy.clear_n_step_replay_buffer()
 
         # update meta parameters
         potential_weight = policy.update_potential_weight()
