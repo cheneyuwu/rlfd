@@ -15,4 +15,4 @@ params_config["ddpg"]["initialize_with_bc"] = False
 params_config["ddpg"]["initialize_num_epochs"] = 2000
 
 # TD3
-params_config["seed"] = tuple(range(1))
+params_config["seed"] = tuple(range(4))
