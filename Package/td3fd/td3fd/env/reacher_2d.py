@@ -30,7 +30,7 @@ class Reacher:
         self.boundary = 1.0
         self.threshold = self.boundary / 12
         self._max_episode_steps = 30 if self.order == 2 else 20
-        self.max_u = 2
+        self.max_u = 1
 
         self.workspace = self.Block((-self.boundary, -self.boundary), 2 * self.boundary, 2 * self.boundary)
         self.blocks = []
