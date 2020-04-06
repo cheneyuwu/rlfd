@@ -20,7 +20,7 @@ DEFAULT_PARAMS = {
     "num_eps": 40,
     "fix_T": True,
     "max_concurrency": 10,
-    "demo": {"random_eps": 0.0, "noise_eps": 0.1, "render": False},
+    "demo": {"random_eps": 0.0, "noise_eps": 0.0, "render": False},
     "filename": "demo_data.npz",
 }
 
@@ -51,8 +51,8 @@ def main(policy, root_dir, **kwargs):
 
     # Set random seed for the current graph
     set_global_seeds(params["seed"])
-    # get a default session for the current graph
-    tf.InteractiveSession()
+    # # get a default session for the current graph
+    # tf.InteractiveSession()
 
     # Load policy.
     with open(policy, "rb") as f:
@@ -103,7 +103,7 @@ def main(policy, root_dir, **kwargs):
         np.savez_compressed(file_name, **episode)  # save the file
         logger.info("Demo file has been stored into {}.".format(file_name))
 
-    tf.compat.v1.get_default_session().close()
+    # tf.compat.v1.get_default_session().close()
 
 
 if __name__ == "__main__":

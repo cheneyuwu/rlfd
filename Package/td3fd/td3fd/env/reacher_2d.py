@@ -7,7 +7,7 @@ import numpy as np
 
 from gym import spaces
 
-matplotlib.use("Agg")  #  TkAgg Can change to 'Agg' for non-interactive mode
+matplotlib.use("TkAgg")  #  TkAgg Can change to 'Agg' for non-interactive mode
 
 
 def make(env_name, **env_args):
@@ -21,7 +21,7 @@ class Reacher:
 
     def __init__(self, order=2, sparse=False, block=False, seed=0):
         self.init_args = locals()
-        
+
         self.random = np.random.RandomState(seed)
         self.order = order
         self.sparse = sparse
@@ -97,7 +97,7 @@ class Reacher:
         return distance
 
     def render(self):
-        plt.clf()      
+        plt.clf()
         # plot the environment visualization
         ax = plt.subplot(121)
         ax.axis([-self.boundary, self.boundary, -self.boundary, self.boundary])
@@ -124,7 +124,7 @@ class Reacher:
 
     def reset(self):
         # a random goal location
-        self.goal = self.random.uniform(-0.2, 0.2, size=2) * self.boundary
+        self.goal = self.random.uniform(-0.0, 0.0, size=2) * self.boundary
         self.curr_pos = self.random.uniform(-0.8, -0.8, size=2) * self.boundary
         if self.order == 2:
             self.speed = np.zeros(2)

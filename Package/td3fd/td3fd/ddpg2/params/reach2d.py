@@ -22,7 +22,7 @@ params_config = {
         "initialize_with_bc": False,
         "initialize_num_epochs": 0,
         "use_demo_reward": False,
-        "num_demo": 40,
+        "num_demo": 50,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         # normalize observation
         "norm_eps": 0.01,
@@ -41,7 +41,7 @@ params_config = {
         "polyak": 0.95,
         # multi step return
         "use_n_step_return": False,
-        "bc_params": {"q_filter": False, "prm_loss_weight": 0.1, "aux_loss_weight": 1.0},
+        "bc_params": {"q_filter": False, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
         "shaping_params": {
             # potential weight decay
             "potential_decay_scale": 1.0,
@@ -66,7 +66,7 @@ params_config = {
             },
         },
         # replay buffer setup
-        "buffer_size": int(1e6),
+        "buffer_size": int(5e5),
     },
     # rollouts config
     "rollout": {
@@ -79,7 +79,7 @@ params_config = {
         "history_len": 300,
     },
     "evaluator": {
-        "num_episodes": 10,
+        "num_episodes": 4,
         "num_steps": None,
         "noise_eps": 0.0,
         "polyak_noise": 0.0,
