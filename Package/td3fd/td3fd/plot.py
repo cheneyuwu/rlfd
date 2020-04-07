@@ -16,6 +16,18 @@ matplotlib.use("Agg")  # Can change to 'Agg' for non-interactive mode
 matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["ps.fonttype"] = 42
 
+# set sizes
+SMALL_SIZE = 10
+MEDIUM_SIZE = 12
+BIGGER_SIZE = 16
+plt.rc("font", size=MEDIUM_SIZE)  # controls default text sizes
+plt.rc("axes", titlesize=MEDIUM_SIZE)  # fontsize of the axes title
+plt.rc("axes", labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
+plt.rc("xtick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
+plt.rc("ytick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
+plt.rc("figure", titlesize=MEDIUM_SIZE)  # fontsize of the figure title
+plt.rc("legend", fontsize=SMALL_SIZE)  # legend fontsize
+
 
 def pad(xs, value=np.nan):
     maxlen = np.max([len(x) for x in xs])
@@ -113,20 +125,10 @@ def plot_results(allresults, xys, target_dir, smooth=0):
             data[env_id][xy][config].append((x, y))
 
     fig = plt.figure()
-    fig.subplots_adjust(left=0.1, right=0.9, bottom=0.25, top=0.9, wspace=0.25, hspace=0.25)
-    # set sizes
-    SMALL_SIZE = 14
-    MEDIUM_SIZE = 14
-    BIGGER_SIZE = 16
-    plt.rc("font", size=MEDIUM_SIZE)  # controls default text sizes
-    plt.rc("axes", titlesize=BIGGER_SIZE)  # fontsize of the axes title
-    plt.rc("axes", labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
-    plt.rc("xtick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
-    plt.rc("ytick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
-    plt.rc("legend", fontsize=MEDIUM_SIZE)  # legend fontsize
-    plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
-
+    fig.set_size_inches(5 * len(data.keys()), 5 * len(xys))
+    fig.subplots_adjust(left=0.15, right=0.9, bottom=0.3, top=0.95, wspace=0.25, hspace=0.25)
     fig.clf()
+
     for env_n, env_id in enumerate(sorted(data.keys())):
         print("Creating plots for environment: {}".format(env_id))
         for i, xy in enumerate(data[env_id].keys()):
@@ -174,28 +176,35 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                     x, mean_y - 1.0 * stddev_y, mean_y + 1.0 * stddev_y, alpha=0.2, color=colors[j % len(colors)]
                 )
                 #
-                ax.set_xlabel(x_label)
-                ax.set_ylabel(y_label)
-                # ax.set_xlabel("Number of Env Steps")
-                # ax.set_ylabel("Average Return")
+                # ax.set_xlabel(x_label)
+                # ax.set_ylabel(y_label)
+                ax.set_xlabel("Number of Env. Steps")
+                ax.set_ylabel("Average Episode Return")
+
+                ax.set_ylim(-20, -5)
+
                 ax.tick_params(axis="x", pad=5, length=5, width=1)
                 ax.tick_params(axis="y", pad=5, length=5, width=1)
                 ax.ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-                ax.set_title(env_id)
+
+                # ax.set_title(env_id)
+
                 ax.spines["top"].set_visible(False)
                 ax.spines["right"].set_visible(False)
                 ax.spines["bottom"].set_visible(True)
                 ax.spines["left"].set_visible(True)
+
                 # use ax level legend
-                # ax.legend(fontsize=5)
+                # ax.legend()
+
             num_lines = len(data[env_id][xy].keys())
     # use fig level legend
     handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=min(4, int(num_lines)), frameon=False)
-    fig.set_size_inches(4.7 * len(data.keys()), 5 * len(xys))
+    fig.legend(handles, labels, loc="lower center", ncol=min(3, int(num_lines)), frameon=False)
+
     now = datetime.now()  # current date and time
     date_time = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
-    save_path = os.path.join(target_dir, "Result_{}_{}.png".format("plot_name", date_time))
+    save_path = os.path.join(target_dir, "Plot_{}_{}.jpg".format("name", date_time))
     print("Saving image to " + save_path)
     plt.savefig(save_path, dpi=200)
     plt.show()
