@@ -58,11 +58,11 @@ params_config = {
                 "potential_weight": 3.0,
             },
             "gan": {
-                "layer_sizes": [256, 256, 256],
-                "latent_dim": 6,
-                "gp_lambda": 0.1,
+                "layer_sizes": [256, 256],
+                "latent_dim": 4,
+                "gp_lambda": 0.5,
                 "critic_iter": 5,
-                "potential_weight": 3.0,
+                "potential_weight": 1.0,
             },
         },
         # replay buffer setup
