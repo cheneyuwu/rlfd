@@ -15,7 +15,7 @@ params_config = {
     # normalize observation
     "norm_obs": False,  # whethere or not to normalize observations
     "norm_eps": 0.01,  # epsilon used for observation normalization
-    "norm_clip": 5,  # normalized observations are cropped to this value        
+    "norm_clip": 5,  # normalized observations are cropped to this value
     # ddpg training
     "num_demo": 40,
     "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
@@ -37,7 +37,7 @@ params_config = {
         "action_l2": 0.0,
         # double q learning
         "polyak": 0.95,
-        "bc_params": {"q_filter": False, "prm_loss_weight": 1.0, "aux_loss_weight": 1.0},
+        "bc_params": {"q_filter": False, "prm_loss_weight": 1e-4, "aux_loss_weight": 1.0},
     },
     "shaping": {
         "num_ensembles": 1,
@@ -61,7 +61,7 @@ params_config = {
     },
     "memory": {
         # replay buffer setup
-        "buffer_size": int(1e4),
+        "buffer_size": int(1e5),
     },
     # rollouts config
     "rollout": {

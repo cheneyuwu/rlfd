@@ -77,13 +77,26 @@ def generate_params(root_dir, param_config):
 
 def transform_config_name(config_name):
     """ Transfer the legend names"""
-    print(config_name)
     for i in range(len(config_name)):
         if config_name[i].startswith("config"):
             if config_name[i] == "config_TD3_NF_Shaping":
-                return ["TD3+Shaping (NF)"]
+                for name in config_name:
+                    if name.startswith("potential_weight_"):
+                        weight = name.replace("potential_weight_", "")
+                        return ["TD3+Shaping(NF), $k^{NF}$="+weight]
+                return ["TD3+Shaping(NF)"]
+            elif config_name[i] == "config_TD3_NF_Shaping_Decay":
+                for name in config_name:
+                    if name.startswith("potential_weight_"):
+                        weight = name.replace("potential_weight_", "")
+                        return ["TD3+Shaping(NF) w/ Decay, $k^{NF}$="+weight]
+                return ["TD3+Shaping(NF) w/ Decay"]
             elif config_name[i] == "config_TD3_GAN_Shaping":
-                return ["TD3+Shaping (GAN)"]
+                for name in config_name:
+                    if name.startswith("potential_weight_"):
+                        weight = name.replace("potential_weight_", "")
+                        return ["TD3+Shaping(GAN), $k^{GAN}$="+weight]
+                return ["TD3+Shaping(GAN)"]
             elif config_name[i] == "config_BC":
                 return ["BC"]
             elif config_name[i] == "config_TD3":
@@ -153,7 +166,9 @@ def main(targets, exp_dir, policy, save_dir, **kwargs):
                     # copy params.json file, rename the config entry
                     varied_params = k[len(exp_dir) + 1 :].split("/")
                     config_name = [x for x in varied_params if not any([x.startswith(y) for y in exc_params])]
+                    print(config_name)
                     config_name = transform_config_name(config_name)
+                    print("||||---> ", config_name)
                     v["config"] = "-".join(config_name)
                     with open(os.path.join(k, "params_renamed.json"), "w") as f:
                         json.dump(v, f)

@@ -6,9 +6,9 @@ params_config = {
     "env_name": "YWFetchPegInHole2D-v0",
     "r_scale": 1.0,
     "r_shift": 0.0,
-    "eps_length": 0,
+    "eps_length": 40,
     "env_args": {},
-    "gamma": 0.95,
+    "gamma": None,
     "fix_T": True,
     # DDPG config
     "ddpg": {
@@ -52,10 +52,10 @@ params_config = {
             "nf": {
                 "num_masked": 4,
                 "num_bijectors": 4,
-                "layer_sizes": [128, 128],
+                "layer_sizes": [256, 256],
                 "prm_loss_weight": 1.0,
-                "reg_loss_weight": 500.0,
-                "potential_weight": 3.0,
+                "reg_loss_weight": 400.0,
+                "potential_weight": 10.0,
             },
             "gan": {
                 "layer_sizes": [256, 256, 256],
@@ -66,7 +66,7 @@ params_config = {
             },
         },
         # replay buffer setup
-        "buffer_size": int(1e5),
+        "buffer_size": int(5e5),
     },
     # rollouts config
     "rollout": {
@@ -79,7 +79,7 @@ params_config = {
         "history_len": 300,
     },
     "evaluator": {
-        "num_episodes": 10,
+        "num_episodes": 4,
         "num_steps": None,
         "noise_eps": 0.05,
         "polyak_noise": 0.0,

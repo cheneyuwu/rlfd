@@ -449,8 +449,12 @@ class RewardShaping:
 
     @tf.function
     def potential(self, o, g, u):
-        return self.shaping.potential(o, g, u)
+        potential = self.shaping.potential(o, g, u)
+        # support
+        # potential = tf.sigmoid(potential)
+        # potential = tf.where(potential > 0.3, tf.ones_like(potential) ,tf.zeros_like(potential))
+        return potential
 
-    @tf.function
-    def reward(self, o, g, u, o_2, g_2, u_2):
-        return self.shaping.reward(o, g, u, o_2, g_2, u_2)
+    # @tf.function
+    # def reward(self, o, g, u, o_2, g_2, u_2):
+    #     return self.shaping.reward(o, g, u, o_2, g_2, u_2)

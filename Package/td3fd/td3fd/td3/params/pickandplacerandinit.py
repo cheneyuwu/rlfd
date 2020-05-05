@@ -15,7 +15,7 @@ params_config = {
     # normalize observation
     "norm_obs": False,  # whethere or not to normalize observations
     "norm_eps": 0.01,  # epsilon used for observation normalization
-    "norm_clip": 5,  # normalized observations are cropped to this value        
+    "norm_clip": 5,  # normalized observations are cropped to this value
     # ddpg training
     "num_demo": 40,
     "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]

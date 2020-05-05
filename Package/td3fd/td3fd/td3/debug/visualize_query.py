@@ -19,17 +19,28 @@ from td3fd.plot import load_results
 
 
 def visualize_potential_surface(ax, res):
-    # ct = ax.contour(*res["o"], res["surf"])
-    ax.plot_surface(*res["o"], res["surf"])
+    ct = ax.contour(*res["o"], res["surf"])
+    # ax.plot_surface(*res["o"], res["surf"])
     try:  # in case of nan
         plt.colorbar(ct, ax=ax)
     except:
         pass
     # ax.axis([-1, 0, -1, 0])
-    ax.set_xlabel("s1")
-    ax.set_ylabel("s2")
+    ax.set_xlabel(r"s_1")
+    ax.set_ylabel(r"s_2")
+    #
+    ax.tick_params(axis="x", pad=5, length=5, width=1)
+    ax.tick_params(axis="y", pad=5, length=5, width=1)
+    ax.ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax.set_title("NF Shaping Potential v=(1.0, 1.0)")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["bottom"].set_visible(True)
+    ax.spines["left"].set_visible(True)    
+    #
     for item in [ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels():
-        item.set_fontsize(6)
+        item.set_fontsize(10)
+    ax.title.set_fontsize(15)
 
 
 def visualize_action(ax, res, plot_opts={}):

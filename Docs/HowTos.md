@@ -18,22 +18,23 @@
     - `pip install mujoco_py==1.50.1.68`
     - `pip install mpi4py`
   - install tensorflow with
-    - `pip install tensorflow-gpu==1.14.1 tensorflow-probability==0.7.0 tensorflow-determinism`
+    - For tf1: `pip install tensorflow-gpu==1.14.1 tensorflow-probability==0.7.0 tensorflow-determinism`
     - For tf2: `pip install tensorflow tensorflow_probability`
+      - Note: on cluster use `tensorflow_gpu`
   - install pytorch with
-    - `pip install --no-index torch==1.3.1 torchvision torchtext torchaudio && pip install torchsummary==1.5.1`
+    - `pip install torch==1.3.1 torchvision torchtext torchaudio torchsummary`
   - install gym and metaworld and other environments
-    - cd to gym and metaworld then
-    - `pip install -e . --no-deps`
+    - cd to gym and metaworld then `pip install -e . --no-deps`
     - for dm_control, install it directly via `pip install dm_control --no-deps`
     - also install the dmc to gym wrapper (dmc2gym) included in the submodule of this repo
   - install td3fd and rlkit
+    - cd to  td3fd and rlkit then `pip install -e . --no-deps`
   - extra packages that should be installed:
-    - `pip install black certifi chardet urllib3 requests idna dm-env dm-control gtimer matplotlib --no-deps`
+    - `pip install black certifi chardet urllib3 requests idna gtimer matplotlib pandas future lxml pyopengl`
+    - `pip install dm-env dm-control --no-deps`
   - note: on compute canada cluster you need to manually install tensorflow and use `module load mpi4py` to get the mpi python package
 5. Modify the directory of EXPRUN according to the true exp running directory
-6. change TkAgg to Agg for plot.py visualize_query.py and point_reach.py
-7. add rl project directory to the bashrc
+6. add rl project directory to the bashrc
   - export RLProject='/home/yuchenwu/projects/def-florian7/yuchenwu/RLProject'
 
 ## Compute Canada Cluster

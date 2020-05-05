@@ -20,7 +20,7 @@ matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["ps.fonttype"] = 42
 
 # set sizes
-SMALL_SIZE = 10
+SMALL_SIZE = 8
 MEDIUM_SIZE = 12
 BIGGER_SIZE = 16
 plt.rc("font", size=MEDIUM_SIZE)  # controls default text sizes
@@ -61,7 +61,7 @@ def check_potential(exp_dir, results):
     """
     demo_data = dict(np.load(os.path.join(exp_dir, "demo_data.npz")))
 
-    max_var = 1.0
+    max_var = 5e-2
     vars = np.arange(0, max_var, max_var / 100.0)
 
     configs = {}
@@ -72,6 +72,14 @@ def check_potential(exp_dir, results):
             print("Skip ", config)
             continue
         print(config)
+        ############################# temp
+        if config == "TD3+Shaping (NF), $\eta^{NF}$=100":
+            config = "TD3+Shaping (NF), $\eta^{NF}=100, k^{NF}=1$"
+        if config == "TD3+Shaping (NF), $\eta^{NF}$=1000":
+            config = "TD3+Shaping (NF), $\eta^{NF}=1000, k^{NF}=8$"
+        if config == "TD3+Shaping (NF), $\eta^{NF}$=10000":
+            config = "TD3+Shaping (NF), $\eta^{NF}=10000, k^{NF}=60$"
+        #############################
         if not config in configs.keys():
             configs[config] = []
         y = get_potential(demo_data, vars, policy)
@@ -82,11 +90,24 @@ def check_potential(exp_dir, results):
     fig.subplots_adjust(left=0.2, right=0.9, bottom=0.2, top=0.9, wspace=0.25, hspace=0.25)
     ax = fig.add_subplot(111)
 
+    # NF
     colors = ["r", "g", "b", "m", "c", "k", "y"]
     markers = ["o", "v", "s", "d", "p", "h"]
+    # # GAN
+    # colors = ["g", "b", "m", "c", "k", "y"]
+    # markers = ["o", "v", "s", "d", "p", "h"]
 
     for j, (config, ys) in enumerate(configs.items()):
         ys = np.array(ys)
+        ############################################ temp
+        scale = 1
+        if config == "TD3+Shaping (NF), $\eta^{NF}=10000, k^{NF}=60$":
+            scale = 60
+        if config == "TD3+Shaping (NF), $\eta^{NF}=1000, k^{NF}=8$":
+            scale = 8
+        ys = ys * scale
+        #########################
+        # ys = (ys - np.amin(ys)) / (np.amax(ys) - np.amin(ys))
         mean_y = np.nanmean(ys, axis=0)
         stddev_y = np.nanstd(ys, axis=0)
         ax.plot(
@@ -103,10 +124,22 @@ def check_potential(exp_dir, results):
             vars, mean_y - 1.0 * stddev_y, mean_y + 1.0 * stddev_y, alpha=0.2, color=colors[j % len(colors)]
         )
 
-        ax.set_xlabel("Shaping Potential ($\Phi$)")
-        ax.set_ylabel("Variance of Gaussian Noise ($\sigma^2$)")
+        # #####################
+        # # NF
+        # # bar = 13
+        # # ax.set_ylim(-0.2, 2.5)
+        # # GAN
+        # bar = 20
+        # ax.set_ylim(-16, -2)
+        # #
+        # ax.fill_between(vars[:bar+1], -100, 100, alpha=0.4, color="gray")
+        # ax.fill_between(vars[bar:], -100, 100, alpha=0.2, color="gray")
+        # #####################
 
-        # ax.set_ylim(-20, -5)
+        ax.set_xlim(vars[0], vars[-1])
+        ax.set_ylabel("Shaping Potential ($\Phi$)")
+        ax.set_xlabel("Variance of Gaussian Noise ($\sigma^2$)")
+
 
         ax.tick_params(axis="x", pad=5, length=5, width=1)
         ax.tick_params(axis="y", pad=5, length=5, width=1)
@@ -117,11 +150,11 @@ def check_potential(exp_dir, results):
         ax.spines["bottom"].set_visible(True)
         ax.spines["left"].set_visible(True)
 
-        # ax.legend()
+        ax.legend()
 
-    # use fig level legend
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=2, frameon=False)
+    # # use fig level legend
+    # handles, labels = ax.get_legend_handles_labels()
+    # fig.legend(handles, labels, loc="lower center", ncol=2, frameon=False)
 
     save_path = os.path.join(exp_dir, "Check_potential.jpg")
     print("Result saved to", save_path)

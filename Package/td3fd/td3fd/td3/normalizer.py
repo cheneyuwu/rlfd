@@ -31,7 +31,7 @@ class Normalizer(torch.nn.Module):
 
     def update(self, v):
         # almost equivalent to v = v.reshape(-1, *self.shape), but handles self.shape==(0,)
-        v = v.reshape(np.prod(v.shape[: -len(self.shape)]), *self.shape)
+        v = v.reshape(np.prod(v.shape[: -len(self.shape)], dtype=int), *self.shape)
         self.count_tc += v.shape[0]
         self.sum_tc += torch.sum(v, dim=0)
         self.sumsq_tc += torch.sum(v ** 2, dim=0)
@@ -53,8 +53,8 @@ class Normalizer(torch.nn.Module):
 def test_normalizer():
     normalizer = Normalizer((1,)).to(device)
     dist_tc = torch.distributions.normal.Normal(loc=torch.tensor(1.0).to(device), scale=torch.tensor(2.0).to(device))
-    train_data = dist_tc.sample([1000000])
-    test_data = dist_tc.sample([1000000])
+    train_data = dist_tc.sample([1000000, 1])
+    test_data = dist_tc.sample([1000000, 1])
     normalizer.update(train_data)
     print(normalizer.mean_tc, normalizer.std_tc)
     output = normalizer.normalize(test_data)

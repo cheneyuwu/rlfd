@@ -12,7 +12,7 @@ from td3fd.util.cmd_util import ArgParser
 from td3fd.util.reader_util import load_csv
 from datetime import datetime
 
-matplotlib.use("Agg")  # Can change to 'Agg' for non-interactive mode
+matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode
 matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["ps.fonttype"] = 42
 
@@ -22,7 +22,7 @@ MEDIUM_SIZE = 12
 BIGGER_SIZE = 16
 plt.rc("font", size=MEDIUM_SIZE)  # controls default text sizes
 plt.rc("axes", titlesize=MEDIUM_SIZE)  # fontsize of the axes title
-plt.rc("axes", labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
+plt.rc("axes", labelsize=SMALL_SIZE)  # fontsize of the x and y labels
 plt.rc("xtick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
 plt.rc("ytick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
 plt.rc("figure", titlesize=MEDIUM_SIZE)  # fontsize of the figure title
@@ -114,6 +114,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
             # Process and smooth data.
             if smooth:
                 x, y = smooth_reward_curve(x, y, max(3, len(x) / 10))
+                # x, y = smooth_reward_curve(x, y, 300) # for MW
             assert x.shape == y.shape, (x.shape, y.shape)
 
             if env_id not in data:
@@ -125,16 +126,22 @@ def plot_results(allresults, xys, target_dir, smooth=0):
             data[env_id][xy][config].append((x, y))
 
     fig = plt.figure()
-    fig.set_size_inches(5 * len(data.keys()), 5 * len(xys))
-    fig.subplots_adjust(left=0.15, right=0.9, bottom=0.3, top=0.95, wspace=0.25, hspace=0.25)
+    size=5
+    fig.set_size_inches(size * len(data.keys()), size * len(xys))
+    fig.subplots_adjust(left=0.15, right=0.9, bottom=0.25, top=0.95, wspace=0.25, hspace=0.25) # gym envs
+    # fig.subplots_adjust(left=0.2, right=0.9, bottom=0.2, top=0.95, wspace=0.25, hspace=0.25) # MW envs
     fig.clf()
 
     for env_n, env_id in enumerate(sorted(data.keys())):
         print("Creating plots for environment: {}".format(env_id))
         for i, xy in enumerate(data[env_id].keys()):
-            # colors = ["r", "g", "b", "m", "c", "k", "y"]
-            colors = cm.jet(np.linspace(0, 1.0, len(data[env_id][xy].keys())))
+
+            # RL  BC  RLBCINIT
+            # colors = ["y", "c", "k"]
+            colors = ["m", "b", "g", "r"]
+            # colors = ["b", "r", "g", "k", "c", "m", "y"]
             markers = ["o", "v", "s", "d", "p", "h"]
+
             ax = fig.add_subplot(len(xys), len(data.keys()), env_n * len(data.keys()) + i + 1)
             x_label = xy.split(":")[0]
             y_label = xy.split(":")[1]
@@ -150,7 +157,8 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 assert xs.shape == ys.shape
 
                 # in case you want to cut
-                last_idx = None
+                last_idx = 400 # for gym environments
+                # last_idx = 2500
                 xs = xs[..., :last_idx]
                 ys = ys[..., :last_idx]
 
@@ -181,7 +189,13 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 ax.set_xlabel("Number of Env. Steps")
                 ax.set_ylabel("Average Episode Return")
 
-                ax.set_ylim(-20, -5)
+                # ax.set_ylim(-20, -5) # for reacher 2d
+                ax.set_ylim(-45, -5) # for reacher 2d
+                # ax.set_ylim(-150, -0) # for reacher 2d
+
+                # ax.fill_between(
+                #     x[1500:], -1000, 10000, alpha=0.2, color="gray"
+                # )
 
                 ax.tick_params(axis="x", pad=5, length=5, width=1)
                 ax.tick_params(axis="y", pad=5, length=5, width=1)
@@ -195,12 +209,11 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                 ax.spines["left"].set_visible(True)
 
                 # use ax level legend
-                # ax.legend()
+                # ax.legend(loc="upper left", frameon=False)
 
-            num_lines = len(data[env_id][xy].keys())
     # use fig level legend
     handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=min(3, int(num_lines)), frameon=False)
+    fig.legend(handles, labels, loc="lower center", ncol=2, frameon=False, fontsize=9)
 
     now = datetime.now()  # current date and time
     date_time = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
