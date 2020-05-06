@@ -45,7 +45,7 @@ import gin
 from six.moves import range
 import numpy as np
 import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
-tf.config.set_visible_devices([], 'GPU')
+
 os.environ["TF_DETERMINISTIC_OPS"] = "1"
 
 from tf_agents.agents.ddpg import actor_network
@@ -68,12 +68,6 @@ flags.DEFINE_multi_string('gin_file', None, 'Paths to the gin-config files.')
 flags.DEFINE_multi_string('gin_param', None, 'Gin binding parameters.')
 
 FLAGS = flags.FLAGS
-
-
-def set_global_seeds(seed=0):
-  tf.random.set_seed(seed)
-  np.random.seed(seed)
-  random.seed(seed)
 
 
 @gin.configurable
@@ -115,7 +109,9 @@ def train_eval(
     summaries_flush_secs=10,
     debug_summaries=False,
     summarize_grads_and_vars=False,
-    eval_metrics_callback=None):
+    eval_metrics_callback=None,
+    seed=0,
+):
   """A simple train and eval for TD3."""
   root_dir = os.path.expanduser(root_dir)
   train_dir = os.path.join(root_dir, 'train')
@@ -138,15 +134,18 @@ def train_eval(
       tf_metrics.AverageEpisodeLengthMetric(buffer_size=num_eval_episodes)
   ]
 
-  set_global_seeds(1)
+  tf.random.set_seed(seed)
+  np.random.seed(seed)
+  random.seed(seed)
 
   global_step = tf.compat.v1.train.get_or_create_global_step()
   with tf.compat.v2.summary.record_if(
       lambda: tf.math.equal(global_step % summary_interval, 0)):
+
     py_env = suite_mujoco.load(env_name)
     eval_py_env = suite_mujoco.load(env_name)
-    py_env.seed(1)
-    eval_py_env.seed(1)
+    py_env.seed(seed)
+    eval_py_env.seed(seed)
     tf_env = tf_py_environment.TFPyEnvironment(py_env)
     eval_tf_env = tf_py_environment.TFPyEnvironment(eval_py_env)
 
@@ -244,9 +243,9 @@ def train_eval(
     time_acc = 0
 
     # Dataset generates trajectories with shape [Bx2x...]
-    dataset = replay_buffer.as_dataset(num_parallel_calls=3,
-                                       sample_batch_size=batch_size,
-                                       num_steps=2).prefetch(3)
+    dataset = replay_buffer.as_dataset(
+        num_parallel_calls=None, sample_batch_size=batch_size,
+        num_steps=2)  # for deterministic behavior
     iterator = iter(dataset)
 
     def train_step():
