@@ -73,9 +73,11 @@ class Driver(object, metaclass=abc.ABCMeta):
     """set seed for internal environments"""
     return self._seed(seed)
 
-  def generate_rollouts(self):
-    """Generate experiences"""
-    return self._generate_rollouts()
+  def generate_rollouts(self, random=False):
+    """Generate experiences
+        random - whether or not to use a random policy
+    """
+    return self._generate_rollouts(random=random)
 
   def logs(self, prefix="worker"):
     """Generates a dictionary that contains all collected statistics.
@@ -136,7 +138,7 @@ class Driver(object, metaclass=abc.ABCMeta):
     """set seed for environment"""
 
   @abc.abstractmethod
-  def _generate_rollouts(self):
+  def _generate_rollouts(self, random=False):
     """Performs `num_episodes` rollouts for maximum time horizon `eps_length` with the current policy"""
 
 
@@ -207,10 +209,10 @@ class EpisodeBasedDriver(Driver):
     for idx, env in enumerate(self.envs):
       env.seed(seed + 1000 * idx)
 
-  def _generate_rollouts(self):
+  def _generate_rollouts(self, random=False):
     """ Performs `num_episodes` rollouts for maximum time horizon `eps_length` with the current policy
         """
-
+    assert random == False, "Not yet tested to use random policy for episode driver."
     # Information to store
     observations, next_observations, acts, rewards, dones = [], [], [], [], []
     goals, next_goals, achieved_goals, next_achieved_goals = [], [], [], []
@@ -409,22 +411,11 @@ class StepBasedDriver(Driver):
 
   def _generate_rollouts(self, random=False):
     """generate `num_steps` rollouts
-        """
+    """
     # Information to store
     episode = {
-        k: [] for k in (
-            "o",
-            "o_2",
-            "ag",
-            "ag_2",
-            "u",
-            "g",
-            "g_2",
-            "r",
-            "done",
-        )
+        k: [] for k in ("o", "o_2", "ag", "ag_2", "u", "g", "g_2", "r", "done")
     }
-    obs, obs_2, achieved_goals, achieved_goals_2, acts, goals, rewards, dones = [], [], [], [], [], [], [], []
     info_values = {k: [] for k in self.info_keys}
     Qs, QPs = [], []
 

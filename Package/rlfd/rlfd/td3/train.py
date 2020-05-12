@@ -79,10 +79,10 @@ def train(root_dir, params):
     logger.info("Saving initial policy.")
 
   # Generate some random experiences before training (used by td3 for gym mujoco envs)
-  # for _ in range(10000):
-  #     episode = rollout_worker.generate_rollouts(random=True)
-  #     policy.store_episode(episode)
-  #     policy.update_stats(episode)
+  # for _ in range(1000):
+  #   episode = rollout_worker.generate_rollouts(random=True)
+  #   policy.store_episode(episode)
+  #   policy.update_stats(episode)
 
   # Train rl policy
   for epoch in range(num_epochs):

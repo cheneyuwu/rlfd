@@ -51,15 +51,12 @@ def add_env_params(params):
   tmp_env.reset()
   obs, _, _, info = tmp_env.step(tmp_env.action_space.sample())
   dims = {
-      "o": obs["observation"].shape,  # observation
-      "g":
-          obs["desired_goal"].shape,  # goal (may be of shape (0,) if not exist)
+      "o": tmp_env.observation_space["observation"].shape,
+      "g": tmp_env.observation_space["desired_goal"].shape,
       "u": tmp_env.action_space.shape,
   }
   for key, value in info.items():
-    if type(
-        value
-    ) == str:  # Note: for now, do not add info str to memory (replay buffer)
+    if type(value) == str:
       continue
     value = np.array(value)
     if value.ndim == 0:
@@ -80,12 +77,15 @@ def config_memory(params):
   # buffer shape
   buffer_shapes = {}
   if fix_T:
-    buffer_shapes["o"] = (eps_length + 1, *dimo)
+    buffer_shapes["o"] = (eps_length, *dimo)
+    buffer_shapes["o_2"] = (eps_length, *dimo)
     buffer_shapes["u"] = (eps_length, *dimu)
     buffer_shapes["r"] = (eps_length, 1)
     buffer_shapes["done"] = (eps_length, 1)
-    buffer_shapes["ag"] = (eps_length + 1, *dimg)
+    buffer_shapes["ag"] = (eps_length, *dimg)
+    buffer_shapes["ag_2"] = (eps_length, *dimg)
     buffer_shapes["g"] = (eps_length, *dimg)
+    buffer_shapes["g_2"] = (eps_length, *dimg)
     for key, val in dims.items():
       if key.startswith("info"):
         buffer_shapes[key] = (eps_length, *val)

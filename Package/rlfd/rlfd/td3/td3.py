@@ -295,7 +295,7 @@ class TD3(object):
     self.shaping.evaluate(demo_data)
 
   @tf.function
-  def train_tf(self, o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf):
+  def train_tf(self, o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf, done_tf):
 
     self.training_step.assign((self.training_step + 1) % self.policy_freq)
 
@@ -322,16 +322,18 @@ class TD3(object):
           o=o_tf, g=g_tf, u=u_tf)
       potential_next = self.potential_weight * self.shaping.potential(
           o=o_2_tf, g=g_2_tf, u=u_2_tf)
-      target_tf += tf.pow(self.gamma, n_tf) * potential_next - potential_curr
+      target_tf += (1.0 - done_tf) * tf.pow(
+          self.gamma, n_tf) * potential_next - potential_curr
     # ddpg or td3 target with or without clipping
     if self.twin_delayed:
-      target_tf += tf.pow(self.gamma, n_tf) * tf.minimum(
+      target_tf += (1.0 - done_tf) * tf.pow(self.gamma, n_tf) * tf.minimum(
           self.target_critic([norm_o_2_tf, norm_g_2_tf, u_2_tf]),
           self.target_critic_twin([norm_o_2_tf, norm_g_2_tf, u_2_tf]),
       )
     else:
-      target_tf += tf.pow(self.gamma, n_tf) * self.target_critic(
-          [norm_o_2_tf, norm_g_2_tf, u_2_tf])
+      target_tf += (1.0 - done_tf) * tf.pow(
+          self.gamma, n_tf) * self.target_critic(
+              [norm_o_2_tf, norm_g_2_tf, u_2_tf])
     with tf.GradientTape(persistent=True) as tape:
       if self.twin_delayed:
         rl_bellman_tf = tf.square(target_tf - self.main_critic(
@@ -340,13 +342,15 @@ class TD3(object):
       else:
         rl_bellman_tf = tf.square(
             target_tf - self.main_critic([norm_o_tf, norm_g_tf, u_tf]))
-      # whether or not to train the critic on demo reward (if sample from demonstration buffer)
+
       if self.sample_demo_buffer and not self.use_demo_reward:
         # mask off entries from demonstration dataset
         mask = np.concatenate(
             (np.ones(self.batch_size), np.zeros(self.batch_size_demo)), axis=0)
         rl_bellman_tf = tf.boolean_mask(rl_bellman_tf, mask)
+
       critic_loss_tf = tf.reduce_mean(rl_bellman_tf)
+
     critic_grads = tape.gradient(critic_loss_tf,
                                  self.main_critic.trainable_weights)
     if self.twin_delayed:
@@ -416,9 +420,9 @@ class TD3(object):
     u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
     r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
     n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
-    # done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32) # TODO
+    done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
     critic_loss_tf, actor_loss_tf = self.train_tf(o_tf, g_tf, o_2_tf, g_2_tf,
-                                                  u_tf, r_tf, n_tf)
+                                                  u_tf, r_tf, n_tf, done_tf)
 
     return critic_loss_tf.numpy(), actor_loss_tf.numpy()
 
@@ -496,6 +500,7 @@ class TD3(object):
       buffer_shapes["ag_2"] = (self.eps_length, *self.dimg)
       buffer_shapes["g"] = (self.eps_length, *self.dimg)
       buffer_shapes["g_2"] = (self.eps_length, *self.dimg)
+      buffer_shapes["done"] = (self.eps_length, 1)
 
       self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size,
                                                self.eps_length)
