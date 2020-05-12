@@ -1,12 +1,9 @@
 import numpy as np
 import tensorflow as tf
 
-from td3fd.env_manager import EnvManager  # manage environments
-from td3fd.rollout import (
-    ParallelRolloutWorker,
-    SerialRolloutWorker,
-)  # rollout worker for generating experiences and testing
-from td3fd.memory import UniformReplayBuffer, RingReplayBuffer
+from rlfd.env_manager import EnvManager
+from rlfd.rollout import ParallelRolloutWorker, SerialRolloutWorker
+from rlfd.memory import UniformReplayBuffer, RingReplayBuffer
 
 
 def check_params(params, default_params):

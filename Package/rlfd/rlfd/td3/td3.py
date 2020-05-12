@@ -191,15 +191,15 @@ class TD3(object):
     return episode_batch
 
   def add_to_demo_buffer(self, episode_batch):
-    self.demo_buffer.store_episode(episode_batch)
+    self.demo_buffer.store(episode_batch)
 
   def store_episode(self, episode_batch):
     """
         episode_batch: array of batch_size x (T or T+1) x dim_key ('o' and 'ag' is of size T+1, others are of size T)
         """
-    self.replay_buffer.store_episode(episode_batch)
+    self.replay_buffer.store(episode_batch)
     if self.use_n_step_return:
-      self.n_step_replay_buffer.store_episode(episode_batch)
+      self.n_step_replay_buffer.store(episode_batch)
 
   def clear_n_step_replay_buffer(self):
     if not self.use_n_step_return:
@@ -250,17 +250,16 @@ class TD3(object):
     if not self.initialize_with_bc:
       return
 
-    demo_data = self.demo_buffer.sample()
-
+    # NOTE: keep the following two versions equivalent
     for epoch in range(self.initialize_num_epochs):
-      for (o, g, u) in iterbatches(
-          (demo_data["o"], demo_data["g"], demo_data["u"]),
-          batch_size=self.batch_size_demo,
-          include_final_partial_batch=True):
-
-        o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
-        g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
-        u_tf = tf.convert_to_tensor(u, dtype=tf.float32)
+      demo_data_iter = self.demo_buffer.sample(batch_size=self.batch_size_demo,
+                                               shuffle=True,
+                                               return_iterator=True,
+                                               include_partial_batch=True)
+      for batch in demo_data_iter:
+        o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
+        g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
+        u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
         bc_loss_tf = self.train_bc_tf(o_tf, g_tf, u_tf)
         bc_loss = bc_loss_tf.numpy()
 
@@ -269,9 +268,29 @@ class TD3(object):
         logger.info("epoch: {} policy initialization loss: {}".format(
             epoch, bc_loss))
 
+    # demo_data_iter = self.demo_buffer.sample(return_iterator=True)
+    # demo_data = next(demo_data_iter)
+    # for epoch in range(self.initialize_num_epochs):
+    #   for (o, g, u) in iterbatches(
+    #       (demo_data["o"], demo_data["g"], demo_data["u"]),
+    #       batch_size=self.batch_size_demo,
+    #       include_final_partial_batch=True):
+
+    #     o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
+    #     g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
+    #     u_tf = tf.convert_to_tensor(u, dtype=tf.float32)
+    #     bc_loss_tf = self.train_bc_tf(o_tf, g_tf, u_tf)
+    #     bc_loss = bc_loss_tf.numpy()
+
+    #   if epoch % (self.initialize_num_epochs / 100) == (
+    #       self.initialize_num_epochs / 100 - 1):
+    #     logger.info("epoch: {} policy initialization loss: {}".format(
+    #         epoch, bc_loss))
+
   def train_shaping(self):
     assert self.demo_strategy in ["nf", "gan"]
-    demo_data = self.demo_buffer.sample()
+    demo_data_iter = self.demo_buffer.sample(return_iterator=True)
+    demo_data = next(demo_data_iter)
     self.shaping.train(demo_data)
     self.shaping.evaluate(demo_data)
 
