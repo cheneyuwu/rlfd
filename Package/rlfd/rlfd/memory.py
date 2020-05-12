@@ -294,29 +294,6 @@ class UniformReplayBuffer(ReplayBuffer):
 
     return _sample_iterator()
 
-  # def sample(self, batch_size=-1):
-  #   """ Returns a dict {key: array(batch_size x shapes[key])}
-  #       """
-  #   buffers = {}
-
-  #   assert self._current_size > 0
-  #   for key in self.buffers.keys():
-  #     buffers[key] = self.buffers[key][:self._current_size]
-
-  #   buffers["o_2"] = buffers["o"][:, 1:, ...]
-  #   if "ag" in buffers.keys():
-  #     buffers["ag_2"] = buffers["ag"][:, 1:, ...]
-  #   if "g" in buffers.keys():
-  #     buffers["g_2"] = buffers["g"][:, :, ...]
-  #   if "pv" in buffers.keys():
-  #     buffers["pv_2"] = buffers["pv"][:, 1:, ...]
-
-  #   transitions = self.sample_transitions(buffers, batch_size)
-  #   assert all([key in transitions for key in list(self.buffers.keys())
-  #              ]), "key missing from transitions"
-
-  #   return transitions
-
   # TODO: remove this method
   def sample_transitions(self, buffers, batch_size=-1):
     """Sample transitions of size batch_size randomly from episode_batch.
