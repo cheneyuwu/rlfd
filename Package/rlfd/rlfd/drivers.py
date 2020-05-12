@@ -19,20 +19,20 @@ class Driver(object, metaclass=abc.ABCMeta):
   def __init__(self, make_env, policy, dims, max_u, noise_eps, polyak_noise,
                random_eps, history_len, render, **kwargs):
     """
-        Rollout worker generates experience by interacting with one or many environments.
+    Rollout worker generates experience by interacting with one or many environments.
 
-        This base class handles the following:
+    This base class handles the following:
 
-        Args:
-            make_env           (function)    - a factory function that creates a new instance of the environment when called
-            policy             (object)      - the policy that is used to act
-            dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
-            num_episodes       (int)         - the number of parallel rollouts that should be used
-            noise_eps          (float)       - scale of the additive Gaussian noise
-            random_eps         (float)       - probability of selecting a completely random action
-            history_len        (int)         - length of history for statistics smoothing
-            render             (bool)        - whether or not to render the rollouts
-        """
+    Args:
+        make_env           (function)    - a factory function that creates a new instance of the environment when called
+        policy             (object)      - the policy that is used to act
+        dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
+        num_episodes       (int)         - the number of parallel rollouts that should be used
+        noise_eps          (float)       - scale of the additive Gaussian noise
+        random_eps         (float)       - probability of selecting a completely random action
+        history_len        (int)         - length of history for statistics smoothing
+        render             (bool)        - whether or not to render the rollouts
+    """
     # Parameters
     self.make_env = make_env
     self.policy = policy
@@ -190,18 +190,16 @@ class EpisodeBasedDriver(Driver):
 
     # TODO parallelize environment
     self.eps_length = eps_length
-    self.num_episodes = num_episodes  # number f env in parallel (#TODO make it true parallel)
+    self.num_episodes = num_episodes  # number of env in parallel (#TODO make it true parallel)
     self.compute_q = compute_q
 
     self.envs = [self.make_env() for _ in range(self.num_episodes)]
     self.env = self.envs[0]
-    self.initial_o = np.empty((self.num_episodes, *self.dims["o"]),
-                              np.float32)  # observations
-    self.initial_ag = np.empty((self.num_episodes, *self.dims["g"]),
-                               np.float32)  # achieved goals
-    self.g = np.empty((self.num_episodes, *self.dims["g"]), np.float32)  # goals
+    self.initial_o = np.empty((self.num_episodes, *self.dims["o"]), np.float32)
+    self.initial_ag = np.empty((self.num_episodes, *self.dims["g"]), np.float32)
+    self.g = np.empty((self.num_episodes, *self.dims["g"]), np.float32)
 
-    self.reset()
+    self._reset()
 
   def _seed(self, seed):
     """ Set seed for environment
@@ -214,7 +212,8 @@ class EpisodeBasedDriver(Driver):
         """
 
     # Information to store
-    obs, achieved_goals, acts, goals, rewards, dones = [], [], [], [], [], []
+    observations, next_observations, acts, rewards, dones = [], [], [], [], []
+    goals, next_goals, achieved_goals, next_achieved_goals = [], [], [], []
     info_values = {
         key: np.empty(
             (self.eps_length, self.num_episodes, *self.dims["info_" + key]))
@@ -223,16 +222,15 @@ class EpisodeBasedDriver(Driver):
     Qs, QPs = [], []
 
     # Store initial observations and goals
-    self.reset()
+    self._reset()
     # Clear noise history for polyak noise
     self._clear_noise_history()
 
-    o = np.empty((self.num_episodes, *self.dims["o"]), np.float32)  # o
-    ag = np.empty((self.num_episodes, *self.dims["g"]), np.float32)  # ag
+    o = np.empty((self.num_episodes, *self.dims["o"]), np.float32)
+    ag = np.empty((self.num_episodes, *self.dims["g"]), np.float32)
     o[:] = self.initial_o
     ag[:] = self.initial_ag
 
-    # Main episode loop
     for t in range(self.eps_length):
       # get the action for all envs of the current batch
       policy_output = self.policy.get_actions(o,
@@ -276,9 +274,12 @@ class EpisodeBasedDriver(Driver):
         logger.warn("NaN caught during rollout generation. Trying again...")
         return self.generate_rollouts()
 
-      obs.append(o.copy())
+      observations.append(o.copy())
+      next_observations.append(o_new.copy())
       achieved_goals.append(ag.copy())
+      next_achieved_goals.append(ag_new.copy())
       goals.append(self.g.copy())
+      next_goals.append(self.g.copy())
       acts.append(u.copy())
       rewards.append(r.copy())
       dones.append(done.copy())
@@ -287,14 +288,15 @@ class EpisodeBasedDriver(Driver):
         QPs.append(QP.copy())
       o[...] = o_new  # o_2 -> o
       ag[...] = ag_new  # ag_2 -> ag
-    obs.append(o.copy())
-    achieved_goals.append(ag.copy())
 
     # Store all information into an episode dict
-    episode = dict(o=obs,
+    episode = dict(o=observations,
+                   o_2=next_observations,
                    u=acts,
                    g=goals,
+                   g_2=next_goals,
                    ag=achieved_goals,
+                   ag_2=next_achieved_goals,
                    r=rewards,
                    done=dones)
     for key in self.info_keys:
@@ -319,9 +321,9 @@ class EpisodeBasedDriver(Driver):
 
     return episode
 
-  def reset(self):
-    """ Perform a reset of environments.
-        """
+  def _reset(self):
+    """Perform a reset of environments.
+    """
     for i in range(self.num_episodes):
       obs = self.envs[i].reset()
       self.initial_o[i] = obs["observation"]

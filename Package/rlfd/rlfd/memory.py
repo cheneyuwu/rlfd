@@ -60,8 +60,8 @@ class ReplayBuffer(object, metaclass=abc.ABCMeta):
              shuffle=False,
              include_partial_batch=False):
     """ Returns a dict {key: array(batch_size x shapes[key])}
-        If batch_size is -1, this function should return the entire buffer (i.e. all stored transitions)
-        """
+    If batch_size is -1, this function should return the entire buffer (i.e. all stored transitions)
+    """
     assert self._current_size > 0, "Replay buffer is empty."
     if return_iterator:
       return self._sample_iterator(batch_size, shuffle, include_partial_batch)
@@ -71,8 +71,8 @@ class ReplayBuffer(object, metaclass=abc.ABCMeta):
 
   def store(self, data):
     """ Store data into the replay buffer.
-            data.shape[0] should be the size of increment
-        """
+        data.shape[0] should be the size of increment
+    """
     batch_sizes = [len(v) for v in data.values()]
     assert np.all(np.array(batch_sizes) == batch_sizes[0])
     batch_size = batch_sizes[0]
@@ -84,8 +84,8 @@ class ReplayBuffer(object, metaclass=abc.ABCMeta):
 
   def store_episode(self, episode_batch):
     """ API for storing episodes. Including memory management.
-            episode_batch: array(batch_size x (T or T+1) x dim_key)
-        """
+        episode_batch: array(batch_size x (T or T+1) x dim_key)
+    """
     print("Warning: store_episode method is deprecated. Use store instead.")
     self.store(episode_batch)
 
@@ -234,15 +234,6 @@ class UniformReplayBuffer(ReplayBuffer):
     for key in self.buffers.keys():
       buffers[key] = self.buffers[key][:self._current_size]
 
-    # TODO: remove this later
-    buffers["o_2"] = buffers["o"][:, 1:, ...]
-    if "ag" in buffers.keys():
-      buffers["ag_2"] = buffers["ag"][:, 1:, ...]
-    if "g" in buffers.keys():
-      buffers["g_2"] = buffers["g"][:, :, ...]
-    if "pv" in buffers.keys():
-      buffers["pv_2"] = buffers["pv"][:, 1:, ...]
-
     episode_idxs = np.random.randint(self._current_size, size=batch_size)
     step_idxs = np.random.randint(self.T, size=batch_size)
 
@@ -260,15 +251,6 @@ class UniformReplayBuffer(ReplayBuffer):
     buffers = {}
     for key in self.buffers.keys():
       buffers[key] = self.buffers[key][:self._current_size]
-
-    # TODO: remove this later
-    buffers["o_2"] = buffers["o"][:, 1:, ...]
-    if "ag" in buffers.keys():
-      buffers["ag_2"] = buffers["ag"][:, 1:, ...]
-    if "g" in buffers.keys():
-      buffers["g_2"] = buffers["g"][:, :, ...]
-    if "pv" in buffers.keys():
-      buffers["pv_2"] = buffers["pv"][:, 1:, ...]
 
     episode_idxs = np.repeat(np.arange(self._current_size), self.T)
     step_idxs = np.tile(np.arange(self.T), self._current_size)
@@ -293,36 +275,6 @@ class UniformReplayBuffer(ReplayBuffer):
           yield {k: v[batch_inds] for k, v in transitions.items()}
 
     return _sample_iterator()
-
-  # TODO: remove this method
-  def sample_transitions(self, buffers, batch_size=-1):
-    """Sample transitions of size batch_size randomly from episode_batch.
-        Args:
-            episode_batch - {key: array(buffer_size x T x dim_key)}
-            batch_size    - batch size in transitions (if -1, returns all)
-        Return:
-            transitions
-        """
-    # Select which episodes and time to use
-    assert buffers["u"].shape[1] == self.T
-    if batch_size >= 0:
-      episode_idxs = np.random.randint(buffers["u"].shape[0], size=batch_size)
-      step_idxs = np.random.randint(self.T, size=batch_size)
-    else:
-      episode_idxs = np.repeat(np.arange(buffers["u"].shape[0]), self.T)
-      step_idxs = np.tile(np.arange(self.T), buffers["u"].shape[0])
-      batch_size = buffers["u"].shape[0] * self.T
-
-    transitions = {
-        key: buffers[key][episode_idxs, step_idxs].copy()
-        for key in buffers.keys()
-    }
-    # handle multi-step return
-    transitions["n"] = np.ones_like(transitions["r"])
-    # transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:]) for k in transitions.keys()}
-    assert transitions["u"].shape[0] == batch_size
-
-    return transitions
 
   def _store(self, data):
 
@@ -361,11 +313,11 @@ class MultiStepReplayBuffer(UniformReplayBuffer):
 
   def __init__(self, buffer_shapes, size_in_transitions, T, num_steps, gamma):
     """
-        Args:
-            buffer_shapes       (dict of int) - the shape for all buffers that are used in the replay buffer
-            size_in_transitions (int)         - the size of the buffer, measured in transitions
-            T                   (int)         - the time horizon for episodes
-        """
+    Args:
+        buffer_shapes       (dict of int) - the shape for all buffers that are used in the replay buffer
+        size_in_transitions (int)         - the size of the buffer, measured in transitions
+        T                   (int)         - the time horizon for episodes
+    """
 
     super().__init__(buffer_shapes=buffer_shapes,
                      size_in_transitions=size_in_transitions,
@@ -376,37 +328,14 @@ class MultiStepReplayBuffer(UniformReplayBuffer):
 
   def sample(self, batch_size=-1):
     """ Returns a dict {key: array(batch_size x shapes[key])}
-        """
+    """
     buffers = {}
 
     assert self._current_size > 0
     for key in self.buffers.keys():
       buffers[key] = self.buffers[key][:self._current_size]
 
-    buffers["o_2"] = buffers["o"][:, 1:, ...]
-    if "ag" in buffers.keys():
-      buffers["ag_2"] = buffers["ag"][:, 1:, ...]
-    if "g" in buffers.keys():
-      buffers["g_2"] = buffers["g"][:, :, ...]
-    if "pv" in buffers.keys():
-      buffers["pv_2"] = buffers["pv"][:, 1:, ...]
-
-    transitions = self.sample_transitions(buffers, batch_size)
-    assert all([key in transitions for key in list(self.buffers.keys())
-               ]), "key missing from transitions"
-
-    return transitions
-
-  def sample_transitions(self, buffers, batch_size=-1):
-    """Sample transitions of size batch_size randomly from episode_batch.
-        Args:
-            episode_batch - {key: array(buffer_size x T x dim_key)}
-            batch_size    - batch size in transitions (if -1, returns all)
-        Return:
-            transitions
-        """
     # Select which episodes and time to use
-    assert buffers["u"].shape[1] == self.T
     if batch_size >= 0:
       episode_idxs = np.random.randint(buffers["u"].shape[0], size=batch_size)
       step_idxs = np.random.randint(self.T - self.num_steps, size=batch_size)
@@ -430,11 +359,7 @@ class MultiStepReplayBuffer(UniformReplayBuffer):
       n_step_reward += (self.gamma**i) * buffers["r"][episode_idxs,
                                                       step_idxs + i]
     transitions["r"] = n_step_reward
-    assert transitions.keys() == buffers.keys(
-    )  # before adding number of steps n
     transitions["n"] = self.num_steps * np.ones_like(transitions["r"])
-
-    assert transitions["u"].shape[0] == batch_size
 
     return transitions
 

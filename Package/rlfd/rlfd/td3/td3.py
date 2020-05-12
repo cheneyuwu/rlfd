@@ -195,8 +195,8 @@ class TD3(object):
 
   def store_episode(self, episode_batch):
     """
-        episode_batch: array of batch_size x (T or T+1) x dim_key ('o' and 'ag' is of size T+1, others are of size T)
-        """
+    episode_batch: array of batch_size x (T or T+1) x dim_key ('o' and 'ag' is of size T+1, others are of size T)
+    """
     self.replay_buffer.store(episode_batch)
     if self.use_n_step_return:
       self.n_step_replay_buffer.store(episode_batch)
@@ -474,13 +474,10 @@ class TD3(object):
   def update_stats(self, episode_batch):
     # add transitions to normalizer
     if self.fix_T:
-      episode_batch["o_2"] = episode_batch["o"][:, 1:, ...]
-      episode_batch["ag_2"] = episode_batch["ag"][:, 1:, ...]
-      episode_batch["g_2"] = episode_batch["g"][:, :, ...]
-      num_normalizing_transitions = episode_batch["u"].shape[0] * episode_batch[
-          "u"].shape[1]
-      transitions = self.replay_buffer.sample_transitions(
-          episode_batch, num_normalizing_transitions)
+      transitions = {
+          k: v.reshape((-1, v.shape[-1])).copy()
+          for k, v in episode_batch.items()
+      }
     else:
       transitions = episode_batch.copy()
     o_tf = tf.convert_to_tensor(transitions["o"], dtype=tf.float32)
@@ -491,11 +488,14 @@ class TD3(object):
   def _create_memory(self):
     buffer_shapes = {}
     if self.fix_T:
-      buffer_shapes["o"] = (self.eps_length + 1, *self.dimo)
+      buffer_shapes["o"] = (self.eps_length, *self.dimo)
+      buffer_shapes["o_2"] = (self.eps_length, *self.dimo)
       buffer_shapes["u"] = (self.eps_length, *self.dimu)
       buffer_shapes["r"] = (self.eps_length, 1)
-      buffer_shapes["ag"] = (self.eps_length + 1, *self.dimg)
+      buffer_shapes["ag"] = (self.eps_length, *self.dimg)
+      buffer_shapes["ag_2"] = (self.eps_length, *self.dimg)
       buffer_shapes["g"] = (self.eps_length, *self.dimg)
+      buffer_shapes["g_2"] = (self.eps_length, *self.dimg)
 
       self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size,
                                                self.eps_length)
@@ -516,8 +516,7 @@ class TD3(object):
       buffer_shapes["g"] = self.dimg
       buffer_shapes["ag_2"] = self.dimg
       buffer_shapes["g_2"] = self.dimg
-      buffer_shapes["done"] = (
-          1,)  # need the "done" signal for restarting from training
+      buffer_shapes["done"] = (1,)
 
       self.replay_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
       assert not self.use_n_step_return, "not implemented yet"
@@ -590,7 +589,6 @@ class TD3(object):
     self.potential_weight = tf.Variable(1.0, trainable=False)
     self.potential_decay_scale = self.shaping_params["potential_decay_scale"]
     self.potential_decay_epoch = 0  # eventually becomes self.shaping_params["potential_decay_epoch"]
-    # self.meta_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
     # Initialize all variables
     self.initialize_target_net()
@@ -598,8 +596,8 @@ class TD3(object):
 
   def __getstate__(self):
     """
-        Our policies can be loaded from pkl, but after unpickling you cannot continue training.
-        """
+    Our policies can be loaded from pkl, but after unpickling you cannot continue training.
+    """
     state = {k: v for k, v in self.init_args.items() if not k == "self"}
     state["shaping"] = self.shaping
     state["tf"] = {
