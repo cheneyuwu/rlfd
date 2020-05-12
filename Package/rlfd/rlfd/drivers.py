@@ -1,5 +1,6 @@
 """Adopted from OpenAI baselines, HER
 """
+import abc
 import pickle
 from collections import deque
 
@@ -13,7 +14,7 @@ except:
   MujocoException = None
 
 
-class RolloutWorkerBase(object):
+class Driver(object, metaclass=abc.ABCMeta):
 
   def __init__(self, make_env, policy, dims, max_u, noise_eps, polyak_noise,
                random_eps, history_len, render, **kwargs):
@@ -69,14 +70,12 @@ class RolloutWorkerBase(object):
       pickle.dump(self.history, f)
 
   def seed(self, seed):
-    """set seed for environment
-    """
-    raise NotImplementedError
+    """set seed for internal environments"""
+    return self._seed(seed)
 
   def generate_rollouts(self):
-    """Performs `num_episodes` rollouts for maximum time horizon `eps_length` with the current policy
-    """
-    raise NotImplementedError
+    """Generate experiences"""
+    return self._generate_rollouts()
 
   def logs(self, prefix="worker"):
     """Generates a dictionary that contains all collected statistics.
@@ -132,8 +131,16 @@ class RolloutWorkerBase(object):
                              high=self.max_u,
                              size=(n, *self.dims["u"]))
 
+  @abc.abstractmethod
+  def _seed(self, seed):
+    """set seed for environment"""
 
-class ParallelRolloutWorker(RolloutWorkerBase):
+  @abc.abstractmethod
+  def _generate_rollouts(self):
+    """Performs `num_episodes` rollouts for maximum time horizon `eps_length` with the current policy"""
+
+
+class EpisodeBasedDriver(Driver):
 
   def __init__(self,
                make_env,
@@ -150,19 +157,19 @@ class ParallelRolloutWorker(RolloutWorkerBase):
                render=False,
                **kwargs):
     """
-        Rollout worker generates experience by interacting with one or many environments.
+    Rollout worker generates experience by interacting with one or many environments.
 
-        Args:
-            make_env           (function)    - a factory function that creates a new instance of the environment when called
-            policy             (object)      - the policy that is used to act
-            dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
-            num_episodes       (int)         - the number of parallel rollouts that should be used
-            compute_q          (bool)        - whether or not to compute the Q values alongside the actions
-            noise_eps          (float)       - scale of the additive Gaussian noise
-            random_eps         (float)       - probability of selecting a completely random action
-            history_len        (int)         - length of history for statistics smoothing
-            render             (bool)        - whether or not to render the rollouts
-        """
+    Args:
+        make_env           (function)    - a factory function that creates a new instance of the environment when called
+        policy             (object)      - the policy that is used to act
+        dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
+        num_episodes       (int)         - the number of parallel rollouts that should be used
+        compute_q          (bool)        - whether or not to compute the Q values alongside the actions
+        noise_eps          (float)       - scale of the additive Gaussian noise
+        random_eps         (float)       - probability of selecting a completely random action
+        history_len        (int)         - length of history for statistics smoothing
+        render             (bool)        - whether or not to render the rollouts
+    """
     super().__init__(
         make_env=make_env,
         policy=policy,
@@ -196,13 +203,13 @@ class ParallelRolloutWorker(RolloutWorkerBase):
 
     self.reset()
 
-  def seed(self, seed):
+  def _seed(self, seed):
     """ Set seed for environment
         """
     for idx, env in enumerate(self.envs):
       env.seed(seed + 1000 * idx)
 
-  def generate_rollouts(self):
+  def _generate_rollouts(self):
     """ Performs `num_episodes` rollouts for maximum time horizon `eps_length` with the current policy
         """
 
@@ -333,7 +340,7 @@ class ParallelRolloutWorker(RolloutWorkerBase):
     return episode_batch
 
 
-class SerialRolloutWorker(RolloutWorkerBase):
+class StepBasedDriver(Driver):
 
   def __init__(self,
                make_env,
@@ -351,18 +358,18 @@ class SerialRolloutWorker(RolloutWorkerBase):
                render=False,
                **kwargs):
     """
-        Rollout worker generates experience by interacting with one or many environments.
+    Rollout worker generates experience by interacting with one or many environments.
 
-        Args:
-            make_env           (func)        - a factory function that creates a new instance of the environment when called
-            policy             (cls)         - the policy that is used to act
-            dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
-            compute_q          (bool)        - whether or not to compute the Q values alongside the actions
-            noise_eps          (float)       - scale of the additive Gaussian noise
-            random_eps         (float)       - probability of selecting a completely random action
-            history_len        (int)         - length of history for statistics smoothing
-            render             (bool)        - whether or not to render the rollouts
-        """
+    Args:
+        make_env           (func)        - a factory function that creates a new instance of the environment when called
+        policy             (cls)         - the policy that is used to act
+        dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
+        compute_q          (bool)        - whether or not to compute the Q values alongside the actions
+        noise_eps          (float)       - scale of the additive Gaussian noise
+        random_eps         (float)       - probability of selecting a completely random action
+        history_len        (int)         - length of history for statistics smoothing
+        render             (bool)        - whether or not to render the rollouts
+    """
     super().__init__(
         make_env=make_env,
         policy=policy,
@@ -393,12 +400,12 @@ class SerialRolloutWorker(RolloutWorkerBase):
     self.compute_q = compute_q
     self.env = make_env()
 
-  def seed(self, seed):
+  def _seed(self, seed):
     """ Set seed for environment
         """
     self.env.seed(seed)
 
-  def generate_rollouts(self, random=False):
+  def _generate_rollouts(self, random=False):
     """generate `num_steps` rollouts
         """
     # Information to store

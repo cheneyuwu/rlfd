@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 
 from rlfd.env_manager import EnvManager
-from rlfd.rollout import ParallelRolloutWorker, SerialRolloutWorker
+from rlfd.drivers import EpisodeBasedDriver, StepBasedDriver
 from rlfd.memory import UniformReplayBuffer, RingReplayBuffer
 
 
@@ -115,8 +115,8 @@ def config_rollout(params, policy):
       "eps_length": params["eps_length"],
       "max_u": params["max_u"]
   })
-  return _config_rollout_worker(params["make_env"], params["fix_T"],
-                                params["seed"], policy, rollout_params)
+  return _config_driver(params["make_env"], params["fix_T"], params["seed"],
+                        policy, rollout_params)
 
 
 def config_evaluator(params, policy):
@@ -126,8 +126,8 @@ def config_evaluator(params, policy):
       "eps_length": params["eps_length"],
       "max_u": params["max_u"]
   })
-  return _config_rollout_worker(params["make_env"], params["fix_T"],
-                                params["seed"], policy, rollout_params)
+  return _config_driver(params["make_env"], params["fix_T"], params["seed"],
+                        policy, rollout_params)
 
 
 def config_demo(params, policy):
@@ -137,16 +137,15 @@ def config_demo(params, policy):
       "eps_length": params["eps_length"],
       "max_u": params["max_u"]
   })
-  return _config_rollout_worker(params["make_env"], params["fix_T"],
-                                params["seed"], policy, rollout_params)
+  return _config_driver(params["make_env"], params["fix_T"], params["seed"],
+                        policy, rollout_params)
 
 
-def _config_rollout_worker(make_env, fix_T, seed, policy, rollout_params):
-
+def _config_driver(make_env, fix_T, seed, policy, rollout_params):
   if fix_T:  # fix the time horizon, so use the parrallel virtual envs
-    rollout = ParallelRolloutWorker(make_env, policy, **rollout_params)
+    rollout = EpisodeBasedDriver(make_env, policy, **rollout_params)
   else:
-    rollout = SerialRolloutWorker(make_env, policy, **rollout_params)
+    rollout = StepBasedDriver(make_env, policy, **rollout_params)
   rollout.seed(seed)
 
   return rollout
