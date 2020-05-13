@@ -115,24 +115,23 @@ class TD3(object):
     self._create_network()
 
   @tf.function
-  def get_actions_tf(self, o_tf, g_tf):
+  def get_actions_graph(self, o, g):
 
-    norm_o_tf = self.o_stats.normalize(o_tf)
-    norm_g_tf = self.g_stats.normalize(g_tf)
+    norm_o = self.o_stats.normalize(o)
+    norm_g = self.g_stats.normalize(g)
 
-    u_tf = self.main_actor([norm_o_tf, norm_g_tf])
+    u = self.main_actor([norm_o, norm_g])
 
-    q_tf = self.main_critic([norm_o_tf, norm_g_tf, u_tf])
+    q = self.main_critic([norm_o, norm_g, u])
     if self.shaping != None:
-      p_tf = self.potential_weight * self.shaping.potential(
-          o=o_tf, g=g_tf, u=u_tf)
+      p = self.potential_weight * self.shaping.potential(o=o, g=g, u=u)
     else:
-      p_tf = tf.zeros_like(q_tf)
+      p = tf.zeros_like(q)
 
-    if tf.shape(o_tf)[0] == 1:
-      u_tf = u_tf[0]
+    if tf.shape(o)[0] == 1:
+      u = u[0]
 
-    return u_tf, q_tf, p_tf
+    return u, q, p
 
   def get_actions(self, o, g, compute_q=False):
     o = o.reshape((-1, *self.dimo))
@@ -140,7 +139,7 @@ class TD3(object):
     o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
     g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
 
-    u_tf, q_tf, p_tf = self.get_actions_tf(o_tf, g_tf)
+    u_tf, q_tf, p_tf = self.get_actions_graph(o_tf, g_tf)
 
     if compute_q:
       return [u_tf.numpy(), q_tf.numpy(), p_tf.numpy() + q_tf.numpy()]
@@ -197,16 +196,16 @@ class TD3(object):
     return batch
 
   @tf.function
-  def train_bc_tf(self, o_tf, g_tf, u_tf):
-    o_tf = self.o_stats.normalize(o_tf)
-    g_tf = self.g_stats.normalize(g_tf)
+  def train_bc_graph(self, o, g, u):
+    o = self.o_stats.normalize(o)
+    g = self.g_stats.normalize(g)
     with tf.GradientTape() as tape:
-      pi_tf = self.main_actor([o_tf, g_tf])
-      bc_loss_tf = tf.reduce_mean(tf.square(pi_tf - u_tf))
-    actor_grads = tape.gradient(bc_loss_tf, self.main_actor.trainable_weights)
+      pi = self.main_actor([o, g])
+      bc_loss = tf.reduce_mean(tf.square(pi - u))
+    actor_grads = tape.gradient(bc_loss, self.main_actor.trainable_weights)
     self.bc_optimizer.apply_gradients(
         zip(actor_grads, self.main_actor.trainable_weights))
-    return bc_loss_tf
+    return bc_loss
 
   def train_bc(self):
 
@@ -223,7 +222,7 @@ class TD3(object):
         o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
         g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
         u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
-        bc_loss_tf = self.train_bc_tf(o_tf, g_tf, u_tf)
+        bc_loss_tf = self.train_bc_graph(o_tf, g_tf, u_tf)
         bc_loss = bc_loss_tf.numpy()
 
       if epoch % (self.initialize_num_epochs / 100) == (
@@ -242,7 +241,7 @@ class TD3(object):
     #     o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
     #     g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
     #     u_tf = tf.convert_to_tensor(u, dtype=tf.float32)
-    #     bc_loss_tf = self.train_bc_tf(o_tf, g_tf, u_tf)
+    #     bc_loss_tf = self.train_bc_graph(o_tf, g_tf, u_tf)
     #     bc_loss = bc_loss_tf.numpy()
 
     #   if epoch % (self.initialize_num_epochs / 100) == (
