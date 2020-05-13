@@ -34,6 +34,7 @@ class SampleIterator(object):
 
   def __call__(self, batch_size):
     self._batch_size = batch_size
+    return self
 
   def __iter__(self):
     return self
