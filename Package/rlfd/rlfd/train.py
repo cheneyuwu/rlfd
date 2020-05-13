@@ -8,9 +8,7 @@ import tensorflow as tf
 
 from rlfd import config, logger
 from rlfd.td3 import train as td3_train
-
-# TODO: remove import from the old repo
-# from td3fd.mage.train import train as mage_tf_train
+from rlfd.mage import train as mage_train
 
 try:
   from mpi4py import MPI
@@ -38,10 +36,11 @@ def main(root_dir, **kwargs):
   # Launch the training script
   if params["alg"] == "td3":
     td3_train.train(root_dir=root_dir, params=params)
-#   elif params["alg"] == "mage-tf":
-#     mage_tf_train(root_dir=root_dir, params=params)
+  elif params["alg"] == "mage":
+    mage_train.train(root_dir=root_dir, params=params)
   else:
     assert False, "unknown algorithm"
+
 
 if __name__ == "__main__":
 

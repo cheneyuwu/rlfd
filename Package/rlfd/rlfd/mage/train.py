@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 
 from rlfd import config, logger
-from rlfd.td3 import config as td3_config
+from rlfd.mage import config as mage_config
 from rlfd.utils.cmd_util import ArgParser
 from rlfd.utils.util import set_global_seeds
 
@@ -33,7 +33,7 @@ except ImportError:
 def train(root_dir, params):
 
   # Check parameters
-  config.check_params(params, td3_config.default_params)
+  config.check_params(params, mage_config.default_params)
 
   # Construct...
   save_interval = 0
@@ -54,7 +54,7 @@ def train(root_dir, params):
 
   # Construct ...
   config.add_env_params(params=params)
-  policy = td3_config.configure_td3(params=params)
+  policy = mage_config.configure_mage(params=params)
   rollout_worker = config.config_rollout(params=params, policy=policy)
   evaluator = config.config_evaluator(params=params, policy=policy)
   # adding demonstration data to the demonstration buffer
@@ -90,9 +90,18 @@ def train(root_dir, params):
   for epoch in range(num_epochs):
     # 1 epoch contains multiple cycles of training, 1 time testing, logging and
     # policy saving
+
+    # TODO: move these hyper parameters to config files
+    cyc_per_model_training = 250  # set by mbpo for 1000 long halfcheetah env
+
     # train
     rollout_worker.clear_history()
     for cyc in range(num_cycles):
+
+      # TODO: add proper training of the model
+      if cyc % cyc_per_model_training == 0:
+        policy.train_model()
+
       # print("cycle: {} completed!!".format(cyc))
       experiences = rollout_worker.generate_rollouts()
       if num_batches != 0:  # policy is being updated

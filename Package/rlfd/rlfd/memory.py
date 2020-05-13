@@ -26,6 +26,25 @@ def iterbatches(arrays,
       yield tuple(a[batch_inds] for a in arrays)
 
 
+class SampleIterator(object):
+
+  def __init__(self, sample_fn, batch_size):
+    self._sample_fn = sample_fn
+    self._batch_size = batch_size
+
+  def __call__(self, batch_size):
+    self._batch_size = batch_size
+
+  def __iter__(self):
+    return self
+
+  def __next__(self):
+    batch = self._sample_fn(self._batch_size)
+    if batch is None:
+      raise StopIteration
+    return batch
+
+
 class ReplayBuffer(object, metaclass=abc.ABCMeta):
 
   def __init__(self, buffer_shapes, size):
@@ -89,6 +108,10 @@ class ReplayBuffer(object, metaclass=abc.ABCMeta):
     print("Warning: store_episode method is deprecated. Use store instead.")
     self.store(episode_batch)
 
+  def clear_buffer(self):
+    self._clear_buffer()
+    self._current_size = 0
+
   @property
   def full(self):
     return self._current_size == self._size
@@ -101,9 +124,15 @@ class ReplayBuffer(object, metaclass=abc.ABCMeta):
   def current_size(self):
     return self._current_size
 
-  def clear_buffer(self):
-    self._clear_buffer()
-    self._current_size = 0
+  @property
+  @abc.abstractmethod
+  def stored_steps(self):
+    """current number of environment steps stored in the replay buffer"""
+
+  @property
+  @abc.abstractmethod
+  def stored_episodes(self):
+    """current number of environment episodes stored in the replay buffer"""
 
   @abc.abstractmethod
   def _store(self, data):
@@ -136,9 +165,19 @@ class RingReplayBuffer(ReplayBuffer):
     # contains {key: array(transitions x dim_key)}
     self._pointer = 0
 
+  @property
+  def stored_steps(self):
+    """current number of environment steps stored in the replay buffer"""
+    return self._current_size
+
+  @property
+  def stored_episodes(self):
+    """current number of environment episodes stored in the replay buffer"""
+    raise ValueError("Number of episodes unknown in step based replay buffer.")
+
   def _sample_random(self, batch_size):
     """Sample a batch of sizee batch_size randomly from the replay buffer"""
-    inds = np.random.randint(0, self._current_size, batch_size)
+    inds = np.random.randint(0, self.stored_steps, batch_size)
     transitions = {
         key: self.buffers[key][inds].copy() for key in self.buffers.keys()
     }
@@ -149,25 +188,35 @@ class RingReplayBuffer(ReplayBuffer):
 
   def _sample_iterator(self, batch_size, shuffle, include_partial_batch):
     """return a iterator from sampler"""
-    inds = np.arange(self._current_size)
+    inds = np.arange(self.stored_steps)
+    if shuffle:
+      np.random.shuffle(inds)
+
     transitions = {
         key: self.buffers[key][inds].copy() for key in self.buffers.keys()
     }
     # handle multi-step return TODO this is a hack
     transitions["n"] = np.ones_like(transitions["r"])
 
-    if shuffle:
-      np.random.shuffle(inds)
     if batch_size == None:
-      batch_size = self._current_size
-    sections = np.arange(0, self._current_size, batch_size)[1:]
+      batch_size = self.stored_steps
 
-    def _sample_iterator():
-      for batch_inds in np.array_split(inds, sections):
-        if include_partial_batch or len(batch_inds) == batch_size:
-          yield {k: v[batch_inds] for k, v in transitions.items()}
+    self._sample_iterator_curr_idx = 0
 
-    return _sample_iterator()
+    def _sample(batch_size):
+      if self._sample_iterator_curr_idx > self.stored_steps:
+        return None
+      if (self._sample_iterator_curr_idx + batch_size >
+          self.stored_steps) and (not include_partial_batch):
+        return None
+      batch = {
+          k: v[self._sample_iterator_curr_idx:self._sample_iterator_curr_idx +
+               batch_size] for k, v in transitions.items()
+      }
+      self._sample_iterator_curr_idx += batch_size
+      return batch
+
+    return SampleIterator(_sample, batch_size)
 
   def _store(self, data):
 
@@ -219,12 +268,14 @@ class UniformReplayBuffer(ReplayBuffer):
     self.T = T
 
   @property
-  def current_size_episode(self):
-    return self._current_size
+  def stored_steps(self):
+    """current number of environment steps stored in the replay buffer"""
+    return self._current_size * self.T
 
   @property
-  def current_size_transiton(self):
-    return self._current_size * self.T
+  def stored_episodes(self):
+    """current number of environment episodes stored in the replay buffer"""
+    return self._current_size
 
   def _sample_random(self, batch_size):
     """ Returns a dict {key: array(batch_size x shapes[key])}
@@ -259,22 +310,36 @@ class UniformReplayBuffer(ReplayBuffer):
         key: buffers[key][episode_idxs, step_idxs].copy()
         for key in buffers.keys()
     }
-    # handle multi-step return
-    transitions["n"] = np.ones_like(transitions["r"])
 
-    inds = np.arange(self._current_size * self.T)
+    inds = np.arange(self.stored_steps)
     if shuffle:
       np.random.shuffle(inds)
+
+    transitions = {
+        key: transitions[key][inds].copy() for key in transitions.keys()
+    }
+    # handle multi-step return TODO this is a hack
+    transitions["n"] = np.ones_like(transitions["r"])
+
     if batch_size == None:
-      batch_size = self._current_size * self.T
-    sections = np.arange(0, self._current_size * self.T, batch_size)[1:]
+      batch_size = self.stored_steps
 
-    def _sample_iterator():
-      for batch_inds in np.array_split(inds, sections):
-        if include_partial_batch or len(batch_inds) == batch_size:
-          yield {k: v[batch_inds] for k, v in transitions.items()}
+    self._sample_iterator_curr_idx = 0
 
-    return _sample_iterator()
+    def _sample(batch_size):
+      if self._sample_iterator_curr_idx > self.stored_steps:
+        return None
+      if (self._sample_iterator_curr_idx + batch_size >
+          self.stored_steps) and (not include_partial_batch):
+        return None
+      batch = {
+          k: v[self._sample_iterator_curr_idx:self._sample_iterator_curr_idx +
+               batch_size] for k, v in transitions.items()
+      }
+      self._sample_iterator_curr_idx += batch_size
+      return batch
+
+    return SampleIterator(_sample, batch_size)
 
   def _store(self, data):
 
@@ -409,11 +474,15 @@ if __name__ == "__main__":
   for batch in iterator:
     print(batch["r"].shape)
     print(batch["r"])
-    print("here")
+  #
+  iterator = replay_buffer.sample(2, return_iterator=True)
+  batch = next(iterator)
+  print(batch["r"].shape)
+  print(batch["r"])
+  iterator(4)
   for batch in iterator:
     print(batch["r"].shape)
     print(batch["r"])
-    print("here")
 
   # RingReplayBuffer Usage
   o = np.linspace(0.0, 17.0, 8).reshape((4, 2))  # Batch x Time x Dim
@@ -457,8 +526,9 @@ if __name__ == "__main__":
   for batch in iterator:
     print(batch["r"].shape)
     print(batch["r"])
-    print("here")
+  #
+  iterator = replay_buffer.sample(return_iterator=True)
+  iterator(1)  # set batch size to be 1
   for batch in iterator:
     print(batch["r"].shape)
     print(batch["r"])
-    print("here")
