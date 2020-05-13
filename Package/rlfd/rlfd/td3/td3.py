@@ -58,43 +58,6 @@ class TD3(object):
       shaping_params,
       info,
   ):
-    """
-    Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER). Added functionality
-    to use demonstrations for training to Overcome exploration problem.
-
-    Args:
-        # Environment I/O and Config
-        max_u              (float)        - maximum action magnitude, i.e. actions are in [-max_u, max_u]
-        T                  (int)          - the time horizon for rollouts
-        fix_T              (bool)         - every episode has fixed length
-        # Normalizer
-        norm_eps           (float)        - a small value used in the normalizer to avoid numerical instabilities
-        norm_clip          (float)        - normalized inputs are clipped to be in [-norm_clip, norm_clip]
-        # NN Configuration
-        scope              (str)          - the scope used for the TensorFlow graph
-        dims               (dict of tps)  - dimensions for the observation (o), the goal (g), and the actions (u)
-        layer_sizes        (list of ints) - number of units in each hidden layers
-        initializer_type   (str)          - initializer of the weight for both policy and critic
-        reuse              (boolean)      - whether or not the networks should be reused
-        # Replay Buffer
-        buffer_size        (int)          - number of transitions that are stored in the replay buffer
-        # Dual Network Set
-        polyak             (float)        - coefficient for Polyak-averaging of the target network
-        # Training
-        batch_size         (int)          - batch size for training
-        Q_lr               (float)        - learning rate for the Q (critic) network
-        pi_lr              (float)        - learning rate for the pi (actor) network
-        action_l2          (float)        - coefficient for L2 penalty on the actions
-        gamma              (float)        - gamma used for Q learning updates
-        # Use demonstration to shape critic or actor
-        sample_demo_buffer (int)          - whether or not to sample from demonstration buffer
-        batch_size_demo    (int)          - number of samples to be used from the demonstrations buffer, per mpi thread
-        use_demo_reward    (int)          - whether or not to assue that demonstration dataset has rewards
-        num_demo           (int)          - number of episodes in to be used in the demonstration buffer
-        demo_strategy      (str)          - whether or not to use demonstration with different strategies
-        bc_params          (dict)
-        shaping_params     (dict)
-    """
     # Store initial args passed into the function
     self.init_args = locals()
 
@@ -294,120 +257,127 @@ class TD3(object):
     self.shaping.train(demo_data)
     self.shaping.evaluate(demo_data)
 
-  @tf.function
-  def train_tf(self, o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf, done_tf):
-
-    self.training_step.assign((self.training_step + 1) % self.policy_freq)
+  def critic_loss_graph(self, o, g, o_2, g_2, u, r, n, done):
 
     # normalize observations
-    norm_o_tf = self.o_stats.normalize(o_tf)
-    norm_g_tf = self.g_stats.normalize(g_tf)
-    norm_o_2_tf = self.o_stats.normalize(o_2_tf)
-    norm_g_2_tf = self.g_stats.normalize(g_2_tf)
+    norm_o = self.o_stats.normalize(o)
+    norm_g = self.g_stats.normalize(g)
+    norm_o_2 = self.o_stats.normalize(o_2)
+    norm_g_2 = self.g_stats.normalize(g_2)
 
     # add noise to target policy output
-    noise = tfd.Normal(loc=0.0, scale=self.policy_noise).sample(tf.shape(u_tf))
+    # noise = tfd.Normal(loc=0.0, scale=self.policy_noise).sample(tf.shape(u))
+    noise = tf.random.normal(tf.shape(u), 0.0, self.policy_noise)
+
     noise = tf.clip_by_value(noise, -self.policy_noise_clip,
                              self.policy_noise_clip) * self.max_u
-    u_2_tf = tf.clip_by_value(
-        self.target_actor([norm_o_2_tf, norm_g_2_tf]) + noise, -self.max_u,
+    u_2 = tf.clip_by_value(
+        self.target_actor([norm_o_2, norm_g_2]) + noise, -self.max_u,
         self.max_u)
 
-    # Critic loss
     # immediate reward
-    target_tf = r_tf
+    target = r
     # demo shaping reward
     if self.demo_strategy in ["gan", "nf"]:
       potential_curr = self.potential_weight * self.shaping.potential(
-          o=o_tf, g=g_tf, u=u_tf)
+          o=o, g=g, u=u)
       potential_next = self.potential_weight * self.shaping.potential(
-          o=o_2_tf, g=g_2_tf, u=u_2_tf)
-      target_tf += (1.0 - done_tf) * tf.pow(
-          self.gamma, n_tf) * potential_next - potential_curr
+          o=o_2, g=g_2, u=u_2)
+      target += (1.0 - done) * tf.pow(self.gamma,
+                                      n) * potential_next - potential_curr
     # ddpg or td3 target with or without clipping
     if self.twin_delayed:
-      target_tf += (1.0 - done_tf) * tf.pow(self.gamma, n_tf) * tf.minimum(
-          self.target_critic([norm_o_2_tf, norm_g_2_tf, u_2_tf]),
-          self.target_critic_twin([norm_o_2_tf, norm_g_2_tf, u_2_tf]),
+      target += (1.0 - done) * tf.pow(self.gamma, n) * tf.minimum(
+          self.target_critic([norm_o_2, norm_g_2, u_2]),
+          self.target_critic_twin([norm_o_2, norm_g_2, u_2]),
       )
     else:
-      target_tf += (1.0 - done_tf) * tf.pow(
-          self.gamma, n_tf) * self.target_critic(
-              [norm_o_2_tf, norm_g_2_tf, u_2_tf])
-    with tf.GradientTape(persistent=True) as tape:
-      if self.twin_delayed:
-        rl_bellman_tf = tf.square(target_tf - self.main_critic(
-            [norm_o_tf, norm_g_tf, u_tf])) + tf.square(
-                target_tf - self.main_critic_twin([norm_o_tf, norm_g_tf, u_tf]))
-      else:
-        rl_bellman_tf = tf.square(
-            target_tf - self.main_critic([norm_o_tf, norm_g_tf, u_tf]))
+      target += (1.0 - done) * tf.pow(self.gamma, n) * self.target_critic(
+          [norm_o_2, norm_g_2, u_2])
 
-      if self.sample_demo_buffer and not self.use_demo_reward:
-        # mask off entries from demonstration dataset
-        mask = np.concatenate(
-            (np.ones(self.batch_size), np.zeros(self.batch_size_demo)), axis=0)
-        rl_bellman_tf = tf.boolean_mask(rl_bellman_tf, mask)
-
-      critic_loss_tf = tf.reduce_mean(rl_bellman_tf)
-
-    critic_grads = tape.gradient(critic_loss_tf,
-                                 self.main_critic.trainable_weights)
     if self.twin_delayed:
-      critic_twin_grads = tape.gradient(critic_loss_tf,
-                                        self.main_critic_twin.trainable_weights)
+      bellman_error = tf.square(
+          tf.stop_gradient(target) -
+          self.main_critic([norm_o, norm_g, u])) + tf.square(
+              tf.stop_gradient(target) -
+              self.main_critic_twin([norm_o, norm_g, u]))
+    else:
+      bellman_error = tf.square(
+          tf.stop_gradient(target) - self.main_critic([norm_o, norm_g, u]))
+
+    if self.sample_demo_buffer and not self.use_demo_reward:
+      # mask off entries from demonstration dataset
+      mask = np.concatenate(
+          (np.ones(self.batch_size), np.zeros(self.batch_size_demo)), axis=0)
+      bellman_error = tf.boolean_mask(bellman_error, mask)
+
+    critic_loss = tf.reduce_mean(bellman_error)
+    return critic_loss
+
+  def actor_loss_graph(self, o, g, u):
+
+    # normalize observations
+    norm_o = self.o_stats.normalize(o)
+    norm_g = self.g_stats.normalize(g)
+
+    pi = self.main_actor([norm_o, norm_g])
+    actor_loss = -tf.reduce_mean(self.main_critic([norm_o, norm_g, pi]))
+    actor_loss += self.action_l2 * tf.reduce_mean(tf.square(pi / self.max_u))
+    if self.demo_strategy in ["gan", "nf"]:
+      actor_loss += -tf.reduce_mean(
+          self.potential_weight * self.shaping.potential(o=o, g=g, u=pi))
+    if self.demo_strategy == "bc":
+      assert self.sample_demo_buffer, "must sample from the demonstration buffer to use behavior cloning"
+      mask = np.concatenate(
+          (np.zeros(self.batch_size), np.ones(self.batch_size_demo)), axis=0)
+      demo_pi = tf.boolean_mask((pi), mask)
+      demo_u = tf.boolean_mask((u), mask)
+      if self.bc_params["q_filter"]:
+        q_u = self.main_critic([norm_o, norm_g, u])
+        q_pi = self.main_critic([norm_o, norm_g, pi])
+        q_filter_mask = tf.reshape(tf.boolean_mask(q_u > q_pi, mask), [-1])
+        bc_loss = tf.reduce_mean(
+            tf.square(
+                tf.boolean_mask(demo_pi, q_filter_mask, axis=0) -
+                tf.boolean_mask(demo_u, q_filter_mask, axis=0)))
+      else:
+        bc_loss = tf.reduce_mean(tf.square(demo_pi - demo_u))
+      actor_loss = (self.bc_params["prm_loss_weight"] * actor_loss +
+                    self.bc_params["aux_loss_weight"] * bc_loss)
+
+    return actor_loss
+
+  @tf.function
+  def train_graph(self, o, g, o_2, g_2, u, r, n, done):
+
+    self.training_step.assign((self.training_step + 1) % self.policy_freq)
+
+    # Train critic
+    critic_trainable_weights = self.main_critic.trainable_weights
+    if self.twin_delayed:
+      critic_trainable_weights += self.main_critic_twin.trainable_weights
+
+    with tf.GradientTape() as tape:
+      critic_loss = self.critic_loss_graph(o, g, o_2, g_2, u, r, n, done)
+
+    critic_grads = tape.gradient(critic_loss, critic_trainable_weights)
 
     self.critic_optimizer.apply_gradients(
-        zip(critic_grads, self.main_critic.trainable_weights))
-    if self.twin_delayed:
-      self.critic_twin_optimizer.apply_gradients(
-          zip(critic_twin_grads, self.main_critic_twin.trainable_weights))
+        zip(critic_grads, critic_trainable_weights))
 
     if self.training_step % self.policy_freq != 0:
-      return critic_loss_tf, tf.constant(0.0)
+      return critic_loss, tf.constant(0.0)
 
-    # Actor Loss
-    with tf.GradientTape(persistent=True) as tape:
-      pi_tf = self.main_actor([norm_o_tf, norm_g_tf])
-      actor_loss_tf = -tf.reduce_mean(
-          self.main_critic([norm_o_tf, norm_g_tf, pi_tf]))
-      actor_loss_tf += self.action_l2 * tf.reduce_mean(
-          tf.square(pi_tf / self.max_u))
-      if self.demo_strategy in ["gan", "nf"]:
-        actor_loss_tf += -tf.reduce_mean(
-            self.potential_weight *
-            self.shaping.potential(o=o_tf, g=g_tf, u=pi_tf))
-      if self.demo_strategy == "bc":
-        assert self.sample_demo_buffer, "must sample from the demonstration buffer to use behavior cloning"
-        # define the cloning loss on the actor's actions only on the samples which adhere to the above masks
-        mask = np.concatenate(
-            (np.zeros(self.batch_size), np.ones(self.batch_size_demo)), axis=0)
-        demo_pi_tf = tf.boolean_mask((pi_tf), mask)
-        demo_u_tf = tf.boolean_mask((u_tf), mask)
-        if self.bc_params["q_filter"]:
-          q_u_tf = self.main_critic([norm_o_tf, norm_g_tf, u_tf])
-          q_pi_tf = self.main_critic([norm_o_tf, norm_g_tf, pi_tf])
-          q_filter_mask = tf.reshape(tf.boolean_mask(q_u_tf > q_pi_tf, mask),
-                                     [-1])
-          # use to be tf.reduce_sum, however, use tf.reduce_mean makes the loss function independent from number
-          # of demonstrations
-          bc_loss_tf = tf.reduce_mean(
-              tf.square(
-                  tf.boolean_mask(demo_pi_tf, q_filter_mask, axis=0) -
-                  tf.boolean_mask(demo_u_tf, q_filter_mask, axis=0)))
-        else:
-          # use to be tf.reduce_sum, however, use tf.reduce_mean makes the loss function independent from number
-          # of demonstrations
-          bc_loss_tf = tf.reduce_mean(tf.square(demo_pi_tf - demo_u_tf))
-        actor_loss_tf = (self.bc_params["prm_loss_weight"] * actor_loss_tf +
-                         self.bc_params["aux_loss_weight"] * bc_loss_tf)
+    # Train actor
+    actor_trainable_weights = self.main_actor.trainable_weights
+    with tf.GradientTape() as tape:
+      actor_loss = self.actor_loss_graph(o, g, u)
 
-    actor_grads = tape.gradient(actor_loss_tf,
-                                self.main_actor.trainable_weights)
+    actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
     self.actor_optimizer.apply_gradients(
-        zip(actor_grads, self.main_actor.trainable_weights))
+        zip(actor_grads, actor_trainable_weights))
 
-    return critic_loss_tf, actor_loss_tf
+    return critic_loss, actor_loss
 
   def train(self):
 
@@ -421,8 +391,8 @@ class TD3(object):
     r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
     n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
     done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
-    critic_loss_tf, actor_loss_tf = self.train_tf(o_tf, g_tf, o_2_tf, g_2_tf,
-                                                  u_tf, r_tf, n_tf, done_tf)
+    critic_loss_tf, actor_loss_tf = self.train_graph(o_tf, g_tf, o_2_tf, g_2_tf,
+                                                     u_tf, r_tf, n_tf, done_tf)
 
     return critic_loss_tf.numpy(), actor_loss_tf.numpy()
 
@@ -538,13 +508,8 @@ class TD3(object):
     # actor
     self.main_actor = Actor(self.dimo, self.dimg, self.dimu, self.max_u,
                             self.layer_sizes)
-    self.target_actor = Actor(
-        self.dimo,
-        self.dimg,
-        self.dimu,
-        self.max_u,
-        self.layer_sizes,
-    )
+    self.target_actor = Actor(self.dimo, self.dimg, self.dimu, self.max_u,
+                              self.layer_sizes)
     # critic
     self.main_critic = Critic(self.dimo, self.dimg, self.dimu, self.max_u,
                               self.layer_sizes)
