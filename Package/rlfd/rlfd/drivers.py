@@ -5,6 +5,7 @@ import pickle
 from collections import deque
 
 import numpy as np
+import tensorflow as tf
 
 from rlfd import logger
 
@@ -82,6 +83,13 @@ class Driver(object, metaclass=abc.ABCMeta):
   def logs(self, prefix="worker"):
     """Generates a dictionary that contains all collected statistics.
     """
+
+    # TODO: move this out to metrics
+    with tf.name_scope("Driver"):
+      tf.summary.scalar(name='reward_per_eps vs env steps',
+                        data=np.mean(self.history["reward_per_eps"]),
+                        step=self.total_num_steps)
+
     logs = []
     logs += [("episodes", self.total_num_episodes)]
     logs += [("steps", self.total_num_steps)]

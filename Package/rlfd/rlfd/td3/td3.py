@@ -114,6 +114,11 @@ class TD3(object):
     self._create_memory()
     self._create_network()
 
+    # Initialize training steps
+    self.td3_training_step = tf.Variable(0, trainable=False, dtype=tf.int64)
+    self.model_training_step = tf.Variable(0, trainable=False, dtype=tf.int64)
+    self.exploration_step = tf.Variable(0, trainable=False, dtype=tf.int64)
+
   @tf.function
   def get_actions_graph(self, o, g):
 
@@ -311,6 +316,12 @@ class TD3(object):
       bellman_error = tf.boolean_mask(bellman_error, mask)
 
     critic_loss = tf.reduce_mean(bellman_error)
+
+    with tf.name_scope('TD3Losses'):
+      tf.summary.scalar(name='critic_loss vs td3_training_step',
+                        data=critic_loss,
+                        step=self.td3_training_step)
+
     return critic_loss
 
   def actor_loss_graph(self, o, g, u):
@@ -344,19 +355,23 @@ class TD3(object):
       actor_loss = (self.bc_params["prm_loss_weight"] * actor_loss +
                     self.bc_params["aux_loss_weight"] * bc_loss)
 
+    with tf.name_scope('TD3Losses'):
+      tf.summary.scalar(name='actor_loss vs td3_training_step',
+                        data=actor_loss,
+                        step=self.td3_training_step)
+
     return actor_loss
 
   @tf.function
   def train_graph(self, o, g, o_2, g_2, u, r, n, done):
-
-    self.training_step.assign((self.training_step + 1) % self.policy_freq)
 
     # Train critic
     critic_trainable_weights = self.main_critic.trainable_weights
     if self.twin_delayed:
       critic_trainable_weights += self.main_critic_twin.trainable_weights
 
-    with tf.GradientTape() as tape:
+    with tf.GradientTape(watch_accessed_variables=False) as tape:
+      tape.watch(critic_trainable_weights)
       critic_loss = self.critic_loss_graph(o, g, o_2, g_2, u, r, n, done)
 
     critic_grads = tape.gradient(critic_loss, critic_trainable_weights)
@@ -364,17 +379,20 @@ class TD3(object):
     self.critic_optimizer.apply_gradients(
         zip(critic_grads, critic_trainable_weights))
 
-    if self.training_step % self.policy_freq != 0:
-      return critic_loss, tf.constant(0.0)
-
     # Train actor
-    actor_trainable_weights = self.main_actor.trainable_weights
-    with tf.GradientTape() as tape:
-      actor_loss = self.actor_loss_graph(o, g, u)
+    if self.td3_training_step % self.policy_freq == 0:
+      actor_trainable_weights = self.main_actor.trainable_weights
+      with tf.GradientTape(watch_accessed_variables=False) as tape:
+        tape.watch(actor_trainable_weights)
+        actor_loss = self.actor_loss_graph(o, g, u)
 
-    actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
-    self.actor_optimizer.apply_gradients(
-        zip(actor_grads, actor_trainable_weights))
+      actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
+      self.actor_optimizer.apply_gradients(
+          zip(actor_grads, actor_trainable_weights))
+    else:
+      actor_loss = tf.constant(0.0)
+
+    self.td3_training_step.assign_add(1)
 
     return critic_loss, actor_loss
 
@@ -561,7 +579,6 @@ class TD3(object):
 
     # Initialize all variables
     self.initialize_target_net()
-    self.training_step = tf.Variable(0, trainable=False)
 
   def __getstate__(self):
     """
