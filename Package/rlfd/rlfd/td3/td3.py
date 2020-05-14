@@ -119,6 +119,10 @@ class TD3(object):
     self.model_training_step = tf.Variable(0, trainable=False, dtype=tf.int64)
     self.exploration_step = tf.Variable(0, trainable=False, dtype=tf.int64)
 
+  def _increment_exploration_step(self, num_steps):
+    self.exploration_step.assign_add(num_steps)
+    self._policy_inspect(summarize=True)
+
   @tf.function
   def get_actions_graph(self, o, g):
 
@@ -126,6 +130,8 @@ class TD3(object):
     norm_g = self.g_stats.normalize(g)
 
     u = self.main_actor([norm_o, norm_g])
+
+    self._policy_inspect(o, g)
 
     q = self.main_critic([norm_o, norm_g, u])
     if self.shaping != None:
@@ -161,12 +167,14 @@ class TD3(object):
     self.demo_buffer.store(episode_batch)
 
   def store_episode(self, episode_batch):
-    """
-    episode_batch: array of batch_size x (T or T+1) x dim_key ('o' and 'ag' is of size T+1, others are of size T)
-    """
-    self.replay_buffer.store(episode_batch)
-    if self.use_n_step_return:
-      self.n_step_replay_buffer.store(episode_batch)
+
+    with tf.summary.record_if(lambda: self.exploration_step % 200 == 0):
+      self.replay_buffer.store(episode_batch)
+      if self.use_n_step_return:
+        self.n_step_replay_buffer.store(episode_batch)
+
+      num_steps = np.prod(episode_batch["o"].shape[:-1])
+      self._increment_exploration_step(num_steps)
 
   def clear_n_step_replay_buffer(self):
     if not self.use_n_step_return:
@@ -397,19 +405,21 @@ class TD3(object):
     return critic_loss, actor_loss
 
   def train(self):
+    with tf.summary.record_if(lambda: self.td3_training_step % 200 == 0):
 
-    batch = self.sample_batch()
+      batch = self.sample_batch()
 
-    o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-    g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
-    o_2_tf = tf.convert_to_tensor(batch["o_2"], dtype=tf.float32)
-    g_2_tf = tf.convert_to_tensor(batch["g_2"], dtype=tf.float32)
-    u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
-    r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
-    n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
-    done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
-    critic_loss_tf, actor_loss_tf = self.train_graph(o_tf, g_tf, o_2_tf, g_2_tf,
-                                                     u_tf, r_tf, n_tf, done_tf)
+      o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
+      g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
+      o_2_tf = tf.convert_to_tensor(batch["o_2"], dtype=tf.float32)
+      g_2_tf = tf.convert_to_tensor(batch["g_2"], dtype=tf.float32)
+      u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
+      r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
+      n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
+      done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
+      critic_loss_tf, actor_loss_tf = self.train_graph(o_tf, g_tf, o_2_tf,
+                                                       g_2_tf, u_tf, r_tf, n_tf,
+                                                       done_tf)
 
     return critic_loss_tf.numpy(), actor_loss_tf.numpy()
 
@@ -477,18 +487,19 @@ class TD3(object):
     self.g_stats.update(g_tf)
 
   def _create_memory(self):
-    buffer_shapes = {}
+    buffer_shapes = dict(o=self.dimo,
+                         o_2=self.dimo,
+                         u=self.dimu,
+                         r=(1,),
+                         ag=self.dimg,
+                         ag_2=self.dimg,
+                         g=self.dimg,
+                         g_2=self.dimg,
+                         done=(1,))
     if self.fix_T:
-      buffer_shapes["o"] = (self.eps_length, *self.dimo)
-      buffer_shapes["o_2"] = (self.eps_length, *self.dimo)
-      buffer_shapes["u"] = (self.eps_length, *self.dimu)
-      buffer_shapes["r"] = (self.eps_length, 1)
-      buffer_shapes["ag"] = (self.eps_length, *self.dimg)
-      buffer_shapes["ag_2"] = (self.eps_length, *self.dimg)
-      buffer_shapes["g"] = (self.eps_length, *self.dimg)
-      buffer_shapes["g_2"] = (self.eps_length, *self.dimg)
-      buffer_shapes["done"] = (self.eps_length, 1)
-
+      buffer_shapes = {
+          k: (self.eps_length) + v for k, v in buffer_shapes.items()
+      }
       self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size,
                                                self.eps_length)
       if self.use_n_step_return:
@@ -498,18 +509,7 @@ class TD3(object):
       if self.demo_strategy != "none" or self.sample_demo_buffer:
         self.demo_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size,
                                                self.eps_length)
-
     else:
-      buffer_shapes["o"] = self.dimo
-      buffer_shapes["o_2"] = self.dimo
-      buffer_shapes["u"] = self.dimu
-      buffer_shapes["r"] = (1,)
-      buffer_shapes["ag"] = self.dimg
-      buffer_shapes["g"] = self.dimg
-      buffer_shapes["ag_2"] = self.dimg
-      buffer_shapes["g_2"] = self.dimg
-      buffer_shapes["done"] = (1,)
-
       self.replay_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
       assert not self.use_n_step_return, "not implemented yet"
       if self.demo_strategy != "none" or self.sample_demo_buffer:
@@ -579,6 +579,47 @@ class TD3(object):
 
     # Initialize all variables
     self.initialize_target_net()
+
+  @tf.function
+  def _policy_inspect(self, o=None, g=None, summarize=False):
+    # should only happen for in the first call of this function
+    if not hasattr(self, "_policy_inspect_count"):
+      self._policy_inspect_count = tf.Variable(0.0, trainable=False)
+      self._policy_inspect_estimate_q = tf.Variable(0.0, trainable=False)
+      if self.shaping != None:
+        self._policy_inspect_potential = tf.Variable(0.0, trainable=False)
+
+    if summarize:
+      with tf.name_scope('PolicyInspect'):
+        mean_estimate_q = self._policy_inspect_estimate_q / self._policy_inspect_count
+        success = tf.summary.scalar(name='mean_estimate_q vs exploration_step',
+                                    data=mean_estimate_q,
+                                    step=self.exploration_step)
+        if self.shaping != None:
+          mean_potential = self._policy_inspect_potential / self._policy_inspect_count
+          tf.summary.scalar(name='mean_potential vs exploration_step',
+                            data=mean_potential,
+                            step=self.exploration_step)
+      if success:
+        self._policy_inspect_count.assign(0.0)
+        self._policy_inspect_estimate_q.assign(0.0)
+        if self.shaping != None:
+          self._policy_inspect_potential.assign(0.0)
+
+      return
+
+    assert o != None and g != None, "Provide the same arguments passed to get action."
+
+    norm_o = self.o_stats.normalize(o)
+    norm_g = self.g_stats.normalize(g)
+    u = self.main_actor([norm_o, norm_g])
+
+    self._policy_inspect_count.assign_add(1)
+    q = self.main_critic([norm_o, norm_g, u])
+    self._policy_inspect_estimate_q.assign_add(tf.reduce_sum(q))
+    if self.shaping != None:
+      p = self.potential_weight * self.shaping.potential(o=o, g=g, u=u)
+      self._policy_inspect_potential.assign_add(tf.reduce_sum(p))
 
   def __getstate__(self):
     """

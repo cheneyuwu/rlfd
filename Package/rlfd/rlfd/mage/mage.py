@@ -120,6 +120,10 @@ class MAGE(object):
     self.model_training_step = tf.Variable(0, trainable=False, dtype=tf.int64)
     self.exploration_step = tf.Variable(0, trainable=False, dtype=tf.int64)
 
+  def _increment_exploration_step(self, num_steps):
+    self.exploration_step.assign_add(num_steps)
+    self._policy_inspect(summarize=True)
+
   @tf.function
   def get_actions_graph(self, o, g):
 
@@ -127,6 +131,8 @@ class MAGE(object):
     norm_g = self.g_stats.normalize(g)
 
     u = self.main_actor([norm_o, norm_g])
+
+    self._policy_inspect(o, g)
 
     q = self.main_critic([norm_o, norm_g, u])
     if self.shaping != None:
@@ -162,12 +168,14 @@ class MAGE(object):
     self.demo_buffer.store(episode_batch)
 
   def store_episode(self, episode_batch):
-    """
-    episode_batch: array of batch_size x (T or T+1) x dim_key ('o' and 'ag' is of size T+1, others are of size T)
-    """
-    self.replay_buffer.store(episode_batch)
-    if self.use_n_step_return:
-      self.n_step_replay_buffer.store(episode_batch)
+
+    with tf.summary.record_if(lambda: self.exploration_step % 200 == 0):
+      self.replay_buffer.store(episode_batch)
+      if self.use_n_step_return:
+        self.n_step_replay_buffer.store(episode_batch)
+
+      num_steps = np.prod(episode_batch["o"].shape[:-1])
+      self._increment_exploration_step(num_steps)
 
   def clear_n_step_replay_buffer(self):
     if not self.use_n_step_return:
@@ -268,7 +276,7 @@ class MAGE(object):
       model_loss = tf.reduce_sum(o_mean_loss + r_mean_loss + o_var_loss +
                                  r_var_loss)
 
-      # TODO: add layer decays
+      # TODO: add layer decays used model regularizers
 
       # network variance boundary loss
       logvar_bound_loss = 0.01 * tf.reduce_sum(
@@ -291,7 +299,6 @@ class MAGE(object):
     batch_size = 256  # used in mbpo
     max_logging = 5000  # maximum validation and evaluation number of experiences
 
-    training_steps = 0
     training_epochs = 0
     while True:  # 1 epoch of training (or use max training epochs maybe)
       validation_size = min(
@@ -310,7 +317,7 @@ class MAGE(object):
         }
         self.train_model_graph(**training_exps_tf).numpy()
 
-        training_steps += 1
+        self.model_training_step.assign_add(1)
 
       # validation
       validation_exps_tf = {
@@ -319,15 +326,23 @@ class MAGE(object):
           for k in ["o", "o_2", "u", "r"]
       }
       holdout_loss = self.evaluate_model_graph(**validation_exps_tf).numpy()
-      logger.info("epoch: {} holdout loss: {}".format(training_epochs,
-                                                      holdout_loss))
 
-      sorted_inds = np.argsort(holdout_loss)
+      with tf.name_scope('MAGELosses/ModelLosses'):
+        for i, hl in enumerate(holdout_loss):
+          tf.summary.scalar(
+              name='model_loss_{} vs model_training_step'.format(i),
+              data=hl,
+              step=self.model_training_step)
+
+      logger.info("Model training epoch: {} holdout loss: {}".format(
+          training_epochs, holdout_loss))
 
       training_epochs += 1
-      if training_steps > max_training_steps:
+
+      if self.model_training_step > max_training_steps:
         break
 
+    sorted_inds = np.argsort(holdout_loss)
     elites_inds = sorted_inds[:self.model_network.num_elites].tolist()
     self.model_network.set_elite_inds(elites_inds)
 
@@ -473,7 +488,7 @@ class MAGE(object):
 
     critic_gradient_loss = tf.norm(tape.gradient(critic_loss, u))
 
-    with tf.name_scope('MAGETD3Losses'):
+    with tf.name_scope('MAGELosses'):
       tf.summary.scalar(name='critic_gradient_loss vs td3_training_step',
                         data=critic_loss,
                         step=self.td3_training_step)
@@ -565,7 +580,7 @@ class MAGE(object):
 
     critic_loss = tf.reduce_mean(bellman_error)
 
-    with tf.name_scope('MAGETD3Losses'):
+    with tf.name_scope('MAGELosses'):
       tf.summary.scalar(name='critic_loss vs td3_training_step',
                         data=critic_loss,
                         step=self.td3_training_step)
@@ -603,7 +618,7 @@ class MAGE(object):
       actor_loss = (self.bc_params["prm_loss_weight"] * actor_loss +
                     self.bc_params["aux_loss_weight"] * bc_loss)
 
-    with tf.name_scope('MAGETD3Losses'):
+    with tf.name_scope('MAGELosses'):
       tf.summary.scalar(name='actor_loss vs td3_training_step',
                         data=actor_loss,
                         step=self.td3_training_step)
@@ -649,19 +664,21 @@ class MAGE(object):
     return critic_loss, actor_loss
 
   def train(self):
+    with tf.summary.record_if(lambda: self.td3_training_step % 200 == 0):
 
-    batch = self.sample_batch()
+      batch = self.sample_batch()
 
-    o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-    g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
-    o_2_tf = tf.convert_to_tensor(batch["o_2"], dtype=tf.float32)
-    g_2_tf = tf.convert_to_tensor(batch["g_2"], dtype=tf.float32)
-    u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
-    r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
-    n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
-    done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
-    critic_loss_tf, actor_loss_tf = self.train_graph(o_tf, g_tf, o_2_tf, g_2_tf,
-                                                     u_tf, r_tf, n_tf, done_tf)
+      o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
+      g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
+      o_2_tf = tf.convert_to_tensor(batch["o_2"], dtype=tf.float32)
+      g_2_tf = tf.convert_to_tensor(batch["g_2"], dtype=tf.float32)
+      u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
+      r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
+      n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
+      done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
+      critic_loss_tf, actor_loss_tf = self.train_graph(o_tf, g_tf, o_2_tf,
+                                                       g_2_tf, u_tf, r_tf, n_tf,
+                                                       done_tf)
 
     return critic_loss_tf.numpy(), actor_loss_tf.numpy()
 
@@ -729,18 +746,19 @@ class MAGE(object):
     self.g_stats.update(g_tf)
 
   def _create_memory(self):
-    buffer_shapes = {}
+    buffer_shapes = dict(o=self.dimo,
+                         o_2=self.dimo,
+                         u=self.dimu,
+                         r=(1,),
+                         ag=self.dimg,
+                         ag_2=self.dimg,
+                         g=self.dimg,
+                         g_2=self.dimg,
+                         done=(1,))
     if self.fix_T:
-      buffer_shapes["o"] = (self.eps_length, *self.dimo)
-      buffer_shapes["o_2"] = (self.eps_length, *self.dimo)
-      buffer_shapes["u"] = (self.eps_length, *self.dimu)
-      buffer_shapes["r"] = (self.eps_length, 1)
-      buffer_shapes["ag"] = (self.eps_length, *self.dimg)
-      buffer_shapes["ag_2"] = (self.eps_length, *self.dimg)
-      buffer_shapes["g"] = (self.eps_length, *self.dimg)
-      buffer_shapes["g_2"] = (self.eps_length, *self.dimg)
-      buffer_shapes["done"] = (self.eps_length, 1)
-
+      buffer_shapes = {
+          k: (self.eps_length) + v for k, v in buffer_shapes.items()
+      }
       self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size,
                                                self.eps_length)
       if self.use_n_step_return:
@@ -750,18 +768,7 @@ class MAGE(object):
       if self.demo_strategy != "none" or self.sample_demo_buffer:
         self.demo_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size,
                                                self.eps_length)
-
     else:
-      buffer_shapes["o"] = self.dimo
-      buffer_shapes["o_2"] = self.dimo
-      buffer_shapes["u"] = self.dimu
-      buffer_shapes["r"] = (1,)
-      buffer_shapes["ag"] = self.dimg
-      buffer_shapes["g"] = self.dimg
-      buffer_shapes["ag_2"] = self.dimg
-      buffer_shapes["g_2"] = self.dimg
-      buffer_shapes["done"] = (1,)
-
       self.replay_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
       assert not self.use_n_step_return, "not implemented yet"
       if self.demo_strategy != "none" or self.sample_demo_buffer:
@@ -843,7 +850,47 @@ class MAGE(object):
 
     # Initialize all variables
     self.initialize_target_net()
-    self.training_step = tf.Variable(0, trainable=False)
+
+  @tf.function
+  def _policy_inspect(self, o=None, g=None, summarize=False):
+    # should only happen for in the first call of this function
+    if not hasattr(self, "_policy_inspect_count"):
+      self._policy_inspect_count = tf.Variable(0.0, trainable=False)
+      self._policy_inspect_estimate_q = tf.Variable(0.0, trainable=False)
+      if self.shaping != None:
+        self._policy_inspect_potential = tf.Variable(0.0, trainable=False)
+
+    if summarize:
+      with tf.name_scope('PolicyInspect'):
+        mean_estimate_q = self._policy_inspect_estimate_q / self._policy_inspect_count
+        success = tf.summary.scalar(name='mean_estimate_q vs exploration_step',
+                                    data=mean_estimate_q,
+                                    step=self.exploration_step)
+        if self.shaping != None:
+          mean_potential = self._policy_inspect_potential / self._policy_inspect_count
+          tf.summary.scalar(name='mean_potential vs exploration_step',
+                            data=mean_potential,
+                            step=self.exploration_step)
+      if success:
+        self._policy_inspect_count.assign(0.0)
+        self._policy_inspect_estimate_q.assign(0.0)
+        if self.shaping != None:
+          self._policy_inspect_potential.assign(0.0)
+
+      return
+
+    assert o != None and g != None, "Provide the same arguments passed to get action."
+
+    norm_o = self.o_stats.normalize(o)
+    norm_g = self.g_stats.normalize(g)
+    u = self.main_actor([norm_o, norm_g])
+
+    self._policy_inspect_count.assign_add(1)
+    q = self.main_critic([norm_o, norm_g, u])
+    self._policy_inspect_estimate_q.assign_add(tf.reduce_sum(q))
+    if self.shaping != None:
+      p = self.potential_weight * self.shaping.potential(o=o, g=g, u=u)
+      self._policy_inspect_potential.assign_add(tf.reduce_sum(p))
 
   def __getstate__(self):
     """
