@@ -9,7 +9,7 @@ import sys
 import mujoco_py  # include at the beginning (bug on compute canada cluster)
 import tensorflow as tf
 
-from rlfd import logger, train
+from rlfd import logger, train, plot
 from rlfd.utils import mpi_util
 # TODO: remove include from the old repo
 # tf debug
@@ -260,7 +260,7 @@ def main(targets, exp_dir, policy, save_dir, **kwargs):
       logger.info("Plotting.")
       logger.info("=================================================")
       if rank == 0:  # plot does not need to be run on all threads
-        plot_entry(
+        plot.main(
             dirs=[exp_dir],
             save_dir=save_dir,
             xys=[
