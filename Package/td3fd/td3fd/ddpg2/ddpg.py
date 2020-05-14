@@ -14,6 +14,7 @@ tfd = tfp.distributions
 
 
 class DDPG(object):
+
     def __init__(
         self,
         # for learning
@@ -210,6 +211,26 @@ class DDPG(object):
         with open(path, "wb") as f:
             pickle.dump(self, f)
 
+    def sample_batch(self):
+        if self.use_n_step_return:
+            one_step_batch = self.replay_buffer.sample(self.batch_size // 2)
+            n_step_batch = self.n_step_replay_buffer.sample(self.batch_size - self.batch_size // 2)
+            assert one_step_batch.keys() == n_step_batch.keys()
+            batch = dict()
+            for k in one_step_batch.keys():
+                batch[k] = np.concatenate((one_step_batch[k], n_step_batch[k]))
+        else:
+            batch = self.replay_buffer.sample(self.batch_size)
+
+        if self.sample_demo_buffer:
+            rollout_batch = batch
+            demo_batch = self.demo_buffer.sample(self.batch_size_demo)
+            assert rollout_batch.keys() == demo_batch.keys()
+            for k in rollout_batch.keys():
+                batch[k] = np.concatenate((rollout_batch[k], demo_batch[k]))
+
+        return batch
+
     @tf.function
     def train_bc_tf(self, o_tf, g_tf, u_tf):
         o_tf = self.o_stats.normalize(o_tf)
@@ -229,9 +250,8 @@ class DDPG(object):
         demo_data = self.demo_buffer.sample()
 
         for epoch in range(self.initialize_num_epochs):
-            for (o, g, u) in iterbatches(
-                (demo_data["o"], demo_data["g"], demo_data["u"]), batch_size=self.batch_size_demo
-            ):
+            for (o, g, u) in iterbatches((demo_data["o"], demo_data["g"], demo_data["u"]),
+                                         batch_size=self.batch_size_demo):
 
                 o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
                 g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
@@ -249,9 +269,7 @@ class DDPG(object):
         self.shaping.evaluate(demo_data)
 
     @tf.function
-    def train_tf(
-        self, o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf,
-    ):
+    def train_tf(self, o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf):
 
         self.training_step.assign((self.training_step + 1) % self.policy_freq)
 
@@ -285,8 +303,7 @@ class DDPG(object):
         with tf.GradientTape(persistent=True) as tape:
             if self.twin_delayed:
                 rl_bellman_tf = tf.square(target_tf - self.main_critic([norm_o_tf, norm_g_tf, u_tf])) + tf.square(
-                    target_tf - self.main_critic_twin([norm_o_tf, norm_g_tf, u_tf])
-                )
+                    target_tf - self.main_critic_twin([norm_o_tf, norm_g_tf, u_tf]))
             else:
                 rl_bellman_tf = tf.square(target_tf - self.main_critic([norm_o_tf, norm_g_tf, u_tf]))
             # whether or not to train the critic on demo reward (if sample from demonstration buffer)
@@ -313,8 +330,7 @@ class DDPG(object):
             actor_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(pi_tf / self.max_u))
             if self.demo_strategy in ["gan", "nf"]:
                 actor_loss_tf += -tf.reduce_mean(
-                    self.potential_weight * self.shaping.potential(o=o_tf, g=g_tf, u=pi_tf)
-                )
+                    self.potential_weight * self.shaping.potential(o=o_tf, g=g_tf, u=pi_tf))
             if self.demo_strategy == "bc":
                 assert self.sample_demo_buffer, "must sample from the demonstration buffer to use behavior cloning"
                 # define the cloning loss on the actor's actions only on the samples which adhere to the above masks
@@ -329,42 +345,19 @@ class DDPG(object):
                     # of demonstrations
                     bc_loss_tf = tf.reduce_mean(
                         tf.square(
-                            tf.boolean_mask(demo_pi_tf, q_filter_mask, axis=0)
-                            - tf.boolean_mask(demo_u_tf, q_filter_mask, axis=0)
-                        )
-                    )
+                            tf.boolean_mask(demo_pi_tf, q_filter_mask, axis=0) -
+                            tf.boolean_mask(demo_u_tf, q_filter_mask, axis=0)))
                 else:
                     # use to be tf.reduce_sum, however, use tf.reduce_mean makes the loss function independent from number
                     # of demonstrations
                     bc_loss_tf = tf.reduce_mean(tf.square(demo_pi_tf - demo_u_tf))
-                actor_loss_tf = (
-                    self.bc_params["prm_loss_weight"] * actor_loss_tf + self.bc_params["aux_loss_weight"] * bc_loss_tf
-                )
+                actor_loss_tf = (self.bc_params["prm_loss_weight"] * actor_loss_tf +
+                                 self.bc_params["aux_loss_weight"] * bc_loss_tf)
 
         actor_grads = tape.gradient(actor_loss_tf, self.main_actor.trainable_weights)
         self.actor_optimizer.apply_gradients(zip(actor_grads, self.main_actor.trainable_weights))
 
         return critic_loss_tf, actor_loss_tf
-
-    def sample_batch(self):
-        if self.use_n_step_return:
-            one_step_batch = self.replay_buffer.sample(self.batch_size // 2)
-            n_step_batch = self.n_step_replay_buffer.sample(self.batch_size - self.batch_size // 2)
-            assert one_step_batch.keys() == n_step_batch.keys()
-            batch = dict()
-            for k in one_step_batch.keys():
-                batch[k] = np.concatenate((one_step_batch[k], n_step_batch[k]))
-        else:
-            batch = self.replay_buffer.sample(self.batch_size)
-
-        if self.sample_demo_buffer:
-            rollout_batch = batch
-            demo_batch = self.demo_buffer.sample(self.batch_size_demo)
-            assert rollout_batch.keys() == demo_batch.keys()
-            for k in rollout_batch.keys():
-                batch[k] = np.concatenate((rollout_batch[k], demo_batch[k]))
-
-        return batch
 
     def train(self):
 
@@ -437,9 +430,8 @@ class DDPG(object):
 
             self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
             if self.use_n_step_return:
-                self.n_step_replay_buffer = MultiStepReplayBuffer(
-                    buffer_shapes, self.buffer_size, self.eps_length, self.n_step_return_steps, self.gamma
-                )
+                self.n_step_replay_buffer = MultiStepReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length,
+                                                                  self.n_step_return_steps, self.gamma)
             if self.demo_strategy != "none" or self.sample_demo_buffer:
                 self.demo_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size, self.eps_length)
 
@@ -468,7 +460,13 @@ class DDPG(object):
         # Models
         # actor
         self.main_actor = Actor(self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes)
-        self.target_actor = Actor(self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes,)
+        self.target_actor = Actor(
+            self.dimo,
+            self.dimg,
+            self.dimu,
+            self.max_u,
+            self.layer_sizes,
+        )
         # critic
         self.main_critic = Critic(self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes)
         self.target_critic = Critic(self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes)
@@ -496,16 +494,14 @@ class DDPG(object):
 
         # Add shaping reward
         if self.demo_strategy in ["nf", "gan"]:
-            self.shaping = EnsembleRewardShapingWrapper(
-                dims=self.dims,
-                max_u=self.max_u,
-                gamma=self.gamma,
-                demo_strategy=self.demo_strategy,
-                norm_obs=True,
-                norm_eps=self.norm_eps,
-                norm_clip=self.norm_clip,
-                **self.shaping_params.copy()
-            )
+            self.shaping = EnsembleRewardShapingWrapper(dims=self.dims,
+                                                        max_u=self.max_u,
+                                                        gamma=self.gamma,
+                                                        demo_strategy=self.demo_strategy,
+                                                        norm_obs=True,
+                                                        norm_eps=self.norm_eps,
+                                                        norm_clip=self.norm_clip,
+                                                        **self.shaping_params.copy())
         else:
             self.shaping = None
 
