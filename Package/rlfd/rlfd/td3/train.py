@@ -10,6 +10,7 @@ from rlfd import config, logger
 from rlfd.td3 import config as td3_config
 from rlfd.utils.cmd_util import ArgParser
 from rlfd.utils.util import set_global_seeds
+from rlfd.metrics import metrics
 
 # limit gpu memory growth for tensorflow
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -62,6 +63,21 @@ def train(root_dir, params):
   policy = td3_config.configure_td3(params=params)
   rollout_worker = config.config_rollout(params=params, policy=policy)
   evaluator = config.config_evaluator(params=params, policy=policy)
+
+  training_metrics = [
+      metrics.EnvironmentSteps(),
+      metrics.NumberOfEpisodes(),
+      metrics.AverageReturnMetric(),
+      metrics.AverageEpisodeLengthMetric(),
+  ]
+
+  testing_metrics = [
+      metrics.EnvironmentSteps(),
+      metrics.NumberOfEpisodes(),
+      metrics.AverageReturnMetric(),
+      metrics.AverageEpisodeLengthMetric(),
+  ]
+
   # adding demonstration data to the demonstration buffer
   if demo_strategy != "none" or policy.sample_demo_buffer:
     demo_file = os.path.join(root_dir, "demo_data.npz")
@@ -87,7 +103,8 @@ def train(root_dir, params):
   # TODO: hyper paramter -> put in config files
   num_initial_exploration_steps = 5000  # used in mbpo for half-cheetah environment
   for _ in range(num_initial_exploration_steps):
-    episode = rollout_worker.generate_rollouts(random=True)
+    episode = rollout_worker.generate_rollouts(observers=training_metrics,
+                                               random=True)
     policy.store_episode(episode)
     policy.update_stats(episode)
 
@@ -101,7 +118,8 @@ def train(root_dir, params):
       rollout_worker.clear_history()
       for cyc in range(num_cycles):
 
-        experiences = rollout_worker.generate_rollouts()
+        experiences = rollout_worker.generate_rollouts(
+            observers=training_metrics)
         if num_batches != 0:  # policy is being updated
           policy.store_episode(experiences)
           policy.update_stats(experiences)
@@ -118,6 +136,8 @@ def train(root_dir, params):
           potential_weight = policy.update_potential_weight()
           logger.info("Current potential weight: ", potential_weight)
 
+      for metric in training_metrics[2:]:
+        metric.summarize(step_metrics=training_metrics[:2])
       for key, val in rollout_worker.logs("train"):
         logger.record_tabular(key, val)
       for key, val in policy.logs():
@@ -125,8 +145,10 @@ def train(root_dir, params):
 
     with tf.name_scope("Testing"):
       evaluator.clear_history()
-      experiences = evaluator.generate_rollouts()
+      experiences = evaluator.generate_rollouts(observers=testing_metrics)
 
+      for metric in testing_metrics[2:]:
+        metric.summarize(step_metrics=testing_metrics[:2])
       for key, val in evaluator.logs("test"):
         logger.record_tabular(key, val)
 

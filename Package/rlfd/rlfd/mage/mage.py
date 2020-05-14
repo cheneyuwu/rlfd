@@ -134,29 +134,20 @@ class MAGE(object):
 
     self._policy_inspect(o, g)
 
-    q = self.main_critic([norm_o, norm_g, u])
-    if self.shaping != None:
-      p = self.potential_weight * self.shaping.potential(o=o, g=g, u=u)
-    else:
-      p = tf.zeros_like(q)
+    return u
 
-    if tf.shape(o)[0] == 1:
-      u = u[0]
-
-    return u, q, p
-
-  def get_actions(self, o, g, compute_q=False):
+  def get_actions(self, o, g):
     o = o.reshape((-1, *self.dimo))
     g = g.reshape((o.shape[0], *self.dimg))
     o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
     g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
 
-    u_tf, q_tf, p_tf = self.get_actions_graph(o_tf, g_tf)
+    u_tf = self.get_actions_graph(o_tf, g_tf)
+    u = u_tf.numpy()
+    if o.shape[0] == 1:
+      u = u[0]
 
-    if compute_q:
-      return [u_tf.numpy(), q_tf.numpy(), p_tf.numpy() + q_tf.numpy()]
-    else:
-      return u_tf.numpy()
+    return u
 
   def init_demo_buffer(self, demo_file):
     """Initialize the demonstration buffer.

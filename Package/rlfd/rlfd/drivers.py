@@ -74,22 +74,15 @@ class Driver(object, metaclass=abc.ABCMeta):
     """set seed for internal environments"""
     return self._seed(seed)
 
-  def generate_rollouts(self, random=False):
+  def generate_rollouts(self, observers=(), random=False):
     """Generate experiences
         random - whether or not to use a random policy
     """
-    return self._generate_rollouts(random=random)
+    return self._generate_rollouts(observers=observers, random=random)
 
   def logs(self, prefix="worker"):
     """Generates a dictionary that contains all collected statistics.
     """
-
-    # TODO: move this out to metrics
-    with tf.name_scope("Driver"):
-      tf.summary.scalar(name='reward_per_eps vs env steps',
-                        data=np.mean(self.history["reward_per_eps"]),
-                        step=self.total_num_steps)
-
     logs = []
     logs += [("episodes", self.total_num_episodes)]
     logs += [("steps", self.total_num_steps)]
@@ -146,7 +139,7 @@ class Driver(object, metaclass=abc.ABCMeta):
     """set seed for environment"""
 
   @abc.abstractmethod
-  def _generate_rollouts(self, random=False):
+  def _generate_rollouts(self, observers=(), random=False):
     """Performs `num_episodes` rollouts for maximum time horizon `eps_length` with the current policy"""
 
 
@@ -162,7 +155,6 @@ class EpisodeBasedDriver(Driver):
                noise_eps=0.0,
                polyak_noise=0.0,
                random_eps=0.0,
-               compute_q=False,
                history_len=300,
                render=False,
                **kwargs):
@@ -174,7 +166,6 @@ class EpisodeBasedDriver(Driver):
         policy             (object)      - the policy that is used to act
         dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
         num_episodes       (int)         - the number of parallel rollouts that should be used
-        compute_q          (bool)        - whether or not to compute the Q values alongside the actions
         noise_eps          (float)       - scale of the additive Gaussian noise
         random_eps         (float)       - probability of selecting a completely random action
         history_len        (int)         - length of history for statistics smoothing
@@ -193,7 +184,7 @@ class EpisodeBasedDriver(Driver):
     )
 
     # add to history
-    self.add_history_keys(["reward_per_eps", "Q", "Q_plus_P"])
+    self.add_history_keys(["reward_per_eps"])
     self.add_history_keys(["info_" + x + "_mean" for x in self.info_keys])
     self.add_history_keys(["info_" + x + "_min" for x in self.info_keys])
     self.add_history_keys(["info_" + x + "_max" for x in self.info_keys])
@@ -201,7 +192,6 @@ class EpisodeBasedDriver(Driver):
     # TODO parallelize environment
     self.eps_length = eps_length
     self.num_episodes = num_episodes  # number of env in parallel (#TODO make it true parallel)
-    self.compute_q = compute_q
 
     self.envs = [self.make_env() for _ in range(self.num_episodes)]
     self.env = self.envs[0]
@@ -217,7 +207,7 @@ class EpisodeBasedDriver(Driver):
     for idx, env in enumerate(self.envs):
       env.seed(seed + 1000 * idx)
 
-  def _generate_rollouts(self, random=False):
+  def _generate_rollouts(self, observers=(), random=False):
     """ Performs `num_episodes` rollouts for maximum time horizon `eps_length` with the current policy
         """
     assert random == False, "Not yet tested to use random policy for episode driver."
@@ -229,7 +219,6 @@ class EpisodeBasedDriver(Driver):
             (self.eps_length, self.num_episodes, *self.dims["info_" + key]))
         for key in self.info_keys
     }
-    Qs, QPs = [], []
 
     # Store initial observations and goals
     self._reset()
@@ -243,19 +232,8 @@ class EpisodeBasedDriver(Driver):
 
     for t in range(self.eps_length):
       # get the action for all envs of the current batch
-      policy_output = self.policy.get_actions(o,
-                                              self.g,
-                                              compute_q=self.compute_q)
-      if self.compute_q:
-        u = self._add_noise_to_action(policy_output[0])
-        # Q value
-        Q = policy_output[1]
-        Q = Q.reshape(-1, 1)
-        # Q plus P
-        QP = policy_output[2]
-        QP = QP.reshape(-1, 1)
-      else:
-        u = self._add_noise_to_action(policy_output)
+      policy_output = self.policy.get_actions(o, self.g)
+      u = self._add_noise_to_action(policy_output)
       u = u.reshape(-1, *self.dims["u"])  # make sure that the shape is correct
       # compute the next states
       o_new = np.empty((self.num_episodes, *self.dims["o"]))  # o_2
@@ -293,9 +271,6 @@ class EpisodeBasedDriver(Driver):
       acts.append(u.copy())
       rewards.append(r.copy())
       dones.append(done.copy())
-      if self.compute_q:
-        Qs.append(Q.copy())
-        QPs.append(QP.copy())
       o[...] = o_new  # o_2 -> o
       ag[...] = ag_new  # ag_2 -> ag
 
@@ -317,10 +292,6 @@ class EpisodeBasedDriver(Driver):
     cumu_rewards = np.sum(np.array(rewards), axis=0).reshape(-1)
     assert cumu_rewards.shape == (self.num_episodes,), cumu_rewards.shape
     self.history["reward_per_eps"].append(np.mean(cumu_rewards))
-    # Q output from critic networks
-    if self.compute_q:
-      self.history["Q"].append(np.mean(Qs))
-      self.history["Q_plus_P"].append(np.mean(QPs))
     # info values
     for key in self.info_keys:
       self.history["info_" + key + "_mean"].append(np.mean(info_values[key]))
@@ -365,7 +336,6 @@ class StepBasedDriver(Driver):
                noise_eps=0.0,
                polyak_noise=0.0,
                random_eps=0.0,
-               compute_q=False,
                history_len=300,
                render=False,
                **kwargs):
@@ -376,7 +346,6 @@ class StepBasedDriver(Driver):
         make_env           (func)        - a factory function that creates a new instance of the environment when called
         policy             (cls)         - the policy that is used to act
         dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
-        compute_q          (bool)        - whether or not to compute the Q values alongside the actions
         noise_eps          (float)       - scale of the additive Gaussian noise
         random_eps         (float)       - probability of selecting a completely random action
         history_len        (int)         - length of history for statistics smoothing
@@ -390,13 +359,12 @@ class StepBasedDriver(Driver):
         noise_eps=noise_eps,
         polyak_noise=polyak_noise,
         random_eps=random_eps,
-        compute_q=compute_q,
         history_len=history_len,
         render=render,
     )
 
     # add to history
-    self.add_history_keys(["reward_per_eps", "Q", "Q_plus_P"])
+    self.add_history_keys(["reward_per_eps"])
     self.add_history_keys(["info_" + x + "_mean" for x in self.info_keys])
     self.add_history_keys(["info_" + x + "_min" for x in self.info_keys])
     self.add_history_keys(["info_" + x + "_max" for x in self.info_keys])
@@ -409,7 +377,6 @@ class StepBasedDriver(Driver):
     self.done = True
     self.curr_eps_step = 0
 
-    self.compute_q = compute_q
     self.env = make_env()
 
   def _seed(self, seed):
@@ -417,7 +384,7 @@ class StepBasedDriver(Driver):
         """
     self.env.seed(seed)
 
-  def _generate_rollouts(self, random=False):
+  def _generate_rollouts(self, observers=(), random=False):
     """generate `num_steps` rollouts
     """
     # Information to store
@@ -425,7 +392,6 @@ class StepBasedDriver(Driver):
         k: [] for k in ("o", "o_2", "ag", "ag_2", "u", "g", "g_2", "r", "done")
     }
     info_values = {k: [] for k in self.info_keys}
-    Qs, QPs = [], []
 
     current_step = 0
     current_episode = 0
@@ -443,19 +409,8 @@ class StepBasedDriver(Driver):
       if random:
         u = self._random_action(1)
       else:
-        policy_output = self.policy.get_actions(self.o,
-                                                self.g,
-                                                compute_q=self.compute_q)
-        if self.compute_q:
-          u = self._add_noise_to_action(policy_output[0])
-          # Q value
-          Q = policy_output[1]
-          Q = Q.reshape(1)
-          # Q plus P
-          QP = policy_output[2]
-          QP = QP.reshape(1)
-        else:
-          u = self._add_noise_to_action(policy_output)
+        policy_output = self.policy.get_actions(self.o, self.g)
+        u = self._add_noise_to_action(policy_output)
       u = u.reshape(self.dims["u"])  # make sure that the shape is correct
       # compute new states and observations
       try:
@@ -473,21 +428,32 @@ class StepBasedDriver(Driver):
         self.done = True
         return self.generate_rollouts()
 
+      for observer in observers:
+        observer(
+            o=self.o,
+            ag=self.ag,
+            g=self.g,
+            o_2=o_2,
+            ag_2=ag_2,
+            g_2=self.g,
+            u=u,
+            r=r,
+            done=self.done,
+            info=iv,
+            reset=self.done or (self.curr_eps_step + 1 == self.eps_length),
+        )
+
       episode["o"].append(self.o)
       episode["ag"].append(self.ag)
       episode["g"].append(self.g)
-      episode["g_2"].append(self.g)
-      episode["u"].append(u)
       episode["o_2"].append(o_2)
       episode["ag_2"].append(ag_2)
+      episode["g_2"].append(self.g)
+      episode["u"].append(u)
       episode["r"].append(r)
       episode["done"].append(self.done)
       for key in self.info_keys:
         info_values[key].append(iv[key])
-      if self.compute_q:
-        Qs.append(Q)
-        QPs.append(QP)
-
       self.o = o_2  # o_2 -> o
       self.ag = ag_2  # ag_2 -> ag
 
@@ -509,10 +475,6 @@ class StepBasedDriver(Driver):
     total_reward = np.sum(
         episode["r"]) / current_episode if self.num_episodes else np.NaN
     self.history["reward_per_eps"].append(total_reward)
-    # Q output from critic networks
-    if self.compute_q:
-      self.history["Q"].append(np.mean(Qs))
-      self.history["Q_plus_P"].append(np.mean(QPs))
     # info values
     for key in self.info_keys:
       self.history["info_" + key + "_mean"].append(np.mean(info_values[key]))
