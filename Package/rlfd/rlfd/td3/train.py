@@ -113,29 +113,28 @@ def train(root_dir, params):
 
     # 1 epoch contains multiple cycles of training, 1 time testing, logging
     # and policy saving
+
+    rollout_worker.clear_history()
+    for cyc in range(num_cycles):
+
+      experiences = rollout_worker.generate_rollouts(observers=training_metrics)
+      if num_batches != 0:  # policy is being updated
+        policy.store_episode(experiences)
+        policy.update_stats(experiences)
+
+      for _ in range(num_batches):
+        policy.train()
+
+      if num_batches != 0:  # policy is being updated
+        policy.update_target_net()
+        policy.clear_n_step_replay_buffer()
+
+      if cyc == num_cycles - 1:
+        # update meta parameters
+        potential_weight = policy.update_potential_weight()
+        logger.info("Current potential weight: ", potential_weight)
+
     with tf.name_scope("Training"):
-
-      rollout_worker.clear_history()
-      for cyc in range(num_cycles):
-
-        experiences = rollout_worker.generate_rollouts(
-            observers=training_metrics)
-        if num_batches != 0:  # policy is being updated
-          policy.store_episode(experiences)
-          policy.update_stats(experiences)
-
-        for _ in range(num_batches):
-          policy.train()
-
-        if num_batches != 0:  # policy is being updated
-          policy.update_target_net()
-          policy.clear_n_step_replay_buffer()
-
-        if cyc == num_cycles - 1:
-          # update meta parameters
-          potential_weight = policy.update_potential_weight()
-          logger.info("Current potential weight: ", potential_weight)
-
       for metric in training_metrics[2:]:
         metric.summarize(step_metrics=training_metrics[:2])
       for key, val in rollout_worker.logs("train"):
@@ -143,10 +142,10 @@ def train(root_dir, params):
       for key, val in policy.logs():
         logger.record_tabular(key, val)
 
-    with tf.name_scope("Testing"):
-      evaluator.clear_history()
-      experiences = evaluator.generate_rollouts(observers=testing_metrics)
+    evaluator.clear_history()
+    experiences = evaluator.generate_rollouts(observers=testing_metrics)
 
+    with tf.name_scope("Testing"):
       for metric in testing_metrics[2:]:
         metric.summarize(step_metrics=testing_metrics[:2])
       for key, val in evaluator.logs("test"):

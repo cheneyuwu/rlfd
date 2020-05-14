@@ -6,13 +6,15 @@ tfd = tfp.distributions
 
 class ModelNetwork(tf.keras.Model):
 
-  def __init__(self, dimo, dimu, max_u, layer_sizes):
+  def __init__(self, dimo, dimu, max_u, layer_sizes, weight_decays):
 
     super().__init__()
 
     self.dimo = dimo
     self.dimu = dimu
     self.max_u = max_u
+
+    self._weight_decays = weight_decays
 
     # build layers
     self._mlp_layers = []
@@ -47,15 +49,17 @@ class ModelNetwork(tf.keras.Model):
 
     self.output_dim = output_dim
 
-  @property
-  def max_logvar(self):
-    return self._max_logvar
+  # @tf.function
+  def compute_regularization_loss(self):
+    decays = []
+    for i, layer in enumerate(self._mlp_layers):
+      decays.append(self._weight_decays[i] * tf.nn.l2_loss(layer.kernel))
+    weight_decay_loss = tf.reduce_sum(decays)
+    logvar_bound_loss = 0.01 * tf.reduce_sum(
+        self._max_logvar) - 0.01 * tf.reduce_sum(self._min_logvar)
+    return weight_decay_loss + logvar_bound_loss
 
-  @property
-  def min_logvar(self):
-    return self._min_logvar
-
-  @tf.function
+  # @tf.function
   def call(self, inputs):
     o, u = inputs
     output = tf.concat([o, u / self.max_u], axis=1)
@@ -80,7 +84,8 @@ class ModelNetwork(tf.keras.Model):
 
 class EnsembleModelNetwork(tf.keras.Model):
 
-  def __init__(self, dimo, dimu, max_u, layer_sizes, num_networks, num_elites):
+  def __init__(self, dimo, dimu, max_u, layer_sizes, weight_decays,
+               num_networks, num_elites):
 
     super().__init__()
 
@@ -95,22 +100,16 @@ class EnsembleModelNetwork(tf.keras.Model):
                                     trainable=False)
 
     self._model_networks = [
-        ModelNetwork(dimo, dimu, max_u, layer_sizes)
+        ModelNetwork(dimo, dimu, max_u, layer_sizes, weight_decays)
         for _ in range(num_networks)
     ]
 
-    self._min_logvar = tf.concat([mn.min_logvar for mn in self._model_networks],
-                                 axis=0)
-    self._max_logvar = tf.concat([mn.max_logvar for mn in self._model_networks],
-                                 axis=0)
-
-  @property
-  def max_logvar(self):
-    return self._max_logvar
-
-  @property
-  def min_logvar(self):
-    return self._min_logvar
+  # @tf.function
+  def compute_regularization_loss(self):
+    return tf.reduce_sum([
+        model_network.compute_regularization_loss()
+        for model_network in self._model_networks
+    ])
 
   # @tf.function
   def call(self, inputs):
@@ -144,9 +143,11 @@ class EnsembleModelNetwork(tf.keras.Model):
   def num_elites(self):
     return self._num_elites
 
+  # @tf.function
   def set_elite_inds(self, elites_inds):
     self._elites_inds.assign(elites_inds)
 
+  # @tf.function
   def get_elite_inds(self):
     return self._elites_inds
 

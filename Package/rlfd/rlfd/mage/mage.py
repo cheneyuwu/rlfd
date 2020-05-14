@@ -267,13 +267,9 @@ class MAGE(object):
       model_loss = tf.reduce_sum(o_mean_loss + r_mean_loss + o_var_loss +
                                  r_var_loss)
 
-      # TODO: add layer decays used model regularizers
-
-      # network variance boundary loss
-      logvar_bound_loss = 0.01 * tf.reduce_sum(
-          self.model_network.max_logvar) - 0.01 * tf.reduce_sum(
-              self.model_network.min_logvar)
-      model_loss = model_loss + logvar_bound_loss
+      # layer decays and logvar bound loss
+      regularization_loss = self.model_network.compute_regularization_loss()
+      model_loss = model_loss + regularization_loss
 
     model_grads = tape.gradient(model_loss,
                                 self.model_network.trainable_variables)
@@ -283,59 +279,63 @@ class MAGE(object):
     return model_loss
 
   def train_model(self):
+    with tf.summary.record_if(lambda: self.model_training_step % 500 == 0):
 
-    # TODO: move hyperparameters to config files
-    holdout_ratio = 0.2  # used in mbpo to determine validation dataset size (not used for now)
-    max_training_steps = 5000  # in mbpo this is based on time taken to train the model
-    batch_size = 256  # used in mbpo
-    max_logging = 5000  # maximum validation and evaluation number of experiences
+      # TODO: move hyperparameters to config files
+      holdout_ratio = 0.2  # used in mbpo to determine validation dataset size (not used for now)
+      max_training_steps = 5000  # in mbpo this is based on time taken to train the model
+      batch_size = 256  # used in mbpo
+      max_logging = 5000  # maximum validation and evaluation number of experiences
 
-    training_epochs = 0
-    while True:  # 1 epoch of training (or use max training epochs maybe)
-      validation_size = min(
-          int(self.replay_buffer.stored_steps * holdout_ratio), max_logging)
-      iterator = self.replay_buffer.sample(batch_size=validation_size,
-                                           shuffle=True,
-                                           return_iterator=True,
-                                           include_partial_batch=True)
-      validation_experiences = next(iterator)
-      iterator(batch_size)  # start training
+      training_epochs = 0
+      training_steps = 0
+      while True:  # 1 epoch of training (or use max training epochs maybe)
+        validation_size = min(
+            int(self.replay_buffer.stored_steps * holdout_ratio), max_logging)
+        iterator = self.replay_buffer.sample(batch_size=validation_size,
+                                             shuffle=True,
+                                             return_iterator=True,
+                                             include_partial_batch=True)
+        validation_experiences = next(iterator)
+        iterator(batch_size)  # start training
 
-      for experiences in iterator:
-        training_exps_tf = {
-            k + "_tf": tf.convert_to_tensor(experiences[k], dtype=tf.float32)
+        for experiences in iterator:
+          training_exps_tf = {
+              k + "_tf": tf.convert_to_tensor(experiences[k], dtype=tf.float32)
+              for k in ["o", "o_2", "u", "r"]
+          }
+          self.train_model_graph(**training_exps_tf)
+
+          training_steps += 1
+          self.model_training_step.assign_add(1)
+
+        # validation
+        validation_exps_tf = {
+            k + "_tf": tf.convert_to_tensor(validation_experiences[k],
+                                            dtype=tf.float32)
             for k in ["o", "o_2", "u", "r"]
         }
-        self.train_model_graph(**training_exps_tf).numpy()
+        holdout_loss = self.evaluate_model_graph(**validation_exps_tf).numpy()
 
-        self.model_training_step.assign_add(1)
+        with tf.name_scope('MAGELosses/'):
+          with tf.name_scope('ModelLosses/'):
+            for i, hl in enumerate(holdout_loss):
+              tf.summary.scalar(
+                  name='model_loss_{} vs model_training_step'.format(i),
+                  data=hl,
+                  step=self.model_training_step)
 
-      # validation
-      validation_exps_tf = {
-          k + "_tf": tf.convert_to_tensor(validation_experiences[k],
-                                          dtype=tf.float32)
-          for k in ["o", "o_2", "u", "r"]
-      }
-      holdout_loss = self.evaluate_model_graph(**validation_exps_tf).numpy()
+        # logger.info("Model training epoch: {} holdout loss: {}".format(
+        #     training_epochs, holdout_loss))
 
-      with tf.name_scope('MAGELosses/ModelLosses'):
-        for i, hl in enumerate(holdout_loss):
-          tf.summary.scalar(
-              name='model_loss_{} vs model_training_step'.format(i),
-              data=hl,
-              step=self.model_training_step)
+        training_epochs += 1
 
-      logger.info("Model training epoch: {} holdout loss: {}".format(
-          training_epochs, holdout_loss))
+        if training_steps > max_training_steps:
+          break
 
-      training_epochs += 1
-
-      if self.model_training_step > max_training_steps:
-        break
-
-    sorted_inds = np.argsort(holdout_loss)
-    elites_inds = sorted_inds[:self.model_network.num_elites].tolist()
-    self.model_network.set_elite_inds(elites_inds)
+      sorted_inds = np.argsort(holdout_loss)
+      elites_inds = sorted_inds[:self.model_network.num_elites].tolist()
+      self.model_network.set_elite_inds(elites_inds)
 
   @tf.function
   def train_bc_graph(self, o, g, u):
@@ -479,9 +479,9 @@ class MAGE(object):
 
     critic_gradient_loss = tf.norm(tape.gradient(critic_loss, u))
 
-    with tf.name_scope('MAGELosses'):
+    with tf.name_scope('MAGELosses/'):
       tf.summary.scalar(name='critic_gradient_loss vs td3_training_step',
-                        data=critic_loss,
+                        data=critic_gradient_loss,
                         step=self.td3_training_step)
 
     return critic_gradient_loss
@@ -571,7 +571,7 @@ class MAGE(object):
 
     critic_loss = tf.reduce_mean(bellman_error)
 
-    with tf.name_scope('MAGELosses'):
+    with tf.name_scope('MAGELosses/'):
       tf.summary.scalar(name='critic_loss vs td3_training_step',
                         data=critic_loss,
                         step=self.td3_training_step)
@@ -609,7 +609,7 @@ class MAGE(object):
       actor_loss = (self.bc_params["prm_loss_weight"] * actor_loss +
                     self.bc_params["aux_loss_weight"] * bc_loss)
 
-    with tf.name_scope('MAGELosses'):
+    with tf.name_scope('MAGELosses/'):
       tf.summary.scalar(name='actor_loss vs td3_training_step',
                         data=actor_loss,
                         step=self.td3_training_step)
@@ -777,9 +777,10 @@ class MAGE(object):
         self.dimo,
         self.dimu,
         self.max_u,
-        layer_sizes=[200, 200, 200, 200],
-        num_networks=5,  # TODO: hyper parameters
-        num_elites=3,
+        layer_sizes=[200, 200, 200, 200],  # TODO: hyper parameters
+        weight_decays=[2.5e-5, 5e-5, 7.5e-5, 7.5e-5, 1e-4],
+        num_networks=7,
+        num_elites=5,
     )
     # actor
     self.main_actor = Actor(self.dimo, self.dimg, self.dimu, self.max_u,
