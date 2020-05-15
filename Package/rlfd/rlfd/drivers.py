@@ -388,7 +388,7 @@ class StepBasedDriver(Driver):
     """generate `num_steps` rollouts
     """
     # Information to store
-    episode = {
+    experiences = {
         k: [] for k in ("o", "o_2", "ag", "ag_2", "u", "g", "g_2", "r", "done")
     }
     info_values = {k: [] for k in self.info_keys}
@@ -443,15 +443,15 @@ class StepBasedDriver(Driver):
             reset=self.done or (self.curr_eps_step + 1 == self.eps_length),
         )
 
-      episode["o"].append(self.o)
-      episode["ag"].append(self.ag)
-      episode["g"].append(self.g)
-      episode["o_2"].append(o_2)
-      episode["ag_2"].append(ag_2)
-      episode["g_2"].append(self.g)
-      episode["u"].append(u)
-      episode["r"].append(r)
-      episode["done"].append(self.done)
+      experiences["o"].append(self.o)
+      experiences["ag"].append(self.ag)
+      experiences["g"].append(self.g)
+      experiences["o_2"].append(o_2)
+      experiences["ag_2"].append(ag_2)
+      experiences["g_2"].append(self.g)
+      experiences["u"].append(u)
+      experiences["r"].append(r)
+      experiences["done"].append(self.done)
       for key in self.info_keys:
         info_values[key].append(iv[key])
       self.o = o_2  # o_2 -> o
@@ -465,15 +465,15 @@ class StepBasedDriver(Driver):
           break
 
     # Store all information into an episode dict
-    for key, value in episode.items():
-      episode[key] = np.array(value).reshape(len(value), -1)
+    for key, value in experiences.items():
+      experiences[key] = np.array(value).reshape(len(value), -1)
     for key, value in info_values.items():
-      episode["info_" + key] = np.array(value).reshape(len(value), -1)
+      experiences["info_" + key] = np.array(value).reshape(len(value), -1)
 
     # Store stats
     # total reward
     total_reward = np.sum(
-        episode["r"]) / current_episode if self.num_episodes else np.NaN
+        experiences["r"]) / current_episode if self.num_episodes else np.NaN
     self.history["reward_per_eps"].append(total_reward)
     # info values
     for key in self.info_keys:
@@ -484,4 +484,5 @@ class StepBasedDriver(Driver):
     self.total_num_episodes += current_episode
     self.total_num_steps += current_step
 
-    return episode
+    return experiences
+
