@@ -129,7 +129,7 @@ def train(root_dir, params):
 
     with tf.name_scope("Testing"):
       for metric in testing_metrics[2:]:
-        metric.summarize(step_metrics=testing_metrics[:2])
+        metric.summarize(step_metrics=training_metrics[:2])
       for key, val in evaluator.logs("test"):
         logger.record_tabular(key, val)
 
