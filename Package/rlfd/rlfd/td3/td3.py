@@ -1,3 +1,4 @@
+import os
 import pickle
 
 import numpy as np
@@ -148,9 +149,23 @@ class TD3(object):
 
     return u
 
+  def before_training_hook(self, demo_file=None):
+    if self.demo_strategy != "none" or self.sample_demo_buffer:
+      assert os.path.isfile(demo_file), "Demo file not exist."
+      episode_batch = self.demo_buffer.load_from_file(data_file=demo_file)
+      if self.sample_demo_buffer:
+        self.update_stats(episode_batch)
+
+    if self.demo_strategy in ["nf", "gan"]:
+      self.train_shaping()
+
+    if self.initialize_with_bc:
+      self.train_bc()
+      self.initialize_target_net()
+
   def init_demo_buffer(self, demo_file):
     """Initialize the demonstration buffer.
-        """
+    """
     episode_batch = self.demo_buffer.load_from_file(data_file=demo_file)
     return episode_batch
 
@@ -489,7 +504,7 @@ class TD3(object):
                          done=(1,))
     if self.fix_T:
       buffer_shapes = {
-          k: (self.eps_length) + v for k, v in buffer_shapes.items()
+          k: (self.eps_length,) + v for k, v in buffer_shapes.items()
       }
       self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size,
                                                self.eps_length)

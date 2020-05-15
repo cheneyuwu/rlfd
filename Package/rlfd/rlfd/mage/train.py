@@ -78,35 +78,21 @@ def train(root_dir, params):
       metrics.AverageEpisodeLengthMetric(),
   ]
 
-  # adding demonstration data to the demonstration buffer
-  if demo_strategy != "none" or policy.sample_demo_buffer:
-    demo_file = os.path.join(root_dir, "demo_data.npz")
-    assert os.path.isfile(
-        demo_file), "demonstration training set does not exist"
-    episode_batch = policy.init_demo_buffer(demo_file)
-    if policy.sample_demo_buffer:
-      policy.update_stats(episode_batch)
+  demo_file = os.path.join(root_dir, "demo_data.npz")
+  policy.before_training_hook(demo_file=demo_file)
 
-  # Train shaping potential
-  if demo_strategy in ["nf", "gan"]:
-    policy.train_shaping()
-
-  if policy.initialize_with_bc:
-    policy.train_bc()
-    policy.initialize_target_net()
-
-    # save the policy
-    policy.save(initial_policy_path)
-    logger.info("Saving initial policy.")
+  # save the policy
+  policy.save(initial_policy_path)
+  logger.info("Saving initial policy.")
 
   # Generate some random experiences before training (used by td3 for gym mujoco envs)
   # TODO: hyper paramter -> put in config files
   num_initial_exploration_steps = 5000  # used in mbpo for half-cheetah environment
   for _ in range(num_initial_exploration_steps):
-    episode = rollout_worker.generate_rollouts(observers=training_metrics,
-                                               random=True)
-    policy.store_episode(episode)
-    policy.update_stats(episode)
+    experiences = rollout_worker.generate_rollouts(observers=training_metrics,
+                                                   random=True)
+    policy.store_episode(experiences)
+    policy.update_stats(experiences)
 
   for epoch in range(num_epochs):
     logger.record_tabular("epoch", epoch)
