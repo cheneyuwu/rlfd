@@ -18,7 +18,6 @@ from rlfd.utils import mpi_util
 # from td3fd.ddpg2.debug.check_potential import main as check_potential_entry
 from td3fd.demo_util.generate_demo import main as demo_entry
 from td3fd.evaluate import main as evaluate_entry
-from td3fd.plot import main as plot_entry
 
 try:
   from mpi4py import MPI
