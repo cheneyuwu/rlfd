@@ -143,186 +143,6 @@ class Driver(object, metaclass=abc.ABCMeta):
     """Performs `num_episodes` rollouts for maximum time horizon `eps_length` with the current policy"""
 
 
-class EpisodeBasedDriver(Driver):
-
-  def __init__(self,
-               make_env,
-               policy,
-               dims,
-               eps_length,
-               max_u,
-               num_episodes=1,
-               noise_eps=0.0,
-               polyak_noise=0.0,
-               random_eps=0.0,
-               history_len=300,
-               render=False,
-               **kwargs):
-    """
-    Rollout worker generates experience by interacting with one or many environments.
-
-    Args:
-        make_env           (function)    - a factory function that creates a new instance of the environment when called
-        policy             (object)      - the policy that is used to act
-        dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
-        num_episodes       (int)         - the number of parallel rollouts that should be used
-        noise_eps          (float)       - scale of the additive Gaussian noise
-        random_eps         (float)       - probability of selecting a completely random action
-        history_len        (int)         - length of history for statistics smoothing
-        render             (bool)        - whether or not to render the rollouts
-    """
-    super().__init__(
-        make_env=make_env,
-        policy=policy,
-        dims=dims,
-        max_u=max_u,
-        noise_eps=noise_eps,
-        polyak_noise=polyak_noise,
-        random_eps=random_eps,
-        history_len=history_len,
-        render=render,
-    )
-
-    # add to history
-    self.add_history_keys(["reward_per_eps"])
-    self.add_history_keys(["info_" + x + "_mean" for x in self.info_keys])
-    self.add_history_keys(["info_" + x + "_min" for x in self.info_keys])
-    self.add_history_keys(["info_" + x + "_max" for x in self.info_keys])
-
-    # TODO parallelize environment
-    self.eps_length = eps_length
-    self.num_episodes = num_episodes  # number of env in parallel (#TODO make it true parallel)
-
-    self.envs = [self.make_env() for _ in range(self.num_episodes)]
-    self.env = self.envs[0]
-    self.initial_o = np.empty((self.num_episodes, *self.dims["o"]), np.float32)
-    self.initial_ag = np.empty((self.num_episodes, *self.dims["g"]), np.float32)
-    self.g = np.empty((self.num_episodes, *self.dims["g"]), np.float32)
-
-    self._reset()
-
-  def _seed(self, seed):
-    """ Set seed for environment
-        """
-    for idx, env in enumerate(self.envs):
-      env.seed(seed + 1000 * idx)
-
-  def _generate_rollouts(self, observers=(), random=False):
-    """ Performs `num_episodes` rollouts for maximum time horizon `eps_length` with the current policy
-        """
-    assert random == False, "Not yet tested to use random policy for episode driver."
-    # Information to store
-    observations, next_observations, acts, rewards, dones = [], [], [], [], []
-    goals, next_goals, achieved_goals, next_achieved_goals = [], [], [], []
-    info_values = {
-        key: np.empty(
-            (self.eps_length, self.num_episodes, *self.dims["info_" + key]))
-        for key in self.info_keys
-    }
-
-    # Store initial observations and goals
-    self._reset()
-    # Clear noise history for polyak noise
-    self._clear_noise_history()
-
-    o = np.empty((self.num_episodes, *self.dims["o"]), np.float32)
-    ag = np.empty((self.num_episodes, *self.dims["g"]), np.float32)
-    o[:] = self.initial_o
-    ag[:] = self.initial_ag
-
-    for t in range(self.eps_length):
-      # get the action for all envs of the current batch
-      policy_output = self.policy.get_actions(o, self.g)
-      u = self._add_noise_to_action(policy_output)
-      u = u.reshape(-1, *self.dims["u"])  # make sure that the shape is correct
-      # compute the next states
-      o_new = np.empty((self.num_episodes, *self.dims["o"]))  # o_2
-      ag_new = np.empty((self.num_episodes, *self.dims["g"]))  # ag_2
-      r = np.empty((self.num_episodes, 1))  # reward
-      done = np.empty((self.num_episodes, 1))  # done
-      # compute new states and observations
-      for i in range(self.num_episodes):
-        try:
-          curr_o_new, curr_r, curr_done, info = self.envs[i].step(u[i])
-          o_new[i] = curr_o_new["observation"]
-          ag_new[i] = curr_o_new["achieved_goal"]
-          r[i] = curr_r
-          done[i] = curr_done
-          for key in self.info_keys:
-            info_values[key][t, i] = info[key]
-          if self.render:
-            self.envs[i].render()
-        except MujocoException:
-          logger.warn(
-              "MujocoException caught during rollout generation. Trying again..."
-          )
-          return self.generate_rollouts()
-
-      if np.isnan(o_new).any():
-        logger.warn("NaN caught during rollout generation. Trying again...")
-        return self.generate_rollouts()
-
-      observations.append(o.copy())
-      next_observations.append(o_new.copy())
-      achieved_goals.append(ag.copy())
-      next_achieved_goals.append(ag_new.copy())
-      goals.append(self.g.copy())
-      next_goals.append(self.g.copy())
-      acts.append(u.copy())
-      rewards.append(r.copy())
-      dones.append(done.copy())
-      o[...] = o_new  # o_2 -> o
-      ag[...] = ag_new  # ag_2 -> ag
-
-    # Store all information into an episode dict
-    episode = dict(o=observations,
-                   o_2=next_observations,
-                   u=acts,
-                   g=goals,
-                   g_2=next_goals,
-                   ag=achieved_goals,
-                   ag_2=next_achieved_goals,
-                   r=rewards,
-                   done=dones)
-    for key in self.info_keys:
-      episode["info_" + key] = info_values[key]
-    episode = self._convert_episode_to_batch_major(episode)
-
-    # Store stats
-    cumu_rewards = np.sum(np.array(rewards), axis=0).reshape(-1)
-    assert cumu_rewards.shape == (self.num_episodes,), cumu_rewards.shape
-    self.history["reward_per_eps"].append(np.mean(cumu_rewards))
-    # info values
-    for key in self.info_keys:
-      self.history["info_" + key + "_mean"].append(np.mean(info_values[key]))
-      self.history["info_" + key + "_min"].append(np.min(info_values[key]))
-      self.history["info_" + key + "_max"].append(np.max(info_values[key]))
-    self.total_num_episodes += self.num_episodes
-    self.total_num_steps += self.num_episodes * self.eps_length
-
-    return episode
-
-  def _reset(self):
-    """Perform a reset of environments.
-    """
-    for i in range(self.num_episodes):
-      obs = self.envs[i].reset()
-      self.initial_o[i] = obs["observation"]
-      self.initial_ag[i] = obs["achieved_goal"]
-      self.g[i] = obs["desired_goal"]
-
-  def _convert_episode_to_batch_major(self, episode):
-    """ Converts an episode to have the batch dimension in the major (first) dimension.
-        """
-    episode_batch = {}
-    for key in episode.keys():
-      val = np.array(episode[key]).copy()
-      # make inputs batch-major instead of time-major
-      episode_batch[key] = val.swapaxes(0, 1)
-
-    return episode_batch
-
-
 class StepBasedDriver(Driver):
 
   def __init__(self,
@@ -486,3 +306,49 @@ class StepBasedDriver(Driver):
 
     return experiences
 
+
+class EpisodeBasedDriver(StepBasedDriver):
+
+  def __init__(self,
+               make_env,
+               policy,
+               dims,
+               eps_length,
+               max_u,
+               num_steps=None,
+               num_episodes=None,
+               noise_eps=0.0,
+               polyak_noise=0.0,
+               random_eps=0.0,
+               history_len=300,
+               render=False,
+               **kwargs):
+
+    assert num_episodes and not num_steps
+
+    super(EpisodeBasedDriver, self).__init__(
+        make_env,
+        policy,
+        dims,
+        eps_length,
+        max_u,
+        num_steps,
+        num_episodes,
+        noise_eps,
+        polyak_noise,
+        random_eps,
+        history_len,
+        render,
+    )
+
+  def _generate_rollouts(self, observers=(), random=False):
+    experiences = super()._generate_rollouts(observers=observers, random=random)
+    assert all([
+        v.shape[0] == self.num_episodes * self.eps_length
+        for v in experiences.values()
+    ])
+    experiences = {
+        k: v.reshape((self.num_episodes, self.eps_length, v.shape[-1]))
+        for k, v in experiences.items()
+    }
+    return experiences
