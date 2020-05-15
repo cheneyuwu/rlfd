@@ -5,6 +5,7 @@ params_config = deepcopy(default_params)
 params_config["env_name"] = "YWFetchPegInHole2D-v0"
 params_config["gamma"] = None
 params_config["fix_T"] = True
+params_config["ddpg"]["random_exploration_cycles"] = 10
 params_config["ddpg"]["num_epochs"] = int(4e2)
 params_config["ddpg"]["num_cycles"] = 10
 params_config["ddpg"]["num_batches"] = 40
