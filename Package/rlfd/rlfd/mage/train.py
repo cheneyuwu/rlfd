@@ -87,7 +87,7 @@ def train(root_dir, params):
   for _ in range(random_exploration_cycles):
     experiences = rollout_worker.generate_rollouts(observers=training_metrics,
                                                    random=True)
-    policy.store_episode(experiences)
+    policy.store_experiences(experiences)
     policy.update_stats(experiences)
 
   for epoch in range(num_epochs):
@@ -101,7 +101,7 @@ def train(root_dir, params):
 
       experiences = rollout_worker.generate_rollouts(observers=training_metrics)
       if num_batches != 0:  # policy is being updated
-        policy.store_episode(experiences)
+        policy.store_experiences(experiences)
         policy.update_stats(experiences)
 
       for _ in range(num_batches):

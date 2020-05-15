@@ -169,9 +169,9 @@ class MAGE(object):
   def before_training_hook(self, demo_file=None):
     if self.demo_strategy != "none" or self.sample_demo_buffer:
       assert os.path.isfile(demo_file), "Demo file not exist."
-      episode_batch = self.demo_buffer.load_from_file(data_file=demo_file)
+      experiences = self.demo_buffer.load_from_file(data_file=demo_file)
       if self.sample_demo_buffer:
-        self.update_stats(episode_batch)
+        self.update_stats(experiences)
 
     if self.demo_strategy in ["nf", "gan"]:
       self.train_shaping()
@@ -180,23 +180,14 @@ class MAGE(object):
       self.train_bc()
       self.initialize_target_net()
 
-  def init_demo_buffer(self, demo_file):
-    """Initialize the demonstration buffer.
-    """
-    episode_batch = self.demo_buffer.load_from_file(data_file=demo_file)
-    return episode_batch
-
-  def add_to_demo_buffer(self, episode_batch):
-    self.demo_buffer.store(episode_batch)
-
-  def store_episode(self, episode_batch):
+  def store_experiences(self, experiences):
 
     with tf.summary.record_if(lambda: self.exploration_step % 200 == 0):
-      self.replay_buffer.store(episode_batch)
+      self.replay_buffer.store(experiences)
       if self.use_n_step_return:
-        self.n_step_replay_buffer.store(episode_batch)
+        self.n_step_replay_buffer.store(experiences)
 
-      num_steps = np.prod(episode_batch["o"].shape[:-1])
+      num_steps = np.prod(experiences["o"].shape[:-1])
       self._increment_exploration_step(num_steps)
 
   def clear_n_step_replay_buffer(self):
@@ -773,15 +764,15 @@ class MAGE(object):
     logs.append((prefix + "stats_g/std", np.mean(self.g_stats.std_tf.numpy())))
     return logs
 
-  def update_stats(self, episode_batch):
+  def update_stats(self, experiences):
     # add transitions to normalizer
     if self.fix_T:
       transitions = {
-          k: v.reshape((-1, v.shape[-1])).copy()
-          for k, v in episode_batch.items()
+          k: v.reshape((v.shape[0] * v.shape[1], v.shape[2])).copy()
+          for k, v in experiences.items()
       }
     else:
-      transitions = episode_batch.copy()
+      transitions = experiences.copy()
     o_tf = tf.convert_to_tensor(transitions["o"], dtype=tf.float32)
     g_tf = tf.convert_to_tensor(transitions["g"], dtype=tf.float32)
     self.o_stats.update(o_tf)

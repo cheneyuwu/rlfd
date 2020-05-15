@@ -65,7 +65,7 @@ class ReplayBuffer(object, metaclass=abc.ABCMeta):
 
   def load_from_file(self, data_file):
     episode_batch = dict(np.load(data_file))
-    self.store_episode(episode_batch)
+    self.store(episode_batch)
     return episode_batch
 
   def dump_to_file(self, path):
@@ -101,13 +101,6 @@ class ReplayBuffer(object, metaclass=abc.ABCMeta):
 
     # memory management
     self._current_size = min(self._size, self._current_size + batch_size)
-
-  def store_episode(self, episode_batch):
-    """ API for storing episodes. Including memory management.
-        episode_batch: array(batch_size x (T or T+1) x dim_key)
-    """
-    print("Warning: store_episode method is deprecated. Use store instead.")
-    self.store(episode_batch)
 
   def clear_buffer(self):
     self._clear_buffer()
