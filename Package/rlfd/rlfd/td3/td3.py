@@ -636,15 +636,26 @@ class TD3(object):
 
     if summarize:
       with tf.name_scope('PolicyInspect'):
-        mean_estimate_q = self._policy_inspect_estimate_q / self._policy_inspect_count
-        success = tf.summary.scalar(name='mean_estimate_q vs exploration_step',
-                                    data=mean_estimate_q,
-                                    step=self.exploration_step)
-        if self.shaping != None:
-          mean_potential = self._policy_inspect_potential / self._policy_inspect_count
+        if self.shaping == None:
+          mean_estimate_q = (self._policy_inspect_estimate_q /
+                             self._policy_inspect_count)
+          success = tf.summary.scalar(
+              name='mean_estimate_q vs exploration_step',
+              data=mean_estimate_q,
+              step=self.exploration_step)
+        else:
+          mean_potential = (self._policy_inspect_potential /
+                            self._policy_inspect_count)
           tf.summary.scalar(name='mean_potential vs exploration_step',
                             data=mean_potential,
                             step=self.exploration_step)
+          mean_estimate_q = (
+              self._policy_inspect_estimate_q +
+              self._policy_inspect_potential) / self._policy_inspect_count
+          success = tf.summary.scalar(
+              name='mean_estimate_q vs exploration_step',
+              data=mean_estimate_q,
+              step=self.exploration_step)
       if success:
         self._policy_inspect_count.assign(0.0)
         self._policy_inspect_estimate_q.assign(0.0)
