@@ -7,7 +7,8 @@ import tensorflow_probability as tfp
 
 from rlfd import logger
 from rlfd.td3.actorcritic_network import Actor, Critic
-from rlfd.td3.shaping import EnsembleRewardShapingWrapper
+from rlfd.td3.shaping_v2 import EnsembleShaping as EnsembleShapingV2
+from rlfd.td3.shaping import EnsembleShaping, NFShaping, GANShaping
 from rlfd.td3.normalizer import Normalizer
 from rlfd.memory import RingReplayBuffer, UniformReplayBuffer, MultiStepReplayBuffer, iterbatches
 from rlfd.mage.model_network import EnsembleModelNetwork
@@ -407,11 +408,31 @@ class MAGE(object):
     #         epoch, bc_loss))
 
   def train_shaping(self):
-    assert self.demo_strategy in ["nf", "gan"]
-    demo_data_iter = self.demo_buffer.sample(return_iterator=True)
-    demo_data = next(demo_data_iter)
-    self.shaping.train(demo_data)
-    self.shaping.evaluate(demo_data)
+
+    with tf.summary.record_if(lambda: self.shaping.training_step % 1000 == 0):
+
+      demo_data_iter = self.demo_buffer.sample(return_iterator=True)
+      demo_data = next(demo_data_iter)
+
+      # for version 1
+      self.shaping.train(demo_data)
+      self.shaping.evaluate(demo_data)
+
+      # for version 2
+      # self.shaping.training_before_hook(batch=demo_data)
+
+      # for i in range(self.shaping_params["num_epochs"]):
+      #   demo_data_iter = self.demo_buffer.sample(return_iterator=True,
+      #                                            include_partial_batch=True)
+      #   demo_data_iter(128)  # shaping batch size
+      #   for batch in demo_data_iter:
+      #     self.shaping.train(batch["o"], batch["g"], batch["u"])
+      #     # self.shaping.evaluate(batch["o"], batch["g"], batch["u"])
+
+      #   if i % 100 == 0:
+      #     logger.info("traing shaping finished epoch", i)
+
+      # self.shaping.training_after_hook(batch=demo_data)
 
   def critic_gradient_loss_graph(self, o, g, o_2, g_2, u, r, n, done):
     with tf.GradientTape(watch_accessed_variables=False) as tape:
@@ -837,16 +858,34 @@ class MAGE(object):
     self.bc_optimizer = tf.keras.optimizers.Adam(learning_rate=self.pi_lr)
 
     # Add shaping reward
-    if self.demo_strategy in ["nf", "gan"]:
-      self.shaping = EnsembleRewardShapingWrapper(
-          dims=self.dims,
+    shaping_class = {"nf": NFShaping, "gan": GANShaping}
+    if self.demo_strategy in shaping_class.keys():
+      # instantiate shaping version 1
+      self.shaping = EnsembleShaping(
+          shaping_cls=shaping_class[self.demo_strategy],
+          num_ensembles=self.shaping_params["num_ensembles"],
+          batch_size=self.shaping_params["batch_size"],
+          num_epochs=self.shaping_params["num_epochs"],
+          dimo=self.dimo,
+          dimg=self.dimg,
+          dimu=self.dimu,
           max_u=self.max_u,
-          gamma=self.gamma,
-          demo_strategy=self.demo_strategy,
           norm_obs=True,
           norm_eps=self.norm_eps,
           norm_clip=self.norm_clip,
-          **self.shaping_params.copy())
+          **self.shaping_params[self.demo_strategy].copy())
+      # instantiate shaping version 2
+      # self.shaping = EnsembleShapingV2(
+      #     shaping_cls=shaping_class[self.demo_strategy],
+      #     num_ensembles=self.shaping_params["num_ensembles"],
+      #     dimo=self.dimo,
+      #     dimg=self.dimg,
+      #     dimu=self.dimu,
+      #     max_u=self.max_u,
+      #     norm_obs=True,
+      #     norm_eps=self.norm_eps,
+      #     norm_clip=self.norm_clip,
+      #     **self.shaping_params[self.demo_strategy].copy())
     else:
       self.shaping = None
 
