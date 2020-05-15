@@ -1,5 +1,5 @@
 from copy import deepcopy
-from td3fd.ddpg2.params.reach2d import params_config as base_params
+from rlfd.td3.params.reach2d import params_config as base_params
 
 params_config = deepcopy(base_params)
 
