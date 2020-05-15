@@ -20,6 +20,7 @@ class TD3(object):
   def __init__(
       self,
       # for learning
+      random_exploration_cycles,
       num_epochs,
       num_cycles,
       num_batches,
@@ -54,7 +55,6 @@ class TD3(object):
       use_demo_reward,
       initialize_with_bc,
       initialize_num_epochs,
-      num_demo,
       demo_strategy,
       bc_params,
       shaping_params,
@@ -63,13 +63,13 @@ class TD3(object):
     # Store initial args passed into the function
     self.init_args = locals()
 
+    self.random_exploration_cycles = random_exploration_cycles
     self.num_epochs = num_epochs
     self.num_cycles = num_cycles
     self.num_batches = num_batches
     self.buffer_size = buffer_size
     self.batch_size = batch_size
 
-    self.num_demo = num_demo
     self.use_demo_reward = use_demo_reward
     self.sample_demo_buffer = sample_demo_buffer
     self.batch_size_demo = batch_size_demo
@@ -447,8 +447,6 @@ class TD3(object):
       critic_loss_tf, actor_loss_tf = self.train_graph(o_tf, g_tf, o_2_tf,
                                                        g_2_tf, u_tf, r_tf, n_tf,
                                                        done_tf)
-
-    return critic_loss_tf.numpy(), actor_loss_tf.numpy()
 
   def update_potential_weight(self):
     if self.potential_decay_epoch < self.shaping_params["potential_decay_epoch"]:

@@ -3,92 +3,77 @@ import numpy as np
 from rlfd.mage import mage
 
 default_params = {
-    # config summary and implementation identifier
+    # config summary
     "alg": "mage",
     "config": "default",
     # environment config
-    "env_name": "FetchReach-v1",
-    "r_scale": 1.0,  # scale the reward of the environment down
-    "r_shift": 0.0,  # shift the reward of the environment up
-    "eps_length":
-        0,  # overwrite the default length of the episode provided in _max_episode_steps
-    "env_args": {},  # extra arguments passed to the environment
-    "gamma":
-        None,  # reward discount, usually set to be 0.995, 0.95, set to None to select based on max_eps_length
-    "fix_T":
-        True,  # whether or not to fix episode length for all rollouts (if false, then use the ring buffer)
-    # DDPG config (with TD3 params)
+    "env_name": "InvertedPendulum-v2",
+    "r_scale": 1.0,
+    "r_shift": 0.0,
+    "eps_length": 0,
+    "env_args": {},
+    "gamma": 0.99,
+    "fix_T": False,
+    # DDPG config
     "ddpg": {
         # training
-        "num_epochs": 10,
-        "num_cycles": 10,  # per epoch
-        "num_batches": 40,  # training batches per cycle
-        "batch_size":
-            256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
+        "random_exploration_cycles": 0,
+        "num_epochs": int(1e3),
+        "num_cycles": 1000,
+        "num_batches": 1,
+        "batch_size": 100,
         # use demonstrations
-        "batch_size_demo":
-            128,  # number of samples to be used from the demonstrations buffer, per mpi thread
-        "sample_demo_buffer":
-            False,  # whether or not to sample from demonstration buffer
-        "initialize_with_bc":
-            False,  # whether or not to initialize policy using bc
-        "initialize_num_epochs": 0,  # number of epochs initilize with bc
-        "use_demo_reward":
-            False,  # whether or not to assume that demonstrations have rewards, and train it on the critic
-        "num_demo": 0,  # number of expert demo episodes
-        "demo_strategy": "none",  # choose between ["none", "bc", "nf", "gan"]
+        "batch_size_demo": 128,
+        "sample_demo_buffer": False,
+        "initialize_with_bc": False,
+        "initialize_num_epochs": 0,
+        "use_demo_reward": False,
+        "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         # normalize observation
-        "norm_eps": 0.01,  # epsilon used for observation normalization
-        "norm_clip": 5,  # normalized observations are cropped to this value
+        "norm_eps": 0.01,
+        "norm_clip": 5,
         # actor critic networks
         "scope": "ddpg",
-        "layer_sizes": [256, 256,
-                        256],  # number of neurons in each hidden layer
+        "layer_sizes": [400, 300],
         "twin_delayed": True,
         "policy_freq": 2,
         "policy_noise": 0.2,
         "policy_noise_clip": 0.5,
-        "q_lr": 0.001,  # critic learning rate
-        "pi_lr": 0.001,  # actor learning rate
-        "action_l2":
-            1.0,  # quadratic penalty on actions (before rescaling by max_u)
+        "q_lr": 1e-3,
+        "pi_lr": 1e-3,
+        "action_l2": 0.0,
         # double q learning
-        "polyak": 0.95,  # polyak averaging coefficient for double q learning
+        "polyak": 0.995,
         # multi step return
         "use_n_step_return": False,
+        # model learning
+        "model_update_interval": 250,
+        # mage critic loss weight
+        "critic_loss_weight": 0.01,
         "bc_params": {
-            "q_filter":
-                True,  # whether or not a Q value filter should be used on the actor outputs
-            "prm_loss_weight":
-                0.001,  # weight corresponding to the primary loss
-            "aux_loss_weight":
-                0.0078,  # weight corresponding to the auxilliary loss (also called the cloning loss)
+            "q_filter": False,
+            "prm_loss_weight": 1.0,
+            "aux_loss_weight": 1.0
         },
         "shaping_params": {
             # potential weight decay
             "potential_decay_scale": 1.0,
             "potential_decay_epoch": 0,
-            "num_epochs": int(1e3),
-            "batch_size":
-                128,  # batch size for training the potential function (gan and nf)
+            "num_epochs": int(4e3),
+            "batch_size": 128,
             "num_ensembles": 2,
             "nf": {
-                "num_masked": 2,  # used only when nf_type is set to realnvp
-                "num_bijectors":
-                    6,  # number of bijectors in the normalizing flow
-                "layer_sizes": [512,
-                                512],  # number of neurons in each hidden layer
+                "num_masked": 2,
+                "num_bijectors": 4,
+                "layer_sizes": [256, 256],
                 "prm_loss_weight": 1.0,
-                "reg_loss_weight": 500.0,
-                "potential_weight": 5.0,
+                "reg_loss_weight": 200.0,
+                "potential_weight": 3.0,
             },
             "gan": {
-                "layer_sizes": [
-                    256, 256
-                ],  # number of neurons in each hidden layer (both generator and discriminator)
-                "latent_dim": 6,  # generator latent space dimension
-                "gp_lambda":
-                    0.1,  # weight on gradient penalty (refer to WGAN-GP)
+                "layer_sizes": [256, 256, 256],
+                "latent_dim": 6,
+                "gp_lambda": 0.1,
                 "critic_iter": 5,
                 "potential_weight": 3.0,
             },
@@ -98,18 +83,16 @@ default_params = {
     },
     # rollouts config
     "rollout": {
-        "num_episodes": 4,
-        "num_steps": None,
-        "noise_eps":
-            0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
-        "polyak_noise":
-            0.0,  # use polyak_noise * last_noise + (1 - polyak_noise) * curr_noise
-        "random_eps": 0.3,  # percentage of time a random action is taken
+        "num_episodes": None,
+        "num_steps": 1,
+        "noise_eps": 0.1,
+        "polyak_noise": 0.0,
+        "random_eps": 0.0,
         "compute_q": False,
-        "history_len": 300,  # make sure that this is same as number of cycles
+        "history_len": 300,
     },
     "evaluator": {
-        "num_episodes": 10,
+        "num_episodes": 4,
         "num_steps": None,
         "noise_eps": 0.0,
         "polyak_noise": 0.0,

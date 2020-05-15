@@ -21,6 +21,7 @@ class MAGE(object):
   def __init__(
       self,
       # for learning
+      random_exploration_cycles,
       num_epochs,
       num_cycles,
       num_batches,
@@ -48,6 +49,10 @@ class MAGE(object):
       polyak,
       # multistep return
       use_n_step_return,
+      # model learning
+      model_update_interval,
+      # mage critic loss weight
+      critic_loss_weight,
       # play with demonstrations
       buffer_size,
       batch_size_demo,
@@ -55,7 +60,6 @@ class MAGE(object):
       use_demo_reward,
       initialize_with_bc,
       initialize_num_epochs,
-      num_demo,
       demo_strategy,
       bc_params,
       shaping_params,
@@ -64,13 +68,13 @@ class MAGE(object):
     # Store initial args passed into the function
     self.init_args = locals()
 
+    self.random_exploration_cycles = random_exploration_cycles
     self.num_epochs = num_epochs
     self.num_cycles = num_cycles
     self.num_batches = num_batches
     self.buffer_size = buffer_size
     self.batch_size = batch_size
 
-    self.num_demo = num_demo
     self.use_demo_reward = use_demo_reward
     self.sample_demo_buffer = sample_demo_buffer
     self.batch_size_demo = batch_size_demo
@@ -100,6 +104,17 @@ class MAGE(object):
     # multistep return
     self.use_n_step_return = use_n_step_return
     self.n_step_return_steps = eps_length // 5
+
+    # mage critic loss weight
+    self.critic_loss_weight = critic_loss_weight
+
+    # model learning
+    self.model_update_interval = model_update_interval
+    self.model_lr = 1e-3
+    self.model_layer_sizes = [200, 200, 200, 200]
+    self.model_weight_decays = [2.5e-5, 5e-5, 7.5e-5, 7.5e-5, 1e-4]
+    self.model_num_networks = 7
+    self.model_num_elites = 5
 
     # play with demonstrations
     self.demo_strategy = demo_strategy
@@ -665,8 +680,7 @@ class MAGE(object):
       critic_loss = self.critic_loss_graph(o, g, o_2, g_2, u, r, n, done)
       critic_gradient_loss = self.critic_gradient_loss_graph(
           o, g, o_2, g_2, u, r, n, done)
-      # TODO: hyper parameter, move to config files
-      mage_critic_loss = critic_gradient_loss + 0.01 * critic_loss
+      mage_critic_loss = critic_gradient_loss + self.critic_loss_weight * critic_loss
 
     critic_grads = tape.gradient(mage_critic_loss, critic_trainable_weights)
 
@@ -691,6 +705,9 @@ class MAGE(object):
     return critic_loss, actor_loss
 
   def train(self):
+    if self.td3_training_step % self.model_update_interval == 0:
+      self.train_model()
+
     with tf.summary.record_if(lambda: self.td3_training_step % 200 == 0):
 
       batch = self.sample_batch()
@@ -706,8 +723,6 @@ class MAGE(object):
       critic_loss_tf, actor_loss_tf = self.train_graph(o_tf, g_tf, o_2_tf,
                                                        g_2_tf, u_tf, r_tf, n_tf,
                                                        done_tf)
-
-    return critic_loss_tf.numpy(), actor_loss_tf.numpy()
 
   def update_potential_weight(self):
     if self.potential_decay_epoch < self.shaping_params["potential_decay_epoch"]:
@@ -813,11 +828,12 @@ class MAGE(object):
         self.dimo,
         self.dimu,
         self.max_u,
-        layer_sizes=[200, 200, 200, 200],  # TODO: hyper parameters
-        weight_decays=[2.5e-5, 5e-5, 7.5e-5, 7.5e-5, 1e-4],
-        num_networks=7,
-        num_elites=5,
+        layer_sizes=self.model_layer_sizes,
+        weight_decays=self.model_weight_decays,
+        num_networks=self.model_num_networks,
+        num_elites=self.model_num_elites,
     )
+
     # actor
     self.main_actor = Actor(self.dimo, self.dimg, self.dimu, self.max_u,
                             self.layer_sizes)
@@ -848,8 +864,7 @@ class MAGE(object):
       self.target_critic_twin([o_tf, g_tf, u_tf])
 
     # Optimizers
-    self.model_optimizer = tf.keras.optimizers.Adam(
-        learning_rate=1e-3)  # TODO: hyperparameter, same as mbpo
+    self.model_optimizer = tf.keras.optimizers.Adam(learning_rate=self.model_lr)
     self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=self.pi_lr)
     self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=self.q_lr)
     if self.twin_delayed:

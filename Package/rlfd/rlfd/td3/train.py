@@ -36,13 +36,6 @@ def train(root_dir, params):
   # Check parameters
   config.check_params(params, td3_config.default_params)
 
-  # Construct...
-  save_interval = 0
-  demo_strategy = params["ddpg"]["demo_strategy"]
-  num_epochs = params["ddpg"]["num_epochs"]
-  num_cycles = params["ddpg"]["num_cycles"]
-  num_batches = params["ddpg"]["num_batches"]
-
   # Seed everything.
   set_global_seeds(params["seed"])
 
@@ -85,10 +78,13 @@ def train(root_dir, params):
   policy.save(initial_policy_path)
   logger.info("Saving initial policy.")
 
-  # Generate some random experiences before training (used by td3 for gym mujoco envs)
-  # TODO: hyper paramter -> put in config files
-  num_initial_exploration_steps = 0  # used in mbpo for half-cheetah environment
-  for _ in range(num_initial_exploration_steps):
+  save_interval = 0
+  random_exploration_cycles = params["ddpg"]["random_exploration_cycles"]
+  num_epochs = params["ddpg"]["num_epochs"]
+  num_cycles = params["ddpg"]["num_cycles"]
+  num_batches = params["ddpg"]["num_batches"]
+
+  for _ in range(random_exploration_cycles):
     experiences = rollout_worker.generate_rollouts(observers=training_metrics,
                                                    random=True)
     policy.store_episode(experiences)
