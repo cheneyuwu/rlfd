@@ -78,13 +78,15 @@ class ReplayBuffer(object, metaclass=abc.ABCMeta):
              batch_size=None,
              return_iterator=False,
              shuffle=False,
-             include_partial_batch=False):
+             include_partial_batch=False,
+             repeat=False):
     """ Returns a dict {key: array(batch_size x shapes[key])}
     If batch_size is -1, this function should return the entire buffer (i.e. all stored transitions)
     """
     assert self._current_size > 0, "Replay buffer is empty."
     if return_iterator:
-      return self._sample_iterator(batch_size, shuffle, include_partial_batch)
+      return self._sample_iterator(batch_size, shuffle, include_partial_batch,
+                                   repeat)
     else:
       assert batch_size != None, "Must provide batch size to sample randomly."
       return self._sample_random(batch_size)
@@ -137,7 +139,8 @@ class ReplayBuffer(object, metaclass=abc.ABCMeta):
     """Sample a batch of sizee batch_size randomly from the replay buffer"""
 
   @abc.abstractmethod
-  def _sample_iterator(self, batch_size, shuffle, include_partial_batch):
+  def _sample_iterator(self, batch_size, shuffle, include_partial_batch,
+                       repeat):
     """return a iterator from sampler"""
 
   @abc.abstractmethod
@@ -180,7 +183,8 @@ class RingReplayBuffer(ReplayBuffer):
 
     return transitions
 
-  def _sample_iterator(self, batch_size, shuffle, include_partial_batch):
+  def _sample_iterator(self, batch_size, shuffle, include_partial_batch,
+                       repeat):
     """return a iterator from sampler"""
     inds = np.arange(self.stored_steps)
     if shuffle:
@@ -195,19 +199,30 @@ class RingReplayBuffer(ReplayBuffer):
     if batch_size == None:
       batch_size = self.stored_steps
 
-    self._sample_iterator_curr_idx = 0
+    self._num_sampled = 0
 
     def _sample(batch_size):
-      if self._sample_iterator_curr_idx > self.stored_steps:
-        return None
-      if (self._sample_iterator_curr_idx + batch_size >
-          self.stored_steps) and (not include_partial_batch):
-        return None
-      batch = {
-          k: v[self._sample_iterator_curr_idx:self._sample_iterator_curr_idx +
-               batch_size] for k, v in transitions.items()
-      }
-      self._sample_iterator_curr_idx += batch_size
+      inds = None
+      if repeat:
+        inds = []
+        while len(inds) < batch_size:
+          remaining_size = batch_size - len(inds)
+          last_idx = min(
+              [self._num_sampled + remaining_size, self.stored_steps])
+          inds += list(range(self._num_sampled, last_idx))
+          self._num_sampled = last_idx % self.stored_steps
+      else:
+        if self._num_sampled >= self.stored_steps:
+          return None
+        if (self._num_sampled + batch_size > self.stored_steps):
+          if not include_partial_batch:
+            return None
+          else:
+            batch_size = self.stored_steps - self._num_sampled
+        inds = list(range(self._num_sampled, self._num_sampled + batch_size))
+        self._num_sampled += batch_size
+
+      batch = {k: v[inds] for k, v in transitions.items()}
       return batch
 
     return SampleIterator(_sample, batch_size)
@@ -291,7 +306,8 @@ class UniformReplayBuffer(ReplayBuffer):
 
     return transitions
 
-  def _sample_iterator(self, batch_size, shuffle, include_partial_batch):
+  def _sample_iterator(self, batch_size, shuffle, include_partial_batch,
+                       repeat):
 
     buffers = {}
     for key in self.buffers.keys():
@@ -318,19 +334,30 @@ class UniformReplayBuffer(ReplayBuffer):
     if batch_size == None:
       batch_size = self.stored_steps
 
-    self._sample_iterator_curr_idx = 0
+    self._num_sampled = 0
 
     def _sample(batch_size):
-      if self._sample_iterator_curr_idx > self.stored_steps:
-        return None
-      if (self._sample_iterator_curr_idx + batch_size >
-          self.stored_steps) and (not include_partial_batch):
-        return None
-      batch = {
-          k: v[self._sample_iterator_curr_idx:self._sample_iterator_curr_idx +
-               batch_size] for k, v in transitions.items()
-      }
-      self._sample_iterator_curr_idx += batch_size
+      inds = None
+      if repeat:
+        inds = []
+        while len(inds) < batch_size:
+          remaining_size = batch_size - len(inds)
+          last_idx = min(
+              [self._num_sampled + remaining_size, self.stored_steps])
+          inds += list(range(self._num_sampled, last_idx))
+          self._num_sampled = last_idx % self.stored_steps
+      else:
+        if self._num_sampled >= self.stored_steps:
+          return None
+        if (self._num_sampled + batch_size > self.stored_steps):
+          if not include_partial_batch:
+            return None
+          else:
+            batch_size = self.stored_steps - self._num_sampled
+        inds = list(range(self._num_sampled, self._num_sampled + batch_size))
+        self._num_sampled += batch_size
+
+      batch = {k: v[inds] for k, v in transitions.items()}
       return batch
 
     return SampleIterator(_sample, batch_size)
@@ -494,20 +521,24 @@ if __name__ == "__main__":
   print(replay_buffer.current_size)
   print(replay_buffer.full)
   #
+  print("##############")
   batch = replay_buffer.sample(10)
   print(batch["r"].shape)
   print(batch["r"])
   #
+  print("##############")
   iterator = replay_buffer.sample(1, return_iterator=True)
   for batch in iterator:
     print(batch["r"].shape)
     print(batch["r"])
   #
+  print("##############")
   iterator = replay_buffer.sample(1, return_iterator=True, shuffle=True)
   for batch in iterator:
     print(batch["r"].shape)
     print(batch["r"])
   #
+  print("##############")
   iterator = replay_buffer.sample(4,
                                   return_iterator=True,
                                   shuffle=True,
@@ -516,13 +547,63 @@ if __name__ == "__main__":
     print(batch["r"].shape)
     print(batch["r"])
   #
+  print("##############")
   iterator = replay_buffer.sample(return_iterator=True)
   for batch in iterator:
     print(batch["r"].shape)
     print(batch["r"])
   #
+  print("##############")
   iterator = replay_buffer.sample(return_iterator=True)
   iterator(1)  # set batch size to be 1
   for batch in iterator:
+    print(batch["r"].shape)
+    print(batch["r"])
+  #
+  print("##############")
+  batch = replay_buffer.sample(10, repeat=True)
+  print(batch["r"].shape)
+  print(batch["r"])
+  #
+  print("##############")
+  iterator = replay_buffer.sample(1, return_iterator=True, repeat=True)
+  for _ in range(10):
+    batch = next(iterator)
+    print(batch["r"].shape)
+    print(batch["r"])
+  #
+  print("##############")
+  iterator = replay_buffer.sample(1,
+                                  return_iterator=True,
+                                  shuffle=True,
+                                  repeat=True)
+  for _ in range(10):
+    batch = next(iterator)
+    print(batch["r"].shape)
+    print(batch["r"])
+  #
+  print("##############")
+  iterator = replay_buffer.sample(4,
+                                  return_iterator=True,
+                                  shuffle=True,
+                                  include_partial_batch=True,
+                                  repeat=True)
+  for _ in range(10):
+    batch = next(iterator)
+    print(batch["r"].shape)
+    print(batch["r"])
+  #
+  print("##############")
+  iterator = replay_buffer.sample(return_iterator=True, repeat=True)
+  for _ in range(10):
+    batch = next(iterator)
+    print(batch["r"].shape)
+    print(batch["r"])
+  #
+  print("##############")
+  iterator = replay_buffer.sample(return_iterator=True, repeat=True)
+  iterator(1)  # set batch size to be 1
+  for _ in range(10):
+    batch = next(iterator)
     print(batch["r"].shape)
     print(batch["r"])

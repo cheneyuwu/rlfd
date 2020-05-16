@@ -180,30 +180,32 @@ class TD3(object):
     self.n_step_replay_buffer.clear_buffer()
 
   def save(self, path):
-    """Pickles the current policy for later inspection.
-        """
+    """Pickles the current policy.
+    """
     with open(path, "wb") as f:
       pickle.dump(self, f)
+
+  def _merge_batch_experiences(self, batch1, batch2):
+    assert batch1.keys() == batch2.keys()
+    merged_batch = {}
+    for k in batch1.keys():
+      merged_batch[k] = np.concatenate((batch1[k], batch2[k]))
+
+    return merged_batch
 
   def sample_batch(self):
     if self.use_n_step_return:
       one_step_batch = self.replay_buffer.sample(self.batch_size // 2)
       n_step_batch = self.n_step_replay_buffer.sample(self.batch_size -
                                                       self.batch_size // 2)
-      assert one_step_batch.keys() == n_step_batch.keys()
-      batch = dict()
-      for k in one_step_batch.keys():
-        batch[k] = np.concatenate((one_step_batch[k], n_step_batch[k]))
+      batch = self._merge_batch_experiences(one_step_batch, n_step_batch)
     else:
       batch = self.replay_buffer.sample(self.batch_size)
 
     if self.sample_demo_buffer:
       rollout_batch = batch
       demo_batch = self.demo_buffer.sample(self.batch_size_demo)
-      assert rollout_batch.keys() == demo_batch.keys()
-      for k in rollout_batch.keys():
-        batch[k] = np.concatenate((rollout_batch[k], demo_batch[k]))
-
+      batch = self._merge_batch_experiences(rollout_batch, demo_batch)
     return batch
 
   @tf.function

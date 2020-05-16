@@ -116,6 +116,8 @@ class MAGE(object):
     self.model_num_networks = 7
     self.model_num_elites = 5
 
+    self.demo_batch_size_ratio = 0.5
+
     # play with demonstrations
     self.demo_strategy = demo_strategy
     assert self.demo_strategy in ["none", "bc", "gan", "nf"]
@@ -196,30 +198,32 @@ class MAGE(object):
     self.n_step_replay_buffer.clear_buffer()
 
   def save(self, path):
-    """Pickles the current policy for later inspection.
-        """
+    """Pickles the current policy.
+    """
     with open(path, "wb") as f:
       pickle.dump(self, f)
+
+  def _merge_batch_experiences(self, batch1, batch2):
+    assert batch1.keys() == batch2.keys()
+    merged_batch = {}
+    for k in batch1.keys():
+      merged_batch[k] = np.concatenate((batch1[k], batch2[k]))
+
+    return merged_batch
 
   def sample_batch(self):
     if self.use_n_step_return:
       one_step_batch = self.replay_buffer.sample(self.batch_size // 2)
       n_step_batch = self.n_step_replay_buffer.sample(self.batch_size -
                                                       self.batch_size // 2)
-      assert one_step_batch.keys() == n_step_batch.keys()
-      batch = dict()
-      for k in one_step_batch.keys():
-        batch[k] = np.concatenate((one_step_batch[k], n_step_batch[k]))
+      batch = self._merge_batch_experiences(one_step_batch, n_step_batch)
     else:
       batch = self.replay_buffer.sample(self.batch_size)
 
     if self.sample_demo_buffer:
       rollout_batch = batch
       demo_batch = self.demo_buffer.sample(self.batch_size_demo)
-      assert rollout_batch.keys() == demo_batch.keys()
-      for k in rollout_batch.keys():
-        batch[k] = np.concatenate((rollout_batch[k], demo_batch[k]))
-
+      batch = self._merge_batch_experiences(rollout_batch, demo_batch)
     return batch
 
   @tf.function
@@ -309,7 +313,6 @@ class MAGE(object):
       batch_size = 256  # used in mbpo
       max_logging = 5000  # maximum validation and evaluation number of experiences
 
-      training_epochs = 0
       training_steps = 0
       while True:  # 1 epoch of training (or use max training epochs maybe)
         validation_size = min(
@@ -319,9 +322,22 @@ class MAGE(object):
                                              return_iterator=True,
                                              include_partial_batch=True)
         validation_experiences = next(iterator)
-        iterator(batch_size)  # start training
+
+        if self.sample_demo_buffer:
+          demo_iterator = self.demo_buffer.sample(shuffle=True,
+                                                  return_iterator=True,
+                                                  repeat=True)
+          demo_batch_size = int(batch_size * self.demo_batch_size_ratio)
+          expl_batch_size = batch_size - demo_batch_size
+          iterator(expl_batch_size)
+          demo_iterator(demo_batch_size)
+        else:
+          iterator(batch_size)  # start training
 
         for experiences in iterator:
+          if self.sample_demo_buffer:
+            experiences = self._merge_batch_experiences(experiences,
+                                                        next(demo_iterator))
           training_exps_tf = {
               k + "_tf": tf.convert_to_tensor(experiences[k], dtype=tf.float32)
               for k in ["o", "o_2", "u", "r"]
@@ -346,11 +362,6 @@ class MAGE(object):
                   name='model_loss_{} vs model_training_step'.format(i),
                   data=hl,
                   step=self.model_training_step)
-
-        # logger.info("Model training epoch: {} holdout loss: {}".format(
-        #     training_epochs, holdout_loss))
-
-        training_epochs += 1
 
         if training_steps > max_training_steps:
           break
