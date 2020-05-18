@@ -347,6 +347,9 @@ class MAGE(object):
           training_steps += 1
           self.model_training_step.assign_add(1)
 
+          if training_steps > max_training_steps:
+            break
+
         # validation
         validation_exps_tf = {
             k + "_tf": tf.convert_to_tensor(validation_experiences[k],
@@ -365,6 +368,9 @@ class MAGE(object):
 
         if training_steps > max_training_steps:
           break
+
+      logger.info("Training Steps {}, Holdout loss: {}".format(
+          training_steps, holdout_loss))
 
       sorted_inds = np.argsort(holdout_loss)
       elites_inds = sorted_inds[:self.model_network.num_elites].tolist()
