@@ -358,16 +358,16 @@ class MAGE(object):
         }
         holdout_loss = self.evaluate_model_graph(**validation_exps_tf).numpy()
 
-        with tf.name_scope('MAGELosses/'):
-          with tf.name_scope('ModelLosses/'):
-            for i, hl in enumerate(holdout_loss):
-              tf.summary.scalar(
-                  name='model_loss_{} vs model_training_step'.format(i),
-                  data=hl,
-                  step=self.model_training_step)
-
         if training_steps > max_training_steps:
           break
+
+      with tf.name_scope('MAGELosses/'):
+        with tf.name_scope('ModelLosses/'):
+          for i, hl in enumerate(holdout_loss):
+            tf.summary.scalar(
+                name='model_loss_{} vs model_training_step'.format(i),
+                data=hl,
+                step=self.model_training_step)
 
       logger.info("Training Steps {}, Holdout loss: {}".format(
           training_steps, holdout_loss))
