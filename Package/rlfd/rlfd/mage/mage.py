@@ -345,7 +345,7 @@ class MAGE(object):
         training_steps += 1
         self.model_training_step.assign_add(1)
 
-        if training_steps > max_training_steps:
+        if training_steps >= max_training_steps:
           break
 
       # validation
@@ -356,7 +356,7 @@ class MAGE(object):
       }
       holdout_loss = self.evaluate_model_graph(**validation_exps_tf).numpy()
 
-      if training_steps > max_training_steps:
+      if training_steps >= max_training_steps:
         break
 
     with tf.name_scope('MAGELosses/'):
