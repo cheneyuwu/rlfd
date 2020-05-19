@@ -305,76 +305,74 @@ class MAGE(object):
     return model_loss
 
   def train_model(self):
-    with tf.summary.record_if(lambda: self.model_training_step % 500 == 0):
+    # TODO: move hyperparameters to config files
+    holdout_ratio = 0.2  # used in mbpo to determine validation dataset size (not used for now)
+    max_training_steps = 5000  # in mbpo this is based on time taken to train the model
+    batch_size = 256  # used in mbpo
+    max_logging = 5000  # maximum validation and evaluation number of experiences
 
-      # TODO: move hyperparameters to config files
-      holdout_ratio = 0.2  # used in mbpo to determine validation dataset size (not used for now)
-      max_training_steps = 5000  # in mbpo this is based on time taken to train the model
-      batch_size = 256  # used in mbpo
-      max_logging = 5000  # maximum validation and evaluation number of experiences
+    training_steps = 0
+    while True:  # 1 epoch of training (or use max training epochs maybe)
+      validation_size = min(
+          int(self.replay_buffer.stored_steps * holdout_ratio), max_logging)
+      iterator = self.replay_buffer.sample(batch_size=validation_size,
+                                           shuffle=True,
+                                           return_iterator=True,
+                                           include_partial_batch=True)
+      validation_experiences = next(iterator)
 
-      training_steps = 0
-      while True:  # 1 epoch of training (or use max training epochs maybe)
-        validation_size = min(
-            int(self.replay_buffer.stored_steps * holdout_ratio), max_logging)
-        iterator = self.replay_buffer.sample(batch_size=validation_size,
-                                             shuffle=True,
-                                             return_iterator=True,
-                                             include_partial_batch=True)
-        validation_experiences = next(iterator)
+      if self.sample_demo_buffer:
+        demo_iterator = self.demo_buffer.sample(shuffle=True,
+                                                return_iterator=True,
+                                                repeat=True)
+        demo_batch_size = int(batch_size * self.demo_batch_size_ratio)
+        expl_batch_size = batch_size - demo_batch_size
+        iterator(expl_batch_size)
+        demo_iterator(demo_batch_size)
+      else:
+        iterator(batch_size)  # start training
 
+      for experiences in iterator:
         if self.sample_demo_buffer:
-          demo_iterator = self.demo_buffer.sample(shuffle=True,
-                                                  return_iterator=True,
-                                                  repeat=True)
-          demo_batch_size = int(batch_size * self.demo_batch_size_ratio)
-          expl_batch_size = batch_size - demo_batch_size
-          iterator(expl_batch_size)
-          demo_iterator(demo_batch_size)
-        else:
-          iterator(batch_size)  # start training
-
-        for experiences in iterator:
-          if self.sample_demo_buffer:
-            experiences = self._merge_batch_experiences(experiences,
-                                                        next(demo_iterator))
-          training_exps_tf = {
-              k + "_tf": tf.convert_to_tensor(experiences[k], dtype=tf.float32)
-              for k in ["o", "o_2", "u", "r"]
-          }
-          self.train_model_graph(**training_exps_tf)
-
-          training_steps += 1
-          self.model_training_step.assign_add(1)
-
-          if training_steps > max_training_steps:
-            break
-
-        # validation
-        validation_exps_tf = {
-            k + "_tf": tf.convert_to_tensor(validation_experiences[k],
-                                            dtype=tf.float32)
+          experiences = self._merge_batch_experiences(experiences,
+                                                      next(demo_iterator))
+        training_exps_tf = {
+            k + "_tf": tf.convert_to_tensor(experiences[k], dtype=tf.float32)
             for k in ["o", "o_2", "u", "r"]
         }
-        holdout_loss = self.evaluate_model_graph(**validation_exps_tf).numpy()
+        self.train_model_graph(**training_exps_tf)
+
+        training_steps += 1
+        self.model_training_step.assign_add(1)
 
         if training_steps > max_training_steps:
           break
 
-      with tf.name_scope('MAGELosses/'):
-        with tf.name_scope('ModelLosses/'):
-          for i, hl in enumerate(holdout_loss):
-            tf.summary.scalar(
-                name='model_loss_{} vs model_training_step'.format(i),
-                data=hl,
-                step=self.model_training_step)
+      # validation
+      validation_exps_tf = {
+          k + "_tf": tf.convert_to_tensor(validation_experiences[k],
+                                          dtype=tf.float32)
+          for k in ["o", "o_2", "u", "r"]
+      }
+      holdout_loss = self.evaluate_model_graph(**validation_exps_tf).numpy()
 
-      logger.info("Training Steps {}, Holdout loss: {}".format(
-          training_steps, holdout_loss))
+      if training_steps > max_training_steps:
+        break
 
-      sorted_inds = np.argsort(holdout_loss)
-      elites_inds = sorted_inds[:self.model_network.num_elites].tolist()
-      self.model_network.set_elite_inds(elites_inds)
+    with tf.name_scope('MAGELosses/'):
+      with tf.name_scope('ModelLosses/'):
+        for i, hl in enumerate(holdout_loss):
+          tf.summary.scalar(
+              name='model_loss_{} vs model_training_step'.format(i),
+              data=hl,
+              step=self.model_training_step)
+
+    logger.info("Training Steps {}, Holdout loss: {}".format(
+        training_steps, holdout_loss))
+
+    sorted_inds = np.argsort(holdout_loss)
+    elites_inds = sorted_inds[:self.model_network.num_elites].tolist()
+    self.model_network.set_elite_inds(elites_inds)
 
   @tf.function
   def train_bc_graph(self, o, g, u):
