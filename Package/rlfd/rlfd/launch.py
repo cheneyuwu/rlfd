@@ -263,10 +263,8 @@ def main(targets, exp_dir, policy, save_dir, **kwargs):
             dirs=[exp_dir],
             save_dir=save_dir,
             xys=[
-                # "epoch:test/success_rate",
-                # "epoch:test/:reward_per_eps",
-                # "train/steps:test/success_rate",
-                "train/steps:test/reward_per_eps",
+                # "train/steps:test/reward_per_eps",
+                "Testing/AverageReturn vs EnvironmentSteps",
             ],
             smooth=True,
         )
@@ -285,12 +283,12 @@ def main(targets, exp_dir, policy, save_dir, **kwargs):
     #     if rank == 0:
     #         visualize_query_entry(exp_dir=exp_dir, save=True)
 
-    elif target == "check":
-      logger.info("\n\n=================================================")
-      logger.info("Check potential.")
-      logger.info("=================================================")
-      if rank == 0:
-        check_potential_entry(exp_dir=exp_dir)
+    # elif target == "check":
+    #   logger.info("\n\n=================================================")
+    #   logger.info("Check potential.")
+    #   logger.info("=================================================")
+    #   if rank == 0:
+    #     check_potential_entry(exp_dir=exp_dir)
 
     else:
       assert False, "Unknown target: {}".format(target)

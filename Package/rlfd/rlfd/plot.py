@@ -2,15 +2,18 @@ import json
 import os
 import os.path as osp
 import sys
+from datetime import datetime
 
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import tensorflow as tf
 from matplotlib import cm
+from tensorboard.backend.event_processing import event_accumulator
 
 from rlfd.utils.cmd_util import ArgParser
 from rlfd.utils.reader_util import load_csv
-from datetime import datetime
 
 matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode
 matplotlib.rcParams["pdf.fonttype"] = 42
@@ -62,16 +65,37 @@ def smooth_reward_curve(x, y, size=50):
   return xsmoo, ysmoo
 
 
+def convert_tensorboard_data_to_csv(path,
+                                    source_dir="summaries",
+                                    target_dir="csv_summaries"):
+  summary_iterator = event_accumulator.EventAccumulator(
+      osp.join(path, source_dir),
+      size_guidance={
+          "tensors": 0
+      },
+  ).Reload()
+  tags = summary_iterator.Tags()
+  for tag in tags["tensors"]:
+    # This is hardcoded in the tensorboard output
+    y_label, x_label = tag.split(" vs ")
+    xy_data = np.array([(event.step, tf.make_ndarray(event.tensor_proto))
+                        for event in summary_iterator.Tensors(tag)])
+    df = pd.DataFrame({y_label: xy_data[:, 1], x_label: xy_data[:, 0]})
+    tag = tag.replace("/", "_")
+    os.makedirs(osp.join(path, target_dir), exist_ok=True)
+    df.to_csv(osp.join(path, target_dir, tag))
+
+
 def load_results(root_dir_or_dirs):
   """
-    Load summaries of runs from a list of directories (including subdirectories)
-    Looking for directories with both params.json and progress.csv.
+  Load summaries of runs from a list of directories (including subdirectories)
+  Looking for directories with both params.json and progress.csv.
 
-    Arguments:
+  Arguments:
 
-    Returns:
-        allresults - list of dicts that contains "progress" and "params".
-    """
+  Returns:
+      allresults - list of dicts that contains "progress" and "params".
+  """
   if isinstance(root_dir_or_dirs, str):
     rootdirs = [osp.expanduser(root_dir_or_dirs)]
   else:
@@ -79,21 +103,34 @@ def load_results(root_dir_or_dirs):
   allresults = []
   for rootdir in rootdirs:
     assert osp.exists(rootdir), "%s doesn't exist" % rootdir
-    for dirname, _, files in os.walk(rootdir):
+    for dirname, subdirs, files in os.walk(rootdir):
       if all([file in files for file in ["params.json", "progress.csv"]]):
         result = {"dirname": dirname}
-        progcsv = os.path.join(dirname, "progress.csv")
-        result["progress"] = load_csv(progcsv)
-        if result["progress"] is None:
-          continue
-        paramsjson = os.path.join(
+        # load parameters
+        paramsjson = osp.join(
             dirname, "params_renamed.json")  # search for the renamed file first
-        if not os.path.exists(paramsjson):
-          # continue # Note: this is only for plotting old figures
-          paramsjson = os.path.join(dirname, "params.json")
+        if not osp.exists(paramsjson):
+          paramsjson = osp.join(dirname, "params.json")
+        # load progress (for old plot)
+        result["progress"] = dict()
+        progcsv = osp.join(dirname, "progress.csv")
+        progress = load_csv(progcsv)
+        if progress is None:
+          continue
+        result["progress"]["progress"] = progress
+        # load tensorboard progress (for new plot)
+        source_dir = "summaries"
+        target_dir = "csv_summaries"
+        if source_dir in subdirs:
+          convert_tensorboard_data_to_csv(dirname, source_dir, target_dir)
+          for csv in os.listdir(osp.join(dirname, target_dir)):
+            progress = load_csv(osp.join(dirname, target_dir, csv))
+            result["progress"][csv] = progress
         with open(paramsjson, "r") as f:
           result["params"] = json.load(f)
+
         allresults.append(result)
+
   return allresults
 
 
@@ -108,8 +145,14 @@ def plot_results(allresults, xys, target_dir, smooth=0):
     assert config != ""
 
     for xy in xys:
-      x = results["progress"][xy.split(":")[0]]
-      y = results["progress"][xy.split(":")[1]]
+      if ":" in xy:  # old way of plotting data
+        x = results["progress"]["progress"][xy.split(":")[0]]
+        y = results["progress"]["progress"][xy.split(":")[1]]
+      else:  # new way of plotting data (from tensorboard)
+        csv_name = xy.replace("/", "_")
+        y_label, x_label = xy.split(" vs ")
+        x = results["progress"][csv_name][x_label]
+        y = results["progress"][csv_name][y_label]
 
       # Process and smooth data.
       if smooth:
@@ -149,8 +192,11 @@ def plot_results(allresults, xys, target_dir, smooth=0):
 
       ax = fig.add_subplot(len(xys), len(data.keys()),
                            env_n * len(data.keys()) + i + 1)
-      x_label = xy.split(":")[0]
-      y_label = xy.split(":")[1]
+      if ":" in xy:
+        x_label = xy.split(":")[0]
+        y_label = xy.split(":")[1]
+      else:
+        y_label, x_label = xy.split(" vs ")
       for j, config in enumerate(sorted(data[env_id][xy].keys())):
         xs, ys = zip(*data[env_id][xy][config])
         if config == "default":
@@ -193,24 +239,20 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                         alpha=0.2,
                         color=colors[j % len(colors)])
         #
-        # ax.set_xlabel(x_label)
-        # ax.set_ylabel(y_label)
-        ax.set_xlabel("Number of Env. Steps")
-        ax.set_ylabel("Average Episode Return")
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        # ax.set_xlabel("Number of Env. Steps")
+        # ax.set_ylabel("Average Episode Return")
 
         # ax.set_ylim(-20, -5) # for reacher 2d
         # ax.set_ylim(-45, -5)  # for reacher 2d
         # ax.set_ylim(-150, -0) # for reacher 2d
 
-        # ax.fill_between(
-        #     x[1500:], -1000, 10000, alpha=0.2, color="gray"
-        # )
-
         ax.tick_params(axis="x", pad=5, length=5, width=1)
         ax.tick_params(axis="y", pad=5, length=5, width=1)
         ax.ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
 
-        # ax.set_title(env_id)
+        ax.set_title(env_id)
 
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
@@ -231,8 +273,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
 
   now = datetime.now()  # current date and time
   date_time = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
-  save_path = os.path.join(target_dir,
-                           "Plot_{}_{}.jpg".format("name", date_time))
+  save_path = osp.join(target_dir, "Plot_{}_{}.jpg".format("name", date_time))
   print("Saving image to " + save_path)
   plt.savefig(save_path, dpi=200)
   plt.show()
@@ -260,11 +301,8 @@ ap.parser.add_argument(
     help="value on x and y axis, splitted by :",
     type=str,
     default=[
-        "epoch:test/success_rate",
-        "epoch:test/total_shaping_reward",
-        "epoch:test/total_reward",
-        "epoch:test/mean_Q",
-        "epoch:test/mean_Q_plus_P",
+        "train/steps:test/reward_per_eps",
+        "Testing/AverageReturn vs EnvironmentSteps",
     ],
     action="append",
     dest="xys",
