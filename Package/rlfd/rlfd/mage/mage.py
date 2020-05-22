@@ -52,7 +52,9 @@ class MAGE(object):
       # model learning
       model_update_interval,
       # mage critic loss weight
+      use_model_for_td3_critic_loss,
       critic_loss_weight,
+      mage_loss_weight,
       # play with demonstrations
       buffer_size,
       batch_size_demo,
@@ -106,7 +108,9 @@ class MAGE(object):
     self.n_step_return_steps = eps_length // 5
 
     # mage critic loss weight
+    self.use_model_for_td3_critic_loss = use_model_for_td3_critic_loss
     self.critic_loss_weight = critic_loss_weight
+    self.mage_loss_weight = mage_loss_weight
 
     # model learning
     self.model_update_interval = model_update_interval
@@ -545,34 +549,34 @@ class MAGE(object):
 
   def critic_loss_graph(self, o, g, o_2, g_2, u, r, n, done):
 
-    # # compute model output
-    # (mean, var) = self.model_network((o, u))
-    # delta_o_mean, r_mean = mean
-    # o_var, r_var = var
+    if self.use_model_for_td3_critic_loss:
+      # compute model output
+      (mean, var) = self.model_network((o, u))
+      delta_o_mean, r_mean = mean
+      o_var, r_var = var
 
-    # o_mean = o + delta_o_mean
-    # o_std, r_std = tf.sqrt(o_var), tf.sqrt(r_var)
+      o_mean = o + delta_o_mean
+      o_std, r_std = tf.sqrt(o_var), tf.sqrt(r_var)
 
-    # # choose between deterministic and non-deterministic
-    # o_sample = o_mean + tf.random.normal(o_mean.shape) * o_std
-    # r_sample = r_mean + tf.random.normal(r_mean.shape) * r_std
+      # choose between deterministic and non-deterministic
+      o_sample = o_mean + tf.random.normal(o_mean.shape) * o_std
+      r_sample = r_mean + tf.random.normal(r_mean.shape) * r_std
 
-    # # choose a random netowrk
-    # batch_inds = tf.range(o_sample.shape[1])
-    # model_inds = tf.random.uniform(shape=[o_sample.shape[1]],
-    #                                minval=0,
-    #                                maxval=self.model_network.num_elites,
-    #                                dtype=tf.dtypes.int32)
-    # model_inds = tf.gather(self.model_network.get_elite_inds(), model_inds)
-    # indices = tf.stack([model_inds, batch_inds], axis=-1)
+      # choose a random netowrk
+      batch_inds = tf.range(o_sample.shape[1])
+      model_inds = tf.random.uniform(shape=[o_sample.shape[1]],
+                                     minval=0,
+                                     maxval=self.model_network.num_elites,
+                                     dtype=tf.dtypes.int32)
+      model_inds = tf.gather(self.model_network.get_elite_inds(), model_inds)
+      indices = tf.stack([model_inds, batch_inds], axis=-1)
 
-    # o_sample = tf.gather_nd(o_sample, indices)
-    # r_sample = tf.gather_nd(r_sample, indices)
+      o_sample = tf.gather_nd(o_sample, indices)
+      r_sample = tf.gather_nd(r_sample, indices)
 
-    # # Replace reward and next observation
-    # o_2 = o_sample
-    # norm_o_2 = self.o_stats.normalize(o_2)
-    # r = r_sample
+      # Replace reward and next observation
+      o_2 = o_sample
+      r = r_sample
 
     # normalize observations
     norm_o = self.o_stats.normalize(o)
@@ -686,7 +690,8 @@ class MAGE(object):
       critic_loss = self.critic_loss_graph(o, g, o_2, g_2, u, r, n, done)
       critic_gradient_loss = self.critic_gradient_loss_graph(
           o, g, o_2, g_2, u, r, n, done)
-      mage_critic_loss = critic_gradient_loss + self.critic_loss_weight * critic_loss
+      mage_critic_loss = (self.mage_loss_weight * critic_gradient_loss +
+                          self.critic_loss_weight * critic_loss)
 
     critic_grads = tape.gradient(mage_critic_loss, critic_trainable_weights)
 
