@@ -49,7 +49,7 @@ default_params = {
         # model learning
         "model_update_interval": 250,
         # mage critic loss weight
-        "use_model_for_td3_critic_loss": True,
+        "use_model_for_td3_critic_loss": False,
         "critic_loss_weight": 0.01,
         "mage_loss_weight": 1.0,
         "bc_params": {
