@@ -143,6 +143,11 @@ class MAGE(object):
     self.model_training_step = tf.Variable(0, trainable=False, dtype=tf.int64)
     self.exploration_step = tf.Variable(0, trainable=False, dtype=tf.int64)
 
+    # for logging only
+    self.model_training_step_per_iter = tf.Variable(0,
+                                                    trainable=False,
+                                                    dtype=tf.int64)
+
   def _increment_exploration_step(self, num_steps):
     self.exploration_step.assign_add(num_steps)
     self._policy_inspect(summarize=True)
@@ -338,7 +343,7 @@ class MAGE(object):
     batch_size = 256  # used in mbpo
     max_logging = 5000  # maximum validation and evaluation number of experiences
 
-    training_steps = tf.Variable(0, trainable=False, dtype=tf.int64)
+    self.model_training_step_per_iter.assign(0)
     while True:  # 1 epoch of training (or use max training epochs maybe)
       validation_size = min(
           int(self.replay_buffer.stored_steps * holdout_ratio), max_logging)
@@ -369,10 +374,10 @@ class MAGE(object):
         }
         self.train_model_graph(**training_exps_tf)
 
-        training_steps.assign_add(1)
+        self.model_training_step_per_iter.assign_add(1)
         self.model_training_step.assign_add(1)
 
-        if training_steps >= max_training_steps:
+        if self.model_training_step_per_iter >= max_training_steps:
           break
 
       validation_exps_tf = {
@@ -381,14 +386,15 @@ class MAGE(object):
       }
       # Note: has to be a lambda function, since it has to be evaluated inside a
       # tensorflow graph
-      with tf.summary.record_if(lambda: training_steps >= max_training_steps):
+      with tf.summary.record_if(
+          lambda: self.model_training_step_per_iter >= max_training_steps):
         holdout_loss = self.evaluate_model_graph(**validation_exps_tf).numpy()
 
-      if training_steps >= max_training_steps:
+      if self.model_training_step_per_iter >= max_training_steps:
         break
 
     logger.info("Training Steps {}, Holdout loss: {}".format(
-        training_steps.numpy(), holdout_loss))
+        self.model_training_step_per_iter.numpy(), holdout_loss))
 
     sorted_inds = np.argsort(holdout_loss)
     elites_inds = sorted_inds[:self.model_network.num_elites].tolist()
