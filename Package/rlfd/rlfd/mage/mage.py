@@ -231,57 +231,80 @@ class MAGE(object):
     return batch
 
   @tf.function
-  def evaluate_model_graph(self, o_tf, o_2_tf, u_tf, r_tf):
-    (mean, var) = self.model_network((o_tf, u_tf))
+  def evaluate_model_graph(self, o, o_2, u, r):
+
+    (mean, var) = self.model_network((o, u))
     delta_o_mean, r_mean = mean
     o_var, r_var = var
 
     # Use delta observation as target
-    delta_o_2_tf = o_2_tf - o_tf
+    delta_o_2 = o_2 - o
 
     o_mean_loss = tf.reduce_mean(
-        tf.square(delta_o_mean - delta_o_2_tf),
+        tf.square(delta_o_mean - delta_o_2),
         axis=[-2, -1],
     )
     r_mean_loss = tf.reduce_mean(
-        tf.square(r_mean - r_tf),
+        tf.square(r_mean - r),
         axis=[-2, -1],
     )
 
     model_loss = o_mean_loss + r_mean_loss
 
+    # For debugging
+    model_r = tf.reduce_mean(r_mean, axis=[-2, -1])
+    true_r = tf.reduce_mean(r, axis=[-2, -1])
+
+    with tf.name_scope('ModelLosses/'):
+      for i in range(self.model_network.num_networks):
+        tf.summary.scalar(
+            name='model_loss_{} vs model_training_step'.format(i),
+            data=model_loss[i],
+            step=self.model_training_step,
+        )
+        tf.summary.scalar(
+            name='model_reward_{} vs model_training_step'.format(i),
+            data=model_r[i],
+            step=self.model_training_step,
+        )
+      tf.summary.scalar(
+          name='true_reward vs model_training_step',
+          data=true_r,
+          step=self.model_training_step,
+      )
+
     return model_loss
 
   @tf.function
-  def train_model_graph(self, o_tf, o_2_tf, u_tf, r_tf):
+  def train_model_graph(self, o, o_2, u, r):
 
     # TODO: normalize observations
-    # o_tf = self.o_stats.normalize(o_tf)
-    # norm_o_2_tf = self.o_stats.normalize(o_2_tf)
+    # o = self.o_stats.normalize(o)
+    # norm_o_2 = self.o_stats.normalize(o_2)
 
     random_idx = tf.random.uniform(
-        shape=[self.model_network.num_networks, o_tf.shape[0]],
+        shape=[self.model_network.num_networks, o.shape[0]],
         minval=0,
-        maxval=o_tf.shape[0],
+        maxval=o.shape[0],
         dtype=tf.dtypes.int32,
     )
-    o_tf = tf.gather(o_tf, random_idx)
-    o_2_tf = tf.gather(o_2_tf, random_idx)
-    u_tf = tf.gather(u_tf, random_idx)
-    r_tf = tf.gather(r_tf, random_idx)
+    o = tf.gather(o, random_idx)
+    o_2 = tf.gather(o_2, random_idx)
+    u = tf.gather(u, random_idx)
+    r = tf.gather(r, random_idx)
 
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(self.model_network.trainable_variables)
 
-      (mean, var) = self.model_network((o_tf, u_tf))
+      (mean, var) = self.model_network((o, u))
       delta_o_mean, r_mean = mean
       o_var, r_var = var
 
       # Use delta observation as target
-      delta_o_2_tf = o_2_tf - o_tf
+      delta_o_2 = o_2 - o
 
       o_mean_loss = tf.reduce_mean(
-          tf.square(delta_o_mean - delta_o_2_tf) / o_var,
+          tf.square(delta_o_mean - delta_o_2) / o_var,
           axis=[-2, -1],
       )
       o_var_loss = tf.reduce_mean(
@@ -289,7 +312,7 @@ class MAGE(object):
           axis=[-2, -1],
       )
       r_mean_loss = tf.reduce_mean(
-          tf.square(r_mean - r_tf) / r_var,
+          tf.square(r_mean - r) / r_var,
           axis=[-2, -1],
       )
       r_var_loss = tf.reduce_mean(tf.math.log(r_var), axis=[-2, -1])
@@ -315,7 +338,7 @@ class MAGE(object):
     batch_size = 256  # used in mbpo
     max_logging = 5000  # maximum validation and evaluation number of experiences
 
-    training_steps = 0
+    training_steps = tf.Variable(0, trainable=False, dtype=tf.int64)
     while True:  # 1 epoch of training (or use max training epochs maybe)
       validation_size = min(
           int(self.replay_buffer.stored_steps * holdout_ratio), max_logging)
@@ -341,38 +364,31 @@ class MAGE(object):
           experiences = self._merge_batch_experiences(experiences,
                                                       next(demo_iterator))
         training_exps_tf = {
-            k + "_tf": tf.convert_to_tensor(experiences[k], dtype=tf.float32)
+            k: tf.convert_to_tensor(experiences[k], dtype=tf.float32)
             for k in ["o", "o_2", "u", "r"]
         }
         self.train_model_graph(**training_exps_tf)
 
-        training_steps += 1
+        training_steps.assign_add(1)
         self.model_training_step.assign_add(1)
 
         if training_steps >= max_training_steps:
           break
 
-      # validation
       validation_exps_tf = {
-          k + "_tf": tf.convert_to_tensor(validation_experiences[k],
-                                          dtype=tf.float32)
+          k: tf.convert_to_tensor(validation_experiences[k], dtype=tf.float32)
           for k in ["o", "o_2", "u", "r"]
       }
-      holdout_loss = self.evaluate_model_graph(**validation_exps_tf).numpy()
+      # Note: has to be a lambda function, since it has to be evaluated inside a
+      # tensorflow graph
+      with tf.summary.record_if(lambda: training_steps >= max_training_steps):
+        holdout_loss = self.evaluate_model_graph(**validation_exps_tf).numpy()
 
       if training_steps >= max_training_steps:
         break
 
-    with tf.name_scope('MAGELosses/'):
-      with tf.name_scope('ModelLosses/'):
-        for i, hl in enumerate(holdout_loss):
-          tf.summary.scalar(
-              name='model_loss_{} vs model_training_step'.format(i),
-              data=hl,
-              step=self.model_training_step)
-
     logger.info("Training Steps {}, Holdout loss: {}".format(
-        training_steps, holdout_loss))
+        training_steps.numpy(), holdout_loss))
 
     sorted_inds = np.argsort(holdout_loss)
     elites_inds = sorted_inds[:self.model_network.num_elites].tolist()
@@ -575,6 +591,8 @@ class MAGE(object):
       r_sample = tf.gather_nd(r_sample, indices)
 
       # Replace reward and next observation
+      o_2_real = o_2
+      r_real = r
       o_2 = o_sample
       r = r_sample
 
@@ -636,6 +654,14 @@ class MAGE(object):
       tf.summary.scalar(name='critic_loss vs td3_training_step',
                         data=critic_loss,
                         step=self.td3_training_step)
+
+      if self.use_model_for_td3_critic_loss:
+        tf.summary.scalar(name='true_reward vs td3_training_step',
+                          data=tf.reduce_mean(r_real),
+                          step=self.td3_training_step)
+        tf.summary.scalar(name='model_reward vs td3_training_step',
+                          data=tf.reduce_mean(r),
+                          step=self.td3_training_step)
 
     return critic_loss
 
