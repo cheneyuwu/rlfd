@@ -15,7 +15,7 @@ from tensorboard.backend.event_processing import event_accumulator
 from rlfd.utils.cmd_util import ArgParser
 from rlfd.utils.reader_util import load_csv
 
-matplotlib.use("TkAgg")  # Can change to 'Agg' for non-interactive mode
+matplotlib.use("Agg")  # Can change to 'Agg' for non-interactive mode
 matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["ps.fonttype"] = 42
 
