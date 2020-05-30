@@ -21,7 +21,7 @@ class ModelNetwork(tf.keras.Model):
     for size in layer_sizes:
       layer = tf.keras.layers.Dense(
           units=size,
-          activation=tf.nn.swish,  # TODO: change to "swish" once tf2.2 is ready
+          activation="swish",
           kernel_initializer=tf.keras.initializers.GlorotNormal(),
           bias_initializer=None,
       )
