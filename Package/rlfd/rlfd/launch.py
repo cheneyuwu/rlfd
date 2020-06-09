@@ -12,13 +12,14 @@ import tensorflow as tf
 
 from rlfd import logger, plot, train
 from rlfd.utils import mpi_util
+from rlfd.demo_utils import generate_demo
+from rlfd import evaluate
+
 # TODO: remove include from the old repo
 # tf debug
 # from td3fd.ddpg.debug.generate_query import main as generate_query_entry
 # from td3fd.ddpg.debug.visualize_query import main as visualize_query_entry
 # from td3fd.ddpg2.debug.check_potential import main as check_potential_entry
-from td3fd.demo_util.generate_demo import main as demo_entry
-from td3fd.evaluate import main as evaluate_entry
 
 # limit gpu memory growth for tensorflow
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -258,7 +259,7 @@ def main(targets, exp_dir, policy, save_dir, **kwargs):
           "Using policy file from {} to generate demo data.".format(policy))
       logger.info("=================================================")
       if rank == 0:
-        demo_entry(policy=policy, root_dir=exp_dir)
+        generate_demo.main(policy=policy, root_dir=exp_dir)
 
     elif target == "evaluate":
       assert policy != None
@@ -266,7 +267,7 @@ def main(targets, exp_dir, policy, save_dir, **kwargs):
       logger.info("Evaluating using policy file from {}.".format(policy))
       logger.info("=================================================")
       if rank == 0:
-        evaluate_entry(policy=policy)
+        evaluate.main(policy=policy)
 
     elif target == "plot":
       logger.info("\n\n=================================================")
@@ -315,7 +316,7 @@ def main(targets, exp_dir, policy, save_dir, **kwargs):
 
 if __name__ == "__main__":
 
-  from td3fd.util.cmd_util import ArgParser
+  from rlfd.utils.cmd_util import ArgParser
 
   exp_parser = ArgParser(allow_unknown_args=False)
   exp_parser.parser.add_argument(

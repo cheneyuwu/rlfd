@@ -28,4 +28,4 @@
   - (goto Package folder) install rlfd
     - `pip install -e rlfd --no-deps`
   - extra packages that should be installed
-    - `pip install black certifi chardet urllib3 requests idna gtimer matplotlib pandas future lxml pyopengl`
+    - `pip install certifi chardet urllib3 requests idna gtimer matplotlib pandas future lxml pyopengl`
