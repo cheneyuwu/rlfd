@@ -17,4 +17,4 @@ params_config["ddpg"]["initialize_num_epochs"] = 2000
 # TD3_BC
 params_config["ddpg"]["bc_params"]["q_filter"] = (False,)
 params_config["ddpg"]["bc_params"]["prm_loss_weight"] = (1e-4,)
-params_config["seed"] = tuple(range(1))
+params_config["seed"] = tuple(range(5))
