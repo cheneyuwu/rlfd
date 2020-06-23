@@ -14,3 +14,7 @@
 [submodule "Package/dm_control2gym"]
 	path = Package/dm_control2gym
 	url = git@github.com:cheneyuwu/dm_control2gym.git
+[submodule "Package/mj_envs"]
+	path = Package/mj_envs
+	url = git@github.com:anair13/mj_envs.git
+	branch = master
