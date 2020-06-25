@@ -2,23 +2,22 @@
 
 #SBATCH --account=def-florian7
 #SBATCH --nodes=1
+#SBATCH --cpus-per-task=10         # maximum CPU cores per GPU request: 6 on Cedar, 16 on Graham.
 #SBATCH --gres=gpu:1              # request GPU "generic resource"
-#SBATCH --cpus-per-task=6         # maximum CPU cores per GPU request: 6 on Cedar, 16 on Graham.
-#SBATCH --tasks-per-node=1               
 #SBATCH --mem-per-cpu=4GB    
+#SBATCH --tasks-per-node=1               
 #SBATCH --time=01-00:00:00        # time format: day-hour:min:sec
 #SBATCH --job-name=train             
 #SBATCH --output=job-%x-%j.out
 
 # Parameters
-worker_num=0  # Must be one less that the total number of nodes
-NUM_CPUS=20  # nodes * cpu per node
+NUM_NODES=1  # nodes
 TRAINING_FILE="<parameters>.py"
 
 # Setup
 module load nixpkgs/16.09  intel/2018.3  cuda/10.0  cudnn/7.5  python/3.6  openmpi/3.1.2  mpi4py/3.0.0
 source /home/yuchenwu/.bashrc
-source /home/yuchenwu/TD3fD-through-Shaping-using-Generative-Models/venv/bin/activate
+source /home/yuchenwu/TD3fD-through-Shaping-using-Generative-Models/venv2/bin/activate
 nvidia-smi --compute-mode=0
 source ${RLProject}/setup.sh
 # for pytorch
@@ -29,7 +28,7 @@ nodes_array=( $nodes )
 
 node1=${nodes_array[0]}
 
-ip_prefix=$(srun --nodes=1 --ntasks=1 -w $node1 hostname --ip-address)  # Making address
+ip_prefix=$(srun --nodes=1 --ntasks=1 -w $node1 hostname --ip-address | xargs)  # Making address, xargs to remove trailing spaces
 suffix=':6379'
 ip_head=$ip_prefix$suffix
 redis_password=$(uuidgen)
@@ -40,7 +39,7 @@ sleep 5
 # the worker will not be able to connect to redis. In case of longer delay,
 # adjust the sleeptime above to ensure proper order.
 
-for ((  i=1; i<=$worker_num; i++ ))
+for ((  i=1; i<$NUM_NODES; i++ ))
 do
   node2=${nodes_array[$i]}
   srun --nodes=1 --ntasks=1 -w $node2 ray start --block --address=$ip_head --redis-password=$redis_password & # Starting the workers
@@ -49,4 +48,4 @@ do
 done
 
 # Launch the training process
-python -u -m td3fd.launch --redis_password $redis_password --ip_head $ip_head --targets train:${TRAINING_FILE} --num_cpus ${NUM_CPUS}
+python -u -m td3fd.launch --redis_password $redis_password --ip_head $ip_head --targets tune:${TRAINING_FILE}
