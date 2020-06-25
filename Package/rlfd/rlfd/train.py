@@ -33,6 +33,17 @@ def main(root_dir, **kwargs):
   with open(param_file, "r") as f:
     params = json.load(f)
 
+  # Limit gpu memory growth for tensorflow
+  physical_gpus = tf.config.experimental.list_physical_devices("GPU")
+  try:
+    for gpu in physical_gpus:
+      tf.config.experimental.set_memory_growth(gpu, True)
+    logical_gpus = tf.config.experimental.list_logical_devices("GPU")
+    print("Found", len(physical_gpus), "physical GPUs", len(logical_gpus),
+          "logical GPUs")
+  except RuntimeError as e:
+    print(e)  # Memory growth must be set before GPUs have been initialized
+
   # Launch the training script
   if params["alg"] == "td3":
     td3_train.train(root_dir=root_dir, params=params)
