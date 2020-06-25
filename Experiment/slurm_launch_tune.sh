@@ -2,7 +2,7 @@
 
 #SBATCH --account=def-florian7
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=10         # maximum CPU cores per GPU request: 6 on Cedar, 16 on Graham.
+#SBATCH --cpus-per-task=10        # maximum CPU cores per GPU request: 6 on Cedar, 16 on Graham.
 #SBATCH --gres=gpu:1              # request GPU "generic resource"
 #SBATCH --mem-per-cpu=4GB    
 #SBATCH --tasks-per-node=1               
@@ -10,8 +10,10 @@
 #SBATCH --job-name=train             
 #SBATCH --output=job-%x-%j.out
 
-# Parameters
-NUM_NODES=1  # nodes
+# Parameters (make sure it is consistent with the resources required above)
+NUM_NODES=1
+NUM_CPU_PER_NODE=10
+NUM_GPU_PER_NODE=1
 TRAINING_FILE="<parameters>.py"
 
 # Setup
@@ -48,4 +50,5 @@ do
 done
 
 # Launch the training process
-python -u -m td3fd.launch --redis_password $redis_password --ip_head $ip_head --targets tune:${TRAINING_FILE}
+let NUM_CPUS=${NUM_CPU_PER_NODE}*${NUM_NODES} NUM_GPUS=${NUM_GPU_PER_NODE}*${NUM_NODES}
+python -u -m rlfd.launch --redis_password $redis_password --ip_head $ip_head --num_cpus $NUM_CPUS --num_gpus $NUM_GPUS --targets tune:${TRAINING_FILE}
