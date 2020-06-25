@@ -155,8 +155,8 @@ def transform_config_name(config_name):
   return config_name
 
 
-def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, num_nodes,
-         ip_head, redis_password, **kwargs):
+def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, ip_head,
+         redis_password, **kwargs):
 
   # Consider rank as pid.
   comm = MPI.COMM_WORLD if MPI is not None else None
@@ -300,17 +300,16 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, num_nodes,
           demo_dest = os.path.join(k, "demo_data.npz")
           if os.path.isfile(demo_file):
             shutil.copyfile(demo_file, demo_dest)
-        ray.init(num_cpus=num_cpus,
-                 num_gpus=num_gpus,
+        ray.init(num_cpus=num_cpus if not ip_head else None,
+                 num_gpus=num_gpus if not ip_head else None,
                  address=ip_head,
                  redis_password=redis_password)
-        total_resources = ray.cluster_resources()
         tune.run(train_tune.main,
                  verbose=1,
                  local_dir=os.path.join(exp_dir, "config_" + config_name),
                  resources_per_trial={
                      "cpu": 1,
-                     "gpu": total_resources["GPU"] / total_resources["CPU"],
+                     "gpu": num_gpus / num_cpus,
                  },
                  config=dict(root_dir=exp_dir,
                              config=config_name,
@@ -409,13 +408,13 @@ if __name__ == "__main__":
       "--num_cpus",
       help="ray.init num_cpus",
       type=int,
-      default=None,
+      default=1,
   )
   exp_parser.parser.add_argument(
       "--num_gpus",
       help="ray.init num_gpus",
       type=int,
-      default=None,
+      default=0,
   )
   # Options below are cluster specific
   exp_parser.parser.add_argument(
