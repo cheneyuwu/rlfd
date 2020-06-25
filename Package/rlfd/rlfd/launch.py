@@ -1,4 +1,5 @@
 import argparse
+import collections
 import copy
 import importlib
 import json
@@ -7,10 +8,11 @@ import shutil
 import sys
 
 import mujoco_py  # include at the beginning (bug on compute canada cluster)
-# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # disalbe tf log infos
 import tensorflow as tf
+import ray
+from ray import tune
 
-from rlfd import logger, plot, train
+from rlfd import logger, plot, train, train_tune
 from rlfd.utils import mpi_util
 from rlfd.demo_utils import generate_demo
 from rlfd import evaluate
@@ -21,24 +23,12 @@ from rlfd import evaluate
 # from td3fd.ddpg.debug.visualize_query import main as visualize_query_entry
 # from td3fd.ddpg2.debug.check_potential import main as check_potential_entry
 
-# limit gpu memory growth for tensorflow
-gpus = tf.config.experimental.list_physical_devices("GPU")
-if gpus:
-  try:
-    # Currently, memory growth needs to be the same across GPUs
-    for gpu in gpus:
-      tf.config.experimental.set_memory_growth(gpu, True)
-    logical_gpus = tf.config.experimental.list_logical_devices("GPU")
-    print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
-  except RuntimeError as e:
-    # Memory growth must be set before GPUs have been initialized
-    print(e)
-
 try:
   from mpi4py import MPI
 except ImportError:
   MPI = None
 
+# Tensorflow environment setup
 os.environ["TF_DETERMINISTIC_OPS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 tf.get_logger().setLevel('ERROR')
@@ -86,6 +76,30 @@ def generate_params(root_dir, param_config):
       for params in res.values():
         params[param_name] = param_val
   return res
+
+
+def get_search_params(param_config):
+  """Returns a list of parameter keys we want to grid-search for and a dict of 
+  grid-search values.
+  """
+
+  def update_dictionary(dictionary, key, value):  # without overwriting keys
+    while key in dictionary.keys():
+      key += "."
+    dictionary[key] = value
+
+  search_params_list = []
+  search_params_dict = collections.OrderedDict()
+  for param_name, param_val in param_config.items():
+    if type(param_val) == tuple:
+      search_params_list += [param_name]
+      update_dictionary(search_params_dict, param_name,
+                        tune.grid_search(list(param_val)))
+    elif type(param_val) == dict:
+      search_params_list += get_search_params(param_val)[0]
+      for k, v in get_search_params(param_val)[1].items():
+        update_dictionary(search_params_dict, k, v)
+  return search_params_list, search_params_dict
 
 
 def transform_config_name(config_name):
@@ -141,7 +155,8 @@ def transform_config_name(config_name):
   return config_name
 
 
-def main(targets, exp_dir, policy, save_dir, **kwargs):
+def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, num_nodes,
+         ip_head, redis_password, **kwargs):
 
   # Consider rank as pid.
   comm = MPI.COMM_WORLD if MPI is not None else None
@@ -252,6 +267,56 @@ def main(targets, exp_dir, policy, save_dir, **kwargs):
       if comm is not None:
         comm.Barrier()
 
+    elif "tune:" in target:
+      logger.info("\n\n=================================================")
+      logger.info("Launching the training experiment (with ray.tune)!")
+      logger.info("=================================================")
+      # adding checking
+      config_file = target.replace("tune:", "")
+      params_configs = import_param_config(config_file)
+      assert len(params_configs) == 1, "Only support 1 config now."
+      params_config = params_configs[0]
+      dir_param_dict = generate_params(exp_dir, params_config)
+      config_name = params_config.pop("config")
+      config_name = config_name[0] if type(
+          config_name) == tuple else config_name
+      search_params_list, search_params_dict = get_search_params(params_config)
+      # store json config file to the target directory
+      if rank == 0:
+        for k, v in dir_param_dict.items():
+          if os.path.exists(k):  # COMMENT out this check for restarting
+            logger.info(
+                "Directory {} already exists! Remove it? [Y/n]".format(k))
+            remove = input()
+            if remove != "y":
+              mpi_util.mpi_exit(1, comm=comm)
+            shutil.rmtree(k)
+          os.makedirs(k, exist_ok=True)
+          # copy params.json file
+          with open(os.path.join(k, "params.json"), "w") as f:
+            json.dump(v, f)
+          # copy demo_sata file if exist
+          demo_file = os.path.join(exp_dir, "demo_data.npz")
+          demo_dest = os.path.join(k, "demo_data.npz")
+          if os.path.isfile(demo_file):
+            shutil.copyfile(demo_file, demo_dest)
+        ray.init(num_cpus=num_cpus,
+                 num_gpus=num_gpus,
+                 address=ip_head,
+                 redis_password=redis_password)
+        total_resources = ray.cluster_resources()
+        tune.run(train_tune.main,
+                 verbose=1,
+                 local_dir=os.path.join(exp_dir, "config_" + config_name),
+                 resources_per_trial={
+                     "cpu": 1,
+                     "gpu": total_resources["GPU"] / total_resources["CPU"],
+                 },
+                 config=dict(root_dir=exp_dir,
+                             config=config_name,
+                             search_params_list=search_params_list,
+                             **search_params_dict))
+
     elif target == "demo":
       assert policy != None
       logger.info("\n\n=================================================")
@@ -330,15 +395,38 @@ if __name__ == "__main__":
                                  default=os.getcwd())
   exp_parser.parser.add_argument(
       "--targets",
-      help=
-      "target or list of targets in [demo_data, train:<parameter file>.py, plot, evaluate]",
+      help="list of targets: [demo, train:<parameter file>.py, plot, evaluate]",
       type=str,
       nargs="+",
   )
   exp_parser.parser.add_argument(
       "--policy",
-      help=
-      "when target is evaluate or demodata, specify the policy file to be used, <policy name>.pkl",
+      help="The policy file to be used for evaluate or demo, <policy name>.pkl",
+      type=str,
+      default=None,
+  )
+  exp_parser.parser.add_argument(
+      "--num_cpus",
+      help="ray.init num_cpus",
+      type=int,
+      default=None,
+  )
+  exp_parser.parser.add_argument(
+      "--num_gpus",
+      help="ray.init num_gpus",
+      type=int,
+      default=None,
+  )
+  # Options below are cluster specific
+  exp_parser.parser.add_argument(
+      "--ip_head",
+      help="ray.init address",
+      type=str,
+      default=None,
+  )
+  exp_parser.parser.add_argument(
+      "--redis_password",
+      help="ray.init redis_password",
       type=str,
       default=None,
   )

@@ -5,6 +5,8 @@ import sys
 
 import numpy as np
 import tensorflow as tf
+import ray
+from ray import tune
 
 from rlfd import config, logger
 from rlfd.td3 import config as td3_config
@@ -131,6 +133,10 @@ def train(root_dir, params):
     policy.save(latest_policy_path)
     save_msg += "latest"
     logger.info("Saving", save_msg, "policy.")
+
+    # For ray status updates
+    if ray.is_initialized():
+      tune.track.log()
 
 
 def main(root_dir, **kwargs):
