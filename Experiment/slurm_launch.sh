@@ -15,12 +15,12 @@
 #SBATCH --mail-type=END
 
 # Setup
-module load cuda/10.1 cudnn openmpi/3.1.2 mpi4py/3.0.0
+module load nixpkgs/16.09 intel/2018.3 openmpi/3.1.4 mpi4py/3.0.0 cuda/10.1 cudnn/7.6.5
 source /home/yuchenwu/.bashrc
-source /home/yuchenwu/TD3fD-through-Shaping-using-Generative-Models/venv2/bin/activate
+source /home/yuchenwu/TD3fD-through-Shaping-using-Generative-Models/venv/bin/activate
 source /home/yuchenwu/TD3fD-through-Shaping-using-Generative-Models/setup.sh
 # for pytorch
-export LD_LIBRARY_PATH=/home/yuchenwu/TD3fD-through-Shaping-using-Generative-Models/venv2/lib/python3.6/site-packages/torch/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/home/yuchenwu/TD3fD-through-Shaping-using-Generative-Models/venv/lib/python3.6/site-packages/torch/lib:$LD_LIBRARY_PATH
 
 
 N_TASKS=20

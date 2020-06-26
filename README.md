@@ -27,11 +27,12 @@
     - cluster: `module load mpi4py`
   - install tensorflow
     - local: `pip install tensorflow tensorflow_probability`
-    - cluster: `pip isntall tensorflow_gpu tensorflow_probability`
+    - cluster: `pip install tensorflow_gpu tensorflow_probability`
   - install pytorch (not used, but in case)
-    - `pip install torch torchvision torchtext torchaudio torchsummary`
+    - `pip install torch torchvision torchsummary`
   - install ray
-    - `pip install ray ray[tune]`
+    - `pip install ray`
+    - `pip install ray[tune]`
   - (goto `Package` folder) install gym and metaworld (and maybe other environments)
     - `pip install -e gym --no-deps`
     - `pip install -e metaworld --no-deps`
