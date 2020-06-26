@@ -2,13 +2,17 @@
 
 #SBATCH --account=def-florian7
 #SBATCH --nodes=1
+#SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=10        # maximum CPU cores per GPU request: 6 on Cedar, 16 on Graham.
 #SBATCH --gres=gpu:1              # request GPU "generic resource"
 #SBATCH --mem-per-cpu=4GB    
-#SBATCH --tasks-per-node=1               
 #SBATCH --time=01-00:00:00        # time format: day-hour:min:sec
 #SBATCH --job-name=train             
 #SBATCH --output=job-%x-%j.out
+
+#SBATCH --mail-user=cheney.wu@mail.utoronto.ca
+#SBATCH --mail-type=BEGIN
+#SBATCH --mail-type=END
 
 # Parameters (make sure it is consistent with the resources required above)
 NUM_NODES=1
