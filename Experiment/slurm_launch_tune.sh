@@ -17,13 +17,12 @@ NUM_GPU_PER_NODE=1
 TRAINING_FILE="<parameters>.py"
 
 # Setup
-module load nixpkgs/16.09  intel/2018.3  cuda/10.0  cudnn/7.5  python/3.6  openmpi/3.1.2  mpi4py/3.0.0
+module load cuda/10.1 cudnn openmpi/3.1.2 mpi4py/3.0.0
 source /home/yuchenwu/.bashrc
 source /home/yuchenwu/TD3fD-through-Shaping-using-Generative-Models/venv2/bin/activate
-nvidia-smi --compute-mode=0
-source ${RLProject}/setup.sh
+source /home/yuchenwu/TD3fD-through-Shaping-using-Generative-Models/setup.sh
 # for pytorch
-export LD_LIBRARY_PATH=/home/yuchenwu/TD3fD-through-Shaping-using-Generative-Models/venv/lib/python3.6/site-packages/torch/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/home/yuchenwu/TD3fD-through-Shaping-using-Generative-Models/venv2/lib/python3.6/site-packages/torch/lib:$LD_LIBRARY_PATH
 
 nodes=$(scontrol show hostnames $SLURM_JOB_NODELIST)  # Getting the node names
 nodes_array=( $nodes )
