@@ -5,12 +5,8 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from rlfd import logger
-from rlfd.td3.actorcritic_network import Actor, Critic
-from rlfd.td3.shaping_v2 import EnsembleShaping as EnsembleShapingV2
-from rlfd.td3.shaping import EnsembleShaping, NFShaping, GANShaping
-from rlfd.td3.normalizer import Normalizer
-from rlfd.memory import RingReplayBuffer, UniformReplayBuffer, MultiStepReplayBuffer, iterbatches
+from rlfd import logger, memory
+from rlfd.td3 import actorcritic_network, shaping_v2, shaping, normalizer
 
 tfd = tfp.distributions
 
@@ -123,17 +119,17 @@ class TD3(object):
 
   def _increment_exploration_step(self, num_steps):
     self.exploration_step.assign_add(num_steps)
-    self._policy_inspect(summarize=True)
+    self._policy_inspect_graph(summarize=True)
 
   @tf.function
-  def get_actions_graph(self, o, g):
+  def _get_actions_graph(self, o, g):
 
     norm_o = self.o_stats.normalize(o)
     norm_g = self.g_stats.normalize(g)
 
     u = self.main_actor([norm_o, norm_g])
 
-    self._policy_inspect(o, g)
+    self._policy_inspect_graph(o, g)
 
     return u
 
@@ -143,7 +139,7 @@ class TD3(object):
     o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
     g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
 
-    u_tf = self.get_actions_graph(o_tf, g_tf)
+    u_tf = self._get_actions_graph(o_tf, g_tf)
     u = u_tf.numpy()
     if o.shape[0] == 1:
       u = u[0]
@@ -209,7 +205,7 @@ class TD3(object):
     return batch
 
   @tf.function
-  def train_bc_graph(self, o, g, u):
+  def _train_bc_graph(self, o, g, u):
     o = self.o_stats.normalize(o)
     g = self.g_stats.normalize(g)
     with tf.GradientTape() as tape:
@@ -235,32 +231,13 @@ class TD3(object):
         o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
         g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
         u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
-        bc_loss_tf = self.train_bc_graph(o_tf, g_tf, u_tf)
+        bc_loss_tf = self._train_bc_graph(o_tf, g_tf, u_tf)
         bc_loss = bc_loss_tf.numpy()
 
       if epoch % (self.initialize_num_epochs / 100) == (
           self.initialize_num_epochs / 100 - 1):
         logger.info("epoch: {} policy initialization loss: {}".format(
             epoch, bc_loss))
-
-    # demo_data_iter = self.demo_buffer.sample(return_iterator=True)
-    # demo_data = next(demo_data_iter)
-    # for epoch in range(self.initialize_num_epochs):
-    #   for (o, g, u) in iterbatches(
-    #       (demo_data["o"], demo_data["g"], demo_data["u"]),
-    #       batch_size=self.batch_size_demo,
-    #       include_final_partial_batch=True):
-
-    #     o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
-    #     g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
-    #     u_tf = tf.convert_to_tensor(u, dtype=tf.float32)
-    #     bc_loss_tf = self.train_bc_graph(o_tf, g_tf, u_tf)
-    #     bc_loss = bc_loss_tf.numpy()
-
-    #   if epoch % (self.initialize_num_epochs / 100) == (
-    #       self.initialize_num_epochs / 100 - 1):
-    #     logger.info("epoch: {} policy initialization loss: {}".format(
-    #         epoch, bc_loss))
 
   def train_shaping(self):
 
@@ -269,27 +246,10 @@ class TD3(object):
       demo_data_iter = self.demo_buffer.sample(return_iterator=True)
       demo_data = next(demo_data_iter)
 
-      # for version 1
       self.shaping.train(demo_data)
       self.shaping.evaluate(demo_data)
 
-      # for version 2
-      # self.shaping.training_before_hook(batch=demo_data)
-
-      # for i in range(self.shaping_params["num_epochs"]):
-      #   demo_data_iter = self.demo_buffer.sample(return_iterator=True,
-      #                                            include_partial_batch=True)
-      #   demo_data_iter(128)  # shaping batch size
-      #   for batch in demo_data_iter:
-      #     self.shaping.train(batch["o"], batch["g"], batch["u"])
-      #     # self.shaping.evaluate(batch["o"], batch["g"], batch["u"])
-
-      #   if i % 100 == 0:
-      #     logger.info("traing shaping finished epoch", i)
-
-      # self.shaping.training_after_hook(batch=demo_data)
-
-  def critic_loss_graph(self, o, g, o_2, g_2, u, r, n, done):
+  def _critic_loss_graph(self, o, g, o_2, g_2, u, r, n, done):
 
     # normalize observations
     norm_o = self.o_stats.normalize(o)
@@ -298,9 +258,7 @@ class TD3(object):
     norm_g_2 = self.g_stats.normalize(g_2)
 
     # add noise to target policy output
-    # noise = tfd.Normal(loc=0.0, scale=self.policy_noise).sample(tf.shape(u))
     noise = tf.random.normal(tf.shape(u), 0.0, self.policy_noise)
-
     noise = tf.clip_by_value(noise, -self.policy_noise_clip,
                              self.policy_noise_clip) * self.max_u
     u_2 = tf.clip_by_value(
@@ -352,7 +310,7 @@ class TD3(object):
 
     return critic_loss
 
-  def actor_loss_graph(self, o, g, u):
+  def _actor_loss_graph(self, o, g, u):
 
     # normalize observations
     norm_o = self.o_stats.normalize(o)
@@ -391,7 +349,7 @@ class TD3(object):
     return actor_loss
 
   @tf.function
-  def train_graph(self, o, g, o_2, g_2, u, r, n, done):
+  def _train_graph(self, o, g, o_2, g_2, u, r, n, done):
 
     # Train critic
     critic_trainable_weights = self.main_critic.trainable_weights
@@ -400,7 +358,7 @@ class TD3(object):
 
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(critic_trainable_weights)
-      critic_loss = self.critic_loss_graph(o, g, o_2, g_2, u, r, n, done)
+      critic_loss = self._critic_loss_graph(o, g, o_2, g_2, u, r, n, done)
 
     critic_grads = tape.gradient(critic_loss, critic_trainable_weights)
 
@@ -412,7 +370,7 @@ class TD3(object):
       actor_trainable_weights = self.main_actor.trainable_weights
       with tf.GradientTape(watch_accessed_variables=False) as tape:
         tape.watch(actor_trainable_weights)
-        actor_loss = self.actor_loss_graph(o, g, u)
+        actor_loss = self._actor_loss_graph(o, g, u)
 
       actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
       self.actor_optimizer.apply_gradients(
@@ -437,9 +395,9 @@ class TD3(object):
       r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
       n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
       done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
-      critic_loss_tf, actor_loss_tf = self.train_graph(o_tf, g_tf, o_2_tf,
-                                                       g_2_tf, u_tf, r_tf, n_tf,
-                                                       done_tf)
+      critic_loss_tf, actor_loss_tf = self._train_graph(o_tf, g_tf, o_2_tf,
+                                                        g_2_tf, u_tf, r_tf,
+                                                        n_tf, done_tf)
 
   def update_potential_weight(self):
     if self.potential_decay_epoch < self.shaping_params["potential_decay_epoch"]:
@@ -518,45 +476,54 @@ class TD3(object):
       buffer_shapes = {
           k: (self.eps_length,) + v for k, v in buffer_shapes.items()
       }
-      self.replay_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size,
-                                               self.eps_length)
+      self.replay_buffer = memory.UniformReplayBuffer(buffer_shapes,
+                                                      self.buffer_size,
+                                                      self.eps_length)
       if self.use_n_step_return:
-        self.n_step_replay_buffer = MultiStepReplayBuffer(
+        self.n_step_replay_buffer = memory.MultiStepReplayBuffer(
             buffer_shapes, self.buffer_size, self.eps_length,
             self.n_step_return_steps, self.gamma)
       if self.demo_strategy != "none" or self.sample_demo_buffer:
-        self.demo_buffer = UniformReplayBuffer(buffer_shapes, self.buffer_size,
-                                               self.eps_length)
+        self.demo_buffer = memory.UniformReplayBuffer(buffer_shapes,
+                                                      self.buffer_size,
+                                                      self.eps_length)
     else:
-      self.replay_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
+      self.replay_buffer = memory.RingReplayBuffer(buffer_shapes,
+                                                   self.buffer_size)
       assert not self.use_n_step_return, "not implemented yet"
       if self.demo_strategy != "none" or self.sample_demo_buffer:
-        self.demo_buffer = RingReplayBuffer(buffer_shapes, self.buffer_size)
+        self.demo_buffer = memory.RingReplayBuffer(buffer_shapes,
+                                                   self.buffer_size)
 
   def _create_network(self):
 
     # Normalizer for goal and observation.
-    self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip)
-    self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip)
+    self.o_stats = normalizer.Normalizer(self.dimo, self.norm_eps,
+                                         self.norm_clip)
+    self.g_stats = normalizer.Normalizer(self.dimg, self.norm_eps,
+                                         self.norm_clip)
 
     # Models
     # actor
-    self.main_actor = Actor(self.dimo, self.dimg, self.dimu, self.max_u,
-                            self.layer_sizes)
-    self.target_actor = Actor(self.dimo, self.dimg, self.dimu, self.max_u,
-                              self.layer_sizes)
+    self.main_actor = actorcritic_network.Actor(self.dimo, self.dimg, self.dimu,
+                                                self.max_u, self.layer_sizes)
+    self.target_actor = actorcritic_network.Actor(self.dimo, self.dimg,
+                                                  self.dimu, self.max_u,
+                                                  self.layer_sizes)
     # critic
-    self.main_critic = Critic(self.dimo, self.dimg, self.dimu, self.max_u,
-                              self.layer_sizes)
-    self.target_critic = Critic(self.dimo, self.dimg, self.dimu, self.max_u,
-                                self.layer_sizes)
+    self.main_critic = actorcritic_network.Critic(self.dimo, self.dimg,
+                                                  self.dimu, self.max_u,
+                                                  self.layer_sizes)
+    self.target_critic = actorcritic_network.Critic(self.dimo, self.dimg,
+                                                    self.dimu, self.max_u,
+                                                    self.layer_sizes)
     if self.twin_delayed:
-      self.main_critic_twin = Critic(self.dimo, self.dimg, self.dimu,
-                                     self.max_u, self.layer_sizes)
-      self.target_critic_twin = Critic(self.dimo, self.dimg, self.dimu,
-                                       self.max_u, self.layer_sizes)
+      self.main_critic_twin = actorcritic_network.Critic(
+          self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes)
+      self.target_critic_twin = actorcritic_network.Critic(
+          self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes)
 
-    # create weights
+    # Create weights
     o_tf = tf.zeros([0, *self.dimo])
     g_tf = tf.zeros([0, *self.dimg])
     u_tf = tf.zeros([0, *self.dimu])
@@ -577,10 +544,10 @@ class TD3(object):
     self.bc_optimizer = tf.keras.optimizers.Adam(learning_rate=self.pi_lr)
 
     # Add shaping reward
-    shaping_class = {"nf": NFShaping, "gan": GANShaping}
+    shaping_class = {"nf": shaping.NFShaping, "gan": shaping.GANShaping}
     if self.demo_strategy in shaping_class.keys():
       # instantiate shaping version 1
-      self.shaping = EnsembleShaping(
+      self.shaping = shaping.EnsembleShaping(
           shaping_cls=shaping_class[self.demo_strategy],
           num_ensembles=self.shaping_params["num_ensembles"],
           batch_size=self.shaping_params["batch_size"],
@@ -593,18 +560,6 @@ class TD3(object):
           norm_eps=self.norm_eps,
           norm_clip=self.norm_clip,
           **self.shaping_params[self.demo_strategy].copy())
-      # instantiate shaping version 2
-      # self.shaping = EnsembleShapingV2(
-      #     shaping_cls=shaping_class[self.demo_strategy],
-      #     num_ensembles=self.shaping_params["num_ensembles"],
-      #     dimo=self.dimo,
-      #     dimg=self.dimg,
-      #     dimu=self.dimu,
-      #     max_u=self.max_u,
-      #     norm_obs=True,
-      #     norm_eps=self.norm_eps,
-      #     norm_clip=self.norm_clip,
-      #     **self.shaping_params[self.demo_strategy].copy())
     else:
       self.shaping = None
 
@@ -617,7 +572,7 @@ class TD3(object):
     self.initialize_target_net()
 
   @tf.function
-  def _policy_inspect(self, o=None, g=None, summarize=False):
+  def _policy_inspect_graph(self, o=None, g=None, summarize=False):
     # should only happen for in the first call of this function
     if not hasattr(self, "_policy_inspect_count"):
       self._policy_inspect_count = tf.Variable(0.0, trainable=False)
