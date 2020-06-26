@@ -33,7 +33,6 @@ default_params = {
         "norm_eps": 0.01,
         "norm_clip": 5,
         # actor critic networks
-        "scope": "ddpg",
         "layer_sizes": [400, 300],
         "twin_delayed": True,
         "policy_freq": 2,

@@ -30,7 +30,6 @@ class TD3(object):
       norm_eps,
       norm_clip,
       # networks
-      scope,
       layer_sizes,
       q_lr,
       pi_lr,
@@ -98,7 +97,7 @@ class TD3(object):
 
     # play with demonstrations
     self.demo_strategy = demo_strategy
-    assert self.demo_strategy in ["none", "bc", "gan", "nf"]
+    assert self.demo_strategy in ["none", "bc", "gan", "nf", "orl"]
     self.bc_params = bc_params
     self.shaping_params = shaping_params
     self.gamma = gamma
@@ -153,7 +152,7 @@ class TD3(object):
       if self.sample_demo_buffer:
         self.update_stats(experiences)
 
-    if self.demo_strategy in ["nf", "gan"]:
+    if self.shaping != None:
       self.train_shaping()
 
     if self.initialize_with_bc:
@@ -241,13 +240,11 @@ class TD3(object):
 
   def train_shaping(self):
 
-    with tf.summary.record_if(lambda: self.shaping.training_step % 1000 == 0):
+    demo_data_iter = self.demo_buffer.sample(return_iterator=True)
+    demo_data = next(demo_data_iter)
 
-      demo_data_iter = self.demo_buffer.sample(return_iterator=True)
-      demo_data = next(demo_data_iter)
-
-      self.shaping.train(demo_data)
-      self.shaping.evaluate(demo_data)
+    self.shaping.train(demo_data)
+    self.shaping.evaluate(demo_data)
 
   def _critic_loss_graph(self, o, g, o_2, g_2, u, r, n, done):
 
@@ -268,7 +265,7 @@ class TD3(object):
     # immediate reward
     target = r
     # demo shaping reward
-    if self.demo_strategy in ["gan", "nf"]:
+    if self.shaping != None:
       potential_curr = self.potential_weight * self.shaping.potential(
           o=o, g=g, u=u)
       potential_next = self.potential_weight * self.shaping.potential(
@@ -319,7 +316,7 @@ class TD3(object):
     pi = self.main_actor([norm_o, norm_g])
     actor_loss = -tf.reduce_mean(self.main_critic([norm_o, norm_g, pi]))
     actor_loss += self.action_l2 * tf.reduce_mean(tf.square(pi / self.max_u))
-    if self.demo_strategy in ["gan", "nf"]:
+    if self.shaping != None:
       actor_loss += -tf.reduce_mean(
           self.potential_weight * self.shaping.potential(o=o, g=g, u=pi))
     if self.demo_strategy == "bc":
@@ -544,7 +541,11 @@ class TD3(object):
     self.bc_optimizer = tf.keras.optimizers.Adam(learning_rate=self.pi_lr)
 
     # Add shaping reward
-    shaping_class = {"nf": shaping.NFShaping, "gan": shaping.GANShaping}
+    shaping_class = {
+        "nf": shaping.NFShaping,
+        "gan": shaping.GANShaping,
+        "orl": shaping.OfflineRLShaping
+    }
     if self.demo_strategy in shaping_class.keys():
       # instantiate shaping version 1
       self.shaping = shaping.EnsembleShaping(
@@ -556,6 +557,7 @@ class TD3(object):
           dimg=self.dimg,
           dimu=self.dimu,
           max_u=self.max_u,
+          gamma=self.gamma,
           norm_obs=True,
           norm_eps=self.norm_eps,
           norm_clip=self.norm_clip,

@@ -33,7 +33,6 @@ default_params = {
         "norm_eps": 0.01,
         "norm_clip": 5,
         # actor critic networks
-        "scope": "ddpg",
         "layer_sizes": [400, 300],
         "twin_delayed": True,
         "policy_freq": 2,
@@ -72,6 +71,12 @@ default_params = {
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
                 "potential_weight": 3.0,
+            },
+            "orl": {
+                "layer_sizes": [256, 256, 256],
+                "q_lr": 1e-3,
+                "pi_lr": 1e-3,
+                "polyak": 0.995,
             },
         },
         # replay buffer setup
