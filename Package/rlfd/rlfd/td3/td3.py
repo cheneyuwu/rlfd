@@ -6,7 +6,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from rlfd import logger, memory
-from rlfd.td3 import actorcritic_network, shaping_v2, shaping, normalizer
+from rlfd.td3 import actorcritic_network, shaping, normalizer
 
 tfd = tfp.distributions
 

@@ -5,37 +5,10 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from rlfd import logger
-from rlfd.memory import iterbatches
-from rlfd.td3.gan_network import Discriminator, Generator
-from rlfd.td3.normalizer import Normalizer
-from rlfd.td3.normalizing_flows import create_maf
+from rlfd import memory
+from rlfd.td3 import actorcritic_network, gan_network, normalizer, normalizing_flows
 
 tfd = tfp.distributions
-
-
-class Shaping(object, metaclass=abc.ABCMeta):
-
-  def __init__(self):
-    """Implement the state, action based potential"""
-    self.training_step = tf.Variable(0, trainable=False, dtype=tf.int64)
-
-  @abc.abstractmethod
-  def potential(self, o, g, u):
-    """return the shaping potential"""
-
-  @abc.abstractmethod
-  def train(self, o, g, u, suffix=None):
-    """train the shaping potential"""
-
-  @abc.abstractmethod
-  def evaluate(self, o, g, u, suffix=None):
-    """evaluate the shaping potential"""
-
-  def training_before_hook(self, *args, **kwargs):
-    pass
-
-  def training_after_hook(self, *args, **kwargs):
-    pass
 
 
 class EnsembleShaping(object):
@@ -49,32 +22,31 @@ class EnsembleShaping(object):
     self.batch_size = batch_size
 
   def train(self, demo_data):
+    dataset = self._construct_dataset(demo_data)
     for i, shaping in enumerate(self.shapings):
       logger.log("Training shaping function #{}...".format(i))
 
       shaping.training_before_hook(demo_data)
 
       self.training_step = self.shapings[i].training_step
-
       for epoch in range(self.num_epochs):
+        dataset_iter = dataset.sample(return_iterator=True,
+                                      include_partial_batch=True)
+        dataset_iter(self.batch_size)
         losses = np.empty(0)
-        for (o, g, u) in iterbatches(
-            (demo_data["o"], demo_data["g"], demo_data["u"]),
-            batch_size=self.batch_size,
-            include_final_partial_batch=True):
-          loss = shaping.train(o, g, u)
+        for batch in dataset_iter:
+          loss = shaping.train(**batch)  # o, g, u, o_2, g_2, r, n, done
           with tf.name_scope(self.shaping_cls.__name__ + 'Losses'):
             tf.summary.scalar(name='model_' + str(i) + ' loss vs training_step',
                               data=loss,
                               step=self.training_step)
           losses = np.append(losses, loss)
-
-        if epoch % (self.num_epochs / 100) == (self.num_epochs / 100 - 1):
-          logger.info("epoch: {} demo shaping loss: {}".format(
-              epoch, np.mean(losses)))
-          mean_pot = shaping.evaluate(o, g, u)
-          logger.info("epoch: {} mean potential on demo data: {}".format(
-              epoch, mean_pot))
+          if epoch % (self.num_epochs / 100) == (self.num_epochs / 100 - 1):
+            logger.info("epoch: {} demo shaping loss: {}".format(
+                epoch, np.mean(losses)))
+            mean_pot = shaping.evaluate(**batch)
+            logger.info("epoch: {} mean potential on demo data: {}".format(
+                epoch, mean_pot))
 
       shaping.training_after_hook(demo_data)
 
@@ -86,6 +58,168 @@ class EnsembleShaping(object):
     potential = tf.reduce_mean([x.potential(o, g, u) for x in self.shapings],
                                axis=0)
     return potential
+
+  def _construct_dataset(self, demo_data):
+    buffer_shapes = {k: tuple(v.shape[1:]) for k, v in demo_data.items()}
+    dataset = memory.RingReplayBuffer(buffer_shapes, int(1e6))
+    dataset.store(demo_data)
+    return dataset
+
+
+class Shaping(object, metaclass=abc.ABCMeta):
+
+  def __init__(self):
+    """Implement the state, action based potential"""
+    self.training_step = tf.Variable(0, trainable=False, dtype=tf.int64)
+
+  def train(self, *args, **kwargs):
+    """train the shaping potential"""
+    result = self._train(*args, **kwargs)
+    self.training_step.assign_add(1)
+    return result
+
+  def evaluate(self, *args, **kwargs):
+    """evaluate the shaping potential"""
+    return self._evaluate(*args, **kwargs)
+
+  def training_before_hook(self, *args, **kwargs):
+    pass
+
+  def training_after_hook(self, *args, **kwargs):
+    pass
+
+  @abc.abstractmethod
+  def potential(self, o, g, u):
+    """return the shaping potential, has to be a tf.function"""
+
+  def _train(self, *args, **kwargs):
+    """train the shaping potential (implementation)"""
+
+  def _evaluate(self, *args, **kwargs):
+    """evaluate the shaping potential (implementation)"""
+
+
+class OfflineRLShaping(Shaping):
+
+  def __init__(
+      self,
+      dimo,
+      dimg,
+      dimu,
+      max_u,
+      learning_rate,
+      layer_sizes,
+      norm_obs,
+      norm_eps,
+      norm_clip,
+  ):
+    self.init_args = locals()
+
+    super(OfflineRLShaping, self).__init__()
+
+    # Parameters
+    self.dimo = dimo
+    self.dimg = dimg
+    self.dimu = dimu
+    self.max_u = max_u
+    self.layer_sizes = layer_sizes
+    self.norm_obs = norm_obs
+    self.norm_eps = norm_eps
+    self.norm_clip = norm_clip
+    self.learning_rate = learning_rate
+    # Normalizer for goal and observation.
+    self.o_stats = normalizer.Normalizer(self.dimo, self.norm_eps,
+                                         self.norm_clip)
+    self.g_stats = normalizer.Normalizer(self.dimg, self.norm_eps,
+                                         self.norm_clip)
+    # Model
+    self.critic = actorcritic_network.Critic(self.dimo, self.dimg, self.dimu,
+                                             self.max_u, self.layer_sizes)
+    # Create weights
+    o_tf = tf.zeros([0, *self.dimo])
+    g_tf = tf.zeros([0, *self.dimg])
+    u_tf = tf.zeros([0, *self.dimu])
+    self.critic([o_tf, g_tf, u_tf])
+    # Optimizer
+    self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate)
+
+  def _update_stats(self, batch):
+    # add transitions to normalizer
+    if not self.norm_obs:
+      return
+    self.o_stats.update(batch["o"])
+    self.g_stats.update(batch["g"])
+
+  @tf.function
+  def potential(self, o, g, u):
+    o = self.o_stats.normalize(o)
+    g = self.g_stats.normalize(g)
+    potential = self.critic([o, g, u])
+    return potential
+
+  def training_before_hook(self, batch):
+    self._update_stats(batch)
+
+  @tf.function
+  def _train_graph(self, o, g, o_2, g_2, u, r, n, done):
+    # normalize observations
+    o = self.o_stats.normalize(o)
+    g = self.g_stats.normalize(g)
+    norm_o_2 = self.o_stats.normalize(o_2)
+    norm_g_2 = self.g_stats.normalize(g_2)
+
+    # TODO: learn the critic properly.
+    loss = 0.0
+
+    return loss
+
+  def _train(self, o, g, o_2, g_2, u, r, n, done, name="", **kwargs):
+    o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
+    g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
+    o_2_tf = tf.convert_to_tensor(o_2, dtype=tf.float32)
+    g_2_tf = tf.convert_to_tensor(g_2, dtype=tf.float32)
+    u_tf = tf.convert_to_tensor(u, dtype=tf.float32)
+    r_tf = tf.convert_to_tensor(r, dtype=tf.float32)
+    n_tf = tf.convert_to_tensor(n, dtype=tf.float32)
+    done_tf = tf.convert_to_tensor(done, dtype=tf.float32)
+
+    loss_tf = self._train_graph(o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf,
+                                done_tf)
+
+    with tf.name_scope('OfflineRLShapingLosses'):
+      tf.summary.scalar(name=name + ' loss vs training_step',
+                        data=loss_tf,
+                        step=self.training_step)
+
+    return loss_tf.numpy()
+
+  def _evaluate(self, o, g, u, name="", **kwargs):
+    o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
+    g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
+    u_tf = tf.convert_to_tensor(u, dtype=tf.float32)
+    potential = self.potential(o_tf, g_tf, u_tf)
+    potential = np.mean(potential.numpy())
+    return potential
+
+  def __getstate__(self):
+    state = {
+        k: v
+        for k, v in self.init_args.items()
+        if not k in ["self", "__class__"]
+    }
+    state["tf"] = {
+        "o_stats": self.o_stats.get_weights(),
+        "g_stats": self.g_stats.get_weights(),
+        "critic": self.critic.get_weights(),
+    }
+    return state
+
+  def __setstate__(self, state):
+    stored_vars = state.pop("tf")
+    self.__init__(**state)
+    self.o_stats.set_weights(stored_vars["o_stats"])
+    self.g_stats.set_weights(stored_vars["g_stats"])
+    self.critic.set_weights(stored_vars["critic"])
 
 
 class NFShaping(Shaping):
@@ -137,14 +271,16 @@ class NFShaping(Shaping):
     self.scale = tf.constant(5.0, dtype=tf.float64)
 
     # normalizer for goal and observation.
-    self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip)
-    self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip)
+    self.o_stats = normalizer.Normalizer(self.dimo, self.norm_eps,
+                                         self.norm_clip)
+    self.g_stats = normalizer.Normalizer(self.dimg, self.norm_eps,
+                                         self.norm_clip)
 
     # normalizing flow
     state_dim = self.dimo[0] + self.dimg[0] + self.dimu[0]
-    self.nf = create_maf(dim=state_dim,
-                         num_bijectors=num_bijectors,
-                         layer_sizes=layer_sizes)
+    self.nf = normalizing_flows.create_maf(dim=state_dim,
+                                           num_bijectors=num_bijectors,
+                                           layer_sizes=layer_sizes)
     # create weights
     self.nf.sample()
     # optimizers
@@ -178,7 +314,7 @@ class NFShaping(Shaping):
     self._update_stats(batch)
 
   @tf.function
-  def train_graph(self, o, g, u):
+  def _train_graph(self, o, g, u):
 
     o = self.o_stats.normalize(o)
     g = self.g_stats.normalize(g)
@@ -202,17 +338,15 @@ class NFShaping(Shaping):
 
     loss = tf.cast(loss, tf.float32)
 
-    self.training_step.assign_add(1)
-
     return loss
 
-  def train(self, o, g, u, name=""):
+  def _train(self, o, g, u, name="", **kwargs):
 
     o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
     g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
     u_tf = tf.convert_to_tensor(u, dtype=tf.float32)
 
-    loss_tf = self.train_graph(o_tf, g_tf, u_tf)
+    loss_tf = self._train_graph(o_tf, g_tf, u_tf)
 
     with tf.name_scope('NFShapingLosses'):
       tf.summary.scalar(name=name + ' loss vs training_step',
@@ -221,7 +355,7 @@ class NFShaping(Shaping):
 
     return loss_tf.numpy()
 
-  def evaluate(self, o, g, u, name=""):
+  def _evaluate(self, o, g, u, name="", **kwargs):
     o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
     g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
     u_tf = tf.convert_to_tensor(u, dtype=tf.float32)
@@ -287,13 +421,17 @@ class GANShaping(Shaping):
     self.gp_lambda = gp_lambda
 
     # normalizer for goal and observation.
-    self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip)
-    self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip)
+    self.o_stats = normalizer.Normalizer(self.dimo, self.norm_eps,
+                                         self.norm_clip)
+    self.g_stats = normalizer.Normalizer(self.dimg, self.norm_eps,
+                                         self.norm_clip)
 
     # Generator & Discriminator
     state_dim = self.dimo[0] + self.dimg[0] + self.dimu[0]
-    self.generator = Generator(layer_sizes=layer_sizes + [state_dim])
-    self.discriminator = Discriminator(layer_sizes=layer_sizes + [1])
+    self.generator = gan_network.Generator(layer_sizes=layer_sizes +
+                                           [state_dim])
+    self.discriminator = gan_network.Discriminator(layer_sizes=layer_sizes +
+                                                   [1])
     # create weights
     self.generator(tf.zeros([0, latent_dim]))
     self.discriminator(tf.zeros([0, state_dim]))
@@ -331,7 +469,7 @@ class GANShaping(Shaping):
     self._update_stats(batch)
 
   @tf.function
-  def train_graph(self, o, g, u):
+  def _train_graph(self, o, g, u):
 
     o = self.o_stats.normalize(o)
     g = self.g_stats.normalize(g)
@@ -368,17 +506,15 @@ class GANShaping(Shaping):
           zip(gen_grads, self.generator.trainable_weights))
     self.train_gen.assign_add(1)
 
-    self.training_step.assign_add(1)
-
     return disc_loss
 
-  def train(self, o, g, u, name=""):
+  def _train(self, o, g, u, name="", **kwargs):
 
     o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
     g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
     u_tf = tf.convert_to_tensor(u, dtype=tf.float32)
 
-    disc_loss_tf = self.train_graph(o_tf, g_tf, u_tf)
+    disc_loss_tf = self._train_graph(o_tf, g_tf, u_tf)
 
     with tf.name_scope('GANShapingLosses'):
       tf.summary.scalar(name=name + ' loss vs training_step',
@@ -387,7 +523,7 @@ class GANShaping(Shaping):
 
     return disc_loss_tf.numpy()
 
-  def evaluate(self, o, g, u, name=""):
+  def _evaluate(self, o, g, u, name="", **kwargs):
     o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
     g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
     u_tf = tf.convert_to_tensor(u, dtype=tf.float32)
