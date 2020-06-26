@@ -13,8 +13,8 @@
 ## Installation
 
 - setup Mujoco
-  - local: http://www.mujoco.org/
-  - cluster: https://docs.computecanada.ca/wiki/MuJoCo
+  - [Instructions on installing it locally](http://www.mujoco.org/)
+  - [Instructions on installing it on CC](https://docs.computecanada.ca/wiki/MuJoCo)
 - download the repo
   - `git clone --recurse-submodules git@github.com:cheneyuwu/TD3fD-through-Shaping-using-Generative-Models`
 - build virtual env
@@ -29,8 +29,9 @@
     - local: `pip install tensorflow tensorflow_probability`
     - cluster: `pip isntall tensorflow_gpu tensorflow_probability`
   - install pytorch (not used, but in case)
-    - `pip install torch==1.3.1 torchvision torchtext torchaudio torchsummary`
-      - Note: i think pytorch 1.4 has some issue running on cluster, so don't use it for now.
+    - `pip install torch torchvision torchtext torchaudio torchsummary`
+  - install ray
+    - `pip install ray ray[tune]`
   - (goto `Package` folder) install gym and metaworld (and maybe other environments)
     - `pip install -e gym --no-deps`
     - `pip install -e metaworld --no-deps`
