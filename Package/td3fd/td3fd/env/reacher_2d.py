@@ -5,15 +5,12 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 
-matplotlib.use("TkAgg")  #  TkAgg Can change to 'Agg' for non-interactive mode
+from gym import spaces
+
+matplotlib.use("Agg")  #  TkAgg Can change to 'Agg' for non-interactive mode
 
 
 def make(env_name, **env_args):
-    # note: we only have one environment
-    try:
-        _ = eval(env_name)(**env_args)
-    except:
-        raise NotImplementedError
     return eval(env_name)(**env_args)
 
 
@@ -23,6 +20,8 @@ class Reacher:
     """
 
     def __init__(self, order=2, sparse=False, block=False, seed=0):
+        self.init_args = locals()
+
         self.random = np.random.RandomState(seed)
         self.order = order
         self.sparse = sparse
@@ -31,23 +30,24 @@ class Reacher:
         self.boundary = 1.0
         self.threshold = self.boundary / 12
         self._max_episode_steps = 30 if self.order == 2 else 20
-        self.max_u = 2
-        self.action_space = self.ActionSpace()
+        self.max_u = 1
+
         self.workspace = self.Block((-self.boundary, -self.boundary), 2 * self.boundary, 2 * self.boundary)
         self.blocks = []
         if block == True:
             # add an obstacle
             self.blocks.append(self.Block((-0.5, -0.5), 1.0, 1.0))
         plt.ion()
-        self.reset()
+        obs = self.reset()
 
-    class ActionSpace:
-        def __init__(self, seed=0):
-            self.random = np.random.RandomState(seed)
-            self.shape = (2,)
-
-        def sample(self):
-            return self.random.rand(2)
+        self.action_space = spaces.Box(-1.0 * self.max_u, 1.0 * self.max_u, shape=(2,), dtype="float32")
+        self.observation_space = spaces.Dict(
+            dict(
+                observation=spaces.Box(-np.inf, np.inf, shape=obs["observation"].shape, dtype="float32"),
+                desired_goal=spaces.Box(-np.inf, np.inf, shape=obs["desired_goal"].shape, dtype="float32"),
+                achieved_goal=spaces.Box(-np.inf, np.inf, shape=obs["achieved_goal"].shape, dtype="float32"),
+            )
+        )
 
     class Block:
         def __init__(self, start, width, height):
@@ -99,7 +99,7 @@ class Reacher:
     def render(self):
         plt.clf()
         # plot the environment visualization
-        ax = plt.subplot(211)
+        ax = plt.subplot(121)
         ax.axis([-self.boundary, self.boundary, -self.boundary, self.boundary])
         ax.plot(
             self.history["position"][-1][0], self.history["position"][-1][1], "o", color="r", label="current position"
@@ -107,31 +107,38 @@ class Reacher:
         ax.plot(self.history["goal"][-1][0], self.history["goal"][-1][1], "o", color="g", label="goal position")
         for block in self.blocks:
             block.plot(ax)
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        ax.set_title("state")
+        ax.set_xlabel("s_1")
+        ax.set_ylabel("s_2")
+        ax.set_title("Render Env")
         ax.legend(loc="upper right")
         # plot reward and success info
-        ax = plt.subplot(212)
+        ax = plt.subplot(122)
         ax.axis([0, self._max_episode_steps, -2, 2])
-        ax.plot(self.history["t"], self.history["r"], color="g", label="reward")
-        ax.plot(self.history["t"], self.history["v"], color="r", label="is_success")
+        ax.plot(self.history["t"], self.history["r"], color="g", label="Reward")
+        ax.plot(self.history["t"], self.history["v"], color="r", label="Succeed")
         ax.legend()
-        ax.set_title("info")
+        ax.set_title("Env Info")
 
         plt.show()
         plt.pause(0.05)
 
     def reset(self):
         # a random goal location
-        self.goal = self.random.uniform(-0.2, 0.2, size=2) * self.boundary
+        self.goal = self.random.uniform(-0.0, 0.0, size=2) * self.boundary
         self.curr_pos = self.random.uniform(-0.8, -0.8, size=2) * self.boundary
         if self.order == 2:
             self.speed = np.zeros(2)
 
         self.T = 0
-        self.history = {"position": [], "goal": [], "t": [], "r": [], "v": []}
-        return self._get_state()[0]
+        state, r, done, info = self._get_state()
+        self.history = {
+            "position": [self.curr_pos],
+            "goal": [self.goal],
+            "t": [self.T],
+            "r": [r],
+            "v": [info["is_success"]],
+        }
+        return state
 
     def seed(self, seed=0):
         self.random = np.random.RandomState(seed)
@@ -176,9 +183,19 @@ class Reacher:
         return (
             {"observation": obs, "desired_goal": g, "achieved_goal": ag},
             r,
-            0,
-            {"is_success": is_success, "shaping_reward": -distance},
+            0.0,  # float(is_success),
+            {"is_success": float(is_success), "shaping_reward": -distance},
         )
+
+    def __getstate__(self):
+        """
+        Our policies can be loaded from pkl, but after unpickling you cannot continue training.
+        """
+        state = {k: v for k, v in self.init_args.items() if not k == "self"}
+        return state
+
+    def __setstate__(self, state):
+        self.__init__(**state)
 
 
 if __name__ == "__main__":

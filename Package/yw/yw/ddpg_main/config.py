@@ -1,13 +1,13 @@
 import numpy as np
 import tensorflow as tf
 
-from yw.ddpg_main.ddpg import DDPG
+from td3fd.env_manager import EnvManager
 from yw.ddpg_main.rollout import RolloutWorker, SerialRolloutWorker
-from yw.env.env_manager import EnvManager
-from yw.tool import logger
+from yw.ddpg_main.ddpg import DDPG
 
-DEFAULT_PARAMS = {
+default_params = {
     # config summary
+    "alg": "old-ddpg-tf",
     "config": "default",
     # environment config
     "env_name": "FetchReach-v1",
@@ -15,35 +15,42 @@ DEFAULT_PARAMS = {
     "r_shift": 0.0,  # shift the reward of the environment up
     "eps_length": 0,  # overwrite the default length of the episode provided in _max_episode_steps
     "env_args": {},  # extra arguments passed to the environment
+    "gamma": None,  # the discount rate
     "fix_T": True,  # whether or not to fix episode length for all rollouts (if false, then use the ring buffer)
     # DDPG config
     "ddpg": {
-        # replay buffer setup
-        "buffer_size": int(1e6),
-        "replay_strategy": "none",  # choose between ["her", "none"] (her for hindsight exp replay)
+        "num_epochs": 10,
+        "num_cycles": 10,  # per epoch
+        "num_batches": 40,  # training batches per cycle
+        "batch_size": 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
+        # use demonstrations
+        "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread
+        "sample_demo_buffer": False,  # whether or not to sample from demonstration buffer
+        "use_demo_reward": False,  # whether or not to assume that demonstrations have rewards, and train it on the critic
+        "num_demo": 0,  # number of expert demo episodes
+        "demo_strategy": "none",  # choose between ["none", "bc", "nf", "gan"]
+        # normalize observation
+        "norm_eps": 0.01,  # epsilon used for observation normalization
+        "norm_clip": 5,  # normalized observations are cropped to this values
         # actor critic networks
         "scope": "ddpg",
-        "use_td3": 1,  # whether or not to use td3
         "layer_sizes": [256, 256, 256],  # number of neurons in each hidden layer
-        "initializer_type": "glorot",  # choose between ["zero", "glorot"]
-        "Q_lr": 0.001,  # critic learning rate
+        "twin_delayed": True,
+        "policy_freq": 2,
+        "policy_noise": 0.2,
+        "policy_noise_clip": 0.5,
+        "q_lr": 0.001,  # critic learning rate
         "pi_lr": 0.001,  # actor learning rate
         "action_l2": 1.0,  # quadratic penalty on actions (before rescaling by max_u)
-        "batch_size": 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
         # double q learning
         "polyak": 0.95,  # polyak averaging coefficient for double q learning
-        # use demonstrations
-        "sample_demo_buffer": 0,  # whether or not to sample from demonstration buffer
-        "batch_size_demo": 128,  # number of samples to be used from the demonstrations buffer, per mpi thread
-        "use_demo_reward": 0,  # whether or not to assume that demonstrations have rewards, and train it on the critic
-        "num_demo": 0,  # number of expert demo episodes
-        "demo_strategy": "none",  # choose between ["none", "pure_bc", "bc", "nf", "gan"]
         "bc_params": {
             "q_filter": 1,  # whether or not a Q value filter should be used on the actor outputs
             "prm_loss_weight": 0.001,  # weight corresponding to the primary loss
             "aux_loss_weight": 0.0078,  # weight corresponding to the auxilliary loss (also called the cloning loss)
         },
         "shaping_params": {
+            "num_epochs": int(1e4),
             "batch_size": 128,  # batch size for training the potential function (gan and nf)
             "nf": {
                 "num_ens": 1,  # number of nf ensembles
@@ -67,52 +74,33 @@ DEFAULT_PARAMS = {
                 "potential_weight": 3.0,
             },
         },
-        # normalize observation
-        "norm_eps": 0.01,  # epsilon used for observation normalization
-        "norm_clip": 5,  # normalized observations are cropped to this values
-        # i/o clippings
-        "clip_obs": 200.0,
-        "clip_pos_returns": False,  # whether or not this environment has positive return.
-        "clip_return": False,
+        # replay buffer setup
+        "buffer_size": int(1e6),
     },
-    # HER config
-    "her": {"k": 4},  # number of additional goals used for replay
     # rollouts config
     "rollout": {
-        "rollout_batch_size": 4,
+        "num_episodes": 4,
+        "num_steps": None,
         "noise_eps": 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
         "polyak_noise": 0.0,  # use polyak_noise * last_noise + (1 - polyak_noise) * curr_noise
         "random_eps": 0.3,  # percentage of time a random action is taken
-        "compute_Q": False,
+        "compute_q": False,
         "history_len": 10,  # make sure that this is same as number of cycles
     },
     "evaluator": {
-        "rollout_batch_size": 20,
+        "num_episodes": 10,
+        "num_steps": None,
         "noise_eps": 0.0,
         "polyak_noise": 0.0,
         "random_eps": 0.0,
-        "compute_Q": True,
+        "compute_q": True,
         "history_len": 1,
-    },
-    # training config
-    "train": {
-        "n_epochs": 10,
-        "n_cycles": 10,  # per epoch
-        "n_batches": 40,  # training batches per cycle
-        "shaping_n_epochs": 100,
-        "pure_bc_n_epochs": 100,
-        "save_interval": 2,
     },
     "seed": 0,
 }
 
 
-def log_params(params):
-    for key in sorted(params.keys()):
-        logger.info("{:<30}{}".format(key, params[key]))
-
-
-def check_params(params, default_params=DEFAULT_PARAMS):
+def check_params(params, default_params=default_params):
     """make sure that the keys match"""
     assert type(params) == dict
     assert type(default_params) == dict
@@ -124,29 +112,11 @@ def check_params(params, default_params=DEFAULT_PARAMS):
         assert key in default_params.keys(), "provided params has an extra key: {}".format(key)
 
 
-# Helper Functions for Configuration
-# =====================================
-
-
-class EnvCache:
-    """Only creates a new environment from the provided function if one has not yet already been
-    created.
-
-    This is useful here because we need to infer certain properties of the env, e.g.
-    its observation and action spaces, without any intend of actually using it.
-
-    """
-
-    cached_envs = {}
-
-    @staticmethod
-    def get_env(make_env):
-        if make_env not in EnvCache.cached_envs.keys():
-            EnvCache.cached_envs[make_env] = make_env()
-        return EnvCache.cached_envs[make_env]
-
-
 def add_env_params(params):
+    """
+    Add the following environment parameters to params:
+        make_env, eps_length, gamma, max_u, dims
+    """
     env_manager = EnvManager(
         env_name=params["env_name"],
         env_args=params["env_args"],
@@ -154,73 +124,43 @@ def add_env_params(params):
         r_shift=params["r_shift"],
         eps_length=params["eps_length"],
     )
-    logger.info(
-        "Using environment {} with r scale down by {} shift by {} and max episode {}".format(
-            params["env_name"], params["r_scale"], params["r_shift"], params["eps_length"]
-        )
-    )
     params["make_env"] = env_manager.get_env
-    tmp_env = EnvCache.get_env(params["make_env"])
-    assert hasattr(tmp_env, "_max_episode_steps")
-    params["T"] = tmp_env._max_episode_steps
-    params["gamma"] = 1.0 - 1.0 / params["T"]
-    assert hasattr(tmp_env, "max_u")
+    tmp_env = params["make_env"]()
+    # maximum number of simulation steps per episode
+    params["eps_length"] = tmp_env.eps_length
+    # calculate discount factor gamma based on episode length
+    params["gamma"] = 1.0 - 1.0 / params["eps_length"] if params["gamma"] is None else params["gamma"]
+    # limit on the magnitude of actions
     params["max_u"] = np.array(tmp_env.max_u) if isinstance(tmp_env.max_u, list) else tmp_env.max_u
-    # get environment dimensions
+    # get environment observation & action dimensions
     tmp_env.reset()
     obs, _, _, info = tmp_env.step(tmp_env.action_space.sample())
     dims = {
-        "o": obs["observation"].shape[0],  # the state
-        "u": tmp_env.action_space.shape[0],
-        "g": obs["desired_goal"].shape[0],  # extra state that does not change within 1 episode
+        "o": obs["observation"].shape,  # observation
+        "g": obs["desired_goal"].shape,  # goal (may be of shape (0,) if not exist)
+        "u": tmp_env.action_space.shape,
     }
-    # temporarily put here as we never run multigoal jobs
-    assert dims["g"] == 0
     for key, value in info.items():
+        if type(value) == str: # Note: for now, do not add info str to memory (replay buffer)
+            continue
         value = np.array(value)
         if value.ndim == 0:
             value = value.reshape(1)
-        dims["info_{}".format(key)] = value.shape[0]
+        dims["info_{}".format(key)] = value.shape
     params["dims"] = dims
     return params
 
 
-def configure_her(params):
-    env = EnvCache.get_env(params["make_env"])
-    env.reset()
-
-    def reward_fun(ag_2, g_2, info):  # vectorized
-        return env.compute_reward(achieved_goal=ag_2, desired_goal=g_2, info=info)
-
-    # Prepare configuration for HER.
-    her_params = params["her"]
-    her_params["reward_fun"] = reward_fun
-
-    logger.info("*** her_params ***")
-    log_params(her_params)
-    logger.info("*** her_params ***")
-
-    return her_params
-
-
-def configure_ddpg(params, comm=None):
+def configure_ddpg(params):
     # Extract relevant parameters.
-    ddpg_params = params["ddpg"]
-
-    if ddpg_params["replay_strategy"] == "her":
-        sample_params = configure_her(params)
-    else:
-        sample_params = {}
-    ddpg_params["replay_strategy"] = {"strategy": ddpg_params["replay_strategy"], "args": sample_params}
-
+    ddpg_params = params["ddpg"] # replay strategy has to be her
     # Update parameters
     ddpg_params.update(
         {
+            "dims": params["dims"].copy(),  # agent takes an input observations
             "max_u": params["max_u"],
-            "input_dims": params["dims"].copy(),  # agent takes an input observations
-            "T": params["T"],
+            "eps_length": params["eps_length"],
             "fix_T": params["fix_T"],
-            "clip_return": (1.0 / (1.0 - params["gamma"])) if params["ddpg"]["clip_return"] else np.inf,
             "gamma": params["gamma"],
             "info": {
                 "env_name": params["env_name"],
@@ -228,64 +168,39 @@ def configure_ddpg(params, comm=None):
                 "r_shift": params["r_shift"],
                 "eps_length": params["eps_length"],
                 "env_args": params["env_args"],
+                "gamma": params["gamma"],
             },
         }
     )
 
-    logger.info("*** ddpg_params ***")
-    log_params(ddpg_params)
-    logger.info("*** ddpg_params ***")
-
-    policy = DDPG(**ddpg_params, comm=comm)
+    policy = DDPG(**ddpg_params)
     return policy
 
 
 def config_rollout(params, policy):
     rollout_params = params["rollout"]
-    rollout_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
-
-    logger.info("\n*** rollout_params ***")
-    log_params(rollout_params)
-    logger.info("*** rollout_params ***")
-
-    if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
-        rollout_worker = RolloutWorker(params["make_env"], policy, **rollout_params)
-    else:
-        rollout_worker = SerialRolloutWorker(params["make_env"], policy, **rollout_params)
-    rollout_worker.seed(params["seed"])
-
-    return rollout_worker
+    rollout_params.update({"dims": params["dims"], "T": params["eps_length"], "max_u": params["max_u"]})
+    return _config_rollout_worker(params["make_env"], params["fix_T"], params["seed"], policy, rollout_params)
 
 
 def config_evaluator(params, policy):
-    eval_params = params["evaluator"]
-    eval_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
-
-    logger.info("*** eval_params ***")
-    log_params(eval_params)
-    logger.info("*** eval_params ***")
-
-    if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
-        evaluator = RolloutWorker(params["make_env"], policy, **eval_params)
-    else:
-        evaluator = SerialRolloutWorker(params["make_env"], policy, **eval_params)
-    evaluator.seed(params["seed"])
-
-    return evaluator
+    rollout_params = params["evaluator"]
+    rollout_params.update({"dims": params["dims"], "T": params["eps_length"], "max_u": params["max_u"]})
+    return _config_rollout_worker(params["make_env"], params["fix_T"], params["seed"], policy, rollout_params)
 
 
 def config_demo(params, policy):
-    demo_params = params["demo"]
-    demo_params.update({"dims": params["dims"], "T": params["T"], "max_u": params["max_u"]})
+    rollout_params = params["demo"]
+    rollout_params.update({"dims": params["dims"], "T": params["eps_length"], "max_u": params["max_u"]})
+    return _config_rollout_worker(params["make_env"], params["fix_T"], params["seed"], policy, rollout_params)
 
-    logger.info("*** demo_params ***")
-    log_params(demo_params)
-    logger.info("*** demo_params ***")
 
-    if params["fix_T"]:  # fix the time horizon, so use the parrallel virtual envs
-        demo = RolloutWorker(params["make_env"], policy, **demo_params)
+def _config_rollout_worker(make_env, fix_T, seed, policy, rollout_params):
+
+    if fix_T:  # fix the time horizon, so use the parrallel virtual envs
+        rollout = RolloutWorker(make_env, policy, **rollout_params)
     else:
-        demo = SerialRolloutWorker(params["make_env"], policy, **demo_params)
-    demo.seed(params["seed"])
+        rollout = SerialRolloutWorker(make_env, policy, **rollout_params)
+    rollout.seed(seed)
 
-    return demo
+    return rollout

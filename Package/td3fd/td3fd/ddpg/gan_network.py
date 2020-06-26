@@ -20,23 +20,7 @@ class Generator(tf.keras.Model):
         conv_type="2d",  # "1d" or "2d"
     ):
         super(Generator, self).__init__()
-        # TODO: for pixel input
-        # self.network_layers = [
-        #     tfl.Dense(units=8 * 8 * 8 * 64, use_bias=False),
-        #     tfl.BatchNormalization(),
-        #     tfl.LeakyReLU(),
-        #     tfl.Reshape(target_shape=(8, 8, 512)),
-        #     tfl.Conv2DTranspose(128, (5, 5), strides=(1, 1), padding="same", use_bias=False),
-        #     tfl.BatchNormalization(),
-        #     tfl.LeakyReLU(),
-        #     tfl.Conv2DTranspose(64, (5, 5), strides=(2, 2), padding="same", use_bias=False),
-        #     tfl.BatchNormalization(),
-        #     tfl.LeakyReLU(),
-        #     tfl.Conv2DTranspose(32, (5, 5), strides=(2, 2), padding="same", use_bias=False),
-        #     tfl.BatchNormalization(),
-        #     tfl.LeakyReLU(),
-        #     tfl.Conv2DTranspose(3, (5, 5), strides=(2, 2), padding="same", use_bias=False, activation="tanh"),
-        # ]
+
         self.network_layers = []
         for size in fc_layer_params[:-1]:
             layer = tfl.Dense(units=size, activation="relu", kernel_initializer=tf.keras.initializers.glorot_normal())
@@ -67,20 +51,7 @@ class Discriminator(tf.keras.Model):
         conv_type="2d",  # "1d" or "2d"
     ):
         super(Discriminator, self).__init__()
-        # TODO: for images
-        # self.network_layers = [
-        #     tfl.Conv2D(32, (5, 5), strides=(2, 2), padding="same"),
-        #     tfl.LeakyReLU(),
-        #     tfl.Dropout(0.3),
-        #     tfl.Conv2D(64, (5, 5), strides=(2, 2), padding="same"),
-        #     tfl.LeakyReLU(),
-        #     tfl.Dropout(0.3),
-        #     tfl.Conv2D(128, (5, 5), strides=(2, 2), padding="same"),
-        #     tfl.LeakyReLU(),
-        #     tfl.Dropout(0.3),
-        #     tfl.Flatten(),
-        #     tfl.Dense(1),
-        # ]
+
         self.network_layers = []
         for size in fc_layer_params[:-1]:
             layer = tfl.Dense(units=size, activation="relu", kernel_initializer=tf.keras.initializers.glorot_normal())

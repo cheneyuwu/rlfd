@@ -8,11 +8,6 @@ setup(
     author_email="cheney.wu@mail.utoronto.ca",
     license="MIT",
     packages=["td3fd"],
-    install_requires=[
-        "matplotlib",
-        "tensorflow==1.15.0",
-        "tensorflow_probability==0.7.0",
-        "pandas",
-    ],
+    install_requires=["matplotlib", "pandas",],
     zip_safe=False,
 )

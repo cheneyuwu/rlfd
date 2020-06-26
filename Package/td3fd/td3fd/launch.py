@@ -19,11 +19,20 @@ except ImportError:
 
 from td3fd import logger
 from td3fd.demo_util.generate_demo import main as demo_entry
+from td3fd.demo_util.generate_demo_rlkit import main as demo_rlkit_entry
 from td3fd.evaluate import main as evaluate_entry
+from td3fd.evaluate_rlkit import main as evaluate_rlkit_entry
 from td3fd.plot import main as plot_entry
 from td3fd.train import main as train_entry
 from td3fd.util.mpi_util import mpi_exit, mpi_input
 
+# tf debug
+# from td3fd.ddpg.debug.generate_query import main as generate_query_entry
+# from td3fd.ddpg.debug.visualize_query import main as visualize_query_entry
+from td3fd.ddpg2.debug.check_potential import main as check_potential_entry
+# # torch debug
+# from td3fd.td3.debug.generate_query import main as generate_query_entry
+# from td3fd.td3.debug.visualize_query import main as visualize_query_entry
 
 def import_param_config(load_dir):
     """Assume that there is a gv called params_config that contains all the params
@@ -66,59 +75,60 @@ def generate_params(root_dir, param_config):
                 params[param_name] = param_val
     return res
 
-
-# def transform_config_name(config_name):
-#     """ Transfer the legend names"""
-#     print(config_name)
-#     for i in range(len(config_name)):
-#         if config_name[i].startswith("demo_strategy"):
-#             if config_name[i] == "demo_strategy_nf":
-#                 config_name[i] = "MAF Shaping"
-#             elif config_name[i] == "demo_strategy_gan":
-#                 config_name[i] = "GAN Shaping"
-#             elif config_name[i] == "demo_strategy_pure_bc":
-#                 config_name[i] = "BC"
-#             elif config_name[i] == "demo_strategy_bc":
-#                 if "q_filter_1" in config_name:
-#                     config_name[i] = "TD3+BC+Q Filter"
-#                 else:
-#                     config_name[i] = "TD3+BC"
-#             elif config_name[i] == "demo_strategy_none":
-#                 config_name[i] = "TD3"
-#     return config_name
-
-
 def transform_config_name(config_name):
     """ Transfer the legend names"""
-    print(config_name)
     for i in range(len(config_name)):
-        if config_name[i].startswith("demo_strategy"):
-            if config_name[i] == "demo_strategy_nf":
-                return ["NF Shaping"]
-            elif config_name[i] == "demo_strategy_gan":
-                return ["GAN Shaping"]
-            elif config_name[i] == "demo_strategy_pure_bc":
+        if config_name[i].startswith("config"):
+            if config_name[i] == "config_TD3_NF_Shaping":
+                for name in config_name:
+                    if name.startswith("potential_weight_"):
+                        weight = name.replace("potential_weight_", "")
+                        return ["TD3+Shaping(NF), $k^{NF}$="+weight]
+                return ["TD3+Shaping(NF)"]
+            elif config_name[i] == "config_TD3_NF_Shaping_Decay":
+                for name in config_name:
+                    if name.startswith("potential_weight_"):
+                        weight = name.replace("potential_weight_", "")
+                        return ["TD3+Shaping(NF) w/ Decay, $k^{NF}$="+weight]
+                return ["TD3+Shaping(NF) w/ Decay"]
+            elif config_name[i] == "config_TD3_GAN_Shaping":
+                for name in config_name:
+                    if name.startswith("potential_weight_"):
+                        weight = name.replace("potential_weight_", "")
+                        return ["TD3+Shaping(GAN), $k^{GAN}$="+weight]
+                return ["TD3+Shaping(GAN)"]
+            elif config_name[i] == "config_BC":
                 return ["BC"]
-            elif config_name[i] == "demo_strategy_bc":
+            elif config_name[i] == "config_TD3":
+                return ["TD3"]
+            elif config_name[i] == "config_TD3_BC":
                 if "prm_loss_weight_0.0001" in config_name:
-                    return ["$\lambda$TD3+BC, $\lambda$=0.0001"]
+                    return ["TD3+BC, $\lambda$=0.0001"]
                 elif "prm_loss_weight_0.001" in config_name:
-                    return ["$\lambda$TD3+BC, $\lambda$=0.001"]
+                    return ["TD3+BC, $\lambda$=0.001"]
                 elif "prm_loss_weight_0.01" in config_name:
-                    return ["$\lambda$TD3+BC, $\lambda$=0.01"]
+                    return ["TD3+BC, $\lambda$=0.01"]
                 elif "prm_loss_weight_0.1" in config_name:
-                    return ["$\lambda$TD3+BC, $\lambda$=0.1"]
+                    return ["TD3+BC, $\lambda$=0.1"]
                 else:
                     return ["TD3+BC"]
-            elif config_name[i] == "demo_strategy_none":
-                return ["TD3"]
-        elif config_name[i].startswith("config"):
-            if config_name[i] == "config_gail":
-                return ["GAIL"]
+            elif config_name[i] == "config_TD3_BC_QFilter":
+                if "prm_loss_weight_0.0001" in config_name:
+                    return ["TD3+BC+QFilter, $\lambda$=0.0001"]
+                elif "prm_loss_weight_0.001" in config_name:
+                    return ["TD3+BC+QFilter, $\lambda$=0.001"]
+                elif "prm_loss_weight_0.01" in config_name:
+                    return ["TD3+BC+QFilter, $\lambda$=0.01"]
+                elif "prm_loss_weight_0.1" in config_name:
+                    return ["TD3+BC+QFilter, $\lambda$=0.1"]
+                else:
+                    return ["TD3+BC+QFilter"]
+            elif config_name[i] == "config_TD3_BC_Init":
+                return ["TD3+BC Init."]
     return config_name
 
 
-def main(targets, exp_dir, policy_file, **kwargs):
+def main(targets, exp_dir, policy, save_dir, **kwargs):
 
     # Consider rank as pid.
     comm = MPI.COMM_WORLD if MPI is not None else None
@@ -133,8 +143,8 @@ def main(targets, exp_dir, policy_file, **kwargs):
     # get the abs path of the exp dir
     assert exp_dir is not None, "must provide the experiment root directory --exp_dir"
     exp_dir = os.path.abspath(os.path.expanduser(exp_dir))
-    if policy_file is not None:
-        policy_file = os.path.abspath(os.path.expanduser(policy_file))
+    if policy is not None:
+        policy = os.path.abspath(os.path.expanduser(policy))
 
     for target in targets:
         if "rename:" in target:
@@ -142,6 +152,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
             logger.info("Renaming the config to params_renamed.json!")
             logger.info("=================================================")
             # excluded params
+            exc_params = []
             exc_params = ["seed"]  # CHANGE this!
             # adding checking
             config_file = target.replace("rename:", "")
@@ -155,7 +166,9 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     # copy params.json file, rename the config entry
                     varied_params = k[len(exp_dir) + 1 :].split("/")
                     config_name = [x for x in varied_params if not any([x.startswith(y) for y in exc_params])]
+                    print(config_name)
                     config_name = transform_config_name(config_name)
+                    print("||||---> ", config_name)
                     v["config"] = "-".join(config_name)
                     with open(os.path.join(k, "params_renamed.json"), "w") as f:
                         json.dump(v, f)
@@ -191,9 +204,9 @@ def main(targets, exp_dir, policy_file, **kwargs):
             if comm is not None:
                 comm.Barrier()
 
-            if policy_file == None:
-                policy_file = os.path.join(list(dir_param_dict.keys())[0], "rl/policy_latest.pkl")
-                logger.info("Setting policy_file to {}".format(policy_file))
+            if policy == None:
+                policy = os.path.join(list(dir_param_dict.keys())[0], "rl/policy_latest.pkl")
+                logger.info("Setting policy to {}".format(policy))
 
             # run experiments
             parallel = 1  # CHANGE this number to allow launching in serial
@@ -227,19 +240,43 @@ def main(targets, exp_dir, policy_file, **kwargs):
             if comm is not None:
                 comm.Barrier()
 
-        elif target == "demo_data":
-            assert policy_file != None
+        elif target == "demo":
+            assert policy != None
             logger.info("\n\n=================================================")
-            logger.info("Using policy file from {} to generate demo data.".format(policy_file))
+            logger.info("Using policy file from {} to generate demo data.".format(policy))
             logger.info("=================================================")
-            demo_entry(policy_file=policy_file, root_dir=exp_dir)
+            if rank == 0:
+                demo_entry(policy=policy, root_dir=exp_dir)
+
+        elif "demo_rlkit:" in target:
+            assert policy != None
+            logger.info("\n\n=================================================")
+            logger.info("Using policy file from {} to generate demo data.".format(policy))
+            logger.info("=================================================")
+            config_file = target.replace("demo_rlkit:", "")
+            params_configs = import_param_config(config_file)
+            env_name = params_configs[0]["env_name"]
+            if rank == 0:
+                demo_rlkit_entry(policy=policy, root_dir=exp_dir, env_name=env_name)
 
         elif target == "evaluate":
-            assert policy_file != None
+            assert policy != None
             logger.info("\n\n=================================================")
-            logger.info("Evaluating using policy file from {}.".format(policy_file))
+            logger.info("Evaluating using policy file from {}.".format(policy))
             logger.info("=================================================")
-            evaluate_entry(policy_file=policy_file)
+            if rank == 0:
+                evaluate_entry(policy=policy)
+
+        elif "evaluate_rlkit:" in target:
+            assert policy != None
+            logger.info("\n\n=================================================")
+            logger.info("Evaluating using policy file from {}.".format(policy))
+            logger.info("=================================================")
+            config_file = target.replace("evaluate_rlkit:", "")
+            params_configs = import_param_config(config_file)
+            env_name = params_configs[0]["env_name"]
+            if rank == 0:
+                evaluate_rlkit_entry(policy=policy, env_name=env_name)
 
         elif target == "plot":
             logger.info("\n\n=================================================")
@@ -248,16 +285,40 @@ def main(targets, exp_dir, policy_file, **kwargs):
             if rank == 0:  # plot does not need to be run on all threads
                 plot_entry(
                     dirs=[exp_dir],
+                    save_dir=save_dir,
                     xys=[
-                        "epoch:test/success_rate",
-                        # "epoch:test/total_shaping_reward",
-                        "epoch:test/total_reward",
-                        # "epoch:test/mean_Q",
-                        # "epoch:test/mean_Q_plus_P",
-                        # "train/episode:test/total_reward"
+                        # "epoch:test/success_rate",
+                        # "epoch:test/:reward_per_eps",
+                        # "train/steps:test/success_rate",
+                        "train/steps:test/reward_per_eps",
+                        # for rlkit
+                        # "exploration/num steps total:evaluation/Average Returns"
+                        # "exploration/num steps total:trainer/Policy Loss"
+                        # "train-steps:evaluation/episode-reward-mean",  # for soft learning
                     ],
                     smooth=True,
                 )
+
+        # elif target == "gen_query":
+        #     logger.info("\n\n=================================================")
+        #     logger.info("Generating queries at: {}".format(exp_dir))
+        #     logger.info("=================================================")
+        #     if rank == 0:
+        #         generate_query_entry(exp_dir=exp_dir, save=True)
+
+        # elif target == "vis_query":
+        #     logger.info("\n\n=================================================")
+        #     logger.info("Visualizing queries.")
+        #     logger.info("=================================================")
+        #     if rank == 0:
+        #         visualize_query_entry(exp_dir=exp_dir, save=True)
+
+        elif target == "check":
+            logger.info("\n\n=================================================")
+            logger.info("Check potential.")
+            logger.info("=================================================")
+            if rank == 0:
+                check_potential_entry(exp_dir=exp_dir)
 
         elif target == "copy_result":
             expdata_dir = os.path.abspath(os.path.expanduser(os.environ["EXPDATA"]))
@@ -303,13 +364,16 @@ if __name__ == "__main__":
         "--exp_dir", help="top level directory to store experiment results", type=str, default=os.getcwd()
     )
     exp_parser.parser.add_argument(
+        "--save_dir", help="top level directory to store plots", type=str, default=os.getcwd()
+    )
+    exp_parser.parser.add_argument(
         "--targets",
         help="target or list of targets in [demo_data, train:<parameter file>.py, plot, evaluate]",
         type=str,
         nargs="+",
     )
     exp_parser.parser.add_argument(
-        "--policy_file",
+        "--policy",
         help="when target is evaluate or demodata, specify the policy file to be used, <policy name>.pkl",
         type=str,
         default=None,

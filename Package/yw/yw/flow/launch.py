@@ -6,15 +6,6 @@ import os
 import shutil
 import sys
 
-from yw.flow.generate_demo import main as demo_entry
-from yw.flow.plot import main as plot_entry
-from yw.flow.query.generate_query import main as generate_query_entry
-from yw.flow.query.visualize_query import main as visualize_query_entry
-from yw.flow.run_agent import main as display_entry
-from yw.flow.train_ddpg_main import main as train_entry
-from yw.tool import logger
-from yw.util.mpi_util import mpi_exit, mpi_input
-
 # must include gym before loading mpi, for compute canada cluster
 try:
     import mujoco_py
@@ -25,6 +16,15 @@ try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
+
+from yw.flow.generate_demo import main as demo_entry
+from yw.flow.run_agent import main as evaluate_entry
+from yw.flow.train_ddpg_main import main as train_entry
+
+
+from td3fd import logger
+from td3fd.plot import main as plot_entry
+from td3fd.util.mpi_util import mpi_exit, mpi_input
 
 
 def import_param_config(load_dir):
@@ -117,7 +117,7 @@ def transform_config_name(config_name):
     return config_name
 
 
-def main(targets, exp_dir, policy_file, **kwargs):
+def main(targets, exp_dir, policy, save_dir, **kwargs):
 
     # Consider rank as pid.
     comm = MPI.COMM_WORLD if MPI is not None else None
@@ -132,8 +132,8 @@ def main(targets, exp_dir, policy_file, **kwargs):
     # get the abs path of the exp dir
     assert exp_dir is not None, "must provide the experiment root directory --exp_dir"
     exp_dir = os.path.abspath(os.path.expanduser(exp_dir))
-    if policy_file is not None:
-        policy_file = os.path.abspath(os.path.expanduser(policy_file))
+    if policy is not None:
+        policy = os.path.abspath(os.path.expanduser(policy))
 
     for target in targets:
         if "rename:" in target:
@@ -151,7 +151,6 @@ def main(targets, exp_dir, policy_file, **kwargs):
             if rank == 0:
                 for k, v in dir_param_dict.items():
                     assert os.path.exists(k), k
-                    assert v["config"] == "default"
                     # copy params.json file, rename the config entry
                     varied_params = k[len(exp_dir) + 1 :].split("/")
                     config_name = [x for x in varied_params if not any([x.startswith(y) for y in exc_params])]
@@ -179,7 +178,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
                         mpi_exit(1, comm=comm)
                     os.makedirs(k, exist_ok=True)
                     # copy params.json file
-                    with open(os.path.join(k, "copied_params.json"), "w") as f:
+                    with open(os.path.join(k, "params.json"), "w") as f:
                         json.dump(v, f)
                     # copy demo_sata file if exist
                     demo_file = os.path.join(exp_dir, "demo_data.npz")
@@ -191,13 +190,12 @@ def main(targets, exp_dir, policy_file, **kwargs):
             if comm is not None:
                 comm.Barrier()
 
-            if policy_file == None:
-                policy_file = os.path.join(list(dir_param_dict.keys())[0], "rl/policy_latest.pkl")
-                logger.info("Setting policy_file to {}".format(policy_file))
+            if policy == None:
+                policy = os.path.join(list(dir_param_dict.keys())[0], "rl/policy_latest.pkl")
+                logger.info("Setting policy to {}".format(policy))
 
             # run experiments
             parallel = 1  # CHANGE this number to allow launching in serial
-            num_cpu = 1  # CHANGE this number to allow multiple processes
             # total num exps
             num_exp = len(dir_param_dict.keys())
 
@@ -207,44 +205,42 @@ def main(targets, exp_dir, policy_file, **kwargs):
                     train_entry(root_dir=k)
 
             elif not parallel:
-                logger.info("{} experiments in series. ({} cpus for each experiment)".format(num_exp, num_cpu))
-                assert num_cpu <= total_num_cpu, "no enough cpu! need {} cpus".format(num_cpu)
-                comm_for_exps = comm.Split(color=int(rank >= num_cpu))
-                if rank < num_cpu:
-                    assert comm_for_exps.Get_size() == num_cpu
+                logger.info("{} experiments in series.".format(num_exp))
+                comm_for_exps = comm.Split(color=int(rank > 0))
+                if rank == 0:
+                    assert comm_for_exps.Get_size() == 1
                     for k in dir_param_dict.keys():
                         train_entry(root_dir=k, comm=comm_for_exps)
-
             else:
-                logger.info("{} experiments in parallel. ({} cpus for each experiment)".format(num_exp, num_cpu))
-                cpus_for_training = num_exp * num_cpu
-                assert cpus_for_training <= total_num_cpu, "no enough cpu! need {} cpus".format(cpus_for_training)
+                logger.info("{} experiments in parallel.".format(num_exp))
+                assert num_exp <= total_num_cpu, "no enough cpu! need {} cpus".format(num_exp)
                 # select processes to run the experiment, which is [0, num_exp]
-                comm_for_exps = comm.Split(color=int(rank >= cpus_for_training))
-                if rank < cpus_for_training:
-                    assert comm_for_exps.Get_size() == cpus_for_training
-                    color_for_each_exp = comm_for_exps.Get_rank() % num_exp
-                    comm_for_each_exp = comm_for_exps.Split(color=color_for_each_exp)
-                    assert comm_for_each_exp.Get_size() == num_cpu
+                comm_for_exps = comm.Split(color=int(rank >= num_exp))
+                if rank < num_exp:
+                    assert comm_for_exps.Get_size() == num_exp
+                    comm_for_each_exp = comm_for_exps.Split(color=comm_for_exps.Get_rank())
+                    assert comm_for_each_exp.Get_size() == 1
                     k = list(dir_param_dict.keys())
-                    train_entry(root_dir=k[color_for_each_exp], comm=comm_for_each_exp)
+                    train_entry(root_dir=k[comm_for_exps.Get_rank()], comm=comm_for_each_exp)
 
             if comm is not None:
                 comm.Barrier()
 
         elif target == "demo":
-            assert policy_file != None
+            assert policy != None
             logger.info("\n\n=================================================")
-            logger.info("Using policy file from {} to generate demo data.".format(policy_file))
+            logger.info("Using policy file from {} to generate demo data.".format(policy))
             logger.info("=================================================")
-            demo_entry(policy_file=policy_file, root_dir=exp_dir)
+            if rank == 0:
+                demo_entry(policy=policy, root_dir=exp_dir)
 
-        elif target == "display":
-            assert policy_file != None
+        elif target == "evaluate":
+            assert policy != None
             logger.info("\n\n=================================================")
-            logger.info("Displaying using policy file from {}.".format(policy_file))
+            logger.info("Evaluating using policy file from {}.".format(policy))
             logger.info("=================================================")
-            display_entry(policy_file=policy_file)
+            if rank == 0:
+                evaluate_entry(policy=policy)
 
         elif target == "plot":
             logger.info("\n\n=================================================")
@@ -253,32 +249,19 @@ def main(targets, exp_dir, policy_file, **kwargs):
             if rank == 0:  # plot does not need to be run on all threads
                 plot_entry(
                     dirs=[exp_dir],
+                    save_dir=save_dir,
                     xys=[
                         "epoch:test/success_rate",
-                        "epoch:test/total_shaping_reward",
                         "epoch:test/total_reward",
-                        "epoch:test/mean_Q",
-                        "epoch:test/mean_Q_plus_P",
+                        # "epoch:test/total_shaping_reward",
+                        # "epoch:test/mean_Q",
+                        # "epoch:test/mean_Q_plus_P",
                         # "train/episode:test/total_reward"
                     ],
                     smooth=True,
                 )
 
-        elif target == "gen_query":
-            # currently assume only 1 level of subdir
-            logger.info("\n\n=================================================")
-            logger.info("Generating queries at: {}".format(exp_dir))
-            logger.info("=================================================")
-            generate_query_entry(directories=[exp_dir], save=1)
-
-        elif target == "vis_query":
-            logger.info("\n\n=================================================")
-            logger.info("Visualizing queries.")
-            logger.info("=================================================")
-            # currently assume only 1 level of subdir
-            visualize_query_entry(directories=[exp_dir], save=1)
-
-        elif target == "cp_result":
+        elif target == "copy_result":
             expdata_dir = os.path.abspath(os.path.expanduser(os.environ["EXPDATA"]))
             print("Experiment directory:", expdata_dir)
             assert os.path.exists(expdata_dir)
@@ -307,6 +290,7 @@ def main(targets, exp_dir, policy_file, **kwargs):
 
         if comm is not None:
             comm.Barrier()
+
         logger.reset()
 
     return
@@ -314,35 +298,26 @@ def main(targets, exp_dir, policy_file, **kwargs):
 
 if __name__ == "__main__":
 
-    from yw.util.cmd_util import ArgParser
+    from td3fd.util.cmd_util import ArgParser
 
-    """
-    Example flow:
-    1. (mpirun -np 1) python launch.py --targets train:rldense
-       Train a rl agent with config defined in rldense.py located in the same directory as launch.py. The output is in
-       TempResult/Temp by default (you can overwrite this default using --exp_dir <overwrite directory>).
-    2. (mpirun -np 1) python launch.py --targets train:rldense demo
-       In addition to 1, also generate demo_data using the trained rl agent and store the demo file as demo_data.py in
-       TempResult/Temp by default.
-    3. (mpirun -np 1) python launch.py --targets train:rldense demo train:rlnorm
-       In addition to 2, also use the generated demo file to train an rl agent with config defined in rlnorm.py located
-       in the same directory as launch.py. The output is TempResult/Temp
-    4. (mpirun -np 1) python launch.py --targets train:rldense plot
-       In addition to 1, also collects result in TempResult/Temp and generates plots
-
-    Note:
-    1. In the params config file (e.g. rldense.py), if the val of any key is a list, this script will create a
-       sub-folder named "key-val" and put the exp result there.
-
-    Run this script with different chain of targets and see what happens! I hope the flow makes sense:)
-    """
     exp_parser = ArgParser(allow_unknown_args=False)
-    exp_parser.parser.add_argument("--targets", help="target or list of target", type=str, nargs="+", default=None)
     exp_parser.parser.add_argument(
         "--exp_dir", help="top level directory to store experiment results", type=str, default=os.getcwd()
     )
     exp_parser.parser.add_argument(
-        "--policy_file", help="top level directory to store experiment results", type=str, default=None
+        "--save_dir", help="top level directory to store plots", type=str, default=os.getcwd()
+    )
+    exp_parser.parser.add_argument(
+        "--targets",
+        help="target or list of targets in [demo_data, train:<parameter file>.py, plot, evaluate]",
+        type=str,
+        nargs="+",
+    )
+    exp_parser.parser.add_argument(
+        "--policy",
+        help="when target is evaluate or demodata, specify the policy file to be used, <policy name>.pkl",
+        type=str,
+        default=None,
     )
     exp_parser.parse(sys.argv)
     main(**exp_parser.get_dict())

@@ -1,8 +1,20 @@
-[submodule "Experiment/ExpData"]
-	path = Experiment/ExpData
-	branch = master
-	url = git@github.com:cheneyuwu/ExpData.git
 [submodule "Package/gym"]
 	path = Package/gym
 	branch = yuchen
 	url = git@github.com:cheneyuwu/gym.git
+[submodule "Package/metaworld"]
+	path = Package/metaworld
+	url = git@github.com:cheneyuwu/metaworld.git
+[submodule "Package/rlkit"]
+	path = Package/rlkit
+	url = git@github.com:cheneyuwu/rlkit.git
+[submodule "Package/dmc2gym"]
+	path = Package/dmc2gym
+	url = git@github.com:cheneyuwu/dmc2gym.git
+[submodule "Package/dm_control2gym"]
+	path = Package/dm_control2gym
+	url = git@github.com:cheneyuwu/dm_control2gym.git
+[submodule "Package/mj_envs"]
+	path = Package/mj_envs
+	url = git@github.com:anair13/mj_envs.git
+	branch = master

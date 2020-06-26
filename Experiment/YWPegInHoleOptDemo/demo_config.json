@@ -1,0 +1,11 @@
+{
+  "seed": 0,
+  "fix_T": true,
+  "demo": {
+    "num_episodes": 100,
+    "random_eps": 0.0,
+    "noise_eps": 0.0,
+    "render": false
+  },
+  "filename": "demo_data.npz"
+}

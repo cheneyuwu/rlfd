@@ -1,15 +1,16 @@
-"""Partially adopted from OpenAI baseline code base
+""" We implemented two types of replay buffer "UniformReplayBuffer" and "RingReplayBuffer"
+    They are only different in the way they store experiences.
+    "UniformReplayBuffer" is easier to be extended to HER style methods. for future works
 """
+
 import numpy as np
 
 
 class ReplayBufferBase:
     def __init__(self, buffer_shapes, size):
-        """ Creates a replay buffer.
-
+        """ Create a replay buffer.
         Args:
-            buffer_shapes       (dict of float) - the shape for all buffers that are used in the replay buffer
-            size_in_transitions (int)           - the size of the buffer, measured in transitions
+            size (int) - the size of the buffer, measured in transitions
         """
         self.buffer_shapes = buffer_shapes
         # memory management
@@ -197,14 +198,13 @@ class ReplayBuffer(ReplayBufferBase):
         for key in self.buffers.keys():
             buffers[key] = self.buffers[key][: self.current_size]
 
-        buffers["o_2"] = buffers["o"][:, 1:, :]
+        buffers["o_2"] = buffers["o"][:, 1:, ...]
         if "ag" in buffers.keys():
-            buffers["ag_2"] = buffers["ag"][:, 1:, :]
+            buffers["ag_2"] = buffers["ag"][:, 1:, ...]
         if "g" in buffers.keys():
-            buffers["g_2"] = buffers["g"][:, :, :]
+            buffers["g_2"] = buffers["g"][:, :, ...]
 
         transitions = self.sample_transitions(buffers, batch_size)
-
         assert all([key in transitions for key in list(self.buffers.keys())]), "key missing from transitions"
 
         return transitions
@@ -212,10 +212,12 @@ class ReplayBuffer(ReplayBufferBase):
     def sample_transitions(self, buffers, batch_size):
         raise NotImplementedError
 
-    def get_current_size_episode(self):
+    @property
+    def current_size_episode(self):
         return self.current_size
 
-    def get_current_size_transiton(self):
+    @property
+    def current_size_transiton(self):
         return self.current_size * self.T
 
     def _get_storage_idx(self, inc):
