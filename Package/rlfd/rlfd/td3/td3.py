@@ -3,12 +3,11 @@ import pickle
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 
-from rlfd import logger, memory
-from rlfd.td3 import actorcritic_network, shaping, normalizer
+from rlfd import logger, memory, normalizer
+from rlfd.td3 import td3_networks, shaping
 
-tfd = tfp.distributions
+tfk = tf.keras
 
 
 class TD3(object):
@@ -34,7 +33,7 @@ class TD3(object):
       q_lr,
       pi_lr,
       action_l2,
-      # td3
+      # td3 specific
       policy_freq,
       policy_noise,
       policy_noise_clip,
@@ -52,8 +51,7 @@ class TD3(object):
       demo_strategy,
       bc_params,
       shaping_params,
-      info,
-  ):
+      info):
     # Store initial args passed into the function
     self.init_args = locals()
 
@@ -75,7 +73,11 @@ class TD3(object):
 
     # Parameters
     self.dims = dims
+    self.dimo = self.dims["o"]
+    self.dimg = self.dims["g"]
+    self.dimu = self.dims["u"]
     self.max_u = max_u
+    self.layer_sizes = layer_sizes
     self.q_lr = q_lr
     self.pi_lr = pi_lr
     self.action_l2 = action_l2
@@ -83,11 +85,6 @@ class TD3(object):
 
     self.norm_eps = norm_eps
     self.norm_clip = norm_clip
-
-    self.layer_sizes = layer_sizes
-    self.policy_freq = policy_freq
-    self.policy_noise = policy_noise
-    self.policy_noise_clip = policy_noise_clip
 
     # multistep return
     self.use_n_step_return = use_n_step_return
@@ -101,17 +98,20 @@ class TD3(object):
     self.gamma = gamma
     self.info = info
 
-    # Prepare parameters
-    self.dimo = self.dims["o"]
-    self.dimg = self.dims["g"]
-    self.dimu = self.dims["u"]
+    # TD3 specific
+    self.policy_freq = policy_freq
+    self.policy_noise = policy_noise
+    self.policy_noise_clip = policy_noise_clip
 
     self._create_memory()
     self._create_network()
 
+    # Losses
+    self._huber_loss = tfk.losses.Huber(delta=10.0,
+                                        reduction=tfk.losses.Reduction.NONE)
+
     # Initialize training steps
     self.td3_training_step = tf.Variable(0, trainable=False, dtype=tf.int64)
-    self.model_training_step = tf.Variable(0, trainable=False, dtype=tf.int64)
     self.exploration_step = tf.Variable(0, trainable=False, dtype=tf.int64)
 
   def _increment_exploration_step(self, num_steps):
@@ -121,10 +121,10 @@ class TD3(object):
   @tf.function
   def _get_actions_graph(self, o, g):
 
-    norm_o = self.o_stats.normalize(o)
-    norm_g = self.g_stats.normalize(g)
+    norm_o = self._o_stats.normalize(o)
+    norm_g = self._g_stats.normalize(g)
 
-    u = self.main_actor([norm_o, norm_g])
+    u = self._actor([norm_o, norm_g])
 
     self._policy_inspect_graph(o, g)
 
@@ -155,7 +155,7 @@ class TD3(object):
 
     if self.initialize_with_bc:
       self.train_bc()
-      self.initialize_target_net()
+      self.update_target_network(polyak=0.0)
 
   def store_experiences(self, experiences):
 
@@ -203,22 +203,20 @@ class TD3(object):
 
   @tf.function
   def _train_bc_graph(self, o, g, u):
-    o = self.o_stats.normalize(o)
-    g = self.g_stats.normalize(g)
+    o = self._o_stats.normalize(o)
+    g = self._g_stats.normalize(g)
     with tf.GradientTape() as tape:
-      pi = self.main_actor([o, g])
+      pi = self._actor([o, g])
       bc_loss = tf.reduce_mean(tf.square(pi - u))
-    actor_grads = tape.gradient(bc_loss, self.main_actor.trainable_weights)
-    self.bc_optimizer.apply_gradients(
-        zip(actor_grads, self.main_actor.trainable_weights))
+    actor_grads = tape.gradient(bc_loss, self._actor.trainable_weights)
+    self._bc_optimizer.apply_gradients(
+        zip(actor_grads, self._actor.trainable_weights))
     return bc_loss
 
   def train_bc(self):
-
     if not self.initialize_with_bc:
       return
 
-    # NOTE: keep the following two versions equivalent
     for epoch in range(self.initialize_num_epochs):
       demo_data_iter = self.demo_buffer.sample(batch_size=self.batch_size_demo,
                                                shuffle=True,
@@ -244,67 +242,64 @@ class TD3(object):
     self.shaping.train(demo_data)
     self.shaping.evaluate(demo_data)
 
-  def _critic_loss_graph(self, o, g, o_2, g_2, u, r, n, done):
-
-    # normalize observations
-    norm_o = self.o_stats.normalize(o)
-    norm_g = self.g_stats.normalize(g)
-    norm_o_2 = self.o_stats.normalize(o_2)
-    norm_g_2 = self.g_stats.normalize(g_2)
+  def _criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done):
+    # Normalize observations
+    norm_o = self._o_stats.normalize(o)
+    norm_g = self._g_stats.normalize(g)
+    norm_o_2 = self._o_stats.normalize(o_2)
+    norm_g_2 = self._g_stats.normalize(g_2)
 
     # add noise to target policy output
     noise = tf.random.normal(tf.shape(u), 0.0, self.policy_noise)
     noise = tf.clip_by_value(noise, -self.policy_noise_clip,
                              self.policy_noise_clip) * self.max_u
     u_2 = tf.clip_by_value(
-        self.target_actor([norm_o_2, norm_g_2]) + noise, -self.max_u,
+        self._actor_target([norm_o_2, norm_g_2]) + noise, -self.max_u,
         self.max_u)
 
     # immediate reward
-    target = r
-    # demo shaping reward
+    target_q = r
+    # shaping reward
     if self.shaping != None:
       potential_curr = self.potential_weight * self.shaping.potential(
           o=o, g=g, u=u)
       potential_next = self.potential_weight * self.shaping.potential(
           o=o_2, g=g_2, u=u_2)
-      target += (1.0 - done) * tf.pow(self.gamma,
-                                      n) * potential_next - potential_curr
-    # td3 target with clipping
-    target += (1.0 - done) * tf.pow(self.gamma, n) * tf.minimum(
-        self.target_critic([norm_o_2, norm_g_2, u_2]),
-        self.target_critic_twin([norm_o_2, norm_g_2, u_2]),
+      target_q += (1.0 - done) * tf.pow(self.gamma,
+                                        n) * potential_next - potential_curr
+    # td3 target_q with clipping
+    target_q += (1.0 - done) * tf.pow(self.gamma, n) * tf.minimum(
+        self._criticq1_target([norm_o_2, norm_g_2, u_2]),
+        self._criticq2_target([norm_o_2, norm_g_2, u_2]),
     )
+    target_q = tf.stop_gradient(target_q)
 
-    bellman_error = (tf.square(
-        tf.stop_gradient(target) - self.main_critic([norm_o, norm_g, u])) +
-                     tf.square(
-                         tf.stop_gradient(target) -
-                         self.main_critic_twin([norm_o, norm_g, u])))
+    td_loss_q1 = self._huber_loss(target_q, self._criticq1([norm_o, norm_g, u]))
+    td_loss_q2 = self._huber_loss(target_q, self._criticq2([norm_o, norm_g, u]))
+    td_loss = td_loss_q1 + td_loss_q2
 
     if self.sample_demo_buffer and not self.use_demo_reward:
       # mask off entries from demonstration dataset
       mask = np.concatenate(
           (np.ones(self.batch_size), np.zeros(self.batch_size_demo)), axis=0)
-      bellman_error = tf.boolean_mask(bellman_error, mask)
+      td_loss = tf.boolean_mask(td_loss, mask)
 
-    critic_loss = tf.reduce_mean(bellman_error)
+    criticq_loss = tf.reduce_mean(td_loss)
 
     with tf.name_scope('TD3Losses/'):
-      tf.summary.scalar(name='critic_loss vs td3_training_step',
-                        data=critic_loss,
+      tf.summary.scalar(name='criticq_loss vs td3_training_step',
+                        data=criticq_loss,
                         step=self.td3_training_step)
 
-    return critic_loss
+    return criticq_loss
 
   def _actor_loss_graph(self, o, g, u):
+    # Normalize observations
+    norm_o = self._o_stats.normalize(o)
+    norm_g = self._g_stats.normalize(g)
 
-    # normalize observations
-    norm_o = self.o_stats.normalize(o)
-    norm_g = self.g_stats.normalize(g)
-
-    pi = self.main_actor([norm_o, norm_g])
-    actor_loss = -tf.reduce_mean(self.main_critic([norm_o, norm_g, pi]))
+    pi = self._actor([norm_o, norm_g])
+    actor_loss = -tf.reduce_mean(self._criticq1([norm_o, norm_g, pi]))
     actor_loss += self.action_l2 * tf.reduce_mean(tf.square(pi / self.max_u))
     if self.shaping != None:
       actor_loss += -tf.reduce_mean(
@@ -316,8 +311,8 @@ class TD3(object):
       demo_pi = tf.boolean_mask((pi), mask)
       demo_u = tf.boolean_mask((u), mask)
       if self.bc_params["q_filter"]:
-        q_u = self.main_critic([norm_o, norm_g, u])
-        q_pi = self.main_critic([norm_o, norm_g, pi])
+        q_u = self._criticq1([norm_o, norm_g, u])
+        q_pi = self._criticq1([norm_o, norm_g, pi])
         q_filter_mask = tf.reshape(tf.boolean_mask(q_u > q_pi, mask), [-1])
         bc_loss = tf.reduce_mean(
             tf.square(
@@ -337,36 +332,27 @@ class TD3(object):
 
   @tf.function
   def _train_graph(self, o, g, o_2, g_2, u, r, n, done):
-
-    # Train critic
-    critic_trainable_weights = (self.main_critic.trainable_weights +
-                                self.main_critic_twin.trainable_weights)
-
+    # Train critic q
+    criticq_trainable_weights = (self._criticq1.trainable_weights +
+                                 self._criticq2.trainable_weights)
     with tf.GradientTape(watch_accessed_variables=False) as tape:
-      tape.watch(critic_trainable_weights)
-      critic_loss = self._critic_loss_graph(o, g, o_2, g_2, u, r, n, done)
-
-    critic_grads = tape.gradient(critic_loss, critic_trainable_weights)
-
-    self.critic_optimizer.apply_gradients(
-        zip(critic_grads, critic_trainable_weights))
+      tape.watch(criticq_trainable_weights)
+      criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done)
+    criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
+    self._criticq_optimizer.apply_gradients(
+        zip(criticq_grads, criticq_trainable_weights))
 
     # Train actor
     if self.td3_training_step % self.policy_freq == 0:
-      actor_trainable_weights = self.main_actor.trainable_weights
+      actor_trainable_weights = self._actor.trainable_weights
       with tf.GradientTape(watch_accessed_variables=False) as tape:
         tape.watch(actor_trainable_weights)
         actor_loss = self._actor_loss_graph(o, g, u)
-
       actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
-      self.actor_optimizer.apply_gradients(
+      self._actor_optimizer.apply_gradients(
           zip(actor_grads, actor_trainable_weights))
-    else:
-      actor_loss = tf.constant(0.0)
 
     self.td3_training_step.assign_add(1)
-
-    return critic_loss, actor_loss
 
   def train(self):
     with tf.summary.record_if(lambda: self.td3_training_step % 200 == 0):
@@ -381,9 +367,8 @@ class TD3(object):
       r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
       n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
       done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
-      critic_loss_tf, actor_loss_tf = self._train_graph(o_tf, g_tf, o_2_tf,
-                                                        g_2_tf, u_tf, r_tf,
-                                                        n_tf, done_tf)
+
+      self._train_graph(o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf, done_tf)
 
   def update_potential_weight(self):
     if self.potential_decay_epoch < self.shaping_params["potential_decay_epoch"]:
@@ -393,41 +378,25 @@ class TD3(object):
         self.potential_weight * self.potential_decay_scale)
     return potential_weight_tf.numpy()
 
-  def initialize_target_net(self):
-    hard_copy_func = lambda v: v[0].assign(v[1])
+  def update_target_network(self, polyak=None):
+    polyak = polyak if polyak else self.polyak
+    copy_func = lambda v: v[0].assign(polyak * v[0] + (1.0 - polyak) * v[1])
+    list(map(copy_func, zip(self._actor_target.weights, self._actor.weights)))
     list(
-        map(hard_copy_func,
-            zip(self.target_actor.weights, self.main_actor.weights)))
+        map(copy_func, zip(self._criticq1_target.weights,
+                           self._criticq1.weights)))
     list(
-        map(hard_copy_func,
-            zip(self.target_critic.weights, self.main_critic.weights)))
-    list(
-        map(hard_copy_func,
-            zip(self.target_critic_twin.weights,
-                self.main_critic_twin.weights)))
-
-  def update_target_net(self):
-    soft_copy_func = lambda v: v[0].assign(self.polyak * v[0] +
-                                           (1.0 - self.polyak) * v[1])
-    list(
-        map(soft_copy_func,
-            zip(self.target_actor.weights, self.main_actor.weights)))
-    list(
-        map(soft_copy_func,
-            zip(self.target_critic.weights, self.main_critic.weights)))
-    list(
-        map(soft_copy_func,
-            zip(self.target_critic_twin.weights,
-                self.main_critic_twin.weights)))
+        map(copy_func, zip(self._criticq2_target.weights,
+                           self._criticq2.weights)))
 
   def logs(self, prefix=""):
     logs = []
     logs.append(
-        (prefix + "stats_o/mean", np.mean(self.o_stats.mean_tf.numpy())))
-    logs.append((prefix + "stats_o/std", np.mean(self.o_stats.std_tf.numpy())))
+        (prefix + "stats_o/mean", np.mean(self._o_stats.mean_tf.numpy())))
+    logs.append((prefix + "stats_o/std", np.mean(self._o_stats.std_tf.numpy())))
     logs.append(
-        (prefix + "stats_g/mean", np.mean(self.g_stats.mean_tf.numpy())))
-    logs.append((prefix + "stats_g/std", np.mean(self.g_stats.std_tf.numpy())))
+        (prefix + "stats_g/mean", np.mean(self._g_stats.mean_tf.numpy())))
+    logs.append((prefix + "stats_g/std", np.mean(self._g_stats.std_tf.numpy())))
     return logs
 
   def update_stats(self, experiences):
@@ -441,8 +410,8 @@ class TD3(object):
       transitions = experiences.copy()
     o_tf = tf.convert_to_tensor(transitions["o"], dtype=tf.float32)
     g_tf = tf.convert_to_tensor(transitions["g"], dtype=tf.float32)
-    self.o_stats.update(o_tf)
-    self.g_stats.update(g_tf)
+    self._o_stats.update(o_tf)
+    self._g_stats.update(g_tf)
 
   def _create_memory(self):
     buffer_shapes = dict(o=self.dimo,
@@ -478,48 +447,29 @@ class TD3(object):
                                                    self.buffer_size)
 
   def _create_network(self):
-
     # Normalizer for goal and observation.
-    self.o_stats = normalizer.Normalizer(self.dimo, self.norm_eps,
-                                         self.norm_clip)
-    self.g_stats = normalizer.Normalizer(self.dimg, self.norm_eps,
-                                         self.norm_clip)
-
+    self._o_stats = normalizer.Normalizer(self.dimo, self.norm_eps,
+                                          self.norm_clip)
+    self._g_stats = normalizer.Normalizer(self.dimg, self.norm_eps,
+                                          self.norm_clip)
     # Models
-    # actor
-    self.main_actor = actorcritic_network.Actor(self.dimo, self.dimg, self.dimu,
+    self._actor = td3_networks.Actor(self.dimo, self.dimg, self.dimu,
+                                     self.max_u, self.layer_sizes)
+    self._actor_target = td3_networks.Actor(self.dimo, self.dimg, self.dimu,
+                                            self.max_u, self.layer_sizes)
+    self._criticq1 = td3_networks.Critic(self.dimo, self.dimg, self.dimu,
+                                         self.max_u, self.layer_sizes)
+    self._criticq1_target = td3_networks.Critic(self.dimo, self.dimg, self.dimu,
                                                 self.max_u, self.layer_sizes)
-    self.target_actor = actorcritic_network.Actor(self.dimo, self.dimg,
-                                                  self.dimu, self.max_u,
-                                                  self.layer_sizes)
-    # critic
-    self.main_critic = actorcritic_network.Critic(self.dimo, self.dimg,
-                                                  self.dimu, self.max_u,
-                                                  self.layer_sizes)
-    self.target_critic = actorcritic_network.Critic(self.dimo, self.dimg,
-                                                    self.dimu, self.max_u,
-                                                    self.layer_sizes)
-    self.main_critic_twin = actorcritic_network.Critic(self.dimo, self.dimg,
-                                                       self.dimu, self.max_u,
-                                                       self.layer_sizes)
-    self.target_critic_twin = actorcritic_network.Critic(
-        self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes)
-
-    # Create weights
-    o_tf = tf.zeros([0, *self.dimo])
-    g_tf = tf.zeros([0, *self.dimg])
-    u_tf = tf.zeros([0, *self.dimu])
-    self.main_actor([o_tf, g_tf])
-    self.target_actor([o_tf, g_tf])
-    self.main_critic([o_tf, g_tf, u_tf])
-    self.target_critic([o_tf, g_tf, u_tf])
-    self.main_critic_twin([o_tf, g_tf, u_tf])
-    self.target_critic_twin([o_tf, g_tf, u_tf])
-
+    self._criticq2 = td3_networks.Critic(self.dimo, self.dimg, self.dimu,
+                                         self.max_u, self.layer_sizes)
+    self._criticq2_target = td3_networks.Critic(self.dimo, self.dimg, self.dimu,
+                                                self.max_u, self.layer_sizes)
+    self.update_target_network(polyak=0.0)
     # Optimizers
-    self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=self.pi_lr)
-    self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=self.q_lr)
-    self.bc_optimizer = tf.keras.optimizers.Adam(learning_rate=self.pi_lr)
+    self._actor_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
+    self._criticq_optimizer = tfk.optimizers.Adam(learning_rate=self.q_lr)
+    self._bc_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
 
     # Add shaping reward
     shaping_class = {
@@ -550,9 +500,6 @@ class TD3(object):
     self.potential_weight = tf.Variable(1.0, trainable=False)
     self.potential_decay_scale = self.shaping_params["potential_decay_scale"]
     self.potential_decay_epoch = 0  # eventually becomes self.shaping_params["potential_decay_epoch"]
-
-    # Initialize all variables
-    self.initialize_target_net()
 
   @tf.function
   def _policy_inspect_graph(self, o=None, g=None, summarize=False):
@@ -595,12 +542,12 @@ class TD3(object):
 
     assert o != None and g != None, "Provide the same arguments passed to get action."
 
-    norm_o = self.o_stats.normalize(o)
-    norm_g = self.g_stats.normalize(g)
-    u = self.main_actor([norm_o, norm_g])
+    norm_o = self._o_stats.normalize(o)
+    norm_g = self._g_stats.normalize(g)
+    u = self._actor([norm_o, norm_g])
 
     self._policy_inspect_count.assign_add(1)
-    q = self.main_critic([norm_o, norm_g, u])
+    q = self._criticq1([norm_o, norm_g, u])
     self._policy_inspect_estimate_q.assign_add(tf.reduce_sum(q))
     if self.shaping != None:
       p = self.potential_weight * self.shaping.potential(o=o, g=g, u=u)
@@ -613,14 +560,14 @@ class TD3(object):
     state = {k: v for k, v in self.init_args.items() if not k == "self"}
     state["shaping"] = self.shaping
     state["tf"] = {
-        "o_stats": self.o_stats.get_weights(),
-        "g_stats": self.g_stats.get_weights(),
-        "main_actor": self.main_actor.get_weights(),
-        "target_actor": self.target_actor.get_weights(),
-        "main_critic": self.main_critic.get_weights(),
-        "target_critic": self.target_critic.get_weights(),
-        "main_critic_twin": self.main_critic_twin.get_weights(),
-        "target_critic_twin": self.target_critic_twin.get_weights(),
+        "o_stats": self._o_stats.get_weights(),
+        "g_stats": self._g_stats.get_weights(),
+        "actor": self._actor.get_weights(),
+        "actor_target": self._actor_target.get_weights(),
+        "criticq1": self._criticq1.get_weights(),
+        "criticq1_target": self._criticq1_target.get_weights(),
+        "criticq2": self._criticq2.get_weights(),
+        "criticq2_target": self._criticq2_target.get_weights(),
     }
     return state
 
@@ -628,12 +575,12 @@ class TD3(object):
     stored_vars = state.pop("tf")
     shaping = state.pop("shaping")
     self.__init__(**state)
-    self.o_stats.set_weights(stored_vars["o_stats"])
-    self.g_stats.set_weights(stored_vars["g_stats"])
-    self.main_actor.set_weights(stored_vars["main_actor"])
-    self.target_actor.set_weights(stored_vars["target_actor"])
-    self.main_critic.set_weights(stored_vars["main_critic"])
-    self.target_critic.set_weights(stored_vars["target_critic"])
-    self.main_critic_twin.set_weights(stored_vars["main_critic_twin"])
-    self.target_critic_twin.set_weights(stored_vars["target_critic_twin"])
+    self._o_stats.set_weights(stored_vars["o_stats"])
+    self._g_stats.set_weights(stored_vars["g_stats"])
+    self._actor.set_weights(stored_vars["actor"])
+    self._actor_target.set_weights(stored_vars["actor_target"])
+    self._criticq1.set_weights(stored_vars["criticq1"])
+    self._criticq1_target.set_weights(stored_vars["criticq1_target"])
+    self._criticq2.set_weights(stored_vars["criticq2"])
+    self._criticq2_target.set_weights(stored_vars["criticq2_target"])
     self.shaping = shaping

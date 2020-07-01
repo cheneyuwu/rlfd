@@ -17,25 +17,21 @@ from rlfd.metrics import metrics
 
 
 def train(root_dir, params):
-
   # Check parameters
   config.check_params(params, default_params.parameters)
-
   # Seed everything.
   set_global_seeds(params["seed"])
-
   # Setup paths
   policy_save_path = os.path.join(root_dir, "policies")
   os.makedirs(policy_save_path, exist_ok=True)
   initial_policy_path = os.path.join(policy_save_path, "policy_initial.pkl")
   latest_policy_path = os.path.join(policy_save_path, "policy_latest.pkl")
   periodic_policy_path = os.path.join(policy_save_path, "policy_{}.pkl")
-
+  # Tensorboard summary writer
   summary_writer_path = os.path.join(root_dir, "summaries")
   summary_writer = tf.summary.create_file_writer(summary_writer_path,
                                                  flush_millis=10 * 1000)
   summary_writer.set_as_default()
-
   # Configure agents and drivers.
   config.add_env_params(params=params)
   td3_params = params["ddpg"]
@@ -65,7 +61,6 @@ def train(root_dir, params):
       metrics.AverageReturnMetric(),
       metrics.AverageEpisodeLengthMetric(),
   ]
-
   testing_metrics = [
       metrics.EnvironmentSteps(),
       metrics.NumberOfEpisodes(),
@@ -74,9 +69,9 @@ def train(root_dir, params):
   ]
 
   demo_file = os.path.join(root_dir, "demo_data.npz")
-  policy.before_training_hook(demo_file=demo_file)
 
-  # save the policy
+  # Save the initial policy
+  policy.before_training_hook(demo_file=demo_file)
   policy.save(initial_policy_path)
   logger.info("Saving initial policy.")
 
@@ -110,7 +105,7 @@ def train(root_dir, params):
         policy.train()
 
       if num_batches != 0:  # policy is being updated
-        policy.update_target_net()
+        policy.update_target_network()
         policy.clear_n_step_replay_buffer()
 
       if cyc == num_cycles - 1:
@@ -137,7 +132,7 @@ def train(root_dir, params):
 
     logger.dump_tabular()
 
-    # save the policy
+    # Save the policy periodically.
     save_msg = ""
     if save_interval > 0 and epoch % save_interval == (save_interval - 1):
       policy_path = periodic_policy_path.format(epoch)

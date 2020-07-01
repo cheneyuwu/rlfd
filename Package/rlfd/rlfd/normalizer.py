@@ -4,8 +4,10 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
+tfk = tf.keras
 
-class Normalizer(tf.keras.Model):
+
+class Normalizer(tfk.Model):
 
   def __init__(self, shape, eps=1e-2, clip_range=np.inf):
     """

@@ -5,8 +5,8 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from rlfd import logger
-from rlfd import memory
-from rlfd.td3 import actorcritic_network, gan_network, normalizer, normalizing_flows
+from rlfd import memory, normalizer
+from rlfd.td3 import td3_networks, gan_network, normalizing_flows
 
 tfd = tfp.distributions
 
@@ -128,26 +128,15 @@ class OfflineRLShaping(Shaping):
                                          self.norm_clip)
     # Models
     # actor
-    self.main_actor = actorcritic_network.Actor(self.dimo, self.dimg, self.dimu,
-                                                self.max_u, self.layer_sizes)
-    self.target_actor = actorcritic_network.Actor(self.dimo, self.dimg,
-                                                  self.dimu, self.max_u,
-                                                  self.layer_sizes)
+    self.main_actor = td3_networks.Actor(self.dimo, self.dimg, self.dimu,
+                                         self.max_u, self.layer_sizes)
+    self.target_actor = td3_networks.Actor(self.dimo, self.dimg, self.dimu,
+                                           self.max_u, self.layer_sizes)
     # critic
-    self.main_critic = actorcritic_network.Critic(self.dimo, self.dimg,
-                                                  self.dimu, self.max_u,
-                                                  self.layer_sizes)
-    self.target_critic = actorcritic_network.Critic(self.dimo, self.dimg,
-                                                    self.dimu, self.max_u,
-                                                    self.layer_sizes)
-    # Create weights
-    o_tf = tf.zeros([0, *self.dimo])
-    g_tf = tf.zeros([0, *self.dimg])
-    u_tf = tf.zeros([0, *self.dimu])
-    self.main_actor([o_tf, g_tf])
-    self.target_actor([o_tf, g_tf])
-    self.main_critic([o_tf, g_tf, u_tf])
-    self.target_critic([o_tf, g_tf, u_tf])
+    self.main_critic = td3_networks.Critic(self.dimo, self.dimg, self.dimu,
+                                           self.max_u, self.layer_sizes)
+    self.target_critic = td3_networks.Critic(self.dimo, self.dimg, self.dimu,
+                                             self.max_u, self.layer_sizes)
     # Optimizer
     self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=self.pi_lr)
     self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=self.q_lr)

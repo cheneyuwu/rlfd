@@ -50,16 +50,4 @@ def main(root_dir, **kwargs):
   elif params["alg"] == "mage":
     mage_train.train(root_dir=root_dir, params=params)
   else:
-    assert False, "unknown algorithm"
-
-
-if __name__ == "__main__":
-
-  ap = ArgParser()
-  # logging and saving path
-  ap.parser.add_argument("--root_dir",
-                         help="directory to launching process",
-                         type=str)
-
-  ap.parse(sys.argv)
-  main(**ap.get_dict())
+    raise RuntimeError("Unknown algorithm.")
