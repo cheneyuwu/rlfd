@@ -1,10 +1,6 @@
-import numpy as np
-
-from rlfd.mage import mage
-
-default_params = {
+parameters = {
     # config summary
-    "alg": "mage",
+    "alg": "td3",
     "config": "default",
     # environment config
     "env_name": "InvertedPendulum-v2",
@@ -45,12 +41,6 @@ default_params = {
         "polyak": 0.995,
         # multi step return
         "use_n_step_return": False,
-        # model learning
-        "model_update_interval": 250,
-        # mage critic loss weight
-        "use_model_for_td3_critic_loss": False,
-        "critic_loss_weight": 0.01,
-        "mage_loss_weight": 1.0,
         "bc_params": {
             "q_filter": False,
             "prm_loss_weight": 1.0,
@@ -78,6 +68,12 @@ default_params = {
                 "critic_iter": 5,
                 "potential_weight": 3.0,
             },
+            "orl": {
+                "layer_sizes": [256, 256, 256],
+                "q_lr": 1e-3,
+                "pi_lr": 1e-3,
+                "polyak": 0.995,
+            },
         },
         # replay buffer setup
         "buffer_size": int(1e6),
@@ -103,26 +99,3 @@ default_params = {
     },
     "seed": 0,
 }
-
-
-def configure_mage(params):
-  # Extract relevant parameters.
-  mage_params = params["ddpg"]
-  # Update parameters
-  mage_params.update({
-      "dims": params["dims"].copy(),  # agent takes an input observations
-      "max_u": params["max_u"],
-      "eps_length": params["eps_length"],
-      "fix_T": params["fix_T"],
-      "gamma": params["gamma"],
-      "info": {
-          "env_name": params["env_name"],
-          "r_scale": params["r_scale"],
-          "r_shift": params["r_shift"],
-          "eps_length": params["eps_length"],
-          "env_args": params["env_args"],
-          "gamma": params["gamma"],
-      },
-  })
-  policy = mage.MAGE(**mage_params)
-  return policy

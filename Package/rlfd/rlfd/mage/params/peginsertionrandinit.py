@@ -1,5 +1,5 @@
 from copy import deepcopy
-from ..config import default_params
+from .default_params import parameters
 
 params_config = deepcopy(default_params)
 params_config["env_name"] = "YWFetchPegInHoleRandInit-v0"

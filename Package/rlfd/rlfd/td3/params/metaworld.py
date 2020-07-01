@@ -1,7 +1,7 @@
 from copy import deepcopy
-from ..config import default_params
+from .default_params import parameters
 
-params_config = deepcopy(default_params)
+params_config = deepcopy(parameters)
 params_config["env_name"] = "reach-v1"
 params_config["fix_T"] = True
 params_config["ddpg"]["num_epochs"] = int(1e4)

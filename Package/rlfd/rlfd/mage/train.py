@@ -9,21 +9,17 @@ import ray
 from ray import tune
 
 from rlfd import config, logger
-from rlfd.mage import config as mage_config
+from rlfd.mage import mage
+from rlfd.mage.params import default_params
 from rlfd.utils.cmd_util import ArgParser
 from rlfd.utils.util import set_global_seeds
 from rlfd.metrics import metrics
-
-try:
-  from mpi4py import MPI
-except ImportError:
-  MPI = None
 
 
 def train(root_dir, params):
 
   # Check parameters
-  config.check_params(params, mage_config.default_params)
+  config.check_params(params, default_params.parameters)
 
   # Seed everything.
   set_global_seeds(params["seed"])
@@ -40,9 +36,26 @@ def train(root_dir, params):
                                                  flush_millis=10 * 1000)
   summary_writer.set_as_default()
 
-  # Construct ...
+  # Configure agents and drivers.
   config.add_env_params(params=params)
-  policy = mage_config.configure_mage(params=params)
+  mage_params = params["ddpg"]
+  mage_params.update({
+      "dims": params["dims"].copy(),  # agent takes an input observations
+      "max_u": params["max_u"],
+      "eps_length": params["eps_length"],
+      "fix_T": params["fix_T"],
+      "gamma": params["gamma"],
+      "info": {
+          "env_name": params["env_name"],
+          "r_scale": params["r_scale"],
+          "r_shift": params["r_shift"],
+          "eps_length": params["eps_length"],
+          "env_args": params["env_args"],
+          "gamma": params["gamma"],
+      },
+  })
+  policy = mage.MAGE(**mage_params)
+  # Exploration + evaluation drivers
   rollout_worker = config.config_rollout(params=params, policy=policy)
   evaluator = config.config_evaluator(params=params, policy=policy)
 
@@ -137,38 +150,3 @@ def train(root_dir, params):
     # For ray status updates
     if ray.is_initialized():
       tune.track.log()
-
-
-def main(root_dir, **kwargs):
-
-  # allow calling this script using MPI to launch multiple training processes
-  # in which case only 1 process should print to stdout
-  if MPI is None or MPI.COMM_WORLD.Get_rank() == 0:
-    logger.configure(dir=root_dir,
-                     format_strs=["stdout", "log", "csv"],
-                     log_suffix="")
-  else:
-    logger.configure(dir=root_dir, format_strs=["log", "csv"], log_suffix="")
-  assert logger.get_dir() is not None
-
-  # Get default params from config and update params.
-  param_file = os.path.join(root_dir, "params.json")
-  assert os.path.isfile(param_file), param_file
-  with open(param_file, "r") as f:
-    params = json.load(f)
-
-  # Launch the training script
-  train(root_dir=root_dir, params=params)
-
-
-if __name__ == "__main__":
-
-  ap = ArgParser()
-  # logging and saving path
-  ap.parser.add_argument("--root_dir",
-                         help="directory to launching process",
-                         type=str,
-                         default=None)
-
-  ap.parse(sys.argv)
-  main(**ap.get_dict())
