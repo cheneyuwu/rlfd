@@ -36,7 +36,6 @@ class MAGE(object):
       pi_lr,
       action_l2,
       # td3
-      twin_delayed,
       policy_freq,
       policy_noise,
       policy_noise_clip,
@@ -93,7 +92,6 @@ class MAGE(object):
     self.norm_clip = norm_clip
 
     self.layer_sizes = layer_sizes
-    self.twin_delayed = twin_delayed
     self.policy_freq = policy_freq
     self.policy_noise = policy_noise
     self.policy_noise_clip = policy_noise_clip
@@ -492,22 +490,13 @@ class MAGE(object):
         target += (1.0 - done) * tf.pow(self.gamma,
                                         n) * potential_next - potential_curr
       # ddpg or td3 target with or without clipping
-      if self.twin_delayed:
-        target += (1.0 - done) * tf.pow(self.gamma, n) * tf.minimum(
-            self.target_critic([norm_o_2, norm_g_2, u_2]),
-            self.target_critic_twin([norm_o_2, norm_g_2, u_2]),
-        )
-      else:
-        target += (1.0 - done) * tf.pow(self.gamma, n) * self.target_critic(
-            [norm_o_2, norm_g_2, u_2])
-
-      if self.twin_delayed:
-        bellman_error = tf.square(
-            target - self.main_critic([norm_o, norm_g, u])) + tf.square(
-                target - self.main_critic_twin([norm_o, norm_g, u]))
-      else:
-        bellman_error = tf.square(target -
-                                  self.main_critic([norm_o, norm_g, u]))
+      target += (1.0 - done) * tf.pow(self.gamma, n) * tf.minimum(
+          self.target_critic([norm_o_2, norm_g_2, u_2]),
+          self.target_critic_twin([norm_o_2, norm_g_2, u_2]),
+      )
+      bellman_error = (
+          tf.square(target - self.main_critic([norm_o, norm_g, u])) +
+          tf.square(target - self.main_critic_twin([norm_o, norm_g, u])))
 
       if self.sample_demo_buffer and not self.use_demo_reward:
         # mask off entries from demonstration dataset
@@ -583,25 +572,17 @@ class MAGE(object):
           o=o_2, g=g_2, u=u_2)
       target += (1.0 - done) * tf.pow(self.gamma,
                                       n) * potential_next - potential_curr
-    # ddpg or td3 target with or without clipping
-    if self.twin_delayed:
-      target += (1.0 - done) * tf.pow(self.gamma, n) * tf.minimum(
-          self.target_critic([norm_o_2, norm_g_2, u_2]),
-          self.target_critic_twin([norm_o_2, norm_g_2, u_2]),
-      )
-    else:
-      target += (1.0 - done) * tf.pow(self.gamma, n) * self.target_critic(
-          [norm_o_2, norm_g_2, u_2])
+    # td3 target with clipping
+    target += (1.0 - done) * tf.pow(self.gamma, n) * tf.minimum(
+        self.target_critic([norm_o_2, norm_g_2, u_2]),
+        self.target_critic_twin([norm_o_2, norm_g_2, u_2]),
+    )
 
-    if self.twin_delayed:
-      bellman_error = tf.square(
-          tf.stop_gradient(target) -
-          self.main_critic([norm_o, norm_g, u])) + tf.square(
-              tf.stop_gradient(target) -
-              self.main_critic_twin([norm_o, norm_g, u]))
-    else:
-      bellman_error = tf.square(
-          tf.stop_gradient(target) - self.main_critic([norm_o, norm_g, u]))
+    bellman_error = (tf.square(
+        tf.stop_gradient(target) - self.main_critic([norm_o, norm_g, u])) +
+                     tf.square(
+                         tf.stop_gradient(target) -
+                         self.main_critic_twin([norm_o, norm_g, u])))
 
     if self.sample_demo_buffer and not self.use_demo_reward:
       # mask off entries from demonstration dataset
@@ -668,9 +649,8 @@ class MAGE(object):
   def _train_graph(self, o, g, o_2, g_2, u, r, n, done):
 
     # Train critic
-    critic_trainable_weights = self.main_critic.trainable_weights
-    if self.twin_delayed:
-      critic_trainable_weights += self.main_critic_twin.trainable_weights
+    critic_trainable_weights = (self.main_critic.trainable_weights +
+                                self.main_critic_twin.trainable_weights)
 
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(critic_trainable_weights)
@@ -738,12 +718,10 @@ class MAGE(object):
     list(
         map(hard_copy_func,
             zip(self.target_critic.weights, self.main_critic.weights)))
-    if self.twin_delayed:
-      list(
-          map(
-              hard_copy_func,
-              zip(self.target_critic_twin.weights,
-                  self.main_critic_twin.weights)))
+    list(
+        map(hard_copy_func,
+            zip(self.target_critic_twin.weights,
+                self.main_critic_twin.weights)))
 
   def update_target_net(self):
     soft_copy_func = lambda v: v[0].assign(self.polyak * v[0] +
@@ -754,12 +732,10 @@ class MAGE(object):
     list(
         map(soft_copy_func,
             zip(self.target_critic.weights, self.main_critic.weights)))
-    if self.twin_delayed:
-      list(
-          map(
-              soft_copy_func,
-              zip(self.target_critic_twin.weights,
-                  self.main_critic_twin.weights)))
+    list(
+        map(soft_copy_func,
+            zip(self.target_critic_twin.weights,
+                self.main_critic_twin.weights)))
 
   def logs(self, prefix=""):
     logs = []
@@ -851,11 +827,11 @@ class MAGE(object):
     self.target_critic = actorcritic_network.Critic(self.dimo, self.dimg,
                                                     self.dimu, self.max_u,
                                                     self.layer_sizes)
-    if self.twin_delayed:
-      self.main_critic_twin = actorcritic_network.Critic(
-          self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes)
-      self.target_critic_twin = actorcritic_network.Critic(
-          self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes)
+    self.main_critic_twin = actorcritic_network.Critic(self.dimo, self.dimg,
+                                                       self.dimu, self.max_u,
+                                                       self.layer_sizes)
+    self.target_critic_twin = actorcritic_network.Critic(
+        self.dimo, self.dimg, self.dimu, self.max_u, self.layer_sizes)
 
     # Create weights
     o_tf = tf.zeros([0, *self.dimo])
@@ -866,17 +842,13 @@ class MAGE(object):
     self.target_actor([o_tf, g_tf])
     self.main_critic([o_tf, g_tf, u_tf])
     self.target_critic([o_tf, g_tf, u_tf])
-    if self.twin_delayed:
-      self.main_critic_twin([o_tf, g_tf, u_tf])
-      self.target_critic_twin([o_tf, g_tf, u_tf])
+    self.main_critic_twin([o_tf, g_tf, u_tf])
+    self.target_critic_twin([o_tf, g_tf, u_tf])
 
     # Optimizers
     self.model_optimizer = tf.keras.optimizers.Adam(learning_rate=self.model_lr)
     self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=self.pi_lr)
     self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=self.q_lr)
-    if self.twin_delayed:
-      self.critic_twin_optimizer = tf.keras.optimizers.Adam(
-          learning_rate=self.q_lr)
     self.bc_optimizer = tf.keras.optimizers.Adam(learning_rate=self.pi_lr)
 
     # Add shaping reward

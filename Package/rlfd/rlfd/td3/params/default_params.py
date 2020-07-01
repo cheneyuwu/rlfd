@@ -30,7 +30,6 @@ parameters = {
         "norm_clip": 5,
         # actor critic networks
         "layer_sizes": [400, 300],
-        "twin_delayed": True,
         "policy_freq": 2,
         "policy_noise": 0.2,
         "policy_noise_clip": 0.5,
