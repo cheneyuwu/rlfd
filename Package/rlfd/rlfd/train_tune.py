@@ -8,6 +8,7 @@ import tensorflow as tf
 
 from rlfd import config, logger
 from rlfd.td3 import train as td3_train
+from rlfd.sac import train as sac_train
 from rlfd.mage import train as mage_train
 
 
@@ -40,6 +41,8 @@ def main(config):
   # Launch the training script
   if params["alg"] == "td3":
     td3_train.train(root_dir=root_dir, params=params)
+  elif params["alg"] == "sac":
+    sac_train.train(root_dir=root_dir, params=params)
   elif params["alg"] == "mage":
     mage_train.train(root_dir=root_dir, params=params)
   else:
