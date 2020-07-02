@@ -3,6 +3,7 @@ import gym
 import gym.wrappers
 from gym import spaces
 
+import d4rl
 import gym_rlfd
 from rlfd.envs import reacher_2d
 
@@ -165,34 +166,13 @@ class EnvManager:
 
     # Search in DMC Envs
     if self.make_env is None and dmc is not None and ":" in env_name:
-      # acrobot swingup
-      # acrobot swingup_sparse
-      # ball_in_cup catch
-      # cartpole balance
-      # cartpole balance_sparse
-      # cartpole swingup
-      # cartpole swingup_sparse
-      # cheetah run
-      # finger spin
-      # finger turn_easy
-      # finger turn_hard
-      # fish upright
-      # fish swim
-      # hopper stand
-      # hopper hop
-      # humanoid stand
-      # humanoid walk
-      # humanoid run
-      # manipulator bring_ball
-      # pendulum swingup
-      # point_mass easy
-      # reacher easy
-      # reacher hard
-      # swimmer swimmer6
-      # swimmer swimmer15
-      # walker stand
-      # walker walk
-      # walker run
+      # acrobot swingup, acrobot swingup_sparse, ball_in_cup catch,
+      # cartpole balance, cartpole balance_sparse, cartpole swingup,
+      # cartpole swingup_sparse, cheetah run, finger spin, finger turn_easy,
+      # finger turn_hard, fish upright, fish swim, hopper stand, hopper hop,
+      # humanoid stand, humanoid walk, humanoid run, manipulator bring_ball,
+      # pendulum swingup, point_mass easy, reacher easy, reacher hard, swimmer
+      # swimmer6, swimmer swimmer15, walker stand, walker walk, walker run
       domain_name, task_name = env_name.split(":")
       try:
         dmc.make(domain_name=domain_name, task_name=task_name)
@@ -201,7 +181,10 @@ class EnvManager:
       except ValueError:
         pass
 
-    # Search in Gym Envs
+    # OpenAI Gym envs: https://gym.openai.com/envs/#mujoco
+    # D4RL envs: https://github.com/rail-berkeley/d4rl/wiki/Tasks
+    # Customized envs: YWPickAndPlaceRandInit-v0, YWPegInHoleRandInit-v0
+    #                  YWPegInHole2D-v0
     if self.make_env is None and gym is not None:
       try:
         gym.make(env_name, **env_args)
@@ -209,7 +192,7 @@ class EnvManager:
       except gym.error.UnregisteredEnv:
         pass
 
-    # Search in MetaWorld Envs
+    # Search in MetaWorld envs
     if (self.make_env is None and mtw_envs is not None and
         env_name in mtw_envs.keys()):
 
@@ -244,35 +227,12 @@ class EnvManager:
 
 
 if __name__ == "__main__":
-  import numpy as np
-  import matplotlib.pyplot as plt
-
-  # # For a openai env
-  # env_manager = EnvManager("YWFetchPegInHole2D-v0")
-  # env = env_manager.get_env()
-
-  # env.seed(0)
-  # done = True
-  # for i in range(1000):
-  #     if done:
-  #         env.reset()
-  #     action = np.random.randn(env.action_space.shape[0]) * env.action_space.high[0]  # sample random action
-  #     state, r, done, info = env.step(action)
-  #     # print(state, r, done, info)
-  #     # print(state["pixel"][..., :3].shape)
-  #     # plt.imshow(state["pixel"][..., 3] / 255.0)
-  #     # plt.show()
-  #     env.render(mode="rgb_array")
-
-  # For a metaworld env
-  env_manager = EnvManager("pick-place-v1")
+  env_manager = EnvManager("hopper-medium-replay-v0")
   env = env_manager.get_env()
+  env.seed(0)
+  done = True
   while True:
-    obs = env.reset()  # Reset environment
-    for _ in range(1000):
-      a = env.action_space.sample()  # Sample an action
-
-      obs, reward, done, info = env.step(
-          a)  # Step the environoment with the sampled random action
-      print(reward)
-      env.render()
+    if done:
+      obs = env.reset()
+    obs, reward, done, info = env.step(env.action_space.sample())
+    env.render()
