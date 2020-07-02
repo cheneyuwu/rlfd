@@ -4,7 +4,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 
-from rlfd import logger, memory, normalizer
+from rlfd import logger, memory, normalizer, policies
 from rlfd.td3 import td3_networks, shaping
 
 tfk = tf.keras
@@ -20,6 +20,9 @@ class TD3(object):
       num_cycles,
       num_batches,
       batch_size,
+      # exploration
+      expl_gaussian_noise,
+      expl_random_prob,
       # environment configuration
       dims,
       max_u,
@@ -61,6 +64,8 @@ class TD3(object):
     self.num_batches = num_batches
     self.buffer_size = buffer_size
     self.batch_size = batch_size
+    self.expl_gaussian_noise = expl_gaussian_noise
+    self.expl_random_prob = expl_random_prob
 
     self.use_demo_reward = use_demo_reward
     self.sample_demo_buffer = sample_demo_buffer
@@ -106,6 +111,29 @@ class TD3(object):
     self._create_memory()
     self._create_network()
 
+    # Generate policies
+    def process_observation(o, g):
+      norm_o = self._o_stats.normalize(o)
+      norm_g = self._g_stats.normalize(g)
+      self._policy_inspect_graph(o, g)
+      return norm_o, norm_g
+
+    self.eval_policy = policies.Policy(
+        self.dimo,
+        self.dimg,
+        self.dimu,
+        get_action=lambda o, g: self._actor([o, g]),
+        process_observation=process_observation)
+    self.expl_policy = policies.GaussianEpsilonGreedyPolicy(
+        self.dimo,
+        self.dimg,
+        self.dimu,
+        get_action=lambda o, g: self._actor([o, g]),
+        max_u=self.max_u,
+        noise_eps=expl_gaussian_noise,
+        random_prob=expl_random_prob,
+        process_observation=process_observation)
+
     # Losses
     self._huber_loss = tfk.losses.Huber(delta=10.0,
                                         reduction=tfk.losses.Reduction.NONE)
@@ -117,31 +145,6 @@ class TD3(object):
   def _increment_exploration_step(self, num_steps):
     self.exploration_step.assign_add(num_steps)
     self._policy_inspect_graph(summarize=True)
-
-  @tf.function
-  def _get_actions_graph(self, o, g):
-
-    norm_o = self._o_stats.normalize(o)
-    norm_g = self._g_stats.normalize(g)
-
-    u = self._actor([norm_o, norm_g])
-
-    self._policy_inspect_graph(o, g)
-
-    return u
-
-  def get_actions(self, o, g):
-    o = o.reshape((-1, *self.dimo))
-    g = g.reshape((o.shape[0], *self.dimg))
-    o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
-    g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
-
-    u_tf = self._get_actions_graph(o_tf, g_tf)
-    u = u_tf.numpy()
-    if o.shape[0] == 1:
-      u = u[0]
-
-    return u
 
   def before_training_hook(self, demo_file=None):
     if self.demo_strategy != "none" or self.sample_demo_buffer:
@@ -537,7 +540,6 @@ class TD3(object):
         self._policy_inspect_estimate_q.assign(0.0)
         if self.shaping != None:
           self._policy_inspect_potential.assign(0.0)
-
       return
 
     assert o != None and g != None, "Provide the same arguments passed to get action."

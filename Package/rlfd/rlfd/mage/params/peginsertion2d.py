@@ -18,4 +18,3 @@ params_config["ddpg"]["shaping_params"]["nf"]["reg_loss_weight"] = 4e2
 params_config["ddpg"]["shaping_params"]["nf"]["potential_weight"] = 1e1
 params_config["rollout"]["num_episodes"] = 4
 params_config["rollout"]["num_steps"] = None
-params_config["evaluator"]["noise_eps"] = 0.05

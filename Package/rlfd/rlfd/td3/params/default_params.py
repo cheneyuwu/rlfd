@@ -18,6 +18,9 @@ parameters = {
         "num_cycles": 1000,
         "num_batches": 1,
         "batch_size": 100,
+        # exploration
+        "expl_gaussian_noise": 0.1,
+        "expl_random_prob": 0.0,
         # use demonstrations
         "batch_size_demo": 128,
         "sample_demo_buffer": False,
@@ -77,24 +80,14 @@ parameters = {
         # replay buffer setup
         "buffer_size": int(1e6),
     },
-    # rollouts config
+    # driver config
     "rollout": {
         "num_episodes": None,
         "num_steps": 1,
-        "noise_eps": 0.1,
-        "polyak_noise": 0.0,
-        "random_eps": 0.0,
-        "compute_q": False,
-        "history_len": 300,
     },
     "evaluator": {
         "num_episodes": 4,
         "num_steps": None,
-        "noise_eps": 0.0,
-        "polyak_noise": 0.0,
-        "random_eps": 0.0,
-        "compute_q": True,
-        "history_len": 300,
     },
     "seed": 0,
 }

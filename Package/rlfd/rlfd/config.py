@@ -66,54 +66,11 @@ def add_env_params(params):
   return params
 
 
-def config_memory(params):
-  buffer_size = params["memory"]["buffer_size"]
-  fix_T = params["fix_T"]
-  eps_length = params["eps_length"]
-  dims = params["dims"]
-  dimo = params["dims"]["o"]
-  dimg = params["dims"]["g"]
-  dimu = params["dims"]["u"]
-  # buffer shape
-  buffer_shapes = {}
-  if fix_T:
-    buffer_shapes["o"] = (eps_length, *dimo)
-    buffer_shapes["o_2"] = (eps_length, *dimo)
-    buffer_shapes["u"] = (eps_length, *dimu)
-    buffer_shapes["r"] = (eps_length, 1)
-    buffer_shapes["done"] = (eps_length, 1)
-    buffer_shapes["ag"] = (eps_length, *dimg)
-    buffer_shapes["ag_2"] = (eps_length, *dimg)
-    buffer_shapes["g"] = (eps_length, *dimg)
-    buffer_shapes["g_2"] = (eps_length, *dimg)
-    for key, val in dims.items():
-      if key.startswith("info"):
-        buffer_shapes[key] = (eps_length, *val)
-
-    return UniformReplayBuffer(buffer_shapes, buffer_size, eps_length)
-  else:
-    buffer_shapes["o"] = dimo
-    buffer_shapes["o_2"] = dimo
-    buffer_shapes["u"] = dimu
-    buffer_shapes["r"] = (1,)
-    buffer_shapes["done"] = (1,)
-    buffer_shapes["ag"] = dimg
-    buffer_shapes["g"] = dimg
-    buffer_shapes["ag_2"] = dimg
-    buffer_shapes["g_2"] = dimg
-    for key, val in dims.items():
-      if key.startswith("info"):
-        buffer_shapes[key] = val
-
-    return RingReplayBuffer(buffer_shapes, buffer_size)
-
-
 def config_rollout(params, policy):
   rollout_params = params["rollout"]
   rollout_params.update({
       "dims": params["dims"],
-      "eps_length": params["eps_length"],
-      "max_u": params["max_u"]
+      "eps_length": params["eps_length"]
   })
   return _config_driver(params["make_env"], params["fix_T"], params["seed"],
                         policy, rollout_params)
@@ -123,8 +80,7 @@ def config_evaluator(params, policy):
   rollout_params = params["evaluator"]
   rollout_params.update({
       "dims": params["dims"],
-      "eps_length": params["eps_length"],
-      "max_u": params["max_u"]
+      "eps_length": params["eps_length"]
   })
   return _config_driver(params["make_env"], params["fix_T"], params["seed"],
                         policy, rollout_params)
@@ -134,8 +90,7 @@ def config_demo(params, policy):
   rollout_params = params["demo"]
   rollout_params.update({
       "dims": params["dims"],
-      "eps_length": params["eps_length"],
-      "max_u": params["max_u"]
+      "eps_length": params["eps_length"]
   })
   return _config_driver(params["make_env"], params["fix_T"], params["seed"],
                         policy, rollout_params)
