@@ -5,15 +5,19 @@
 [submodule "Package/metaworld"]
 	path = Package/metaworld
 	url = git@github.com:cheneyuwu/metaworld.git
+	branch = master
 [submodule "Package/rlkit"]
 	path = Package/rlkit
 	url = git@github.com:cheneyuwu/rlkit.git
+	branch = master
 [submodule "Package/dmc2gym"]
 	path = Package/dmc2gym
 	url = git@github.com:cheneyuwu/dmc2gym.git
+	branch = master
 [submodule "Package/dm_control2gym"]
 	path = Package/dm_control2gym
 	url = git@github.com:cheneyuwu/dm_control2gym.git
+	branch = master
 [submodule "Package/d4rl"]
 	path = Package/d4rl
 	url = git@github.com:rail-berkeley/d4rl.git
