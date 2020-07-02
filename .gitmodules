@@ -1,7 +1,3 @@
-[submodule "Package/gym"]
-	path = Package/gym
-	url = git@github.com:cheneyuwu/gym.git
-	branch = master
 [submodule "Package/metaworld"]
 	path = Package/metaworld
 	url = git@github.com:cheneyuwu/metaworld.git

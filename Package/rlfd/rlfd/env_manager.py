@@ -1,7 +1,7 @@
 import numpy as np
-  import gym
-  import gym.wrappers
-  from gym import spaces
+import gym
+import gym.wrappers
+from gym import spaces
 
 import gym_rlfd
 from rlfd.envs import reacher_2d
