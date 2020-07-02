@@ -1,7 +1,7 @@
 [submodule "Package/gym"]
 	path = Package/gym
-	branch = yuchen
 	url = git@github.com:cheneyuwu/gym.git
+	branch = master
 [submodule "Package/metaworld"]
 	path = Package/metaworld
 	url = git@github.com:cheneyuwu/metaworld.git
@@ -14,3 +14,7 @@
 [submodule "Package/dm_control2gym"]
 	path = Package/dm_control2gym
 	url = git@github.com:cheneyuwu/dm_control2gym.git
+[submodule "Package/d4rl"]
+	path = Package/d4rl
+	url = git@github.com:rail-berkeley/d4rl.git
+	branch = master
