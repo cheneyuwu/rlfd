@@ -147,4 +147,7 @@ def train(root_dir, params):
 
     # For ray status updates
     if ray.is_initialized():
-      tune.track.log()
+      try:
+        tune.report()  # ray 0.8.6
+      except:
+        tune.track.log()  # previous versions
