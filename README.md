@@ -36,6 +36,7 @@
   - install environments
     - `pip install gym`
     - `pip install -e Package/gym_rlfd`
+    - `pip install -e Package/d4rl`
     - `pip install -e Package/metaworld --no-deps`
   - install rlfd
     - `pip install -e Package/rlfd`
