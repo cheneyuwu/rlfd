@@ -33,15 +33,12 @@
   - install ray
     - `pip install ray`
     - `pip install ray[tune]`
-  - (goto `Package` folder) install gym and metaworld (and maybe other environments)
-    - `pip install -e gym --no-deps`
-    - `pip install -e metaworld --no-deps`
-    - Optional: `pip install dm-control dm-env --no-deps` (for DeepMind Control Suite)
-      - if you install dm_control, also install the dmc to gym wrapper (dmc2gym) included in the submodule of this repo
-  - (goto `Package` folder) install rlfd
-    - `pip install -e rlfd --no-deps`
-  - extra packages that should be installed
-    - `pip install certifi chardet urllib3 requests idna gtimer matplotlib pandas future lxml pyopengl`
+  - install environments
+    - `pip install gym`
+    - `pip install -e Package/gym_rlfd`
+    - `pip install -e Package/metaworld --no-deps`
+  - install rlfd
+    - `pip install -e Package/rlfd`
 
 ## Running Experiments
 

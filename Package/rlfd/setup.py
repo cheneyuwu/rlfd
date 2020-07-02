@@ -9,6 +9,8 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     license="MIT",
     python_requires='>=3.6',
-    install_requires=["tensorflow>=2.2.0", "tensorflow-probability"],
+    install_requires=[
+        "tensorflow>=2.2.0", "tensorflow-probability", "matplotlib"
+    ],
     zip_safe=False,
 )

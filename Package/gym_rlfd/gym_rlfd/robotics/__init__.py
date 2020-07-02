@@ -1,0 +1,2 @@
+from gym_rlfd.robotics.fetch.peg_in_hole import FetchPegInHoleEnv
+from gym_rlfd.robotics.fetch.pick_and_place import FetchPickAndPlaceEnv

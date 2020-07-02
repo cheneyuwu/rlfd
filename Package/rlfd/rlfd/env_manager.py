@@ -1,20 +1,10 @@
 import numpy as np
-
-from rlfd.envs import reacher_2d
-
-try:
   import gym
   import gym.wrappers
-
   from gym import spaces
-  from mujoco_py.cymj import GlfwError
 
-  # # Need this for getting observation in pixels (for vision based learning) (for future works)
-  # from mujoco_py import GlfwContext
-
-  # GlfwContext(offscreen=True)  # Create a window to init GLFW.
-except ImportError or GlfwError:
-  gym = None
+import gym_rlfd
+from rlfd.envs import reacher_2d
 
 try:
   import dmc2gym as dmc
@@ -220,8 +210,8 @@ class EnvManager:
         pass
 
     # Search in MetaWorld Envs
-    if self.make_env is None and mtw_envs is not None and env_name in mtw_envs.keys(
-    ):
+    if (self.make_env is None and mtw_envs is not None and
+        env_name in mtw_envs.keys()):
 
       def make_env():
         args = mtw_args[env_name]["args"]
