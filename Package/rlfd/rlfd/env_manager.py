@@ -34,9 +34,9 @@ except:
 
 class EnvWrapper:
   """Wrapper of the environment that does the following:
-        1. adjust rewards: r = (r + r_shift) / r_scale
-        2. modify state to contain: observation, achieved_goal, desired_goal
-    """
+    1. adjust rewards: r = (r + r_shift) / r_scale
+    2. modify state to contain: observation, achieved_goal, desired_goal
+  """
 
   def __init__(self, make_env, r_scale, r_shift, eps_length):
     self.env = make_env()
@@ -49,7 +49,7 @@ class EnvWrapper:
     elif "max_path_length" in self.env.__dict__:
       self.eps_length = self.env.max_path_length
     else:
-      assert False, "max episode length unknown."
+      raise RuntimeError("max episode length unknown.")
     if isinstance(self.env, gym.wrappers.TimeLimit):
       self.env = self.env.env
       env_ = self.env
@@ -102,8 +102,8 @@ class GoalEnvWrapper(EnvWrapper):
 
   def _transform_state(self, state):
     """
-        modify state to contain: observation, achieved_goal, desired_goal
-        """
+    modify state to contain: observation, achieved_goal, desired_goal
+    """
     if not type(state) == dict:
       state = {
           "observation": state,
@@ -130,8 +130,8 @@ class NoGoalEnvWrapper(EnvWrapper):
 
   def _transform_state(self, state):
     """
-        modify state to contain: observation, achieved_goal, desired_goal
-        """
+    modify state to contain: observation, achieved_goal, desired_goal
+    """
     if type(state) == dict:
       state = np.concatenate((state["observation"], state["desired_goal"]))
     return state
