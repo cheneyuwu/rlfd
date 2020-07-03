@@ -224,8 +224,6 @@ class SAC(object):
     if self.shaping != None:
       self._train_shaping()
 
-      self.train_offline()
-
   def _update_stats(self, experiences):
     # add transitions to normalizer
     if self.fix_T:
@@ -501,6 +499,7 @@ class SAC(object):
     norm_o = self._o_stats.normalize(o)
     norm_g = self._g_stats.normalize(g)
     mean_u, logprob_u = self._actor([norm_o, norm_g])
+
     self._policy_inspect_count.assign_add(1)
     q = self._criticq1([norm_o, norm_g, mean_u])
     self._policy_inspect_estimate_q.assign_add(tf.reduce_sum(q))

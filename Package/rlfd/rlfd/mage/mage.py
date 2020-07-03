@@ -264,8 +264,6 @@ class MAGE(object):
     if self.shaping != None:
       self._train_shaping()
 
-    self.train_offline()
-
   def _update_stats(self, experiences):
     # add transitions to normalizer
     if self.fix_T:
