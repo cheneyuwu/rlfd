@@ -17,7 +17,7 @@ except:
 
 class Driver(object, metaclass=abc.ABCMeta):
 
-  def __init__(self, make_env, policy, dims, history_len, render):
+  def __init__(self, make_env, policy, history_len, render):
     """
     Rollout worker generates experience by interacting with one or many environments.
 
@@ -26,21 +26,13 @@ class Driver(object, metaclass=abc.ABCMeta):
     Args:
         make_env           (function)    - a factory function that creates a new instance of the environment when called
         policy             (object)      - the policy that is used to act
-        dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
         num_episodes       (int)         - the number of parallel rollouts that should be used
         history_len        (int)         - length of history for statistics smoothing
         render             (bool)        - whether or not to render the rollouts
     """
     self.make_env = make_env
     self.policy = policy
-    self.info_keys = [
-        key.replace("info_", "")
-        for key in dims.keys()
-        if key.startswith("info_")
-    ]
-
     self.render = render
-
     self.history_len = history_len
     self.history = {}
     self.total_num_episodes = 0
@@ -94,8 +86,6 @@ class StepBasedDriver(Driver):
   def __init__(self,
                make_env,
                policy,
-               dims,
-               eps_length,
                num_steps=None,
                num_episodes=None,
                history_len=300,
@@ -106,33 +96,27 @@ class StepBasedDriver(Driver):
     Args:
         make_env           (func)        - a factory function that creates a new instance of the environment when called
         policy             (cls)         - the policy that is used to act
-        dims               (dict of int) - the dimensions for observations (o), goals (g), and actions (u)
         history_len        (int)         - length of history for statistics smoothing
         render             (bool)        - whether or not to render the rollouts
     """
     super().__init__(make_env=make_env,
                      policy=policy,
-                     dims=dims,
                      history_len=history_len,
                      render=render)
     # add to history
     self.add_history_keys(["reward_per_eps"])
-    self.add_history_keys(["info_" + x + "_mean" for x in self.info_keys])
-    self.add_history_keys(["info_" + x + "_min" for x in self.info_keys])
-    self.add_history_keys(["info_" + x + "_max" for x in self.info_keys])
     #
+    self.env = make_env()
     assert any([num_steps, num_episodes]) and not all([num_steps, num_episodes])
     self.num_steps = num_steps
     self.num_episodes = num_episodes
-    self.eps_length = eps_length
+    self.eps_length = self.env.eps_length
     self.done = True
     self.curr_eps_step = 0
 
-    self.env = make_env()
-
   def _seed(self, seed):
-    """ Set seed for environment
-        """
+    """Set seed for environment
+    """
     self.env.seed(seed)
 
   def _generate_rollouts(self, observers=()):
@@ -142,7 +126,6 @@ class StepBasedDriver(Driver):
     experiences = {
         k: [] for k in ("o", "o_2", "ag", "ag_2", "u", "g", "g_2", "r", "done")
     }
-    info_values = {k: [] for k in self.info_keys}
 
     current_step = 0
     current_episode = 0
@@ -193,8 +176,6 @@ class StepBasedDriver(Driver):
       experiences["u"].append(u)
       experiences["r"].append(r)
       experiences["done"].append(self.done)
-      for key in self.info_keys:
-        info_values[key].append(iv[key])
       self.o = o_2  # o_2 -> o
       self.ag = ag_2  # ag_2 -> ag
 
@@ -208,19 +189,12 @@ class StepBasedDriver(Driver):
     # Store all information into an episode dict
     for key, value in experiences.items():
       experiences[key] = np.array(value).reshape(len(value), -1)
-    for key, value in info_values.items():
-      experiences["info_" + key] = np.array(value).reshape(len(value), -1)
 
     # Store stats
     # total reward
     total_reward = np.sum(
         experiences["r"]) / current_episode if self.num_episodes else np.NaN
     self.history["reward_per_eps"].append(total_reward)
-    # info values
-    for key in self.info_keys:
-      self.history["info_" + key + "_mean"].append(np.mean(info_values[key]))
-      self.history["info_" + key + "_min"].append(np.min(info_values[key]))
-      self.history["info_" + key + "_max"].append(np.max(info_values[key]))
     # number of steps
     self.total_num_episodes += current_episode
     self.total_num_steps += current_step
@@ -233,17 +207,14 @@ class EpisodeBasedDriver(StepBasedDriver):
   def __init__(self,
                make_env,
                policy,
-               dims,
-               eps_length,
                num_steps=None,
                num_episodes=None,
                history_len=300,
                render=False,
                **kwargs):
     assert num_episodes and not num_steps
-    super(EpisodeBasedDriver,
-          self).__init__(make_env, policy, dims, eps_length, num_steps,
-                         num_episodes, history_len, render)
+    super(EpisodeBasedDriver, self).__init__(make_env, policy, num_steps,
+                                             num_episodes, history_len, render)
 
   def _generate_rollouts(self, observers=()):
     experiences = super()._generate_rollouts(observers=observers)

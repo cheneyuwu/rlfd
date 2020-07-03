@@ -66,41 +66,8 @@ def add_env_params(params):
   return params
 
 
-def config_rollout(params, policy):
-  rollout_params = params["rollout"]
-  rollout_params.update({
-      "dims": params["dims"],
-      "eps_length": params["eps_length"]
-  })
-  return _config_driver(params["make_env"], params["fix_T"], params["seed"],
-                        policy, rollout_params)
-
-
-def config_evaluator(params, policy):
-  rollout_params = params["evaluator"]
-  rollout_params.update({
-      "dims": params["dims"],
-      "eps_length": params["eps_length"]
-  })
-  return _config_driver(params["make_env"], params["fix_T"], params["seed"],
-                        policy, rollout_params)
-
-
-def config_demo(params, policy):
-  rollout_params = params["demo"]
-  rollout_params.update({
-      "dims": params["dims"],
-      "eps_length": params["eps_length"]
-  })
-  return _config_driver(params["make_env"], params["fix_T"], params["seed"],
-                        policy, rollout_params)
-
-
-def _config_driver(make_env, fix_T, seed, policy, rollout_params):
-  if fix_T:  # fix the time horizon, so use the parrallel virtual envs
-    rollout = EpisodeBasedDriver(make_env, policy, **rollout_params)
-  else:
-    rollout = StepBasedDriver(make_env, policy, **rollout_params)
-  rollout.seed(seed)
-
-  return rollout
+def config_driver(fix_T, seed, *args, **kwargs):
+  driver = (EpisodeBasedDriver(*args, **kwargs) if fix_T else StepBasedDriver(
+      *args, **kwargs))
+  driver.seed(seed)
+  return driver

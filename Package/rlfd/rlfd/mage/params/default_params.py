@@ -1,6 +1,6 @@
 parameters = {
     # config summary
-    "alg": "mage",
+    "algo": "mage",
     "config": "default",
     # environment config
     "env_name": "InvertedPendulum-v2",
@@ -10,13 +10,17 @@ parameters = {
     "env_args": {},
     "gamma": 0.99,
     "fix_T": False,
-    # DDPG config
-    "ddpg": {
-        # training
-        "random_exploration_cycles": 0,
-        "num_epochs": int(1e3),
-        "num_cycles": 1000,
-        "num_batches": 1,
+    # learner
+    "random_expl_num_cycles": 0,
+    "num_epochs": int(1e3),
+    "num_cycles_per_epoch": int(1e3),
+    "num_batches_per_cycle": 1,
+    "expl_num_episodes_per_cycle": None,
+    "expl_num_steps_per_cycle": 1,
+    "eval_num_episodes_per_cycle": 4,
+    "eval_num_steps_per_cycle": None,
+    # agent config
+    "agent": {
         "batch_size": 100,
         # exploration
         "expl_gaussian_noise": 0.1,
@@ -79,15 +83,6 @@ parameters = {
         },
         # replay buffer setup
         "buffer_size": int(1e6),
-    },
-    # driver config
-    "rollout": {
-        "num_episodes": None,
-        "num_steps": 1,
-    },
-    "evaluator": {
-        "num_episodes": 4,
-        "num_steps": None,
     },
     "seed": 0,
 }

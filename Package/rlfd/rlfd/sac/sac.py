@@ -15,11 +15,6 @@ class SAC(object):
 
   def __init__(
       self,
-      # for learning
-      random_exploration_cycles,
-      num_epochs,
-      num_cycles,
-      num_batches,
       batch_size,
       # environment configuration
       dims,
@@ -56,10 +51,6 @@ class SAC(object):
     # Store initial args passed into the function
     self.init_args = locals()
 
-    self.random_exploration_cycles = random_exploration_cycles
-    self.num_epochs = num_epochs
-    self.num_cycles = num_cycles
-    self.num_batches = num_batches
     self.buffer_size = buffer_size
     self.batch_size = batch_size
 
