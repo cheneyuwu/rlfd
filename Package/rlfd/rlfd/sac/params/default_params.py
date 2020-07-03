@@ -21,12 +21,13 @@ parameters = {
     # agent config
     "agent": {
         "gamma": 0.99,
-        "batch_size": 100,
+        "online_batch_size": 100,
+        "offline_batch_size": 128,
+        "offline_num_epochs": 0,
+        # replay buffer setup
+        "buffer_size": int(1e6),
         # use demonstrations
-        "batch_size_demo": 128,
         "sample_demo_buffer": False,
-        "initialize_with_bc": False,
-        "initialize_num_epochs": 0,
         "use_demo_reward": False,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         # normalize observation
@@ -37,13 +38,11 @@ parameters = {
         "auto_alpha": False,
         "alpha": 0.2,
         "q_lr": 3e-4,
-        "vf_lr": 3e-4,
         "pi_lr": 3e-4,
         "action_l2": 0.0,
         # double q learning
         "polyak": 0.995,
-        # multi step return
-        "use_n_step_return": False,
+        "target_update_freq": 1,
         "bc_params": {
             "q_filter": False,
             "prm_loss_weight": 1.0,
@@ -78,8 +77,6 @@ parameters = {
                 "polyak": 0.995,
             },
         },
-        # replay buffer setup
-        "buffer_size": int(1e6),
     },
     "seed": 0,
 }

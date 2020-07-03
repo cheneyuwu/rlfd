@@ -62,7 +62,7 @@ class EnsembleShaping(object):
 
   def _construct_dataset(self, demo_data):
     buffer_shapes = {k: tuple(v.shape[1:]) for k, v in demo_data.items()}
-    dataset = memory.RingReplayBuffer(buffer_shapes, int(1e6))
+    dataset = memory.StepBaseReplayBuffer(buffer_shapes, int(1e6))
     dataset.store(demo_data)
     return dataset
 

@@ -1,6 +1,3 @@
-""" We implemented two types of replay buffer "UniformReplayBuffer" and "RingReplayBuffer"
-    They are only different in the way they store experiences.
-"""
 import abc
 import numpy as np
 
@@ -148,7 +145,7 @@ class ReplayBuffer(object, metaclass=abc.ABCMeta):
     """Overwrite this for further cleanup"""
 
 
-class RingReplayBuffer(ReplayBuffer):
+class StepBaseReplayBuffer(ReplayBuffer):
 
   def __init__(self, buffer_shapes, size_in_transitions):
     """ Creates a replay buffer.
@@ -260,7 +257,7 @@ class RingReplayBuffer(ReplayBuffer):
     return idx
 
 
-class UniformReplayBuffer(ReplayBuffer):
+class EpisodeBaseReplayBuffer(ReplayBuffer):
 
   def __init__(self, buffer_shapes, size_in_transitions, T):
     """ Creates a replay buffer.
@@ -272,7 +269,6 @@ class UniformReplayBuffer(ReplayBuffer):
         """
 
     super().__init__(size=size_in_transitions // T, buffer_shapes=buffer_shapes)
-
     # self.buffers is {key: array(size_in_episodes x T or T+1 x dim_key)}
     self.T = T
 
@@ -395,7 +391,8 @@ class UniformReplayBuffer(ReplayBuffer):
     return idx
 
 
-class MultiStepReplayBuffer(UniformReplayBuffer):
+class MultiStepReplayBuffer(EpisodeBaseReplayBuffer):
+  """Temporarily disabled due to lack of testing."""
 
   def __init__(self, buffer_shapes, size_in_transitions, T, num_steps, gamma):
     """
@@ -451,10 +448,10 @@ class MultiStepReplayBuffer(UniformReplayBuffer):
 
 
 if __name__ == "__main__":
-  # UniformReplayBuffer Usage
+  # EpisodeBaseReplayBuffer Usage
   o = np.linspace(0.0, 15.0, 16).reshape((2, 4, 2))  # Batch x Time x Dim
   r = np.linspace(0.0, 5.0, 6).reshape((2, 3, 1))  # Batch x Time x Dim
-  replay_buffer = UniformReplayBuffer({
+  replay_buffer = EpisodeBaseReplayBuffer({
       "o": o.shape[1:],
       "r": r.shape[1:]
   }, 6, 3)
@@ -505,10 +502,10 @@ if __name__ == "__main__":
     print(batch["r"].shape)
     print(batch["r"])
 
-  # RingReplayBuffer Usage
+  # StepBaseReplayBuffer Usage
   o = np.linspace(0.0, 17.0, 8).reshape((4, 2))  # Batch x Time x Dim
   r = np.linspace(0.0, 3.0, 4).reshape((4, 1))  # Batch x Time x Dim
-  replay_buffer = RingReplayBuffer({"o": o.shape[1:], "r": r.shape[1:]}, 6)
+  replay_buffer = StepBaseReplayBuffer({"o": o.shape[1:], "r": r.shape[1:]}, 6)
   #
   print(replay_buffer.capacity)
   print(replay_buffer.current_size)

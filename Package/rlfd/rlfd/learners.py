@@ -74,17 +74,15 @@ class Learner(object):
     summary_writer.set_as_default()
 
     self._agent.before_training_hook(data_dir=root_dir, env=make_env())
-
-    # Save the initial agent
+    self._agent.train_offline()
     self._agent.save(osp.join(self._policy_path, "policy_initial.pkl"))
-    logger.info("Saving initial agent.")
+    logger.info("Saving agent after offline training.")
 
   def learn(self):
     for _ in range(self._random_exploration_cycles):
       experiences = self._random_driver.generate_rollouts(
           observers=self._training_metrics)
       self._agent.store_experiences(experiences)
-      self._agent.update_stats(experiences)
 
     for epoch in range(self._num_epochs):
       logger.record_tabular("epoch", epoch)
@@ -99,14 +97,9 @@ class Learner(object):
             observers=self._training_metrics)
         if self._num_batches_per_cycle != 0:  # self._agent is being updated
           self._agent.store_experiences(experiences)
-          self._agent.update_stats(experiences)
 
         for _ in range(self._num_batches_per_cycle):
-          self._agent.train()
-
-        if self._num_batches_per_cycle != 0:  # agent is being updated
-          self._agent.update_target_network()
-          self._agent.clear_n_step_replay_buffer()
+          self._agent.train_online()
 
         if cyc == self._num_cycles_per_epoch - 1:
           # update meta parameters
@@ -134,15 +127,12 @@ class Learner(object):
       logger.dump_tabular()
 
       # Save the self._agent periodically.
-      save_msg = ""
       if (self._save_interval > 0 and
           epoch % self._save_interval == self._save_interval - 1):
         self._agent.save(
             osp.join(self._policy_path, "policy_{}.pkl".format(epoch)))
-        save_msg += "periodic, "
       self._agent.save(osp.join(self._policy_path, "policy_latest.pkl"))
-      save_msg += "latest"
-      logger.info("Saving", save_msg, "agent.")
+      logger.info("Saving agent after online training.")
 
       # For ray status updates
       if ray.is_initialized():
@@ -150,11 +140,3 @@ class Learner(object):
           tune.report()  # ray 0.8.6
         except:
           tune.track.log()  # previous versions
-
-
-class OnlineLearner(Learner):
-  pass
-
-
-class OfflineLearner(Learner):
-  pass

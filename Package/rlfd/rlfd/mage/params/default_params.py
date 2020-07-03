@@ -21,15 +21,16 @@ parameters = {
     # agent config
     "agent": {
         "gamma": 0.99,
-        "batch_size": 100,
+        "online_batch_size": 100,
+        "offline_batch_size": 128,
+        "offline_num_epochs": 0,
+        # replay buffer setup
+        "buffer_size": int(1e6),
         # exploration
         "expl_gaussian_noise": 0.1,
         "expl_random_prob": 0.0,
         # use demonstrations
-        "batch_size_demo": 128,
         "sample_demo_buffer": False,
-        "initialize_with_bc": False,
-        "initialize_num_epochs": 0,
         "use_demo_reward": False,
         "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
         # normalize observation
@@ -45,8 +46,7 @@ parameters = {
         "action_l2": 0.0,
         # double q learning
         "polyak": 0.995,
-        # multi step return
-        "use_n_step_return": False,
+        "target_update_freq": 1,
         # model learning
         "model_update_interval": 250,
         # mage critic loss weight
@@ -81,8 +81,6 @@ parameters = {
                 "potential_weight": 3.0,
             },
         },
-        # replay buffer setup
-        "buffer_size": int(1e6),
     },
     "seed": 0,
 }
