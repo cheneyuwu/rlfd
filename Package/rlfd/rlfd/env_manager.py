@@ -29,13 +29,11 @@ class EnvWrapper:
     2. modify state to contain: observation, achieved_goal, desired_goal
   """
 
-  def __init__(self, make_env, r_scale, r_shift, eps_length):
+  def __init__(self, make_env, r_scale, r_shift):
     self.env = make_env()
     self.r_scale = r_scale
     self.r_shift = r_shift
-    if eps_length:
-      self.eps_length = eps_length
-    elif "_max_episode_steps" in self.env.__dict__:
+    if "_max_episode_steps" in self.env.__dict__:
       self.eps_length = self.env._max_episode_steps
     elif "max_path_length" in self.env.__dict__:
       self.eps_length = self.env.max_path_length
@@ -74,8 +72,8 @@ class EnvWrapper:
 
 class GoalEnvWrapper(EnvWrapper):
 
-  def __init__(self, make_env, r_scale, r_shift, eps_length):
-    super().__init__(make_env, r_scale, r_shift, eps_length)
+  def __init__(self, make_env, r_scale, r_shift):
+    super().__init__(make_env, r_scale, r_shift)
 
     if not type(self.observation_space) == spaces.Dict:
       self.observation_space = spaces.Dict(
@@ -106,8 +104,8 @@ class GoalEnvWrapper(EnvWrapper):
 
 class NoGoalEnvWrapper(EnvWrapper):
 
-  def __init__(self, make_env, r_scale, r_shift, eps_length):
-    super().__init__(make_env, r_scale, r_shift, eps_length)
+  def __init__(self, make_env, r_scale, r_shift):
+    super().__init__(make_env, r_scale, r_shift)
 
     if type(self.observation_space) is spaces.Dict:
       assert len(self.observation_space["desired_goal"].low.shape) == 1
@@ -135,7 +133,6 @@ class EnvManager:
                env_args={},
                r_scale=1,
                r_shift=0.0,
-               eps_length=0,
                with_goal=True):
     self.make_env = None
     # Search from our own environments
@@ -215,15 +212,12 @@ class EnvManager:
     # Add extra properties on the environment.
     self.r_scale = r_scale
     self.r_shift = r_shift
-    self.eps_length = eps_length
     self.with_goal = with_goal
 
   def get_env(self):
     if self.with_goal:
-      return GoalEnvWrapper(self.make_env, self.r_scale, self.r_shift,
-                            self.eps_length)
-    return NoGoalEnvWrapper(self.make_env, self.r_scale, self.r_shift,
-                            self.eps_length)
+      return GoalEnvWrapper(self.make_env, self.r_scale, self.r_shift)
+    return NoGoalEnvWrapper(self.make_env, self.r_scale, self.r_shift)
 
 
 if __name__ == "__main__":

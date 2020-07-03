@@ -8,7 +8,6 @@ parameters = {
     "r_shift": 0.0,
     "eps_length": 0,
     "env_args": {},
-    "gamma": 0.99,
     "fix_T": False,
     # learner
     "random_expl_num_cycles": 0,
@@ -21,6 +20,7 @@ parameters = {
     "eval_num_steps_per_cycle": None,
     # agent config
     "agent": {
+        "gamma": 0.99,
         "batch_size": 100,
         # use demonstrations
         "batch_size_demo": 128,

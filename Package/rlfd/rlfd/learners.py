@@ -17,44 +17,31 @@ class Learner(object):
     # Seed everything.
     set_global_seeds(params["seed"])
     # Configure agents and drivers.
-    config.add_env_params(params=params)
+    make_env, env_params = config.get_env_constructor_and_config(params=params)
     agent_params = params["agent"]
-    agent_params.update({
-        "dims": params["dims"].copy(),
-        "max_u": params["max_u"],
-        "eps_length": params["eps_length"],
-        "fix_T": params["fix_T"],
-        "gamma": params["gamma"],
-        "info": {
-            "env_name": params["env_name"],
-            "r_scale": params["r_scale"],
-            "r_shift": params["r_shift"],
-            "eps_length": params["eps_length"],
-            "env_args": params["env_args"],
-            "gamma": params["gamma"],
-        },
-    })
-    self._agent = get_agent(**agent_params)
+    self._agent = get_agent(**agent_params, **env_params)
 
     self._random_driver = config.config_driver(
         params["fix_T"],
         params["seed"],
-        make_env=params["make_env"],
-        policy=policies.RandomPolicy(params["dims"]["o"], params["dims"]["g"],
-                                     params["dims"]["u"], params["max_u"]),
+        make_env=make_env,
+        policy=policies.RandomPolicy(env_params["dims"]["o"],
+                                     env_params["dims"]["g"],
+                                     env_params["dims"]["u"],
+                                     env_params["max_u"]),
         num_steps=params["expl_num_steps_per_cycle"],
         num_episodes=params["expl_num_episodes_per_cycle"])
     self._expl_driver = config.config_driver(
         params["fix_T"],
         params["seed"],
-        make_env=params["make_env"],
+        make_env=make_env,
         policy=self._agent.expl_policy,
         num_steps=params["expl_num_steps_per_cycle"],
         num_episodes=params["expl_num_episodes_per_cycle"])
     self._eval_driver = config.config_driver(
         params["fix_T"],
         params["seed"],
-        make_env=params["make_env"],
+        make_env=make_env,
         policy=self._agent.eval_policy,
         num_steps=params["eval_num_steps_per_cycle"],
         num_episodes=params["eval_num_episodes_per_cycle"])
