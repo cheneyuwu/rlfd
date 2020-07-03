@@ -73,9 +73,9 @@ class Learner(object):
                                                    flush_millis=10 * 1000)
     summary_writer.set_as_default()
 
-    demo_file = osp.join(root_dir, "demo_data.npz")
+    self._agent.before_training_hook(data_dir=root_dir, env=make_env())
+
     # Save the initial agent
-    self._agent.before_training_hook(demo_file=demo_file)
     self._agent.save(osp.join(self._policy_path, "policy_initial.pkl"))
     logger.info("Saving initial agent.")
 

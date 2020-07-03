@@ -1,14 +1,14 @@
 import os
 import pickle
+osp = os.path
 
 import numpy as np
 import tensorflow as tf
+tfk = tf.keras
 
 from rlfd import logger, memory, normalizer, policies
 from rlfd.td3 import td3_networks, shaping
 from rlfd.mage import model_network
-
-tfk = tf.keras
 
 
 class MAGE(object):
@@ -165,9 +165,10 @@ class MAGE(object):
     self.exploration_step.assign_add(num_steps)
     self._policy_inspect_graph(summarize=True)
 
-  def before_training_hook(self, demo_file=None):
+  def before_training_hook(self, data_dir=None, env=None):
     if self.demo_strategy != "none" or self.sample_demo_buffer:
-      assert os.path.isfile(demo_file), "Demo file not exist."
+      demo_file = osp.join(data_dir, "demo_data.npz")
+      assert osp.isfile(demo_file), "Demo file does not exist."
       experiences = self.demo_buffer.load_from_file(data_file=demo_file)
       if self.sample_demo_buffer:
         self.update_stats(experiences)
