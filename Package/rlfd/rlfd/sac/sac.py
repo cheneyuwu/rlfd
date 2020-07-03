@@ -236,13 +236,18 @@ class SAC(object):
     norm_o_2 = self._o_stats.normalize(o_2)
     norm_g_2 = self._g_stats.normalize(g_2)
 
-    # immediate reward
+    # Immediate reward
     target_q = r
-    # shaping reward
+    # Shaping reward
     if self.shaping != None:
       pass  # TODO add shaping rewards.
-    target_q += (1.0 - done) * tf.pow(self.gamma, n) * self._vf_target(
-        [norm_o_2, norm_g_2])
+    # Q value from next state
+    mean_pi, logprob_pi = self._actor([norm_o_2, norm_g_2])
+    target_next_q1 = self._criticq1_target([norm_o_2, norm_g_2, mean_pi])
+    target_next_q2 = self._criticq2_target([norm_o_2, norm_g_2, mean_pi])
+    target_next_min_q = tf.minimum(target_next_q1, target_next_q2)
+    target_q += ((1.0 - done) * tf.pow(self.gamma, n) *
+                 (target_next_min_q - self.alpha * logprob_pi))
     target_q = tf.stop_gradient(target_q)
 
     td_loss_q1 = self._huber_loss(target_q, self._criticq1([norm_o, norm_g, u]))
@@ -263,28 +268,6 @@ class SAC(object):
                         step=self.sac_training_step)
 
     return criticq_loss
-
-  def _vf_loss_graph(self, o, g):
-    norm_o = self._o_stats.normalize(o)
-    norm_g = self._g_stats.normalize(g)
-
-    mean_pi, logprob_pi = self._actor([norm_o, norm_g])
-    current_q1 = self._criticq1([norm_o, norm_g, mean_pi])
-    current_q2 = self._criticq2([norm_o, norm_g, mean_pi])
-    current_min_q = tf.minimum(current_q1, current_q2)
-
-    current_v = self._vf([norm_o, norm_g])
-    target_v = tf.stop_gradient(current_min_q - self.alpha * logprob_pi)
-    td_loss = self._huber_loss(target_v, current_v)
-
-    vf_loss = tf.reduce_mean(td_loss)
-
-    with tf.name_scope('SACLosses/'):
-      tf.summary.scalar(name='vf_loss vs sac_training_step',
-                        data=vf_loss,
-                        step=self.sac_training_step)
-
-    return vf_loss
 
   def _actor_loss_graph(self, o, g, u):
     norm_o = self._o_stats.normalize(o)
@@ -328,14 +311,6 @@ class SAC(object):
     criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
     self._criticq_optimizer.apply_gradients(
         zip(criticq_grads, criticq_trainable_weights))
-
-    # Train value function
-    vf_trainable_weights = self._vf.trainable_weights
-    with tf.GradientTape(watch_accessed_variables=False) as tape:
-      tape.watch(vf_trainable_weights)
-      vf_loss = self._vf_loss_graph(o, g)
-    vf_grads = tape.gradient(vf_loss, vf_trainable_weights)
-    self._vf_optimizer.apply_gradients(zip(vf_grads, vf_trainable_weights))
 
     # Train actor
     actor_trainable_weights = self._actor.trainable_weights
@@ -386,6 +361,12 @@ class SAC(object):
     copy_func = lambda v: v[0].assign(polyak * v[0] + (1.0 - polyak) * v[1])
 
     list(map(copy_func, zip(self._vf_target.weights, self._vf.weights)))
+    list(
+        map(copy_func, zip(self._criticq1_target.weights,
+                           self._criticq1.weights)))
+    list(
+        map(copy_func, zip(self._criticq2_target.weights,
+                           self._criticq2.weights)))
 
   def logs(self, prefix=""):
     logs = []
@@ -457,6 +438,12 @@ class SAC(object):
                                           self.max_u, self.layer_sizes)
     self._criticq2 = sac_networks.CriticQ(self.dimo, self.dimg, self.dimu,
                                           self.max_u, self.layer_sizes)
+    self._criticq1_target = sac_networks.CriticQ(self.dimo, self.dimg,
+                                                 self.dimu, self.max_u,
+                                                 self.layer_sizes)
+    self._criticq2_target = sac_networks.CriticQ(self.dimo, self.dimg,
+                                                 self.dimu, self.max_u,
+                                                 self.layer_sizes)
     self._vf = sac_networks.CriticV(self.dimo, self.dimg, self.layer_sizes)
     self._vf_target = sac_networks.CriticV(self.dimo, self.dimg,
                                            self.layer_sizes)
