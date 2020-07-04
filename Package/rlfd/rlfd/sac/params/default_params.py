@@ -1,6 +1,6 @@
 parameters = {
     # config summary
-    "algo": "sac",
+    "algo": "SAC",
     "config": "default",
     # environment config
     "env_name": "InvertedPendulum-v2",
@@ -10,6 +10,8 @@ parameters = {
     "env_args": {},
     "fix_T": False,
     # learner
+    "offline_num_epochs": 0,
+    "offline_num_batches_per_epoch": 0,
     "random_expl_num_cycles": 0,
     "num_epochs": int(1e3),
     "num_cycles_per_epoch": int(1e3),
@@ -23,7 +25,6 @@ parameters = {
         "gamma": 0.99,
         "online_batch_size": 100,
         "offline_batch_size": 128,
-        "offline_num_epochs": 0,
         # replay buffer setup
         "buffer_size": int(1e6),
         # use demonstrations

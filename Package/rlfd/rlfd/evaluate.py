@@ -5,71 +5,41 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from rlfd import config, logger
+from rlfd import train, logger
 from rlfd.utils.util import set_global_seeds
 
-try:
-    from mpi4py import MPI
-except ImportError:
-    MPI = None
-
-
 DEFAULT_PARAMS = {
-    "seed": 0,
-    "num_eps": 10,
     "fix_T": False,
-    "demo": {"random_eps": 0.0, "noise_eps": 0.0, "compute_Q": True, "render": True, "num_episodes": 1},
+    "seed": 0,
+    "num_steps": None,
+    "num_episodes": 10,
+    "render": True,
 }
 
 
 def main(policy, **kwargs):
-    assert policy is not None, "must provide the policy"
+  logger.configure()
 
-    # Setup
-    logger.configure()
-    assert logger.get_dir() is not None
-    rank = MPI.COMM_WORLD.Get_rank() if MPI != None else 0
+  env_params = DEFAULT_PARAMS.copy()
 
-    params = DEFAULT_PARAMS.copy()
-    # Seed everything
-    set_global_seeds(params["seed"])
-    tf.compat.v1.InteractiveSession()
+  set_global_seeds(env_params["seed"])
 
-    # Load policy.
-    with open(policy, "rb") as f:
-        policy = pickle.load(f)
+  with open(policy, "rb") as f:
+    policy = pickle.load(f)
 
-    # Extract env info
-    params["env_name"] = policy.info["env_name"].replace("Dense", "")  # the reward should be sparse
-    params["r_scale"] = policy.info["r_scale"]
-    params["r_shift"] = policy.info["r_shift"]
-    params["eps_length"] = policy.info["eps_length"] if policy.info["eps_length"] != 0 else policy.T
-    params["gamma"] = policy.info["gamma"]
-    if "env_args" not in params.keys():
-        params["env_args"] = policy.info["env_args"]
-    params = config.add_env_params(params=params)
-    demo = config.config_demo(params=params, policy=policy)
+  params = env_params.copy()
+  params["env_name"] = policy.info["env_name"]
+  params["r_scale"] = policy.info["r_scale"]
+  params["r_shift"] = policy.info["r_shift"]
+  params["env_args"] = policy.info["env_args"]
+  make_env, _ = train.get_env_constructor_and_config(params=params)
+  eval_driver = train.config_driver(make_env=make_env,
+                                    policy=policy.eval_policy,
+                                    **env_params)
 
-    # Run evaluation.
-    demo.clear_history()
-    for _ in range(params["num_eps"]):
-        demo.generate_rollouts()
+  eval_driver.clear_history()
+  eval_driver.generate_rollouts()
 
-    # Log
-    for key, val in demo.logs("test"):
-        logger.record_tabular(key, np.mean(val))
-    if rank == 0:
-        logger.dump_tabular()
-
-    tf.compat.v1.get_default_session().close()
-
-
-if __name__ == "__main__":
-
-    from td3fd.util.cmd_util import ArgParser
-
-    ap = ArgParser()
-    ap.parser.add_argument("--policy", help="demonstration training dataset", type=str, default=None)
-    ap.parse(sys.argv)
-
-    main(**ap.get_dict())
+  for key, val in eval_driver.logs("test"):
+    logger.record_tabular(key, np.mean(val))
+  logger.dump_tabular()

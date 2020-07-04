@@ -11,7 +11,7 @@ from rlfd.sac import sac, sac_networks
 from rlfd.td3 import shaping
 
 
-class SAC(sac.SAC):
+class SACVF(sac.SAC):
   """This implementation of SAC is the original version that learns an extra
   value function
   """
@@ -26,7 +26,6 @@ class SAC(sac.SAC):
       # training
       online_batch_size,
       offline_batch_size,
-      offline_num_epochs,
       fix_T,
       norm_eps,
       norm_clip,
@@ -63,7 +62,6 @@ class SAC(sac.SAC):
 
     self.online_batch_size = online_batch_size
     self.offline_batch_size = offline_batch_size
-    self.offline_num_epochs = offline_num_epochs
 
     self.buffer_size = buffer_size
 

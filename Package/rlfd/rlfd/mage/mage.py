@@ -6,12 +6,12 @@ import numpy as np
 import tensorflow as tf
 tfk = tf.keras
 
-from rlfd import logger, memory, normalizer, policies
+from rlfd import logger, memory, normalizer, policies, agents
 from rlfd.td3 import td3_networks, shaping
 from rlfd.mage import model_network
 
 
-class MAGE(object):
+class MAGE(agents.Agent):
 
   def __init__(
       self,
@@ -23,7 +23,6 @@ class MAGE(object):
       # training
       online_batch_size,
       offline_batch_size,
-      offline_num_epochs,
       # exploration
       expl_gaussian_noise,
       expl_random_prob,
@@ -69,7 +68,6 @@ class MAGE(object):
 
     self.online_batch_size = online_batch_size
     self.offline_batch_size = offline_batch_size
-    self.offline_num_epochs = offline_num_epochs
 
     self.buffer_size = buffer_size
 
@@ -212,13 +210,13 @@ class MAGE(object):
       self._policy_inspect_graph(o, g)
       return norm_o, norm_g
 
-    self.eval_policy = policies.Policy(
+    self._eval_policy = policies.Policy(
         self.dimo,
         self.dimg,
         self.dimu,
         get_action=lambda o, g: self._actor([o, g]),
         process_observation=process_observation)
-    self.expl_policy = policies.GaussianEpsilonGreedyPolicy(
+    self._expl_policy = policies.GaussianEpsilonGreedyPolicy(
         self.dimo,
         self.dimg,
         self.dimu,
@@ -243,6 +241,14 @@ class MAGE(object):
                                                     trainable=False,
                                                     dtype=tf.int64)
 
+  @property
+  def expl_policy(self):
+    return self._expl_policy
+
+  @property
+  def eval_policy(self):
+    return self._eval_policy
+
   def _train_shaping(self):
     """TODO move this outside of this class"""
     offline_data_iter = self.offline_buffer.sample(return_iterator=True)
@@ -260,6 +266,13 @@ class MAGE(object):
       experiences = self.offline_buffer.load_from_file(data_file=demo_file)
       if self.sample_demo_buffer:
         self._update_stats(experiences)
+
+      # TODO set repeat=True?
+      # self._offline_data_iter = self.offline_buffer.sample(
+      #     batch_size=self.offline_batch_size,
+      #     shuffle=True,
+      #     return_iterator=True,
+      #     include_partial_batch=True)
 
     if self.shaping != None:
       self._train_shaping()
@@ -494,18 +507,11 @@ class MAGE(object):
 
   def train_offline(self):
     with tf.summary.record_if(lambda: self.offline_training_step % 200 == 0):
-      for epoch in range(self.offline_num_epochs):
-        offline_data_iter = self.offline_buffer.sample(
-            batch_size=self.offline_batch_size,
-            shuffle=True,
-            return_iterator=True,
-            include_partial_batch=True)
-        for batch in offline_data_iter:
-          o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-          g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
-          u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
-          self._train_offline_graph(o_tf, g_tf, u_tf)
-
+      batch = self.offline_buffer.sample(self.offline_batch_size)
+      o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
+      g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
+      u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
+      self._train_offline_graph(o_tf, g_tf, u_tf)
       self._update_target_network(polyak=0.0)
 
   def _criticq_gradient_loss_graph(self, o, g, o_2, g_2, u, r, n, done):

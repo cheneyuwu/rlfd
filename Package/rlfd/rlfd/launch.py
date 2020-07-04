@@ -229,7 +229,9 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, ip_head,
                config=dict(root_dir=exp_dir,
                            config=config_name,
                            search_params_list=search_params_list,
-                           **search_params_dict))
+                           **search_params_dict),
+               progress_reporter=tune.CLIReporter(
+                   ["mode", "epoch", "time_total_s"]))
 
     elif target == "demo":
       assert policy != None
