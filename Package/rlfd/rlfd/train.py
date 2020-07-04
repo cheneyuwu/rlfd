@@ -190,23 +190,12 @@ def main(config):
   for epoch in range(num_epochs):
     logger.record_tabular("epoch", epoch)
 
-    # 1 epoch contains multiple cycles of training, 1 time testing, logging
-    # and agent saving
-
     expl_driver.clear_history()
     for cyc in range(num_cycles_per_epoch):
-
       experiences = expl_driver.generate_rollouts(observers=training_metrics)
-      if num_batches_per_cycle != 0:  # agent is being updated
-        agent.store_experiences(experiences)
-
+      agent.store_experiences(experiences)
       for _ in range(num_batches_per_cycle):
         agent.train_online()
-
-      if cyc == num_cycles_per_epoch - 1:
-        # update meta parameters
-        potential_weight = agent.update_potential_weight()
-        logger.info("Current potential weight: ", potential_weight)
 
     with tf.name_scope("OnlineTraining"):
       for metric in training_metrics[2:]:
