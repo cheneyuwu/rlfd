@@ -1,6 +1,9 @@
-parameters = {
+from copy import deepcopy
+
+# Default Parameters
+default_params = {
     # config summary
-    "algo": "TD3",
+    "algo": "SAC",
     "config": "default",
     # environment config
     "env_name": "InvertedPendulum-v2",
@@ -27,9 +30,6 @@ parameters = {
         "offline_batch_size": 128,
         # replay buffer setup
         "buffer_size": int(1e6),
-        # exploration
-        "expl_gaussian_noise": 0.1,
-        "expl_random_prob": 0.0,
         # use demonstrations
         "sample_demo_buffer": False,
         "use_demo_reward": False,
@@ -38,12 +38,11 @@ parameters = {
         "norm_eps": 0.01,
         "norm_clip": 5,
         # actor critic networks
-        "layer_sizes": [400, 300],
-        "policy_freq": 2,
-        "policy_noise": 0.2,
-        "policy_noise_clip": 0.5,
-        "q_lr": 1e-3,
-        "pi_lr": 1e-3,
+        "layer_sizes": [256, 256],
+        "auto_alpha": False,
+        "alpha": 0.2,
+        "q_lr": 3e-4,
+        "pi_lr": 3e-4,
         "action_l2": 0.0,
         # double q learning
         "polyak": 0.995,
@@ -85,3 +84,7 @@ parameters = {
     },
     "seed": 0,
 }
+
+# OpenAI Gym
+gym_mujoco_params = deepcopy(default_params)
+gym_mujoco_params["random_expl_num_cycles"] = int(5e3)

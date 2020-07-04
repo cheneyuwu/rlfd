@@ -1,6 +1,9 @@
-parameters = {
+from copy import deepcopy
+
+# Default Parameters
+default_params = {
     # config summary
-    "algo": "MAGE",
+    "algo": "SACVF",
     "config": "default",
     # environment config
     "env_name": "InvertedPendulum-v2",
@@ -27,9 +30,6 @@ parameters = {
         "offline_batch_size": 128,
         # replay buffer setup
         "buffer_size": int(1e6),
-        # exploration
-        "expl_gaussian_noise": 0.1,
-        "expl_random_prob": 0.0,
         # use demonstrations
         "sample_demo_buffer": False,
         "use_demo_reward": False,
@@ -38,22 +38,16 @@ parameters = {
         "norm_eps": 0.01,
         "norm_clip": 5,
         # actor critic networks
-        "layer_sizes": [400, 300],
-        "policy_freq": 2,
-        "policy_noise": 0.2,
-        "policy_noise_clip": 0.5,
-        "q_lr": 1e-3,
-        "pi_lr": 1e-3,
+        "layer_sizes": [256, 256],
+        "auto_alpha": False,
+        "alpha": 0.2,
+        "q_lr": 3e-4,
+        "vf_lr": 3e-4,
+        "pi_lr": 3e-4,
         "action_l2": 0.0,
         # double q learning
         "polyak": 0.995,
         "target_update_freq": 1,
-        # model learning
-        "model_update_interval": 250,
-        # mage critic loss weight
-        "use_model_for_td3_critic_loss": False,
-        "critic_loss_weight": 0.01,
-        "mage_loss_weight": 1.0,
         "bc_params": {
             "q_filter": False,
             "prm_loss_weight": 1.0,
@@ -81,7 +75,17 @@ parameters = {
                 "critic_iter": 5,
                 "potential_weight": 3.0,
             },
+            "orl": {
+                "layer_sizes": [256, 256, 256],
+                "q_lr": 1e-3,
+                "pi_lr": 1e-3,
+                "polyak": 0.995,
+            },
         },
     },
     "seed": 0,
 }
+
+# OpenAI Gym
+gym_mujoco_params = deepcopy(default_params)
+gym_mujoco_params["random_expl_num_cycles"] = int(5e3)

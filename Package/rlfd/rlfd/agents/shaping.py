@@ -6,7 +6,7 @@ import tensorflow_probability as tfp
 
 from rlfd import logger
 from rlfd import memory, normalizer
-from rlfd.td3 import td3_networks, gan_network, normalizing_flows
+from rlfd.agents import td3_networks, gan_network, normalizing_flows
 
 tfd = tfp.distributions
 

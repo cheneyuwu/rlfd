@@ -13,12 +13,6 @@ from rlfd import logger, agents, metrics, policies, env_manager, drivers
 
 from rlfd.utils.util import set_global_seeds
 
-# Import an agent will automatically register them
-from rlfd.td3 import td3
-from rlfd.sac import sac
-from rlfd.sac_vf import sac_vf
-from rlfd.mage import mage
-
 
 def get_env_constructor_and_config(params):
   manager = env_manager.EnvManager(env_name=params["env_name"],

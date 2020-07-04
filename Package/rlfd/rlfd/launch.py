@@ -12,6 +12,11 @@ import tensorflow as tf
 import ray
 from ray import tune
 
+# Tensorflow environment setup
+os.environ["TF_DETERMINISTIC_OPS"] = "1"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+tf.get_logger().setLevel('ERROR')
+
 from rlfd import logger, plot, train, evaluate
 from rlfd.demo_utils import generate_demo
 
@@ -20,11 +25,6 @@ from rlfd.demo_utils import generate_demo
 # from td3fd.ddpg.debug.generate_query import main as generate_query_entry
 # from td3fd.ddpg.debug.visualize_query import main as visualize_query_entry
 # from td3fd.ddpg2.debug.check_potential import main as check_potential_entry
-
-# Tensorflow environment setup
-os.environ["TF_DETERMINISTIC_OPS"] = "1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-tf.get_logger().setLevel('ERROR')
 
 
 def import_param_config(load_dir):
@@ -35,12 +35,8 @@ def import_param_config(load_dir):
   spec = importlib.util.spec_from_file_location("module.name", abs_load_dir)
   module = importlib.util.module_from_spec(spec)
   spec.loader.exec_module(module)
-  params_configs = [
-      getattr(module, params_config)
-      for params_config in dir(module)
-      if params_config.startswith("params_config")
-  ]
-  return params_configs
+  params_config = getattr(module, "params_config")
+  return params_config
 
 
 def generate_params(root_dir, param_config):
@@ -165,10 +161,8 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, ip_head,
       exc_params = ["seed"]  # CHANGE this!
       # adding checking
       config_file = target.replace("rename:", "")
-      params_configs = import_param_config(config_file)
-      dir_param_dict = {}
-      for params_config in params_configs:
-        dir_param_dict.update(generate_params(exp_dir, params_config))
+      params_config = import_param_config(config_file)
+      dir_param_dict = generate_params(exp_dir, params_config)
       for k, v in dir_param_dict.items():
         assert os.path.exists(k), k
         # copy params.json file, rename the config entry
@@ -190,9 +184,7 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, ip_head,
       print("=================================================")
       # adding checking
       config_file = target.replace("train:", "")
-      params_configs = import_param_config(config_file)
-      assert len(params_configs) == 1, "Only support 1 config now."
-      params_config = params_configs[0]
+      params_config = import_param_config(config_file)
       dir_param_dict = generate_params(exp_dir, params_config)
       config_name = params_config.pop("config")
       config_name = config_name[0] if type(

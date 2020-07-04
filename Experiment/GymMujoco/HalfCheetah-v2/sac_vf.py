@@ -1,9 +1,9 @@
 from copy import deepcopy
-from rlfd.params.td3 import gym_mujoco_params
+from rlfd.params.sac_vf import gym_mujoco_params
 
 params_config = deepcopy(gym_mujoco_params)
 
-params_config["config"] = ("TD3",)
+params_config["config"] = ("SAC_VF",)
 
 params_config["env_name"] = "HalfCheetah-v2"  # "InvertedPendulum-v2"
 # No offline training

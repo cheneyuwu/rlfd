@@ -7,10 +7,10 @@ import tensorflow as tf
 tfk = tf.keras
 
 from rlfd import logger, memory, normalizer, policies, agents
-from rlfd.td3 import td3_networks, shaping
+from rlfd.agents import agent, model_network, td3_networks, shaping
 
 
-class TD3(agents.Agent):
+class MAGE(agent.Agent):
 
   def __init__(
       self,
@@ -40,6 +40,12 @@ class TD3(agents.Agent):
       # double q
       polyak,
       target_update_freq,
+      # model learning
+      model_update_interval,
+      # mage critic loss weight
+      use_model_for_td3_criticq_loss,
+      criticq_loss_weight,
+      mage_loss_weight,
       # play with demonstrations
       buffer_size,
       sample_demo_buffer,
@@ -85,6 +91,21 @@ class TD3(agents.Agent):
     self.norm_eps = norm_eps
     self.norm_clip = norm_clip
 
+    # mage critic loss weight
+    self.use_model_for_td3_criticq_loss = use_model_for_td3_criticq_loss
+    self.criticq_loss_weight = criticq_loss_weight
+    self.mage_loss_weight = mage_loss_weight
+
+    # model learning
+    self.model_update_interval = model_update_interval
+    self.model_lr = 1e-3
+    self.model_layer_sizes = [200, 200, 200, 200]
+    self.model_weight_decays = [2.5e-5, 5e-5, 7.5e-5, 7.5e-5, 1e-4]
+    self.model_num_networks = 7
+    self.model_num_elites = 5
+
+    self.demo_batch_size_ratio = 0.5
+
     # Play with demonstrations
     self.demo_strategy = demo_strategy
     assert self.demo_strategy in ["none", "bc", "gan", "nf", "orl"]
@@ -123,6 +144,15 @@ class TD3(agents.Agent):
     self._g_stats = normalizer.Normalizer(self.dimg, self.norm_eps,
                                           self.norm_clip)
     # Models
+    self._model_network = model_network.EnsembleModelNetwork(
+        self.dimo,
+        self.dimu,
+        self.max_u,
+        layer_sizes=self.model_layer_sizes,
+        weight_decays=self.model_weight_decays,
+        num_networks=self.model_num_networks,
+        num_elites=self.model_num_elites,
+    )
     self._actor = td3_networks.Actor(self.dimo, self.dimg, self.dimu,
                                      self.max_u, self.layer_sizes)
     self._actor_target = td3_networks.Actor(self.dimo, self.dimg, self.dimu,
@@ -137,6 +167,7 @@ class TD3(agents.Agent):
                                                 self.max_u, self.layer_sizes)
     self._update_target_network(polyak=0.0)
     # Optimizers
+    self._model_optimizer = tfk.optimizers.Adam(learning_rate=self.model_lr)
     self._actor_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
     self._criticq_optimizer = tfk.optimizers.Adam(learning_rate=self.q_lr)
     self._bc_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
@@ -202,6 +233,12 @@ class TD3(agents.Agent):
     self.offline_training_step = tf.Variable(0, trainable=False, dtype=tf.int64)
     self.online_training_step = tf.Variable(0, trainable=False, dtype=tf.int64)
     self.online_expl_step = tf.Variable(0, trainable=False, dtype=tf.int64)
+    self.model_training_step = tf.Variable(0, trainable=False, dtype=tf.int64)
+
+    # for logging only
+    self.model_training_step_per_iter = tf.Variable(0,
+                                                    trainable=False,
+                                                    dtype=tf.int64)
 
   @property
   def expl_policy(self):
@@ -285,6 +322,171 @@ class TD3(agents.Agent):
     return batch
 
   @tf.function
+  def _evaluate_model_graph(self, o, o_2, u, r):
+
+    (mean, var) = self._model_network((o, u))
+    delta_o_mean, r_mean = mean
+    o_var, r_var = var
+
+    # Use delta observation as target
+    delta_o_2 = o_2 - o
+
+    o_mean_loss = tf.reduce_mean(
+        tf.square(delta_o_mean - delta_o_2),
+        axis=[-2, -1],
+    )
+    r_mean_loss = tf.reduce_mean(
+        tf.square(r_mean - r),
+        axis=[-2, -1],
+    )
+
+    model_loss = o_mean_loss + r_mean_loss
+
+    # For debugging
+    model_r = tf.reduce_mean(r_mean, axis=[-2, -1])
+    true_r = tf.reduce_mean(r, axis=[-2, -1])
+
+    with tf.name_scope('ModelLosses/'):
+      for i in range(self._model_network.num_networks):
+        tf.summary.scalar(
+            name='model_loss_{} vs model_training_step'.format(i),
+            data=model_loss[i],
+            step=self.model_training_step,
+        )
+        tf.summary.scalar(
+            name='model_reward_{} vs model_training_step'.format(i),
+            data=model_r[i],
+            step=self.model_training_step,
+        )
+      tf.summary.scalar(
+          name='true_reward vs model_training_step',
+          data=true_r,
+          step=self.model_training_step,
+      )
+
+    return model_loss
+
+  @tf.function
+  def _train_model_graph(self, o, o_2, u, r):
+
+    # TODO: normalize observations
+    # o = self._o_stats.normalize(o)
+    # norm_o_2 = self._o_stats.normalize(o_2)
+
+    random_idx = tf.random.uniform(
+        shape=[self._model_network.num_networks, o.shape[0]],
+        minval=0,
+        maxval=o.shape[0],
+        dtype=tf.dtypes.int32,
+    )
+    o = tf.gather(o, random_idx)
+    o_2 = tf.gather(o_2, random_idx)
+    u = tf.gather(u, random_idx)
+    r = tf.gather(r, random_idx)
+
+    with tf.GradientTape(watch_accessed_variables=False) as tape:
+      tape.watch(self._model_network.trainable_variables)
+
+      (mean, var) = self._model_network((o, u))
+      delta_o_mean, r_mean = mean
+      o_var, r_var = var
+
+      # Use delta observation as target
+      delta_o_2 = o_2 - o
+
+      o_mean_loss = tf.reduce_mean(
+          tf.square(delta_o_mean - delta_o_2) / o_var,
+          axis=[-2, -1],
+      )
+      o_var_loss = tf.reduce_mean(
+          tf.math.log(o_var),
+          axis=[-2, -1],
+      )
+      r_mean_loss = tf.reduce_mean(
+          tf.square(r_mean - r) / r_var,
+          axis=[-2, -1],
+      )
+      r_var_loss = tf.reduce_mean(tf.math.log(r_var), axis=[-2, -1])
+
+      model_loss = tf.reduce_sum(o_mean_loss + r_mean_loss + o_var_loss +
+                                 r_var_loss)
+
+      # layer decays and logvar bound loss
+      regularization_loss = self._model_network.compute_regularization_loss()
+      model_loss = model_loss + regularization_loss
+
+    model_grads = tape.gradient(model_loss,
+                                self._model_network.trainable_variables)
+    self._model_optimizer.apply_gradients(
+        zip(model_grads, self._model_network.trainable_variables))
+
+    return model_loss
+
+  def train_model(self):
+    # TODO: move hyperparameters to config files
+    holdout_ratio = 0.2  # used in mbpo to determine validation dataset size (not used for now)
+    max_training_steps = 5000  # in mbpo this is based on time taken to train the model
+    batch_size = 256  # used in mbpo
+    max_logging = 5000  # maximum validation and evaluation number of experiences
+
+    self.model_training_step_per_iter.assign(0)
+    while True:  # 1 epoch of training (or use max training epochs maybe)
+      validation_size = min(
+          int(self.online_buffer.stored_steps * holdout_ratio), max_logging)
+      iterator = self.online_buffer.sample(batch_size=validation_size,
+                                           shuffle=True,
+                                           return_iterator=True,
+                                           include_partial_batch=True)
+      validation_experiences = next(iterator)
+
+      if self.sample_demo_buffer:
+        demo_iterator = self.offline_buffer.sample(shuffle=True,
+                                                   return_iterator=True,
+                                                   repeat=True)
+        demo_batch_size = int(batch_size * self.demo_batch_size_ratio)
+        expl_batch_size = batch_size - demo_batch_size
+        iterator(expl_batch_size)
+        demo_iterator(demo_batch_size)
+      else:
+        iterator(batch_size)  # start training
+
+      for experiences in iterator:
+        if self.sample_demo_buffer:
+          experiences = self._merge_batch_experiences(experiences,
+                                                      next(demo_iterator))
+        training_exps_tf = {
+            k: tf.convert_to_tensor(experiences[k], dtype=tf.float32)
+            for k in ["o", "o_2", "u", "r"]
+        }
+        self._train_model_graph(**training_exps_tf)
+
+        self.model_training_step_per_iter.assign_add(1)
+        self.model_training_step.assign_add(1)
+
+        if self.model_training_step_per_iter >= max_training_steps:
+          break
+
+      validation_exps_tf = {
+          k: tf.convert_to_tensor(validation_experiences[k], dtype=tf.float32)
+          for k in ["o", "o_2", "u", "r"]
+      }
+      # Note: has to be a lambda function, since it has to be evaluated inside a
+      # tensorflow graph
+      with tf.summary.record_if(
+          lambda: self.model_training_step_per_iter >= max_training_steps):
+        holdout_loss = self._evaluate_model_graph(**validation_exps_tf).numpy()
+
+      if self.model_training_step_per_iter >= max_training_steps:
+        break
+
+    logger.info("Training Steps {}, Holdout loss: {}".format(
+        self.model_training_step_per_iter.numpy(), holdout_loss))
+
+    sorted_inds = np.argsort(holdout_loss)
+    elites_inds = sorted_inds[:self._model_network.num_elites].tolist()
+    self._model_network.set_elite_inds(elites_inds)
+
+  @tf.function
   def _train_offline_graph(self, o, g, u):
     o = self._o_stats.normalize(o)
     g = self._g_stats.normalize(g)
@@ -311,7 +513,123 @@ class TD3(agents.Agent):
       self._train_offline_graph(o_tf, g_tf, u_tf)
       self._update_target_network(polyak=0.0)
 
+  def _criticq_gradient_loss_graph(self, o, g, o_2, g_2, u, r, n, done):
+    with tf.GradientTape(watch_accessed_variables=False) as tape:
+      tape.watch(u)  # with respect to action
+
+      # compute model output
+      (mean, var) = self._model_network((o, u))
+      delta_o_mean, r_mean = mean
+      o_var, r_var = var
+
+      o_mean = o + delta_o_mean
+      o_std, r_std = tf.sqrt(o_var), tf.sqrt(r_var)
+
+      # choose between deterministic and non-deterministic
+      o_sample = o_mean + tf.random.normal(o_mean.shape) * o_std
+      r_sample = r_mean + tf.random.normal(r_mean.shape) * r_std
+
+      # choose a random netowrk
+      batch_inds = tf.range(o_sample.shape[1])
+      model_inds = tf.random.uniform(shape=[o_sample.shape[1]],
+                                     minval=0,
+                                     maxval=self._model_network.num_elites,
+                                     dtype=tf.dtypes.int32)
+      model_inds = tf.gather(self._model_network.get_elite_inds(), model_inds)
+      indices = tf.stack([model_inds, batch_inds], axis=-1)
+
+      # Replace reward and next observation
+      o_2 = tf.gather_nd(o_sample, indices)
+      r = tf.gather_nd(r_sample, indices)
+
+      # normalize observations
+      norm_o = self._o_stats.normalize(o)
+      norm_g = self._g_stats.normalize(g)
+      norm_o_2 = self._o_stats.normalize(o_2)
+      norm_g_2 = self._g_stats.normalize(g_2)
+
+      # add noise to target policy output
+      noise = tf.random.normal(tf.shape(u), 0.0, self.policy_noise)
+      noise = tf.clip_by_value(noise, -self.policy_noise_clip,
+                               self.policy_noise_clip) * self.max_u
+      u_2 = tf.clip_by_value(
+          self._actor_target([norm_o_2, norm_g_2]) + noise, -self.max_u,
+          self.max_u)
+
+      # immediate reward
+      target_q = r
+      # shaping reward
+      if self.shaping != None:
+        potential_curr = self.potential_weight * self.shaping.potential(
+            o=o, g=g, u=u)
+        potential_next = self.potential_weight * self.shaping.potential(
+            o=o_2, g=g_2, u=u_2)
+        target_q += (1.0 - done) * tf.pow(self.gamma,
+                                          n) * potential_next - potential_curr
+      # Q value from next state
+      target_next_q1 = self._criticq1_target([norm_o_2, norm_g_2, u_2])
+      target_next_q2 = self._criticq2_target([norm_o_2, norm_g_2, u_2])
+      target_next_min_q = tf.minimum(target_next_q1, target_next_q2)
+      target_q += (1.0 - done) * tf.pow(self.gamma, n) * target_next_min_q
+      target_q = tf.stop_gradient(target_q)
+
+      td_loss_q1 = self._huber_loss(target_q,
+                                    self._criticq1([norm_o, norm_g, u]))
+      td_loss_q2 = self._huber_loss(target_q,
+                                    self._criticq2([norm_o, norm_g, u]))
+      td_loss = td_loss_q1 + td_loss_q2
+
+      if self.sample_demo_buffer and not self.use_demo_reward:
+        # mask off entries from demonstration dataset
+        mask = np.concatenate((np.ones(
+            self.online_batch_size), np.zeros(self.offline_batch_size)),
+                              axis=0)
+        td_loss = tf.boolean_mask(td_loss, mask)
+
+      criticq_loss = tf.reduce_mean(td_loss)
+
+    criticq_gradient_loss = tf.norm(tape.gradient(criticq_loss, u))
+
+    with tf.name_scope('OnlineLosses/'):
+      tf.summary.scalar(name='criticq_gradient_loss vs online_training_step',
+                        data=criticq_gradient_loss,
+                        step=self.online_training_step)
+
+    return criticq_gradient_loss
+
   def _criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done):
+
+    if self.use_model_for_td3_criticq_loss:
+      # compute model output
+      (mean, var) = self._model_network((o, u))
+      delta_o_mean, r_mean = mean
+      o_var, r_var = var
+
+      o_mean = o + delta_o_mean
+      o_std, r_std = tf.sqrt(o_var), tf.sqrt(r_var)
+
+      # choose between deterministic and non-deterministic
+      o_sample = o_mean + tf.random.normal(o_mean.shape) * o_std
+      r_sample = r_mean + tf.random.normal(r_mean.shape) * r_std
+
+      # choose a random netowrk
+      batch_inds = tf.range(o_sample.shape[1])
+      model_inds = tf.random.uniform(shape=[o_sample.shape[1]],
+                                     minval=0,
+                                     maxval=self._model_network.num_elites,
+                                     dtype=tf.dtypes.int32)
+      model_inds = tf.gather(self._model_network.get_elite_inds(), model_inds)
+      indices = tf.stack([model_inds, batch_inds], axis=-1)
+
+      o_sample = tf.gather_nd(o_sample, indices)
+      r_sample = tf.gather_nd(r_sample, indices)
+
+      # Replace reward and next observation
+      o_2_real = o_2
+      r_real = r
+      o_2 = o_sample
+      r = r_sample
+
     # Normalize observations
     norm_o = self._o_stats.normalize(o)
     norm_g = self._g_stats.normalize(g)
@@ -361,6 +679,14 @@ class TD3(agents.Agent):
                         data=criticq_loss,
                         step=self.online_training_step)
 
+      if self.use_model_for_td3_criticq_loss:
+        tf.summary.scalar(name='true_reward vs online_training_step',
+                          data=tf.reduce_mean(r_real),
+                          step=self.online_training_step)
+        tf.summary.scalar(name='model_reward vs online_training_step',
+                          data=tf.reduce_mean(r),
+                          step=self.online_training_step)
+
     return criticq_loss
 
   def _actor_loss_graph(self, o, g, u):
@@ -409,7 +735,11 @@ class TD3(agents.Agent):
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(criticq_trainable_weights)
       criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done)
-    criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
+      criticq_gradient_loss = self._criticq_gradient_loss_graph(
+          o, g, o_2, g_2, u, r, n, done)
+      mage_criticq_loss = (self.mage_loss_weight * criticq_gradient_loss +
+                           self.criticq_loss_weight * criticq_loss)
+    criticq_grads = tape.gradient(mage_criticq_loss, criticq_trainable_weights)
     self._criticq_optimizer.apply_gradients(
         zip(criticq_grads, criticq_trainable_weights))
 
@@ -426,6 +756,9 @@ class TD3(agents.Agent):
     self.online_training_step.assign_add(1)
 
   def train_online(self):
+    if self.online_training_step % self.model_update_interval == 0:
+      self.train_model()
+
     with tf.summary.record_if(lambda: self.online_training_step % 200 == 0):
 
       batch = self.sample_batch()
