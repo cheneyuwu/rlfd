@@ -2,6 +2,7 @@ import json
 import os
 import pickle
 import sys
+osp = os.path
 
 import numpy as np
 import tensorflow as tf
@@ -24,15 +25,15 @@ def main(policy, root_dir, **kwargs):
   logger.configure()
 
   # Get default params from config and update params.
-  param_file = os.path.join(root_dir, "demo_config.json")
-  if os.path.isfile(param_file):
+  param_file = osp.join(root_dir, "demo_config.json")
+  if osp.isfile(param_file):
     with open(param_file, "r") as f:
       env_params = json.load(f)
   else:
     logger.warn(
         "WARNING: demo_config.json not found! using the default parameters.")
     env_params = DEFAULT_PARAMS.copy()
-    param_file = os.path.join(root_dir, "demo_config.json")
+    param_file = osp.join(root_dir, "demo_config.json")
     with open(param_file, "w") as f:
       json.dump(env_params, f)
 
@@ -58,6 +59,6 @@ def main(policy, root_dir, **kwargs):
   logger.dump_tabular()
 
   os.makedirs(root_dir, exist_ok=True)
-  file_name = os.path.join(root_dir, params["filename"])
+  file_name = osp.join(root_dir, params["filename"])
   np.savez_compressed(file_name, **episode)  # save the file
   logger.info("Demo file has been stored into {}.".format(file_name))

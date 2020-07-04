@@ -7,7 +7,8 @@ import tensorflow as tf
 tfk = tf.keras
 
 from rlfd import logger, memory, normalizer, policies, agents
-from rlfd.agents import agent, td3_networks, shaping
+from rlfd.agents import agent, td3_networks
+from rlfd.shapings import shaping
 
 
 class TD3(agent.Agent):
@@ -87,7 +88,9 @@ class TD3(agent.Agent):
 
     # Play with demonstrations
     self.demo_strategy = demo_strategy
-    assert self.demo_strategy in ["none", "bc", "gan", "nf", "orl"]
+    assert self.demo_strategy in [
+        "None", "BC", "GANShaping", "NFShaping", "ORLShaping"
+    ]
     self.bc_params = bc_params
     self.shaping_params = shaping_params
     self.gamma = gamma
@@ -142,15 +145,10 @@ class TD3(agent.Agent):
     self._bc_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
 
     # Add shaping reward
-    shaping_class = {
-        "nf": shaping.NFShaping,
-        "gan": shaping.GANShaping,
-        "orl": shaping.OfflineRLShaping
-    }
-    if self.demo_strategy in shaping_class.keys():
+    if self.demo_strategy in shaping.SHAPINGS.keys():
       # instantiate shaping version 1
       self.shaping = shaping.EnsembleShaping(
-          shaping_cls=shaping_class[self.demo_strategy],
+          shaping_type=self.demo_strategy,
           num_ensembles=self.shaping_params["num_ensembles"],
           batch_size=self.shaping_params["batch_size"],
           num_epochs=self.shaping_params["num_epochs"],
@@ -215,9 +213,7 @@ class TD3(agent.Agent):
     """TODO move this outside of this class"""
     offline_data_iter = self.offline_buffer.sample(return_iterator=True)
     offline_data = next(offline_data_iter)
-
     self.shaping.train(offline_data)
-    self.shaping.evaluate(offline_data)
 
   def before_training_hook(self, data_dir=None, env=None):
     """Adds data to the replay buffer and initalizes shaping
@@ -374,7 +370,7 @@ class TD3(agent.Agent):
     if self.shaping != None:
       actor_loss += -tf.reduce_mean(
           self.potential_weight * self.shaping.potential(o=o, g=g, u=pi))
-    if self.demo_strategy == "bc":
+    if self.demo_strategy == "BC":
       assert self.sample_demo_buffer, "must sample from the demonstration buffer to use behavior cloning"
       mask = np.concatenate(
           (np.zeros(self.online_batch_size), np.ones(self.offline_batch_size)),

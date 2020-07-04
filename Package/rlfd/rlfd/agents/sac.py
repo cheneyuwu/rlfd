@@ -7,7 +7,8 @@ import tensorflow as tf
 tfk = tf.keras
 
 from rlfd import logger, memory, normalizer, policies, agents
-from rlfd.agents import agent, sac_networks, shaping
+from rlfd.agents import agent, sac_networks
+from rlfd.shapings import shaping
 
 
 class SAC(agent.Agent):
@@ -80,7 +81,9 @@ class SAC(agent.Agent):
 
     # Play with demonstrations
     self.demo_strategy = demo_strategy
-    assert self.demo_strategy in ["none", "bc", "gan", "nf", "orl"]
+    assert self.demo_strategy in [
+        "None", "BC", "GANShaping", "NFShaping", "ORLShaping"
+    ]
     self.bc_params = bc_params
     self.shaping_params = shaping_params
     self.gamma = gamma
@@ -142,15 +145,10 @@ class SAC(agent.Agent):
       self._alpha_optimizer = tfk.optimizers.Adam(learning_rate=self.alpha_lr)
 
     # Add shaping reward
-    shaping_class = {
-        "nf": shaping.NFShaping,
-        "gan": shaping.GANShaping,
-        "orl": shaping.OfflineRLShaping
-    }
-    if self.demo_strategy in shaping_class.keys():
+    if self.demo_strategy in shaping.SHAPINGS.keys():
       # instantiate shaping version 1
       self.shaping = shaping.EnsembleShaping(
-          shaping_cls=shaping_class[self.demo_strategy],
+          shaping_type=self.demo_strategy,
           num_ensembles=self.shaping_params["num_ensembles"],
           batch_size=self.shaping_params["batch_size"],
           num_epochs=self.shaping_params["num_epochs"],
@@ -212,9 +210,7 @@ class SAC(agent.Agent):
     """TODO move this outside of this class"""
     offline_data_iter = self.offline_buffer.sample(return_iterator=True)
     offline_data = next(offline_data_iter)
-
     self.shaping.train(offline_data)
-    self.shaping.evaluate(offline_data)
 
   def before_training_hook(self, data_dir=None, env=None):
     """Adds data to the replay buffer and initalizes shaping
@@ -362,7 +358,7 @@ class SAC(agent.Agent):
     actor_loss = tf.reduce_mean(self.alpha * logprob_pi - current_min_q)
     if self.shaping != None:
       pass  # TODO add shaping.
-    if self.demo_strategy == "bc":
+    if self.demo_strategy == "BC":
       pass  # TODO add behavior clone.
     with tf.name_scope('OnlineLosses/'):
       tf.summary.scalar(name='actor_loss vs online_training_step',

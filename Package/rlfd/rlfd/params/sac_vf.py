@@ -1,3 +1,4 @@
+# yapf: disable
 from copy import deepcopy
 
 # Default Parameters
@@ -14,7 +15,7 @@ default_params = {
     "fix_T": False,
     # learner
     "offline_num_epochs": 0,
-    "offline_num_batches_per_epoch": 0,
+    "offline_num_batches_per_epoch": 100,
     "random_expl_num_cycles": 0,
     "num_epochs": int(1e3),
     "num_cycles_per_epoch": int(1e3),
@@ -33,7 +34,7 @@ default_params = {
         # use demonstrations
         "sample_demo_buffer": False,
         "use_demo_reward": False,
-        "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
+        "demo_strategy": "None",  # ["None", "BC", "NFShaping", "GANShaping"]
         # normalize observation
         "norm_eps": 0.01,
         "norm_clip": 5,
@@ -60,7 +61,7 @@ default_params = {
             "num_epochs": int(4e3),
             "batch_size": 128,
             "num_ensembles": 2,
-            "nf": {
+            "NFShaping": {
                 "num_masked": 2,
                 "num_bijectors": 4,
                 "layer_sizes": [256, 256],
@@ -68,14 +69,14 @@ default_params = {
                 "reg_loss_weight": 200.0,
                 "potential_weight": 3.0,
             },
-            "gan": {
+            "GANShaping": {
                 "layer_sizes": [256, 256, 256],
                 "latent_dim": 6,
                 "gp_lambda": 0.1,
                 "critic_iter": 5,
                 "potential_weight": 3.0,
             },
-            "orl": {
+            "OfflineRLShaping": {
                 "layer_sizes": [256, 256, 256],
                 "q_lr": 1e-3,
                 "pi_lr": 1e-3,

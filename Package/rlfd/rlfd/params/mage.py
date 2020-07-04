@@ -1,3 +1,4 @@
+# yapf: disable
 from copy import deepcopy
 
 # Default Parameters
@@ -14,7 +15,7 @@ default_params = {
     "fix_T": False,
     # learner
     "offline_num_epochs": 0,
-    "offline_num_batches_per_epoch": 0,
+    "offline_num_batches_per_epoch": 100,
     "random_expl_num_cycles": 0,
     "num_epochs": int(1e3),
     "num_cycles_per_epoch": int(1e3),
@@ -36,7 +37,7 @@ default_params = {
         # use demonstrations
         "sample_demo_buffer": False,
         "use_demo_reward": False,
-        "demo_strategy": "none",  # ["none", "bc", "nf", "gan"]
+        "demo_strategy": "None",  # ["None", "BC", "NFShaping", "GANShaping"]
         # normalize observation
         "norm_eps": 0.01,
         "norm_clip": 5,
@@ -69,7 +70,7 @@ default_params = {
             "num_epochs": int(4e3),
             "batch_size": 128,
             "num_ensembles": 2,
-            "nf": {
+            "NFShaping": {
                 "num_masked": 2,
                 "num_bijectors": 4,
                 "layer_sizes": [256, 256],
@@ -77,7 +78,7 @@ default_params = {
                 "reg_loss_weight": 200.0,
                 "potential_weight": 3.0,
             },
-            "gan": {
+            "GANShaping": {
                 "layer_sizes": [256, 256, 256],
                 "latent_dim": 6,
                 "gp_lambda": 0.1,
@@ -110,8 +111,8 @@ insert_peg_2d_params["agent"]["polyak"] = 0.95
 insert_peg_2d_params["agent"]["target_update_freq"] = 40
 insert_peg_2d_params["agent"]["model_update_interval"] = 400
 insert_peg_2d_params["agent"]["shaping_params"]["num_epochs"] = int(1e4)
-insert_peg_2d_params["agent"]["shaping_params"]["nf"]["reg_loss_weight"] = 4e2
-insert_peg_2d_params["agent"]["shaping_params"]["nf"]["potential_weight"] = 1e1
+insert_peg_2d_params["agent"]["shaping_params"]["NFShaping"]["reg_loss_weight"] = 4e2
+insert_peg_2d_params["agent"]["shaping_params"]["NFShaping"]["potential_weight"] = 1e1
 
 # OpenAI Peg Insertion
 insert_peg_params = deepcopy(default_params)
@@ -133,8 +134,8 @@ insert_peg_params["agent"]["polyak"] = 0.95
 insert_peg_params["agent"]["target_update_freq"] = 40
 insert_peg_params["agent"]["model_update_interval"] = 400
 insert_peg_params["agent"]["shaping_params"]["num_epochs"] = int(1e4)
-insert_peg_params["agent"]["shaping_params"]["nf"]["reg_loss_weight"] = 4e2
-insert_peg_params["agent"]["shaping_params"]["nf"]["potential_weight"] = 1e1
+insert_peg_params["agent"]["shaping_params"]["NFShaping"]["reg_loss_weight"] = 4e2
+insert_peg_params["agent"]["shaping_params"]["NFShaping"]["potential_weight"] = 1e1
 
 # OpenAI Pick Place
 pick_place_params = deepcopy(default_params)
@@ -155,10 +156,10 @@ pick_place_params["agent"]["action_l2"] = 0.4
 pick_place_params["agent"]["polyak"] = 0.95
 pick_place_params["agent"]["target_update_freq"] = 40
 pick_place_params["agent"]["shaping_params"]["num_epochs"] = int(1e4)
-pick_place_params["agent"]["shaping_params"]["nf"]["reg_loss_weight"] = 4e2
-pick_place_params["agent"]["shaping_params"]["nf"]["potential_weight"] = 1e1
-pick_place_params["agent"]["shaping_params"]["gan"]["latent_dim"] = 16
-pick_place_params["agent"]["shaping_params"]["gan"]["potential_weight"] = 1.0
+pick_place_params["agent"]["shaping_params"]["NFShaping"]["reg_loss_weight"] = 4e2
+pick_place_params["agent"]["shaping_params"]["NFShaping"]["potential_weight"] = 1e1
+pick_place_params["agent"]["shaping_params"]["GANShaping"]["latent_dim"] = 16
+pick_place_params["agent"]["shaping_params"]["GANShaping"]["potential_weight"] = 1.0
 
 # Metaworld
 metaworld_params = deepcopy(default_params)
@@ -175,10 +176,10 @@ metaworld_params["agent"]["expl_gaussian_noise"] = 0.2
 metaworld_params["agent"]["layer_sizes"] = [256, 256, 256]
 metaworld_params["agent"]["polyak"] = 0.95
 metaworld_params["agent"]["shaping_params"]["num_epochs"] = int(1e4)
-metaworld_params["agent"]["shaping_params"]["nf"]["reg_loss_weight"] = 4e2
-metaworld_params["agent"]["shaping_params"]["nf"]["potential_weight"] = 1e1
-metaworld_params["agent"]["shaping_params"]["gan"]["latent_dim"] = 16
-metaworld_params["agent"]["shaping_params"]["gan"]["potential_weight"] = 1.0
+metaworld_params["agent"]["shaping_params"]["NFShaping"]["reg_loss_weight"] = 4e2
+metaworld_params["agent"]["shaping_params"]["NFShaping"]["potential_weight"] = 1e1
+metaworld_params["agent"]["shaping_params"]["GANShaping"]["latent_dim"] = 16
+metaworld_params["agent"]["shaping_params"]["GANShaping"]["potential_weight"] = 1.0
 
 # Reach2D
 reach2d_params = deepcopy(default_params)
@@ -198,7 +199,7 @@ reach2d_params["agent"]["action_l2"] = 0.4
 reach2d_params["agent"]["polyak"] = 0.95
 reach2d_params["agent"]["target_update_freq"] = 40
 reach2d_params["agent"]["shaping_params"]["num_epochs"] = int(3e3)
-reach2d_params["agent"]["shaping_params"]["gan"]["layer_sizes"] = [256, 256]
-reach2d_params["agent"]["shaping_params"]["gan"]["latent_dim"] = 4
-reach2d_params["agent"]["shaping_params"]["gan"]["gp_lambda"] = 0.5
-reach2d_params["agent"]["shaping_params"]["gan"]["potential_weight"] = 1.0
+reach2d_params["agent"]["shaping_params"]["GANShaping"]["layer_sizes"] = [256, 256]
+reach2d_params["agent"]["shaping_params"]["GANShaping"]["latent_dim"] = 4
+reach2d_params["agent"]["shaping_params"]["GANShaping"]["gp_lambda"] = 0.5
+reach2d_params["agent"]["shaping_params"]["GANShaping"]["potential_weight"] = 1.0

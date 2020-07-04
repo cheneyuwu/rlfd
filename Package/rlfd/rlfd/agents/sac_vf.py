@@ -7,7 +7,8 @@ import tensorflow as tf
 tfk = tf.keras
 
 from rlfd import logger, memory, normalizer, policies
-from rlfd.agents import sac, sac_networks, shaping
+from rlfd.agents import sac, sac_networks
+from rlfd.shapings import shaping
 
 
 class SACVF(sac.SAC):
@@ -85,7 +86,9 @@ class SACVF(sac.SAC):
 
     # Play with demonstrations
     self.demo_strategy = demo_strategy
-    assert self.demo_strategy in ["none", "bc", "gan", "nf", "orl"]
+    assert self.demo_strategy in [
+        "None", "BC", "GANShaping", "NFShaping", "ORLShaping"
+    ]
     self.bc_params = bc_params
     self.shaping_params = shaping_params
     self.gamma = gamma
@@ -145,15 +148,10 @@ class SACVF(sac.SAC):
       self._alpha_optimizer = tfk.optimizers.Adam(learning_rate=self.alpha_lr)
 
     # Add shaping reward
-    shaping_class = {
-        "nf": shaping.NFShaping,
-        "gan": shaping.GANShaping,
-        "orl": shaping.OfflineRLShaping
-    }
-    if self.demo_strategy in shaping_class.keys():
+    if self.demo_strategy in shaping.SHAPINGS.keys():
       # instantiate shaping version 1
       self.shaping = shaping.EnsembleShaping(
-          shaping_cls=shaping_class[self.demo_strategy],
+          shaping_type=self.demo_strategy,
           num_ensembles=self.shaping_params["num_ensembles"],
           batch_size=self.shaping_params["batch_size"],
           num_epochs=self.shaping_params["num_epochs"],
