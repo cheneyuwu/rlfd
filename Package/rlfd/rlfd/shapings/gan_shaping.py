@@ -53,16 +53,15 @@ class Discriminator(tfk.Model):
 
 class GANShaping(shaping.Shaping):
 
-  def __init__(self, dimo, dimg, dimu, max_u, potential_weight, layer_sizes,
-               latent_dim, gp_lambda, critic_iter, norm_obs, norm_eps,
-               norm_clip, **kwargs):
+  def __init__(self, dims, max_u, potential_weight, layer_sizes, latent_dim,
+               gp_lambda, critic_iter, norm_obs, norm_eps, norm_clip, **kwargs):
     self.init_args = locals()
 
     super(GANShaping, self).__init__()
 
-    self.dimo = dimo
-    self.dimg = dimg
-    self.dimu = dimu
+    self.dimo = dims["o"]
+    self.dimg = dims["g"]
+    self.dimu = dims["u"]
     self.max_u = max_u
     self.latent_dim = latent_dim
     self.layer_sizes = layer_sizes

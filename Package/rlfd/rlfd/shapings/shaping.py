@@ -1,4 +1,6 @@
 import abc
+import os
+osp = os.path
 
 import numpy as np
 import tensorflow as tf
@@ -12,48 +14,55 @@ SHAPINGS = {}
 
 class EnsembleShaping(object):
 
-  def __init__(self, shaping_type, num_ensembles, num_epochs, batch_size, *args,
-               **kwargs):
+  def __init__(self, shaping_type, num_ensembles, num_epochs, batch_size, fix_T,
+               *args, **kwargs):
     self.shapings = [
         SHAPINGS[shaping_type](*args, **kwargs) for _ in range(num_ensembles)
     ]
-
+    self._fix_T = fix_T
     self.shaping_type = shaping_type
     self.num_epochs = num_epochs
     self.batch_size = batch_size
 
-  def train(self, demo_data):
-    dataset = self._construct_dataset(demo_data)
-    for i, shaping in enumerate(self.shapings):
-      logger.log("Training shaping function #{}...".format(i))
+  def before_training_hook(self, data_dir, env):
+    demo_file = osp.join(data_dir, "demo_data.npz")
+    assert osp.isfile(demo_file), "Demostrations not available."
+    if self._fix_T:
+      self._dataset = memory.EpisodeBaseReplayBuffer.construct_from_file(
+          data_file=demo_file)
+    else:
+      self._dataset = memory.StepBaseReplayBuffer.construct_from_file(
+          data_file=demo_file)
 
-      shaping.before_training_hook(demo_data)
+  def train(self):
+    for i, shaping in enumerate(self.shapings):
+      dataset_iter = self._dataset.sample(return_iterator=True,
+                                          shuffle=False,
+                                          include_partial_batch=True)
+      shaping.before_training_hook(next(dataset_iter))
 
       self.training_step = self.shapings[i].training_step
       with tf.summary.record_if(lambda: self.training_step % 200 == 0):
         for epoch in range(self.num_epochs):
-          dataset_iter = dataset.sample(return_iterator=True,
-                                        shuffle=True,
-                                        include_partial_batch=True)
+          dataset_iter = self._dataset.sample(return_iterator=True,
+                                              shuffle=True,
+                                              include_partial_batch=True)
           dataset_iter(self.batch_size)
           for batch in dataset_iter:
             shaping.train(**batch, name="model_" + str(i))
           # TODO: should be done on validation set
           shaping.evaluate(**batch, name="model_" + str(i))
 
-      shaping.after_training_hook(demo_data)
+      shaping.after_training_hook()
+
+  def after_training_hook(self, *args, **kwargs):
+    pass
 
   @tf.function
   def potential(self, o, g, u):
     potential = tf.reduce_mean([x.potential(o, g, u) for x in self.shapings],
                                axis=0)
     return potential
-
-  def _construct_dataset(self, demo_data):
-    buffer_shapes = {k: tuple(v.shape[1:]) for k, v in demo_data.items()}
-    dataset = memory.StepBaseReplayBuffer(buffer_shapes, int(1e6))
-    dataset.store(demo_data)
-    return dataset
 
 
 class Shaping(object, metaclass=abc.ABCMeta):

@@ -159,6 +159,20 @@ class StepBaseReplayBuffer(ReplayBuffer):
     # contains {key: array(transitions x dim_key)}
     self._pointer = 0
 
+  @staticmethod
+  def construct_from_file(data_file):
+    experiences = dict(np.load(data_file))
+    buffer_shapes = {k: v.shape[1:] for k, v in experiences.items()}
+    buffer_size = None
+    for v in experiences.values():
+      if buffer_size != None:
+        assert buffer_size == v.shape[0], "Inconsistent batch size."
+      else:
+        buffer_size = v.shape[0]
+    replay_buffer = StepBaseReplayBuffer(buffer_shapes, buffer_size)
+    replay_buffer.store(experiences)
+    return replay_buffer
+
   @property
   def stored_steps(self):
     """current number of environment steps stored in the replay buffer"""
@@ -271,6 +285,23 @@ class EpisodeBaseReplayBuffer(ReplayBuffer):
     super().__init__(size=size_in_transitions // T, buffer_shapes=buffer_shapes)
     # self.buffers is {key: array(size_in_episodes x T or T+1 x dim_key)}
     self.T = T
+
+  @staticmethod
+  def construct_from_file(data_file):
+    experiences = dict(np.load(data_file))
+    buffer_shapes = {k: v.shape[1:] for k, v in experiences.items()}
+    buffer_size = None
+    T = None
+    for v in experiences.values():
+      if buffer_size != None:
+        assert buffer_size == v.shape[0], "Inconsistent batch size."
+        assert T == v.shape[1], "Inconsistent episode length."
+      else:
+        buffer_size = v.shape[0]
+        T = v.shape[1]
+    replay_buffer = EpisodeBaseReplayBuffer(buffer_shapes, buffer_size * T, T)
+    replay_buffer.store(experiences)
+    return replay_buffer
 
   @property
   def stored_steps(self):

@@ -8,7 +8,6 @@ tfk = tf.keras
 
 from rlfd import logger, memory, normalizer, policies, agents
 from rlfd.agents import agent, td3_networks
-from rlfd.shapings import shaping
 
 
 class TD3(agent.Agent):
@@ -47,7 +46,6 @@ class TD3(agent.Agent):
       use_demo_reward,
       demo_strategy,
       bc_params,
-      shaping_params,
       info):
     # Store initial args passed into the function
     self.init_args = locals()
@@ -88,11 +86,8 @@ class TD3(agent.Agent):
 
     # Play with demonstrations
     self.demo_strategy = demo_strategy
-    assert self.demo_strategy in [
-        "None", "BC", "GANShaping", "NFShaping", "ORLShaping"
-    ]
+    assert self.demo_strategy in ["None", "BC", "Shaping"]
     self.bc_params = bc_params
-    self.shaping_params = shaping_params
     self.gamma = gamma
     self.info = info
 
@@ -144,31 +139,6 @@ class TD3(agent.Agent):
     self._criticq_optimizer = tfk.optimizers.Adam(learning_rate=self.q_lr)
     self._bc_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
 
-    # Add shaping reward
-    if self.demo_strategy in shaping.SHAPINGS.keys():
-      # instantiate shaping version 1
-      self.shaping = shaping.EnsembleShaping(
-          shaping_type=self.demo_strategy,
-          num_ensembles=self.shaping_params["num_ensembles"],
-          batch_size=self.shaping_params["batch_size"],
-          num_epochs=self.shaping_params["num_epochs"],
-          dimo=self.dimo,
-          dimg=self.dimg,
-          dimu=self.dimu,
-          max_u=self.max_u,
-          gamma=self.gamma,
-          norm_obs=True,
-          norm_eps=self.norm_eps,
-          norm_clip=self.norm_clip,
-          **self.shaping_params[self.demo_strategy].copy())
-    else:
-      self.shaping = None
-
-    # Meta-learning for weight on potential
-    self.potential_weight = tf.Variable(1.0, trainable=False)
-    self.potential_decay_scale = self.shaping_params["potential_decay_scale"]
-    self.potential_decay_epoch = 0  # eventually becomes self.shaping_params["potential_decay_epoch"]
-
     # Generate policies
     def process_observation(o, g):
       norm_o = self._o_stats.normalize(o)
@@ -209,31 +179,21 @@ class TD3(agent.Agent):
   def eval_policy(self):
     return self._eval_policy
 
-  def _train_shaping(self):
-    """TODO move this outside of this class"""
-    offline_data_iter = self.offline_buffer.sample(return_iterator=True)
-    offline_data = next(offline_data_iter)
-    self.shaping.train(offline_data)
-
-  def before_training_hook(self, data_dir=None, env=None):
-    """Adds data to the replay buffer and initalizes shaping
-    """
-    if self.demo_strategy != "none" or self.sample_demo_buffer:
-      demo_file = osp.join(data_dir, "demo_data.npz")
-      assert osp.isfile(demo_file), "Demo file does not exist."
+  def before_training_hook(self, data_dir=None, env=None, shaping=None):
+    """Adds data to the offline replay buffer and add shaping"""
+    demo_file = osp.join(data_dir, "demo_data.npz")
+    if osp.isfile(demo_file):
       experiences = self.offline_buffer.load_from_file(data_file=demo_file)
       if self.sample_demo_buffer:
         self._update_stats(experiences)
 
-      # TODO set repeat=True?
-      # self._offline_data_iter = self.offline_buffer.sample(
-      #     batch_size=self.offline_batch_size,
-      #     shuffle=True,
-      #     return_iterator=True,
-      #     include_partial_batch=True)
-
-    if self.shaping != None:
-      self._train_shaping()
+    self.shaping = shaping
+    # TODO set repeat=True?
+    # self._offline_data_iter = self.offline_buffer.sample(
+    #     batch_size=self.offline_batch_size,
+    #     shuffle=True,
+    #     return_iterator=True,
+    #     include_partial_batch=True)
 
   def _update_stats(self, experiences):
     # add transitions to normalizer
@@ -325,11 +285,9 @@ class TD3(agent.Agent):
     # Immediate reward
     target_q = r
     # Shaping reward
-    if self.shaping != None:
-      potential_curr = self.potential_weight * self.shaping.potential(
-          o=o, g=g, u=u)
-      potential_next = self.potential_weight * self.shaping.potential(
-          o=o_2, g=g_2, u=u_2)
+    if self.demo_strategy == "Shaping":
+      potential_curr = self.shaping.potential(o=o, g=g, u=u)
+      potential_next = self.shaping.potential(o=o_2, g=g_2, u=u_2)
       target_q += (1.0 - done) * tf.pow(self.gamma,
                                         n) * potential_next - potential_curr
     # Q value from next state
@@ -367,9 +325,8 @@ class TD3(agent.Agent):
     pi = self._actor([norm_o, norm_g])
     actor_loss = -tf.reduce_mean(self._criticq1([norm_o, norm_g, pi]))
     actor_loss += self.action_l2 * tf.reduce_mean(tf.square(pi / self.max_u))
-    if self.shaping != None:
-      actor_loss += -tf.reduce_mean(
-          self.potential_weight * self.shaping.potential(o=o, g=g, u=pi))
+    if self.demo_strategy == "Shaping":
+      actor_loss += -tf.reduce_mean(self.shaping.potential(o=o, g=g, u=pi))
     if self.demo_strategy == "BC":
       assert self.sample_demo_buffer, "must sample from the demonstration buffer to use behavior cloning"
       mask = np.concatenate(
@@ -440,14 +397,6 @@ class TD3(agent.Agent):
       if self.online_training_step % self.target_update_freq == 0:
         self._update_target_network()
 
-  def update_potential_weight(self):
-    if self.potential_decay_epoch < self.shaping_params["potential_decay_epoch"]:
-      self.potential_decay_epoch += 1
-      return self.potential_weight.numpy()
-    potential_weight_tf = self.potential_weight.assign(
-        self.potential_weight * self.potential_decay_scale)
-    return potential_weight_tf.numpy()
-
   def _update_target_network(self, polyak=None):
     polyak = polyak if polyak else self.polyak
     copy_func = lambda v: v[0].assign(polyak * v[0] + (1.0 - polyak) * v[1])
@@ -517,7 +466,7 @@ class TD3(agent.Agent):
     q = self._criticq1([norm_o, norm_g, u])
     self._policy_inspect_estimate_q.assign_add(tf.reduce_sum(q))
     if self.shaping != None:
-      p = self.potential_weight * self.shaping.potential(o=o, g=g, u=u)
+      p = self.shaping.potential(o=o, g=g, u=u)
       self._policy_inspect_potential.assign_add(tf.reduce_sum(p))
 
   def __getstate__(self):

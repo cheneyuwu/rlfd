@@ -8,16 +8,16 @@ from rlfd.shapings import shaping
 
 class OfflineRLShaping(shaping.Shaping):
 
-  def __init__(self, dimo, dimg, dimu, max_u, pi_lr, q_lr, polyak, gamma,
-               layer_sizes, norm_obs, norm_eps, norm_clip, **kwargs):
+  def __init__(self, dims, max_u, pi_lr, q_lr, polyak, gamma, layer_sizes,
+               norm_obs, norm_eps, norm_clip, **kwargs):
     self.init_args = locals()
 
     super(OfflineRLShaping, self).__init__()
 
     # Parameters
-    self.dimo = dimo
-    self.dimg = dimg
-    self.dimu = dimu
+    self.dimo = dims["o"]
+    self.dimg = dims["g"]
+    self.dimu = dims["u"]
     self.max_u = max_u
     self.layer_sizes = layer_sizes
     self.norm_obs = norm_obs

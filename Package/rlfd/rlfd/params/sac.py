@@ -53,35 +53,6 @@ default_params = {
             "prm_loss_weight": 1.0,
             "aux_loss_weight": 1.0
         },
-        "shaping_params": {
-            # potential weight decay
-            "potential_decay_scale": 1.0,
-            "potential_decay_epoch": 0,
-            "num_epochs": int(4e3),
-            "batch_size": 128,
-            "num_ensembles": 2,
-            "NFShaping": {
-                "num_masked": 2,
-                "num_bijectors": 4,
-                "layer_sizes": [256, 256],
-                "prm_loss_weight": 1.0,
-                "reg_loss_weight": 200.0,
-                "potential_weight": 3.0,
-            },
-            "GANShaping": {
-                "layer_sizes": [256, 256, 256],
-                "latent_dim": 6,
-                "gp_lambda": 0.1,
-                "critic_iter": 5,
-                "potential_weight": 3.0,
-            },
-            "OfflineRLShaping": {
-                "layer_sizes": [256, 256, 256],
-                "q_lr": 1e-3,
-                "pi_lr": 1e-3,
-                "polyak": 0.995,
-            },
-        },
     },
     "seed": 0,
 }

@@ -51,17 +51,17 @@ def create_maf(dim, num_bijectors=6, layer_sizes=[512, 512]):
 
 class NFShaping(shaping.Shaping):
 
-  def __init__(self, dimo, dimg, dimu, max_u, num_bijectors, layer_sizes,
-               num_masked, potential_weight, norm_obs, norm_eps, norm_clip,
-               prm_loss_weight, reg_loss_weight, **kwargs):
+  def __init__(self, dims, max_u, num_bijectors, layer_sizes, num_masked,
+               potential_weight, norm_obs, norm_eps, norm_clip, prm_loss_weight,
+               reg_loss_weight, **kwargs):
     self.init_args = locals()
 
     super(NFShaping, self).__init__()
 
     # Prepare parameters
-    self.dimo = dimo
-    self.dimg = dimg
-    self.dimu = dimu
+    self.dimo = dims["o"]
+    self.dimg = dims["g"]
+    self.dimu = dims["u"]
     self.max_u = max_u
     self.num_bijectors = num_bijectors
     self.layer_sizes = layer_sizes

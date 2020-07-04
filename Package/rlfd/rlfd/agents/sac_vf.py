@@ -8,7 +8,6 @@ tfk = tf.keras
 
 from rlfd import logger, memory, normalizer, policies
 from rlfd.agents import sac, sac_networks
-from rlfd.shapings import shaping
 
 
 class SACVF(sac.SAC):
@@ -47,7 +46,6 @@ class SACVF(sac.SAC):
       use_demo_reward,
       demo_strategy,
       bc_params,
-      shaping_params,
       info):
     # Store initial args passed into the function
     self.init_args = locals()
@@ -86,11 +84,8 @@ class SACVF(sac.SAC):
 
     # Play with demonstrations
     self.demo_strategy = demo_strategy
-    assert self.demo_strategy in [
-        "None", "BC", "GANShaping", "NFShaping", "ORLShaping"
-    ]
+    assert self.demo_strategy in ["None", "BC", "Shaping"]
     self.bc_params = bc_params
-    self.shaping_params = shaping_params
     self.gamma = gamma
     self.info = info
 
@@ -147,31 +142,6 @@ class SACVF(sac.SAC):
       self.target_alpha = -self.dimu[0]
       self._alpha_optimizer = tfk.optimizers.Adam(learning_rate=self.alpha_lr)
 
-    # Add shaping reward
-    if self.demo_strategy in shaping.SHAPINGS.keys():
-      # instantiate shaping version 1
-      self.shaping = shaping.EnsembleShaping(
-          shaping_type=self.demo_strategy,
-          num_ensembles=self.shaping_params["num_ensembles"],
-          batch_size=self.shaping_params["batch_size"],
-          num_epochs=self.shaping_params["num_epochs"],
-          dimo=self.dimo,
-          dimg=self.dimg,
-          dimu=self.dimu,
-          max_u=self.max_u,
-          gamma=self.gamma,
-          norm_obs=True,
-          norm_eps=self.norm_eps,
-          norm_clip=self.norm_clip,
-          **self.shaping_params[self.demo_strategy].copy())
-    else:
-      self.shaping = None
-
-    # Meta-learning for weight on potential
-    self.potential_weight = tf.Variable(1.0, trainable=False)
-    self.potential_decay_scale = self.shaping_params["potential_decay_scale"]
-    self.potential_decay_epoch = 0  # eventually becomes self.shaping_params["potential_decay_epoch"]
-
     # Generate policies
     def process_observation(o, g):
       norm_o = self._o_stats.normalize(o)
@@ -211,7 +181,7 @@ class SACVF(sac.SAC):
     # Immediate reward
     target_q = r
     # Shaping reward
-    if self.shaping != None:
+    if self.demo_strategy == "Shaping":
       pass  # TODO add shaping rewards.
     target_q += ((1.0 - done) * tf.pow(self.gamma, n) *
                  self._vf_target([norm_o_2, norm_g_2]))

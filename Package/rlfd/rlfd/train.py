@@ -9,7 +9,8 @@ import tensorflow as tf
 import ray
 from ray import tune
 
-from rlfd import logger, agents, metrics, policies, env_manager, drivers
+from rlfd import (logger, agents, metrics, policies, env_manager, drivers,
+                  shapings)
 
 from rlfd.utils.util import set_global_seeds
 
@@ -78,8 +79,18 @@ def main(config):
                                                  flush_millis=10 * 1000)
   summary_writer.set_as_default()
 
-  # Configure agents and drivers.
   make_env, env_params = get_env_constructor_and_config(params=params)
+
+  # Configure shaping
+  if "shaping" in params.keys():
+    shaping = shapings.EnsembleShaping(**params["shaping"], **env_params)
+    shaping.before_training_hook(data_dir=root_dir, env=make_env())
+    shaping.train()
+    shaping.after_training_hook()
+  else:
+    shaping = None
+
+  # Configure agents and drivers.
   agent_params = params["agent"]
   agent = agents.AGENTS[params["algo"]](**agent_params, **env_params)
 
@@ -141,7 +152,7 @@ def main(config):
   os.makedirs(policy_path, exist_ok=True)
 
   # Load offline data and initialize shaping
-  agent.before_training_hook(data_dir=root_dir, env=make_env())
+  agent.before_training_hook(data_dir=root_dir, env=make_env(), shaping=shaping)
 
   # Train offline
   for epoch in range(offline_num_epochs):
