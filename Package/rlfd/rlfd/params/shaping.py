@@ -1,28 +1,5 @@
 # yapf: disable
 from copy import deepcopy
-"""
-TODO: this should be in customized files
-insert_peg_2d_nf_params["agent"]["shaping_params"]["NFShaping"]["reg_loss_weight"] = 4e2
-insert_peg_2d_nf_params["agent"]["shaping_params"]["NFShaping"]["potential_weight"] = 1e1
-
-insert_peg_params["agent"]["shaping_params"]["NFShaping"]["reg_loss_weight"] = 4e2
-insert_peg_params["agent"]["shaping_params"]["NFShaping"]["potential_weight"] = 1e1
-
-pick_place_params["agent"]["shaping_params"]["NFShaping"]["reg_loss_weight"] = 4e2
-pick_place_params["agent"]["shaping_params"]["NFShaping"]["potential_weight"] = 1e1
-pick_place_params["agent"]["shaping_params"]["GANShaping"]["latent_dim"] = 16
-pick_place_params["agent"]["shaping_params"]["GANShaping"]["potential_weight"] = 1.0
-
-metaworld_params["agent"]["shaping_params"]["NFShaping"]["reg_loss_weight"] = 4e2
-metaworld_params["agent"]["shaping_params"]["NFShaping"]["potential_weight"] = 1e1
-metaworld_params["agent"]["shaping_params"]["GANShaping"]["latent_dim"] = 16
-metaworld_params["agent"]["shaping_params"]["GANShaping"]["potential_weight"] = 1.0
-
-reach2d_params["agent"]["shaping_params"]["GANShaping"]["layer_sizes"] = [256, 256]
-reach2d_params["agent"]["shaping_params"]["GANShaping"]["latent_dim"] = 4
-reach2d_params["agent"]["shaping_params"]["GANShaping"]["gp_lambda"] = 0.5
-reach2d_params["agent"]["shaping_params"]["GANShaping"]["potential_weight"] = 1.0
-"""
 
 # NF Shaping Parameters
 nf_params = {
