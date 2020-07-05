@@ -34,11 +34,10 @@ default_params = {
         # exploration
         "expl_gaussian_noise": 0.1,
         "expl_random_prob": 0.0,
-        # use demonstrations
-        "sample_demo_buffer": False,
-        "use_demo_reward": False,
-        "demo_strategy": "None",  # ["None", "BC", "NFShaping", "GANShaping"]
+        # online training plus offline data
+        "online_data_strategy": "None",  # ["None", "BC", "NFShaping", "GANShaping"]
         # normalize observation
+        "norm_obs": False,
         "norm_eps": 0.01,
         "norm_clip": 5,
         # actor critic networks

@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 tfk = tf.keras
 
-from rlfd import logger, memory, normalizer, policies, agents
+from rlfd import logger, memory, normalizer, policies
 from rlfd.agents import agent, td3_networks
 
 
@@ -26,6 +26,8 @@ class TD3(agent.Agent):
       expl_gaussian_noise,
       expl_random_prob,
       fix_T,
+      # normalize
+      norm_obs,
       norm_eps,
       norm_clip,
       # networks
@@ -40,12 +42,12 @@ class TD3(agent.Agent):
       # double q
       polyak,
       target_update_freq,
-      # play with demonstrations
-      buffer_size,
-      sample_demo_buffer,
-      use_demo_reward,
-      demo_strategy,
+      # online training plus offline data
+      online_data_strategy,
+      # online bc regularizer
       bc_params,
+      # replay buffer
+      buffer_size,
       info):
     # Store initial args passed into the function
     self.init_args = locals()
@@ -57,6 +59,7 @@ class TD3(agent.Agent):
     self.max_u = max_u
     self.fix_T = fix_T
     self.eps_length = eps_length
+    self.gamma = gamma
 
     self.online_batch_size = online_batch_size
     self.offline_batch_size = offline_batch_size
@@ -70,10 +73,6 @@ class TD3(agent.Agent):
     self.policy_noise = policy_noise
     self.policy_noise_clip = policy_noise_clip
 
-    # TODO not appropriate in offline setting
-    self.use_demo_reward = use_demo_reward
-    self.sample_demo_buffer = sample_demo_buffer
-
     self.layer_sizes = layer_sizes
     self.q_lr = q_lr
     self.pi_lr = pi_lr
@@ -81,14 +80,13 @@ class TD3(agent.Agent):
     self.polyak = polyak
     self.target_update_freq = target_update_freq
 
+    self.norm_obs = norm_obs
     self.norm_eps = norm_eps
     self.norm_clip = norm_clip
 
-    # Play with demonstrations
-    self.demo_strategy = demo_strategy
-    assert self.demo_strategy in ["None", "BC", "Shaping"]
+    self.online_data_strategy = online_data_strategy
+    assert self.online_data_strategy in ["None", "BC", "Shaping"]
     self.bc_params = bc_params
-    self.gamma = gamma
     self.info = info
 
     # Create Replaybuffers
@@ -184,7 +182,7 @@ class TD3(agent.Agent):
     demo_file = osp.join(data_dir, "demo_data.npz")
     if osp.isfile(demo_file):
       experiences = self.offline_buffer.load_from_file(data_file=demo_file)
-      if self.sample_demo_buffer:
+      if self.online_data_strategy != "None" and self.norm_obs:
         self._update_stats(experiences)
 
     self.shaping = shaping
@@ -212,7 +210,8 @@ class TD3(agent.Agent):
   def store_experiences(self, experiences):
     with tf.summary.record_if(lambda: self.online_expl_step % 200 == 0):
       self.online_buffer.store(experiences)
-      self._update_stats(experiences)
+      if self.norm_obs:
+        self._update_stats(experiences)
       self._policy_inspect_graph(summarize=True)
 
       num_steps = np.prod(experiences["o"].shape[:-1])
@@ -233,9 +232,11 @@ class TD3(agent.Agent):
     return merged_batch
 
   def sample_batch(self):
-    batch = self.online_buffer.sample(self.online_batch_size)
-    if self.sample_demo_buffer:
-      online_batch = batch
+    if self.online_data_strategy == "None":
+      batch = self.online_buffer.sample(self.online_batch_size)
+    else:
+      online_batch = self.online_buffer.sample(self.online_batch_size -
+                                               self.offline_batch_size)
       offline_batch = self.offline_buffer.sample(self.offline_batch_size)
       batch = self._merge_batch_experiences(online_batch, offline_batch)
     return batch
@@ -285,7 +286,7 @@ class TD3(agent.Agent):
     # Immediate reward
     target_q = r
     # Shaping reward
-    if self.demo_strategy == "Shaping":
+    if self.online_data_strategy == "Shaping":
       potential_curr = self.shaping.potential(o=o, g=g, u=u)
       potential_next = self.shaping.potential(o=o_2, g=g_2, u=u_2)
       target_q += (1.0 - done) * tf.pow(self.gamma,
@@ -300,13 +301,6 @@ class TD3(agent.Agent):
     td_loss_q1 = self._huber_loss(target_q, self._criticq1([norm_o, norm_g, u]))
     td_loss_q2 = self._huber_loss(target_q, self._criticq2([norm_o, norm_g, u]))
     td_loss = td_loss_q1 + td_loss_q2
-
-    if self.sample_demo_buffer and not self.use_demo_reward:
-      # mask off entries from demonstration dataset
-      mask = np.concatenate(
-          (np.ones(self.online_batch_size), np.zeros(self.offline_batch_size)),
-          axis=0)
-      td_loss = tf.boolean_mask(td_loss, mask)
 
     criticq_loss = tf.reduce_mean(td_loss)
 
@@ -325,10 +319,9 @@ class TD3(agent.Agent):
     pi = self._actor([norm_o, norm_g])
     actor_loss = -tf.reduce_mean(self._criticq1([norm_o, norm_g, pi]))
     actor_loss += self.action_l2 * tf.reduce_mean(tf.square(pi / self.max_u))
-    if self.demo_strategy == "Shaping":
+    if self.online_data_strategy == "Shaping":
       actor_loss += -tf.reduce_mean(self.shaping.potential(o=o, g=g, u=pi))
-    if self.demo_strategy == "BC":
-      assert self.sample_demo_buffer, "must sample from the demonstration buffer to use behavior cloning"
+    if self.online_data_strategy == "BC":
       mask = np.concatenate(
           (np.zeros(self.online_batch_size), np.ones(self.offline_batch_size)),
           axis=0)

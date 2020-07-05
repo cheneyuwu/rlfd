@@ -26,6 +26,8 @@ class SACVF(sac.SAC):
       online_batch_size,
       offline_batch_size,
       fix_T,
+      # normalize
+      norm_obs,
       norm_eps,
       norm_clip,
       # networks
@@ -40,12 +42,12 @@ class SACVF(sac.SAC):
       # double q
       polyak,
       target_update_freq,
-      # play with demonstrations
-      buffer_size,
-      sample_demo_buffer,
-      use_demo_reward,
-      demo_strategy,
+      # online training plus offline data
+      online_data_strategy,
+      # online bc regularizer
       bc_params,
+      # replay buffer
+      buffer_size,
       info):
     # Store initial args passed into the function
     self.init_args = locals()
@@ -57,19 +59,16 @@ class SACVF(sac.SAC):
     self.max_u = max_u
     self.fix_T = fix_T
     self.eps_length = eps_length
+    self.gamma = gamma
 
     self.online_batch_size = online_batch_size
     self.offline_batch_size = offline_batch_size
 
     self.buffer_size = buffer_size
 
-    # SAC specific
     self.auto_alpha = auto_alpha
     self.alpha = tf.constant(alpha, dtype=tf.float32)
     self.alpha_lr = 3e-4
-    # TODO not appropriate in offline setting
-    self.use_demo_reward = use_demo_reward
-    self.sample_demo_buffer = sample_demo_buffer
 
     self.layer_sizes = layer_sizes
     self.q_lr = q_lr
@@ -78,15 +77,13 @@ class SACVF(sac.SAC):
     self.action_l2 = action_l2
     self.polyak = polyak
     self.target_update_freq = target_update_freq
-
+    self.norm_obs = norm_obs
     self.norm_eps = norm_eps
     self.norm_clip = norm_clip
 
-    # Play with demonstrations
-    self.demo_strategy = demo_strategy
-    assert self.demo_strategy in ["None", "BC", "Shaping"]
+    self.online_data_strategy = online_data_strategy
+    assert self.online_data_strategy in ["None", "BC", "Shaping"]
     self.bc_params = bc_params
-    self.gamma = gamma
     self.info = info
 
     # Create Replaybuffers
@@ -181,7 +178,7 @@ class SACVF(sac.SAC):
     # Immediate reward
     target_q = r
     # Shaping reward
-    if self.demo_strategy == "Shaping":
+    if self.online_data_strategy == "Shaping":
       pass  # TODO add shaping rewards.
     target_q += ((1.0 - done) * tf.pow(self.gamma, n) *
                  self._vf_target([norm_o_2, norm_g_2]))
@@ -190,13 +187,6 @@ class SACVF(sac.SAC):
     td_loss_q1 = self._huber_loss(target_q, self._criticq1([norm_o, norm_g, u]))
     td_loss_q2 = self._huber_loss(target_q, self._criticq2([norm_o, norm_g, u]))
     td_loss = td_loss_q1 + td_loss_q2
-
-    if self.sample_demo_buffer and not self.use_demo_reward:
-      # mask off entries from demonstration dataset
-      mask = np.concatenate(
-          (np.ones(self.online_batch_size), np.zeros(self.offline_batch_size)),
-          axis=0)
-      td_loss = tf.boolean_mask(td_loss, mask)
 
     criticq_loss = tf.reduce_mean(td_loss)
 
