@@ -27,26 +27,26 @@ default_params = {
     # agent config
     "agent": {
         "gamma": 0.99,
-        "online_batch_size": 100,
+        "online_batch_size": 256,
         "offline_batch_size": 128,
         # replay buffer setup
         "buffer_size": int(1e6),
         # online training plus offline data
         "online_data_strategy": "None",  # ["None", "BC", "NFShaping", "GANShaping"]
         # normalize observation
-        "norm_obs": False,
+        "norm_obs": True,
         "norm_eps": 0.01,
         "norm_clip": 5,
         # actor critic networks
         "layer_sizes": [256, 256],
-        "auto_alpha": False,
+        "auto_alpha": True,
         "alpha": 0.2,
         "q_lr": 3e-4,
         "vf_lr": 3e-4,
         "pi_lr": 3e-4,
         "action_l2": 0.0,
         # double q learning
-        "polyak": 0.995,
+        "soft_target_tau": 5e-3,
         "target_update_freq": 1,
         "bc_params": {
             "q_filter": False,
@@ -59,4 +59,4 @@ default_params = {
 
 # OpenAI Gym
 gym_mujoco_params = deepcopy(default_params)
-gym_mujoco_params["random_expl_num_cycles"] = int(5e3)
+gym_mujoco_params["random_expl_num_cycles"] = int(1e3)

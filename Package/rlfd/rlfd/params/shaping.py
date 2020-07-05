@@ -47,5 +47,5 @@ orl_params = {
     "layer_sizes": [256, 256, 256],
     "q_lr": 1e-3,
     "pi_lr": 1e-3,
-    "polyak": 0.995,
+    "soft_target_tau": 5e-3,
 }

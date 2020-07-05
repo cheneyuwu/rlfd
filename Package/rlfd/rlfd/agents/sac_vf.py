@@ -40,7 +40,7 @@ class SACVF(sac.SAC):
       auto_alpha,
       alpha,
       # double q
-      polyak,
+      soft_target_tau,
       target_update_freq,
       # online training plus offline data
       online_data_strategy,
@@ -75,7 +75,7 @@ class SACVF(sac.SAC):
     self.vf_lr = vf_lr
     self.pi_lr = pi_lr
     self.action_l2 = action_l2
-    self.polyak = polyak
+    self.soft_target_tau = soft_target_tau
     self.target_update_freq = target_update_freq
     self.norm_obs = norm_obs
     self.norm_eps = norm_eps
@@ -125,7 +125,7 @@ class SACVF(sac.SAC):
     self._vf = sac_networks.CriticV(self.dimo, self.dimg, self.layer_sizes)
     self._vf_target = sac_networks.CriticV(self.dimo, self.dimg,
                                            self.layer_sizes)
-    self._update_target_network(polyak=0.0)
+    self._update_target_network(soft_target_tau=1.0)
     # Optimizers
     self._actor_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
     self._criticq_optimizer = tfk.optimizers.Adam(learning_rate=self.q_lr)
@@ -259,9 +259,11 @@ class SACVF(sac.SAC):
 
     self.online_training_step.assign_add(1)
 
-  def _update_target_network(self, polyak=None):
-    polyak = polyak if polyak else self.polyak
-    copy_func = lambda v: v[0].assign(polyak * v[0] + (1.0 - polyak) * v[1])
+  def _update_target_network(self, soft_target_tau=None):
+    soft_target_tau = (soft_target_tau
+                       if soft_target_tau else self.soft_target_tau)
+    copy_func = lambda v: v[0].assign(
+        (1.0 - soft_target_tau) * v[0] + soft_target_tau * v[1])
 
     list(map(copy_func, zip(self._vf_target.weights, self._vf.weights)))
 

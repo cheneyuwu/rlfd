@@ -7,8 +7,7 @@ params_config["config"] = ("TD3_BC",)
 # Offline training with bc
 params_config["offline_num_epochs"] = 100
 # Online training with be as regularizer
-params_config["agent"]["demo_strategy"] = "BC"
-params_config["agent"]["sample_demo_buffer"] = True
+params_config["agent"]["online_data_strategy"] = "BC"
 # Tuned values
 params_config["agent"]["bc_params"]["q_filter"] = (False,)
 params_config["agent"]["bc_params"]["prm_loss_weight"] = (1e-4,)

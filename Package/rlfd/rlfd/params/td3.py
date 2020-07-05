@@ -37,7 +37,7 @@ default_params = {
         # online training plus offline data
         "online_data_strategy": "None",  # ["None", "BC", "NFShaping", "GANShaping"]
         # normalize observation
-        "norm_obs": False,
+        "norm_obs": True,
         "norm_eps": 0.01,
         "norm_clip": 5,
         # actor critic networks
@@ -49,7 +49,7 @@ default_params = {
         "pi_lr": 1e-3,
         "action_l2": 0.0,
         # double q learning
-        "polyak": 0.995,
+        "soft_target_tau": 5e-3,
         "target_update_freq": 1,
         "bc_params": {
             "q_filter": False,
@@ -77,7 +77,7 @@ insert_peg_2d_params["expl_num_steps_per_cycle"] = None
 insert_peg_2d_params["agent"]["gamma"] = 0.975
 insert_peg_2d_params["agent"]["online_batch_size"] = 256
 insert_peg_2d_params["agent"]["layer_sizes"] = [256, 256]
-insert_peg_2d_params["agent"]["polyak"] = 0.95
+insert_peg_2d_params["agent"]["soft_target_tau"] = 5e-2
 insert_peg_2d_params["agent"]["target_update_freq"] = 40
 
 # OpenAI Peg Insertion
@@ -96,7 +96,7 @@ insert_peg_params["agent"]["expl_random_prob"] = 0.2
 insert_peg_params["agent"]["layer_sizes"] = [256, 256, 256]
 insert_peg_params["agent"]["policy_noise"] = 0.1
 insert_peg_params["agent"]["action_l2"] = 0.4
-insert_peg_params["agent"]["polyak"] = 0.95
+insert_peg_params["agent"]["soft_target_tau"] = 5e-2
 insert_peg_params["agent"]["target_update_freq"] = 40
 
 # OpenAI Pick Place
@@ -115,7 +115,7 @@ pick_place_params["agent"]["expl_random_prob"] = 0.2
 pick_place_params["agent"]["layer_sizes"] = [256, 256, 256]
 pick_place_params["agent"]["policy_noise"] = 0.1
 pick_place_params["agent"]["action_l2"] = 0.4
-pick_place_params["agent"]["polyak"] = 0.95
+pick_place_params["agent"]["soft_target_tau"] = 5e-2
 pick_place_params["agent"]["target_update_freq"] = 40
 
 # Metaworld
@@ -131,7 +131,7 @@ metaworld_params["agent"]["online_batch_size"] = 256
 metaworld_params["agent"]["target_update_freq"] = 40
 metaworld_params["agent"]["expl_gaussian_noise"] = 0.2
 metaworld_params["agent"]["layer_sizes"] = [256, 256, 256]
-metaworld_params["agent"]["polyak"] = 0.95
+metaworld_params["agent"]["soft_target_tau"] = 5e-2
 
 # Reach2D
 reach2d_params = deepcopy(default_params)
@@ -148,5 +148,5 @@ reach2d_params["agent"]["expl_gaussian_noise"] = 0.2
 reach2d_params["agent"]["expl_random_prob"] = 0.2
 reach2d_params["agent"]["layer_sizes"] = [256, 256]
 reach2d_params["agent"]["action_l2"] = 0.4
-reach2d_params["agent"]["polyak"] = 0.95
+reach2d_params["agent"]["soft_target_tau"] = 5e-2
 reach2d_params["agent"]["target_update_freq"] = 40

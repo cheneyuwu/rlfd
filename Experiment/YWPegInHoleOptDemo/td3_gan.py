@@ -13,7 +13,6 @@ params_config["shaping"] = gan_params_config
 # Offline training with bc
 params_config["offline_num_epochs"] = 100
 # Online training with shaping
-params_config["agent"]["demo_strategy"] = "Shaping"
-params_config["agent"]["sample_demo_buffer"] = True
+params_config["agent"]["online_data_strategy"] = "Shaping"
 # Tuned values
 params_config["seed"] = tuple(range(5))

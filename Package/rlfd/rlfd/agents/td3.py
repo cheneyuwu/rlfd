@@ -40,7 +40,7 @@ class TD3(agent.Agent):
       policy_noise,
       policy_noise_clip,
       # double q
-      polyak,
+      soft_target_tau,
       target_update_freq,
       # online training plus offline data
       online_data_strategy,
@@ -77,7 +77,7 @@ class TD3(agent.Agent):
     self.q_lr = q_lr
     self.pi_lr = pi_lr
     self.action_l2 = action_l2
-    self.polyak = polyak
+    self.soft_target_tau = soft_target_tau
     self.target_update_freq = target_update_freq
 
     self.norm_obs = norm_obs
@@ -131,7 +131,7 @@ class TD3(agent.Agent):
                                                 self.max_u, self.layer_sizes)
     self._criticq2_target = td3_networks.Critic(self.dimo, self.dimg, self.dimu,
                                                 self.max_u, self.layer_sizes)
-    self._update_target_network(polyak=0.0)
+    self._update_target_network(soft_target_tau=1.0)
     # Optimizers
     self._actor_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
     self._criticq_optimizer = tfk.optimizers.Adam(learning_rate=self.q_lr)
@@ -266,7 +266,7 @@ class TD3(agent.Agent):
       g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
       u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
       self._train_offline_graph(o_tf, g_tf, u_tf)
-      self._update_target_network(polyak=0.0)
+      self._update_target_network(soft_target_tau=1.0)
 
   def _criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done):
     # Normalize observations
@@ -390,9 +390,11 @@ class TD3(agent.Agent):
       if self.online_training_step % self.target_update_freq == 0:
         self._update_target_network()
 
-  def _update_target_network(self, polyak=None):
-    polyak = polyak if polyak else self.polyak
-    copy_func = lambda v: v[0].assign(polyak * v[0] + (1.0 - polyak) * v[1])
+  def _update_target_network(self, soft_target_tau=None):
+    soft_target_tau = (soft_target_tau
+                       if soft_target_tau else self.soft_target_tau)
+    copy_func = lambda v: v[0].assign(
+        (1.0 - soft_target_tau) * v[0] + soft_target_tau * v[1])
     list(map(copy_func, zip(self._actor_target.weights, self._actor.weights)))
     list(
         map(copy_func, zip(self._criticq1_target.weights,
