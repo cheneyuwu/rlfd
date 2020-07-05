@@ -165,9 +165,18 @@ class TD3(agent.Agent):
                                         reduction=tfk.losses.Reduction.NONE)
 
     # Initialize training steps
-    self.offline_training_step = tf.Variable(0, trainable=False, dtype=tf.int64)
-    self.online_training_step = tf.Variable(0, trainable=False, dtype=tf.int64)
-    self.online_expl_step = tf.Variable(0, trainable=False, dtype=tf.int64)
+    self.offline_training_step = tf.Variable(0,
+                                             trainable=False,
+                                             name="offline_training_step",
+                                             dtype=tf.int64)
+    self.online_training_step = tf.Variable(0,
+                                            trainable=False,
+                                            name="online_training_step",
+                                            dtype=tf.int64)
+    self.online_expl_step = tf.Variable(0,
+                                        trainable=False,
+                                        name="online_expl_step",
+                                        dtype=tf.int64)
 
   @property
   def expl_policy(self):
@@ -181,7 +190,9 @@ class TD3(agent.Agent):
     """Adds data to the offline replay buffer and add shaping"""
     # Offline data
     # D4RL
-    experiences = env.get_dataset()
+    experiences = env.get_dataset()  # T not fixed by assumption
+    if experiences:
+      self.offline_buffer.store(experiences)
     # Ours
     demo_file = osp.join(data_dir, "demo_data.npz")
     if (not experiences) and osp.isfile(demo_file):
@@ -273,7 +284,7 @@ class TD3(agent.Agent):
       self._train_offline_graph(o_tf, g_tf, u_tf)
       self._update_target_network(soft_target_tau=1.0)
 
-  def _criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done):
+  def _criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
     # Normalize observations
     norm_o = self._o_stats.normalize(o)
     norm_g = self._g_stats.normalize(g)
@@ -308,12 +319,12 @@ class TD3(agent.Agent):
     td_loss = td_loss_q1 + td_loss_q2
 
     criticq_loss = tf.reduce_mean(td_loss)
-    tf.summary.scalar(name='criticq_loss vs online_training_step',
+    tf.summary.scalar(name='criticq_loss vs {}'.format(step.name),
                       data=criticq_loss,
-                      step=self.online_training_step)
+                      step=step)
     return criticq_loss
 
-  def _actor_loss_graph(self, o, g, u):
+  def _actor_loss_graph(self, o, g, u, step):
     # Normalize observations
     norm_o = self._o_stats.normalize(o)
     norm_g = self._g_stats.normalize(g)
@@ -341,9 +352,9 @@ class TD3(agent.Agent):
         bc_loss = tf.reduce_mean(tf.square(demo_pi - demo_u))
       actor_loss = (self.bc_params["prm_loss_weight"] * actor_loss +
                     self.bc_params["aux_loss_weight"] * bc_loss)
-    tf.summary.scalar(name='actor_loss vs online_training_step',
+    tf.summary.scalar(name='actor_loss vs {}'.format(step.name),
                       data=actor_loss,
-                      step=self.online_training_step)
+                      step=step)
     return actor_loss
 
   @tf.function
@@ -354,7 +365,8 @@ class TD3(agent.Agent):
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(criticq_trainable_weights)
       with tf.name_scope('OnlineLosses/'):
-        criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done)
+        criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done,
+                                                self.online_training_step)
     criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
     self._criticq_optimizer.apply_gradients(
         zip(criticq_grads, criticq_trainable_weights))
@@ -365,7 +377,8 @@ class TD3(agent.Agent):
       with tf.GradientTape(watch_accessed_variables=False) as tape:
         tape.watch(actor_trainable_weights)
         with tf.name_scope('OnlineLosses/'):
-          actor_loss = self._actor_loss_graph(o, g, u)
+          actor_loss = self._actor_loss_graph(o, g, u,
+                                              self.online_training_step)
       actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
       self._actor_optimizer.apply_gradients(
           zip(actor_grads, actor_trainable_weights))

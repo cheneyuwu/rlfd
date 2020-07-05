@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import gym
 import gym.wrappers
@@ -55,6 +57,20 @@ class EnvWrapper:
     state = self.env.reset(**kwargs)
     return self._transform_state(state)
 
+  def get_dataset(self):
+    """This is for d4rl environments only"""
+    # observations, actions, rewards, terminals
+    try:
+      dataset = self.env.get_dataset()
+      dataset = dict(o=dataset["observations"][:-1],
+                     o_2=dataset["observations"][1:],
+                     u=dataset["actions"][:-1],
+                     r=dataset["rewards"][:-1].reshape((-1, 1)),
+                     done=dataset["terminals"][:-1].reshape((-1, 1)))
+    except AttributeError:
+      dataset = None
+    return dataset
+
   def render(self, **kwargs):
     return self.env.render(**kwargs)
 
@@ -100,6 +116,17 @@ class GoalEnvWrapper(EnvWrapper):
           "desired_goal": np.empty(0)
       }
     return state
+
+  def get_dataset(self):
+    """This is for d4rl environments only"""
+    # observations, actions, rewards, terminals
+    dataset = super().get_dataset()
+    if dataset:
+      dataset["g"] = np.empty((dataset["o"].shape[0], 0))
+      dataset["g_2"] = np.empty((dataset["o"].shape[0], 0))
+      dataset["ag"] = np.empty((dataset["o"].shape[0], 0))
+      dataset["ag_2"] = np.empty((dataset["o"].shape[0], 0))
+    return dataset
 
 
 class NoGoalEnvWrapper(EnvWrapper):
@@ -223,6 +250,7 @@ class EnvManager:
 if __name__ == "__main__":
   env_manager = EnvManager("hopper-medium-replay-v0")
   env = env_manager.get_env()
+  dataset = env.get_dataset()
   env.seed(0)
   done = True
   while True:
