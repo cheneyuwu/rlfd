@@ -37,15 +37,7 @@ gan_params = {
 # ORL Shaping Parameters
 orl_params = {
     "shaping_type": "OfflineRLShaping",
-    "num_epochs": int(4e3),
-    "batch_size": 128,
-    "num_ensembles": 2,
-    "norm_obs": True,
-    "norm_eps": 0.01,
-    "norm_clip": 5,
-    "gamma": 0.99,
-    "layer_sizes": [256, 256, 256],
-    "q_lr": 1e-3,
-    "pi_lr": 1e-3,
-    "soft_target_tau": 5e-3,
+    "num_epochs": 0,
+    "batch_size": 0,
+    "num_ensembles": 1,
 }

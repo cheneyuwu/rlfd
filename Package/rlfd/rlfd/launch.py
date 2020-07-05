@@ -203,10 +203,11 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, ip_head,
         with open(os.path.join(k, "params.json"), "w") as f:
           json.dump(v, f)
         # copy demo_sata file if exist
-        demo_file = os.path.join(exp_dir, "demo_data.npz")
-        demo_dest = os.path.join(k, "demo_data.npz")
-        if os.path.isfile(demo_file):
-          shutil.copyfile(demo_file, demo_dest)
+        for f in ["demo_data.npz", "demo_policy.pkl", "shaping.pkl"]:
+          source = os.path.join(exp_dir, f)
+          destination = os.path.join(k, f)
+          if os.path.isfile(source):
+            shutil.copyfile(source, destination)
       ray.init(num_cpus=num_cpus if not ip_head else None,
                num_gpus=num_gpus if not ip_head else None,
                address=ip_head,

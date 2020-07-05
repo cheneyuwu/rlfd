@@ -115,7 +115,7 @@ class GANShaping(shaping.Shaping):
     potential = self.potential_weight * potential
     return potential
 
-  def before_training_hook(self, batch):
+  def before_training_hook(self, batch, **kwargs):
     self._update_stats(batch)
 
   @tf.function

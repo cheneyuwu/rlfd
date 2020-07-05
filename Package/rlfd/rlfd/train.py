@@ -82,13 +82,16 @@ def main(config):
   make_env, env_params = get_env_constructor_and_config(params=params)
 
   # Configure shaping
+  shaping = None
+  shaping_file = osp.join(root_dir, "shaping.pkl")
+  if osp.isfile(shaping_file):
+    with open(shaping_file, "rb") as f:
+      shaping = pickle.load(f)
   if "shaping" in params.keys():
     shaping = shapings.EnsembleShaping(**params["shaping"], **env_params)
     shaping.before_training_hook(data_dir=root_dir, env=make_env())
     shaping.train()
     shaping.after_training_hook()
-  else:
-    shaping = None
 
   # Configure agents and drivers.
   agent_params = params["agent"]

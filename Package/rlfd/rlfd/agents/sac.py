@@ -183,6 +183,13 @@ class SAC(agent.Agent):
   def eval_policy(self):
     return self._eval_policy
 
+  @tf.function
+  def estimate_q_graph(self, o, g, u):
+    """A convenient function for shaping"""
+    o = self._o_stats.normalize(o)
+    g = self._g_stats.normalize(g)
+    return self._criticq1([o, g, u])
+
   def before_training_hook(self, data_dir=None, env=None, shaping=None):
     """Adds data to the offline replay buffer and add shaping"""
     # Offline data
@@ -288,13 +295,17 @@ class SAC(agent.Agent):
     norm_o_2 = self._o_stats.normalize(o_2)
     norm_g_2 = self._g_stats.normalize(g_2)
 
+    mean_pi, logprob_pi = self._actor([norm_o_2, norm_g_2])
+
     # Immediate reward
     target_q = r
     # Shaping reward
     if self.online_data_strategy == "Shaping":
-      pass  # TODO add shaping rewards.
+      potential_curr = self.shaping.potential(o=o, g=g, u=u)
+      potential_next = self.shaping.potential(o=o_2, g=g_2, u=mean_pi)
+      target_q += (1.0 - done) * tf.pow(self.gamma,
+                                        n) * potential_next - potential_curr
     # Q value from next state
-    mean_pi, logprob_pi = self._actor([norm_o_2, norm_g_2])
     target_next_q1 = self._criticq1_target([norm_o_2, norm_g_2, mean_pi])
     target_next_q2 = self._criticq2_target([norm_o_2, norm_g_2, mean_pi])
     target_next_min_q = tf.minimum(target_next_q1, target_next_q2)
@@ -324,7 +335,7 @@ class SAC(agent.Agent):
 
     actor_loss = tf.reduce_mean(self.alpha * logprob_pi - current_min_q)
     if self.online_data_strategy == "Shaping":
-      pass  # TODO add shaping.
+      actor_loss += -tf.reduce_mean(self.shaping.potential(o=o, g=g, u=mean_pi))
     if self.online_data_strategy == "BC":
       pass  # TODO add behavior clone.
     tf.summary.scalar(name='actor_loss vs {}'.format(step.name),

@@ -25,12 +25,15 @@ class EnsembleShaping(object):
     self.batch_size = batch_size
 
   def before_training_hook(self, data_dir, env):
+    self._data_dir = data_dir
+    self._env = env
     # D4RL
     experiences = env.get_dataset()
     if experiences:  # T not fixed by default
-      buffer_shapes = {k: v.shape for k, v in experiences.items()}
+      buffer_shapes = {k: v.shape[1:] for k, v in experiences.items()}
       buffer_size = experiences["o"].shape[0]
       self._dataset = memory.StepBaseReplayBuffer(buffer_shapes, buffer_size)
+      self._dataset.store(experiences)
     else:
       # Ours
       demo_file = osp.join(data_dir, "demo_data.npz")
@@ -47,7 +50,8 @@ class EnsembleShaping(object):
       dataset_iter = self._dataset.sample(return_iterator=True,
                                           shuffle=False,
                                           include_partial_batch=True)
-      shaping.before_training_hook(next(dataset_iter))
+      shaping.before_training_hook(data_dir=self._data_dir,
+                                   batch=next(dataset_iter))
 
       self.training_step = self.shapings[i].training_step
       with tf.summary.record_if(lambda: self.training_step % 200 == 0):

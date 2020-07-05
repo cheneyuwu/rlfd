@@ -186,6 +186,13 @@ class TD3(agent.Agent):
   def eval_policy(self):
     return self._eval_policy
 
+  @tf.function
+  def estimate_q_graph(self, o, g, u):
+    """A convenient function for shaping"""
+    o = self._o_stats.normalize(o)
+    g = self._g_stats.normalize(g)
+    return self._criticq1([o, g, u])
+
   def before_training_hook(self, data_dir=None, env=None, shaping=None):
     """Adds data to the offline replay buffer and add shaping"""
     # Offline data

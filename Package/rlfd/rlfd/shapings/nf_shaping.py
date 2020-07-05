@@ -116,7 +116,7 @@ class NFShaping(shaping.Shaping):
 
     return potential
 
-  def before_training_hook(self, batch):
+  def before_training_hook(self, batch, **kwargs):
     self._update_stats(batch)
 
   @tf.function
