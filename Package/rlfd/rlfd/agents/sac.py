@@ -176,13 +176,18 @@ class SAC(agent.Agent):
 
   def before_training_hook(self, data_dir=None, env=None, shaping=None):
     """Adds data to the offline replay buffer and add shaping"""
+    # Offline data
+    # D4RL
+    experiences = env.get_dataset()
+    # Ours
     demo_file = osp.join(data_dir, "demo_data.npz")
-    if osp.isfile(demo_file):
+    if (not experiences) and osp.isfile(demo_file):
       experiences = self.offline_buffer.load_from_file(data_file=demo_file)
-      if self.online_data_strategy != "None" and self.norm_obs:
-        self._update_stats(experiences)
+    if experiences and self.online_data_strategy != "None" and self.norm_obs:
+      self._update_stats(experiences)
 
     self.shaping = shaping
+
     # TODO set repeat=True?
     # self._offline_data_iter = self.offline_buffer.sample(
     #     batch_size=self.offline_batch_size,
@@ -291,12 +296,9 @@ class SAC(agent.Agent):
     td_loss = td_loss_q1 + td_loss_q2
 
     criticq_loss = tf.reduce_mean(td_loss)
-
-    with tf.name_scope('OnlineLosses/'):
-      tf.summary.scalar(name='criticq_loss vs online_training_step',
-                        data=criticq_loss,
-                        step=self.online_training_step)
-
+    tf.summary.scalar(name='criticq_loss vs online_training_step',
+                      data=criticq_loss,
+                      step=self.online_training_step)
     return criticq_loss
 
   def _actor_loss_graph(self, o, g, u):
@@ -314,11 +316,9 @@ class SAC(agent.Agent):
       pass  # TODO add shaping.
     if self.online_data_strategy == "BC":
       pass  # TODO add behavior clone.
-    with tf.name_scope('OnlineLosses/'):
-      tf.summary.scalar(name='actor_loss vs online_training_step',
-                        data=actor_loss,
-                        step=self.online_training_step)
-
+    tf.summary.scalar(name='actor_loss vs online_training_step',
+                      data=actor_loss,
+                      step=self.online_training_step)
     return actor_loss
 
   def _alpha_loss_graph(self, o, g):
@@ -338,7 +338,8 @@ class SAC(agent.Agent):
                                  self._criticq2.trainable_weights)
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(criticq_trainable_weights)
-      criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done)
+      with tf.name_scope('OnlineLosses/'):
+        criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done)
     criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
     self._criticq_optimizer.apply_gradients(
         zip(criticq_grads, criticq_trainable_weights))
@@ -347,7 +348,8 @@ class SAC(agent.Agent):
     actor_trainable_weights = self._actor.trainable_weights
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(actor_trainable_weights)
-      actor_loss = self._actor_loss_graph(o, g, u)
+      with tf.name_scope('OnlineLosses/'):
+        actor_loss = self._actor_loss_graph(o, g, u)
     actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
     self._actor_optimizer.apply_gradients(
         zip(actor_grads, actor_trainable_weights))
@@ -356,7 +358,8 @@ class SAC(agent.Agent):
     if self.auto_alpha:
       with tf.GradientTape(watch_accessed_variables=False) as tape:
         tape.watch(self.log_alpha)
-        alpha_loss = self._alpha_loss_graph(o, g)
+        with tf.name_scope('OnlineLosses/'):
+          alpha_loss = self._alpha_loss_graph(o, g)
       alpha_grad = tape.gradient(alpha_loss, [self.log_alpha])
       self._alpha_optimizer.apply_gradients(zip(alpha_grad, [self.log_alpha]))
       self.alpha.assign(tf.exp(self.log_alpha))

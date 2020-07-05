@@ -25,14 +25,22 @@ class EnsembleShaping(object):
     self.batch_size = batch_size
 
   def before_training_hook(self, data_dir, env):
-    demo_file = osp.join(data_dir, "demo_data.npz")
-    assert osp.isfile(demo_file), "Demostrations not available."
-    if self._fix_T:
-      self._dataset = memory.EpisodeBaseReplayBuffer.construct_from_file(
-          data_file=demo_file)
+    # D4RL
+    experiences = env.get_dataset()
+    if experiences:  # T not fixed by default
+      buffer_shapes = {k: v.shape for k, v in experiences.items()}
+      buffer_size = experiences["o"].shape[0]
+      self._dataset = memory.StepBaseReplayBuffer(buffer_shapes, buffer_size)
     else:
-      self._dataset = memory.StepBaseReplayBuffer.construct_from_file(
-          data_file=demo_file)
+      # Ours
+      demo_file = osp.join(data_dir, "demo_data.npz")
+      assert osp.isfile(demo_file), "Demostrations not available."
+      if self._fix_T:
+        self._dataset = memory.EpisodeBaseReplayBuffer.construct_from_file(
+            data_file=demo_file)
+      else:
+        self._dataset = memory.StepBaseReplayBuffer.construct_from_file(
+            data_file=demo_file)
 
   def train(self):
     for i, shaping in enumerate(self.shapings):

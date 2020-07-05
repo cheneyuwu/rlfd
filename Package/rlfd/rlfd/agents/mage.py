@@ -215,13 +215,18 @@ class MAGE(agent.Agent):
 
   def before_training_hook(self, data_dir=None, env=None, shaping=None):
     """Adds data to the offline replay buffer and add shaping"""
+    # Offline data
+    # D4RL
+    experiences = env.get_dataset()
+    # Ours
     demo_file = osp.join(data_dir, "demo_data.npz")
-    if osp.isfile(demo_file):
+    if (not experiences) and osp.isfile(demo_file):
       experiences = self.offline_buffer.load_from_file(data_file=demo_file)
-      if self.online_data_strategy != "None" and self.norm_obs:
-        self._update_stats(experiences)
+    if experiences and self.online_data_strategy != "None" and self.norm_obs:
+      self._update_stats(experiences)
 
     self.shaping = shaping
+
     # TODO set repeat=True?
     # self._offline_data_iter = self.offline_buffer.sample(
     #     batch_size=self.offline_batch_size,
@@ -535,12 +540,9 @@ class MAGE(agent.Agent):
       criticq_loss = tf.reduce_mean(td_loss)
 
     criticq_gradient_loss = tf.norm(tape.gradient(criticq_loss, u))
-
-    with tf.name_scope('OnlineLosses/'):
-      tf.summary.scalar(name='criticq_gradient_loss vs online_training_step',
-                        data=criticq_gradient_loss,
-                        step=self.online_training_step)
-
+    tf.summary.scalar(name='criticq_gradient_loss vs online_training_step',
+                      data=criticq_gradient_loss,
+                      step=self.online_training_step)
     return criticq_gradient_loss
 
   def _criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done):
@@ -611,19 +613,17 @@ class MAGE(agent.Agent):
 
     criticq_loss = tf.reduce_mean(td_loss)
 
-    with tf.name_scope('OnlineLosses/'):
-      tf.summary.scalar(name='criticq_loss vs online_training_step',
-                        data=criticq_loss,
+    tf.summary.scalar(name='criticq_loss vs online_training_step',
+                      data=criticq_loss,
+                      step=self.online_training_step)
+
+    if self.use_model_for_td3_criticq_loss:
+      tf.summary.scalar(name='true_reward vs online_training_step',
+                        data=tf.reduce_mean(r_real),
                         step=self.online_training_step)
-
-      if self.use_model_for_td3_criticq_loss:
-        tf.summary.scalar(name='true_reward vs online_training_step',
-                          data=tf.reduce_mean(r_real),
-                          step=self.online_training_step)
-        tf.summary.scalar(name='model_reward vs online_training_step',
-                          data=tf.reduce_mean(r),
-                          step=self.online_training_step)
-
+      tf.summary.scalar(name='model_reward vs online_training_step',
+                        data=tf.reduce_mean(r),
+                        step=self.online_training_step)
     return criticq_loss
 
   def _actor_loss_graph(self, o, g, u):
@@ -654,12 +654,9 @@ class MAGE(agent.Agent):
         bc_loss = tf.reduce_mean(tf.square(demo_pi - demo_u))
       actor_loss = (self.bc_params["prm_loss_weight"] * actor_loss +
                     self.bc_params["aux_loss_weight"] * bc_loss)
-
-    with tf.name_scope('OnlineLosses/'):
-      tf.summary.scalar(name='actor_loss vs online_training_step',
-                        data=actor_loss,
-                        step=self.online_training_step)
-
+    tf.summary.scalar(name='actor_loss vs online_training_step',
+                      data=actor_loss,
+                      step=self.online_training_step)
     return actor_loss
 
   @tf.function
@@ -669,11 +666,12 @@ class MAGE(agent.Agent):
                                  self._criticq2.trainable_weights)
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(criticq_trainable_weights)
-      criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done)
-      criticq_gradient_loss = self._criticq_gradient_loss_graph(
-          o, g, o_2, g_2, u, r, n, done)
-      mage_criticq_loss = (self.mage_loss_weight * criticq_gradient_loss +
-                           self.criticq_loss_weight * criticq_loss)
+      with tf.name_scope('OnlineLosses/'):
+        criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done)
+        criticq_gradient_loss = self._criticq_gradient_loss_graph(
+            o, g, o_2, g_2, u, r, n, done)
+        mage_criticq_loss = (self.mage_loss_weight * criticq_gradient_loss +
+                             self.criticq_loss_weight * criticq_loss)
     criticq_grads = tape.gradient(mage_criticq_loss, criticq_trainable_weights)
     self._criticq_optimizer.apply_gradients(
         zip(criticq_grads, criticq_trainable_weights))
@@ -683,7 +681,8 @@ class MAGE(agent.Agent):
       actor_trainable_weights = self._actor.trainable_weights
       with tf.GradientTape(watch_accessed_variables=False) as tape:
         tape.watch(actor_trainable_weights)
-        actor_loss = self._actor_loss_graph(o, g, u)
+        with tf.name_scope('OnlineLosses/'):
+          actor_loss = self._actor_loss_graph(o, g, u)
       actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
       self._actor_optimizer.apply_gradients(
           zip(actor_grads, actor_trainable_weights))

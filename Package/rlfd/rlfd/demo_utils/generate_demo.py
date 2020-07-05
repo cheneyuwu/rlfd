@@ -42,6 +42,8 @@ def main(policy, root_dir, **kwargs):
   with open(policy, "rb") as f:
     policy = pickle.load(f)
 
+  filename = env_params.pop("filename")
+
   params = env_params.copy()
   params["env_name"] = policy.info["env_name"]
   params["r_scale"] = policy.info["r_scale"]
@@ -59,6 +61,5 @@ def main(policy, root_dir, **kwargs):
   logger.dump_tabular()
 
   os.makedirs(root_dir, exist_ok=True)
-  file_name = osp.join(root_dir, params["filename"])
-  np.savez_compressed(file_name, **episode)  # save the file
-  logger.info("Demo file has been stored into {}.".format(file_name))
+  np.savez_compressed(osp.join(root_dir, filename), **episode)  # save the file
+  logger.info("Demo file has been stored into {}.".format(filename))
