@@ -6,6 +6,3 @@ export EXPDATA=${PROJECT}/Experiment/ExpData
 export TEMPDIR=${PROJECT}/Temp/
 export LOGDIR=${PROJECT}/Temp/Log/
 export PACKAGE=${PROJECT}/Package/
-
-# experiment running folder, for copying results
-export EXPRUN=${PROJECT}/Experiment/TempResult
