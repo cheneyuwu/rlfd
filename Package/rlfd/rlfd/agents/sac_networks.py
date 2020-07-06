@@ -32,8 +32,8 @@ class Actor(tfk.Model):
   @tf.function
   def call(self, inputs, sample=True):
     mean, logstd = self._compute_dist(inputs)
-    mean_pi = self._dist(mean, logstd).sample() if sample else mean
-    logprob_pi = self._dist(mean, logstd).log_prob(mean_pi)
+    mean_pi = self._dist(mean, tf.exp(logstd)).sample() if sample else mean
+    logprob_pi = self._dist(mean, tf.exp(logstd)).log_prob(mean_pi)
     logprob_pi = tf.expand_dims(logprob_pi, axis=-1)
 
     squashed_mean_pi = tf.tanh(mean_pi)
@@ -46,7 +46,7 @@ class Actor(tfk.Model):
     o, g, u = inputs
     u /= self._max_u
     mean, logstd = self._compute_dist([o, g])
-    logprob_pi = self._dist(mean, logstd).log_prob(u)
+    logprob_pi = self._dist(mean, tf.exp(logstd)).log_prob(u)
     logprob_pi = tf.expand_dims(logprob_pi, axis=-1)
     squashed_logprob_pi = self._squash_correction(logprob_pi, u)
     return squashed_logprob_pi
@@ -54,7 +54,7 @@ class Actor(tfk.Model):
   @tf.function
   def compute_entropy(self, inputs):
     mean, logstd = self._compute_dist(inputs)
-    entropy = self._dist(mean, logstd).entropy()
+    entropy = self._dist(mean, tf.exp(logstd)).entropy()
     entropy = tf.expand_dims(entropy, axis=-1)
     return entropy
 

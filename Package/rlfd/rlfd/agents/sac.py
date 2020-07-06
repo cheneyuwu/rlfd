@@ -386,6 +386,11 @@ class SAC(agent.Agent):
       alpha_grad = tape.gradient(alpha_loss, [self.log_alpha])
       self._alpha_optimizer.apply_gradients(zip(alpha_grad, [self.log_alpha]))
       self.alpha.assign(tf.exp(self.log_alpha))
+      with tf.name_scope('OnlineLosses/'):
+        tf.summary.scalar(name='alpha vs {}'.format(
+            self.online_training_step.name),
+                          data=self.log_alpha,
+                          step=self.online_training_step)
 
     self.online_training_step.assign_add(1)
 
