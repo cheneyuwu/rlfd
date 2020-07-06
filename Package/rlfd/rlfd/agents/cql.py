@@ -238,7 +238,7 @@ class CQL(sac.SAC):
     pi_q2 = self._criticq2([tiled_norm_o, tiled_norm_g, pi])
     pi_q1_logprob_pi = pi_q1 - logprob_pi
     pi_q2_logprob_pi = pi_q2 - logprob_pi
-
+    # Note: log(2N) not included in this case since it is constant.
     log_sum_exp_q1 = tf.math.reduce_logsumexp(tf.concat(
         (uni_q1_logprob_uni_u, pi_q1_logprob_pi), axis=1),
                                               axis=1)
