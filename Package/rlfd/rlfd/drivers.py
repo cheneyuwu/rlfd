@@ -145,12 +145,11 @@ class StepBasedDriver(Driver):
         if self.render:
           self.env.render()
       except MujocoException:
-        logger.warn(
-            "MujocoException caught during rollout generation. Trying again...")
+        print("MujocoException caught during rollout generation. Trying again.")
         self.done = True
         return self.generate_rollouts()
       if np.isnan(o_2).any():
-        logger.warn("NaN caught during rollout generation. Trying again...")
+        print("NaN caught during rollout generation. Trying again.")
         self.done = True
         return self.generate_rollouts()
 

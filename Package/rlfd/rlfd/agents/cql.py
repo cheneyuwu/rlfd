@@ -230,24 +230,23 @@ class CQL(sac.SAC):
                                   keepdims=True)
     uni_q1 = self._criticq1([tiled_norm_o, tiled_norm_g, uni_u])
     uni_q2 = self._criticq2([tiled_norm_o, tiled_norm_g, uni_u])
-    uni_sum_exp_q1 = tf.reduce_sum(tf.exp(uni_q1) / tf.exp(logprob_uni_u),
-                                   axis=1)
-    uni_sum_exp_q2 = tf.reduce_sum(tf.exp(uni_q2) / tf.exp(logprob_uni_u),
-                                   axis=1)
+    uni_q1_logprob_uni_u = uni_q1 - logprob_uni_u
+    uni_q2_logprob_uni_u = uni_q2 - logprob_uni_u
     # first term (policy)
     pi, logprob_pi = self._actor([tiled_norm_o, tiled_norm_g])
     pi_q1 = self._criticq1([tiled_norm_o, tiled_norm_g, pi])
     pi_q2 = self._criticq2([tiled_norm_o, tiled_norm_g, pi])
-    pi_sum_exp_q1 = tf.reduce_sum(tf.exp(pi_q1) / tf.exp(logprob_pi), axis=1)
-    pi_sum_exp_q2 = tf.reduce_sum(tf.exp(pi_q2) / tf.exp(logprob_pi), axis=1)
-    log_sum_exp_q1 = tf.math.log(
-        (uni_sum_exp_q1 + pi_sum_exp_q1) / (2 * num_samples))
-    log_sum_exp_q2 = tf.math.log(
-        (uni_sum_exp_q2 + pi_sum_exp_q2) / (2 * num_samples))
-    cql_loss_q1 = (tf.exp(self.cql_log_alpha) *
-                   (log_sum_exp_q1 - max_term_q1 - self.cql_tau))
-    cql_loss_q2 = (tf.exp(self.cql_log_alpha) *
-                   (log_sum_exp_q2 - max_term_q2 - self.cql_tau))
+    pi_q1_logprob_pi = pi_q1 - logprob_pi
+    pi_q2_logprob_pi = pi_q2 - logprob_pi
+
+    log_sum_exp_q1 = tf.math.reduce_logsumexp(tf.concat(
+        (uni_q1_logprob_uni_u, pi_q1_logprob_pi), axis=1),
+                                              axis=1)
+    log_sum_exp_q2 = tf.math.reduce_logsumexp(tf.concat(
+        (uni_q2_logprob_uni_u, pi_q2_logprob_pi), axis=1),
+                                              axis=1)
+    cql_loss_q1 = (tf.exp(self.cql_log_alpha) * (log_sum_exp_q1 - self.cql_tau))
+    cql_loss_q2 = (tf.exp(self.cql_log_alpha) * (log_sum_exp_q2 - self.cql_tau))
     cql_loss = cql_loss_q1 + cql_loss_q2
 
     criticq_loss = tf.reduce_mean(td_loss) + tf.reduce_mean(cql_loss)
