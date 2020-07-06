@@ -4,13 +4,15 @@ osp = os.path
 
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
+tfd = tfp.distributions
 tfk = tf.keras
 
 from rlfd import logger, memory, normalizer, policies
-from rlfd.agents import agent, sac_networks
+from rlfd.agents import agent, sac, sac_networks
 
 
-class SAC(agent.Agent):
+class CQL(sac.SAC):
 
   def __init__(
       self,
@@ -65,6 +67,13 @@ class SAC(agent.Agent):
     self.auto_alpha = auto_alpha
     self.alpha = tf.constant(alpha, dtype=tf.float32)
     self.alpha_lr = 3e-4
+
+    self.cql_log_alpha = tf.Variable(0.0, dtype=tf.float32)
+    # self.cql_alpha.assign(tf.exp(self.cql_log_alpha))
+    self.cql_tau = 10.0
+    self.cql_alpha_lr = 3e-4
+    self._cql_alpha_optimizer = tfk.optimizers.Adam(
+        learning_rate=self.cql_alpha_lr)
 
     self.layer_sizes = layer_sizes
     self.q_lr = q_lr
@@ -175,119 +184,6 @@ class SAC(agent.Agent):
                                         name="online_expl_step",
                                         dtype=tf.int64)
 
-  @property
-  def expl_policy(self):
-    return self._expl_policy
-
-  @property
-  def eval_policy(self):
-    return self._eval_policy
-
-  @tf.function
-  def estimate_q_graph(self, o, g, u):
-    """A convenient function for shaping"""
-    o = self._o_stats.normalize(o)
-    g = self._g_stats.normalize(g)
-    return self._criticq1([o, g, u])
-
-  def before_training_hook(self, data_dir=None, env=None, shaping=None):
-    """Adds data to the offline replay buffer and add shaping"""
-    # Offline data
-    # D4RL
-    experiences = env.get_dataset()  # T not fixed by assumption
-    if experiences:
-      self.offline_buffer.store(experiences)
-    # Ours
-    demo_file = osp.join(data_dir, "demo_data.npz")
-    if (not experiences) and osp.isfile(demo_file):
-      experiences = self.offline_buffer.load_from_file(data_file=demo_file)
-    if experiences and self.online_data_strategy != "None" and self.norm_obs:
-      self._update_stats(experiences)
-
-    self.shaping = shaping
-
-    # TODO set repeat=True?
-    # self._offline_data_iter = self.offline_buffer.sample(
-    #     batch_size=self.offline_batch_size,
-    #     shuffle=True,
-    #     return_iterator=True,
-    #     include_partial_batch=True)
-
-  def _update_stats(self, experiences):
-    # add transitions to normalizer
-    if self.fix_T:
-      transitions = {
-          k: v.reshape((v.shape[0] * v.shape[1], v.shape[2])).copy()
-          for k, v in experiences.items()
-      }
-    else:
-      transitions = experiences.copy()
-    o_tf = tf.convert_to_tensor(transitions["o"], dtype=tf.float32)
-    g_tf = tf.convert_to_tensor(transitions["g"], dtype=tf.float32)
-    self._o_stats.update(o_tf)
-    self._g_stats.update(g_tf)
-
-  def store_experiences(self, experiences):
-    with tf.summary.record_if(lambda: self.online_expl_step % 200 == 0):
-      self.online_buffer.store(experiences)
-      if self.norm_obs:
-        self._update_stats(experiences)
-      self._policy_inspect_graph(summarize=True)
-
-      num_steps = np.prod(experiences["o"].shape[:-1])
-      self.online_expl_step.assign_add(num_steps)
-
-  def save(self, path):
-    """Pickles the current policy."""
-    with open(path, "wb") as f:
-      pickle.dump(self, f)
-
-  def _merge_batch_experiences(self, batch1, batch2):
-    """Helper function to merge experiences from offline and online data."""
-    assert batch1.keys() == batch2.keys()
-    merged_batch = {}
-    for k in batch1.keys():
-      merged_batch[k] = np.concatenate((batch1[k], batch2[k]))
-
-    return merged_batch
-
-  def sample_batch(self):
-    if self.online_data_strategy == "None":
-      batch = self.online_buffer.sample(self.online_batch_size)
-    else:
-      online_batch = self.online_buffer.sample(self.online_batch_size -
-                                               self.offline_batch_size)
-      offline_batch = self.offline_buffer.sample(self.offline_batch_size)
-      batch = self._merge_batch_experiences(online_batch, offline_batch)
-    return batch
-
-  @tf.function
-  def _train_offline_graph(self, o, g, u):
-    o = self._o_stats.normalize(o)
-    g = self._g_stats.normalize(g)
-    with tf.GradientTape() as tape:
-      pi, logprob_pi = self._actor([o, g])
-      bc_loss = tf.reduce_mean(tf.square(pi - u))
-    actor_grads = tape.gradient(bc_loss, self._actor.trainable_weights)
-    self._bc_optimizer.apply_gradients(
-        zip(actor_grads, self._actor.trainable_weights))
-
-    with tf.name_scope('OfflineLosses/'):
-      tf.summary.scalar(name='bc_loss vs offline_training_step',
-                        data=bc_loss,
-                        step=self.offline_training_step)
-
-    self.offline_training_step.assign_add(1)
-
-  def train_offline(self):
-    with tf.summary.record_if(lambda: self.offline_training_step % 200 == 0):
-      batch = self.offline_buffer.sample(self.offline_batch_size)
-      o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-      g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
-      u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
-      self._train_offline_graph(o_tf, g_tf, u_tf)
-      self._update_target_network(soft_target_tau=1.0)
-
   def _criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
     # Normalize observations
     norm_o = self._o_stats.normalize(o)
@@ -316,63 +212,82 @@ class SAC(agent.Agent):
     td_loss_q1 = self._huber_loss(target_q, self._criticq1([norm_o, norm_g, u]))
     td_loss_q2 = self._huber_loss(target_q, self._criticq2([norm_o, norm_g, u]))
     td_loss = td_loss_q1 + td_loss_q2
+    # Being Conservative (Eqn.4)
+    # second term
+    max_term_q1 = self._criticq1([norm_o, norm_g, u])
+    max_term_q2 = self._criticq2([norm_o, norm_g, u])
+    # first term (uniform)
+    num_samples = 10
+    tiled_norm_o = tf.tile(tf.expand_dims(norm_o, axis=1),
+                           [1, num_samples] + [1] * len(self.dimo))
+    tiled_norm_g = tf.tile(tf.expand_dims(norm_g, axis=1),
+                           [1, num_samples] + [1] * len(self.dimg))
+    uni_u_dist = tfd.Uniform(low=-self.max_u * tf.ones(self.dimu),
+                             high=self.max_u * tf.ones(self.dimu))
+    uni_u = uni_u_dist.sample((tf.shape(u)[0], num_samples))
+    logprob_uni_u = tf.reduce_sum(uni_u_dist.log_prob(uni_u),
+                                  axis=list(range(2, 2 + len(self.dimu))),
+                                  keepdims=True)
+    uni_q1 = self._criticq1([tiled_norm_o, tiled_norm_g, uni_u])
+    uni_q2 = self._criticq2([tiled_norm_o, tiled_norm_g, uni_u])
+    uni_sum_exp_q1 = tf.reduce_sum(tf.exp(uni_q1) / tf.exp(logprob_uni_u),
+                                   axis=1)
+    uni_sum_exp_q2 = tf.reduce_sum(tf.exp(uni_q2) / tf.exp(logprob_uni_u),
+                                   axis=1)
+    # first term (policy)
+    pi, logprob_pi = self._actor([tiled_norm_o, tiled_norm_g])
+    pi_q1 = self._criticq1([tiled_norm_o, tiled_norm_g, pi])
+    pi_q2 = self._criticq2([tiled_norm_o, tiled_norm_g, pi])
+    pi_sum_exp_q1 = tf.reduce_sum(tf.exp(pi_q1) / tf.exp(logprob_pi), axis=1)
+    pi_sum_exp_q2 = tf.reduce_sum(tf.exp(pi_q2) / tf.exp(logprob_pi), axis=1)
+    log_sum_exp_q1 = tf.math.log(
+        (uni_sum_exp_q1 + pi_sum_exp_q1) / (2 * num_samples))
+    log_sum_exp_q2 = tf.math.log(
+        (uni_sum_exp_q2 + pi_sum_exp_q2) / (2 * num_samples))
+    cql_loss_q1 = (tf.exp(self.cql_log_alpha) *
+                   (log_sum_exp_q1 - max_term_q1 - self.cql_tau))
+    cql_loss_q2 = (tf.exp(self.cql_log_alpha) *
+                   (log_sum_exp_q2 - max_term_q2 - self.cql_tau))
+    cql_loss = cql_loss_q1 + cql_loss_q2
 
-    criticq_loss = tf.reduce_mean(td_loss)
+    criticq_loss = tf.reduce_mean(td_loss) + tf.reduce_mean(cql_loss)
     tf.summary.scalar(name='criticq_loss vs {}'.format(step.name),
                       data=criticq_loss,
                       step=step)
     return criticq_loss
 
-  def _actor_loss_graph(self, o, g, u, step):
-    # Normalize observations
-    norm_o = self._o_stats.normalize(o)
-    norm_g = self._g_stats.normalize(g)
-
-    pi, logprob_pi = self._actor([norm_o, norm_g])
-    current_q1 = self._criticq1([norm_o, norm_g, pi])
-    current_q2 = self._criticq2([norm_o, norm_g, pi])
-    current_min_q = tf.minimum(current_q1, current_q2)
-
-    actor_loss = tf.reduce_mean(self.alpha * logprob_pi - current_min_q)
-    if self.online_data_strategy == "Shaping":
-      actor_loss += -tf.reduce_mean(self.shaping.potential(o=o, g=g, u=pi))
-    if self.online_data_strategy == "BC":
-      pass  # TODO add behavior clone.
-    tf.summary.scalar(name='actor_loss vs {}'.format(step.name),
-                      data=actor_loss,
-                      step=step)
-    return actor_loss
-
-  def _alpha_loss_graph(self, o, g, step):
-    norm_o = self._o_stats.normalize(o)
-    norm_g = self._g_stats.normalize(g)
-
-    _, logprob_pi = self._actor([norm_o, norm_g])
-    alpha_loss = -tf.reduce_mean(
-        (self.log_alpha * tf.stop_gradient(logprob_pi + self.target_alpha)))
-
-    return alpha_loss
-
   @tf.function
-  def _train_online_graph(self, o, g, o_2, g_2, u, r, n, done):
+  def _train_offline_graph(self, o, g, o_2, g_2, u, r, n, done):
     # Train critic q
     criticq_trainable_weights = (self._criticq1.trainable_weights +
                                  self._criticq2.trainable_weights)
-    with tf.GradientTape(watch_accessed_variables=False) as tape:
+    with tf.GradientTape(watch_accessed_variables=False,
+                         persistent=True) as tape:
       tape.watch(criticq_trainable_weights)
-      with tf.name_scope('OnlineLosses/'):
+      tape.watch([self.cql_log_alpha])
+      with tf.name_scope('OfflineLosses/'):
         criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done,
-                                                self.online_training_step)
+                                                self.offline_training_step)
+        cql_alpha_loss = -criticq_loss
     criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
     self._criticq_optimizer.apply_gradients(
         zip(criticq_grads, criticq_trainable_weights))
+    cql_alpha_grads = tape.gradient(cql_alpha_loss, [self.cql_log_alpha])
+    self._cql_alpha_optimizer.apply_gradients(
+        zip(cql_alpha_grads, [self.cql_log_alpha]))
+    # self.cql_alpha.assign(tf.exp(self.cql_log_alpha))
+    with tf.name_scope('OfflineLosses/'):
+      tf.summary.scalar(name='cql alpha vs {}'.format(
+          self.offline_training_step.name),
+                        data=self.cql_log_alpha,
+                        step=self.offline_training_step)
 
     # Train actor
     actor_trainable_weights = self._actor.trainable_weights
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(actor_trainable_weights)
-      with tf.name_scope('OnlineLosses/'):
-        actor_loss = self._actor_loss_graph(o, g, u, self.online_training_step)
+      with tf.name_scope('OfflineLosses/'):
+        actor_loss = self._actor_loss_graph(o, g, u, self.offline_training_step)
     actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
     self._actor_optimizer.apply_gradients(
         zip(actor_grads, actor_trainable_weights))
@@ -381,18 +296,17 @@ class SAC(agent.Agent):
     if self.auto_alpha:
       with tf.GradientTape(watch_accessed_variables=False) as tape:
         tape.watch(self.log_alpha)
-        with tf.name_scope('OnlineLosses/'):
-          alpha_loss = self._alpha_loss_graph(o, g, self.online_training_step)
+        with tf.name_scope('OfflineLosses/'):
+          alpha_loss = self._alpha_loss_graph(o, g, self.offline_training_step)
       alpha_grad = tape.gradient(alpha_loss, [self.log_alpha])
       self._alpha_optimizer.apply_gradients(zip(alpha_grad, [self.log_alpha]))
       self.alpha.assign(tf.exp(self.log_alpha))
 
-    self.online_training_step.assign_add(1)
+    self.offline_training_step.assign_add(1)
 
-  def train_online(self):
-    with tf.summary.record_if(lambda: self.online_training_step % 200 == 0):
-
-      batch = self.sample_batch()
+  def train_offline(self):
+    with tf.summary.record_if(lambda: self.offline_training_step % 200 == 0):
+      batch = self.offline_buffer.sample(self.offline_batch_size)
 
       o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
       g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
@@ -403,83 +317,10 @@ class SAC(agent.Agent):
       n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
       done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
 
-      self._train_online_graph(o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf,
-                               done_tf)
-      if self.online_training_step % self.target_update_freq == 0:
+      self._train_offline_graph(o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf,
+                                done_tf)
+      if self.offline_training_step % self.target_update_freq == 0:
         self._update_target_network()
-
-  def _update_target_network(self, soft_target_tau=None):
-    soft_target_tau = (soft_target_tau
-                       if soft_target_tau else self.soft_target_tau)
-    copy_func = lambda v: v[0].assign(
-        (1.0 - soft_target_tau) * v[0] + soft_target_tau * v[1])
-    list(
-        map(copy_func, zip(self._criticq1_target.weights,
-                           self._criticq1.weights)))
-    list(
-        map(copy_func, zip(self._criticq2_target.weights,
-                           self._criticq2.weights)))
-
-  def logs(self, prefix=""):
-    logs = []
-    logs.append(
-        (prefix + "stats_o/mean", np.mean(self._o_stats.mean_tf.numpy())))
-    logs.append((prefix + "stats_o/std", np.mean(self._o_stats.std_tf.numpy())))
-    logs.append(
-        (prefix + "stats_g/mean", np.mean(self._g_stats.mean_tf.numpy())))
-    logs.append((prefix + "stats_g/std", np.mean(self._g_stats.std_tf.numpy())))
-    return logs
-
-  @tf.function
-  def _policy_inspect_graph(self, o=None, g=None, summarize=False):
-    # should only happen for in the first call of this function
-    if not hasattr(self, "_policy_inspect_count"):
-      self._policy_inspect_count = tf.Variable(0.0, trainable=False)
-      self._policy_inspect_estimate_q = tf.Variable(0.0, trainable=False)
-      if self.shaping != None:
-        self._policy_inspect_potential = tf.Variable(0.0, trainable=False)
-
-    if summarize:
-      with tf.name_scope('PolicyInspect'):
-        if self.shaping == None:
-          mean_estimate_q = (self._policy_inspect_estimate_q /
-                             self._policy_inspect_count)
-          success = tf.summary.scalar(
-              name='mean_estimate_q vs exploration_step',
-              data=mean_estimate_q,
-              step=self.online_expl_step)
-        else:
-          mean_potential = (self._policy_inspect_potential /
-                            self._policy_inspect_count)
-          tf.summary.scalar(name='mean_potential vs exploration_step',
-                            data=mean_potential,
-                            step=self.online_expl_step)
-          mean_estimate_q = (
-              self._policy_inspect_estimate_q +
-              self._policy_inspect_potential) / self._policy_inspect_count
-          success = tf.summary.scalar(
-              name='mean_estimate_q vs exploration_step',
-              data=mean_estimate_q,
-              step=self.online_expl_step)
-      if success:
-        self._policy_inspect_count.assign(0.0)
-        self._policy_inspect_estimate_q.assign(0.0)
-        if self.shaping != None:
-          self._policy_inspect_potential.assign(0.0)
-      return
-
-    assert o != None and g != None, "Provide the same arguments passed to get action."
-
-    norm_o = self._o_stats.normalize(o)
-    norm_g = self._g_stats.normalize(g)
-    mean_u, logprob_u = self._actor([norm_o, norm_g])
-
-    self._policy_inspect_count.assign_add(1)
-    q = self._criticq1([norm_o, norm_g, mean_u])
-    self._policy_inspect_estimate_q.assign_add(tf.reduce_sum(q))
-    if self.shaping != None:
-      p = self.shaping.potential(o=o, g=g, u=mean_u)
-      self._policy_inspect_potential.assign_add(tf.reduce_sum(p))
 
   def __getstate__(self):
     """

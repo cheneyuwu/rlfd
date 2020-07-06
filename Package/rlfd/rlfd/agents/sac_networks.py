@@ -34,6 +34,7 @@ class Actor(tfk.Model):
     mean, logstd = self._compute_dist(inputs)
     mean_pi = self._dist(mean, logstd).sample() if sample else mean
     logprob_pi = self._dist(mean, logstd).log_prob(mean_pi)
+    logprob_pi = tf.expand_dims(logprob_pi, axis=-1)
 
     squashed_mean_pi = tf.tanh(mean_pi)
     squashed_logprob_pi = self._squash_correction(logprob_pi, squashed_mean_pi)
@@ -46,18 +47,21 @@ class Actor(tfk.Model):
     u /= self._max_u
     mean, logstd = self._compute_dist([o, g])
     logprob_pi = self._dist(mean, logstd).log_prob(u)
+    logprob_pi = tf.expand_dims(logprob_pi, axis=-1)
     squashed_logprob_pi = self._squash_correction(logprob_pi, u)
     return squashed_logprob_pi
 
   @tf.function
   def compute_entropy(self, inputs):
     mean, logstd = self._compute_dist(inputs)
-    return self._dist(mean, logstd).entropy()
+    entropy = self._dist(mean, logstd).entropy()
+    entropy = tf.expand_dims(entropy, axis=-1)
+    return entropy
 
   def _compute_dist(self, inputs):
     """Compute multivariate normal distribution."""
     o, g = inputs
-    res = tf.concat([o, g], axis=1)
+    res = tf.concat([o, g], axis=-1)
     for l in self._mlp_layers:
       res = l(res)
     mean = self._mean_output_layer(res)
@@ -68,7 +72,8 @@ class Actor(tfk.Model):
 
   def _squash_correction(self, logprob_pi, squashed_mean_pi):
     diff = tf.reduce_sum(tf.math.log(1. - squashed_mean_pi**2 + self.EPS),
-                         axis=1)
+                         axis=-1,
+                         keepdims=True)
     return logprob_pi - diff
 
 
@@ -93,7 +98,7 @@ class CriticV(tfk.Model):
   @tf.function
   def call(self, inputs):
     o, g = inputs
-    res = tf.concat([o, g], axis=1)
+    res = tf.concat([o, g], axis=-1)
     for l in self._mlp_layers:
       res = l(res)
     res = self._output_layer(res)
@@ -127,7 +132,7 @@ class CriticQ(tfk.Model):
   @tf.function
   def call(self, inputs):
     o, g, u = inputs
-    res = tf.concat([o, g, u / self._max_u], axis=1)
+    res = tf.concat([o, g, u / self._max_u], axis=-1)
     for l in self._mlp_layers:
       res = l(res)
     res = self._output_layer(res)

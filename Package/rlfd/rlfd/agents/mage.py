@@ -652,7 +652,8 @@ class MAGE(agent.Agent):
       actor_loss += -tf.reduce_mean(self.shaping.potential(o=o, g=g, u=pi))
     if self.online_data_strategy == "BC":
       mask = np.concatenate(
-          (np.zeros(self.online_batch_size), np.ones(self.offline_batch_size)),
+          (np.zeros(self.online_batch_size - self.offline_batch_size),
+           np.ones(self.offline_batch_size)),
           axis=0)
       demo_pi = tf.boolean_mask((pi), mask)
       demo_u = tf.boolean_mask((u), mask)

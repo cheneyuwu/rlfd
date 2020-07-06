@@ -28,7 +28,7 @@ class Actor(tfk.Model):
   @tf.function
   def call(self, inputs):
     o, g = inputs
-    res = tf.concat([o, g], axis=1)
+    res = tf.concat([o, g], axis=-1)
     for l in self._mlp_layers:
       res = l(res)
     res = self._output_layer(res)
@@ -62,7 +62,7 @@ class Critic(tfk.Model):
   @tf.function
   def call(self, inputs):
     o, g, u = inputs
-    res = tf.concat([o, g, u / self._max_u], axis=1)
+    res = tf.concat([o, g, u / self._max_u], axis=-1)
     for l in self._mlp_layers:
       res = l(res)
     res = self._output_layer(res)
