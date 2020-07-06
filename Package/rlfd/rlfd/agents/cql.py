@@ -245,8 +245,10 @@ class CQL(sac.SAC):
     log_sum_exp_q2 = tf.math.reduce_logsumexp(tf.concat(
         (uni_q2_logprob_uni_u, pi_q2_logprob_pi), axis=1),
                                               axis=1)
-    cql_loss_q1 = (tf.exp(self.cql_log_alpha) * (log_sum_exp_q1 - self.cql_tau))
-    cql_loss_q2 = (tf.exp(self.cql_log_alpha) * (log_sum_exp_q2 - self.cql_tau))
+    cql_loss_q1 = (tf.exp(self.cql_log_alpha) *
+                   (log_sum_exp_q1 - max_term_q1 - self.cql_tau))
+    cql_loss_q2 = (tf.exp(self.cql_log_alpha) *
+                   (log_sum_exp_q2 - max_term_q2 - self.cql_tau))
     cql_loss = cql_loss_q1 + cql_loss_q2
 
     criticq_loss = tf.reduce_mean(td_loss) + tf.reduce_mean(cql_loss)
