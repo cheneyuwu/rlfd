@@ -85,9 +85,11 @@ def main(config):
   shaping = None
   shaping_file = osp.join(root_dir, "shaping.pkl")
   if osp.isfile(shaping_file):
+    print("Load shaping.")
     with open(shaping_file, "rb") as f:
       shaping = pickle.load(f)
   if "shaping" in params.keys():
+    print("Train shaping.")
     shaping = shapings.EnsembleShaping(**params["shaping"], **env_params)
     shaping.before_training_hook(data_dir=root_dir, env=make_env())
     shaping.train()

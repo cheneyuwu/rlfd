@@ -15,7 +15,7 @@ default_params = {
     "fix_T": False,
     # learner
     "offline_num_epochs": int(1e4),
-    "offline_num_batches_per_epoch": 100,
+    "offline_num_batches_per_epoch": 1000,
     "random_expl_num_cycles": 0,
     "num_epochs": 0,
     "num_cycles_per_epoch": int(1e3),
