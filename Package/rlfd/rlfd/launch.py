@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import sys
+osp = os.path
 
 import mujoco_py  # include at the beginning (bug on compute canada cluster)
 import tensorflow as tf

@@ -16,7 +16,7 @@ default_params = {
     # learner
     "offline_num_epochs": 0,
     "offline_num_batches_per_epoch": 100,
-    "random_expl_num_cycles": int(1e3),
+    "random_expl_num_cycles": int(1),
     "num_epochs": int(1e3),
     "num_cycles_per_epoch": 1,
     "num_batches_per_cycle": 1000,
