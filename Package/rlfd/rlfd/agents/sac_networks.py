@@ -22,10 +22,27 @@ class Actor(tfk.Model):
 
     self._mlp_layers = []
     for size in layer_sizes:
-      layer = tfl.Dense(units=size, activation="relu")
+      layer = tfl.Dense(
+          units=size,
+          activation="relu",
+          kernel_initializer="glorot_uniform",
+          bias_initializer=tfk.initializers.constant(0.1),
+      )
       self._mlp_layers.append(layer)
-    self._mean_output_layer = tfl.Dense(units=self._dimu[0])
-    self._logstd_output_layer = tfl.Dense(units=self._dimu[0])
+    self._mean_output_layer = tfl.Dense(
+        units=self._dimu[0],
+        kernel_initializer=
+        "glorot_uniform",  #tfk.initializers.RandomUniform(-3e-3, 3e-3)
+        bias_initializer=
+        "glorot_uniform",  #tfk.initializers.RandomUniform(-3e-3, 3e-3)
+    )
+    self._logstd_output_layer = tfl.Dense(
+        units=self._dimu[0],
+        kernel_initializer=
+        "glorot_uniform",  #tfk.initializers.RandomUniform(-3e-3, 3e-3)
+        bias_initializer=
+        "glorot_uniform",  #tfk.initializers.RandomUniform(-3e-3, 3e-3)
+    )
     # Create weights
     self([tf.zeros([0, *self._dimo]), tf.zeros([0, *self._dimg])])
 
@@ -87,11 +104,20 @@ class CriticV(tfk.Model):
 
     self._mlp_layers = []
     for size in layer_sizes:
-      layer = tfl.Dense(units=size,
-                        activation="relu",
-                        kernel_initializer="glorot_normal")
+      layer = tfl.Dense(
+          units=size,
+          activation="relu",
+          kernel_initializer="glorot_uniform",
+          bias_initializer=tfk.initializers.constant(0.1),
+      )
       self._mlp_layers.append(layer)
-    self._output_layer = tfl.Dense(units=1, kernel_initializer="glorot_normal")
+    self._output_layer = tfl.Dense(
+        units=1,
+        kernel_initializer=
+        "glorot_uniform",  #tfk.initializers.RandomUniform(-3e-3, 3e-3)
+        bias_initializer=
+        "glorot_uniform",  #tfk.initializers.RandomUniform(-3e-3, 3e-3)
+    )
     # Create weights
     self([tf.zeros([0, *self._dimo]), tf.zeros([0, *self._dimg])])
 
@@ -117,11 +143,20 @@ class CriticQ(tfk.Model):
 
     self._mlp_layers = []
     for size in layer_sizes:
-      layer = tfl.Dense(units=size,
-                        activation="relu",
-                        kernel_initializer="glorot_normal")
+      layer = tfl.Dense(
+          units=size,
+          activation="relu",
+          kernel_initializer="glorot_uniform",
+          bias_initializer=tfk.initializers.constant(0.1),
+      )
       self._mlp_layers.append(layer)
-    self._output_layer = tfl.Dense(units=1, kernel_initializer="glorot_normal")
+    self._output_layer = tfl.Dense(
+        units=1,
+        kernel_initializer=
+        "glorot_uniform",  #tfk.initializers.RandomUniform(-3e-3, 3e-3)
+        bias_initializer=
+        "glorot_uniform",  #tfk.initializers.RandomUniform(-3e-3, 3e-3)
+    )
     # Create weights
     self([
         tf.zeros([0, *self._dimo]),

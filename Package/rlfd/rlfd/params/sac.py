@@ -16,13 +16,13 @@ default_params = {
     # learner
     "offline_num_epochs": 0,
     "offline_num_batches_per_epoch": 100,
-    "random_expl_num_cycles": 0,
+    "random_expl_num_cycles": int(1e3),
     "num_epochs": int(1e3),
-    "num_cycles_per_epoch": int(1e3),
-    "num_batches_per_cycle": 1,
+    "num_cycles_per_epoch": 1,
+    "num_batches_per_cycle": 1000,
     "expl_num_episodes_per_cycle": None,
-    "expl_num_steps_per_cycle": 1,
-    "eval_num_episodes_per_cycle": 4,
+    "expl_num_steps_per_cycle": 1000,
+    "eval_num_episodes_per_cycle": 5,
     "eval_num_steps_per_cycle": None,
     # agent config
     "agent": {
@@ -58,4 +58,3 @@ default_params = {
 
 # OpenAI Gym
 gym_mujoco_params = deepcopy(default_params)
-gym_mujoco_params["random_expl_num_cycles"] = int(1e3)

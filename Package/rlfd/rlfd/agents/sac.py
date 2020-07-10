@@ -134,7 +134,7 @@ class SAC(agent.Agent):
       self.log_alpha = tf.Variable(0., dtype=tf.float32)
       self.alpha = tf.Variable(0., dtype=tf.float32)
       self.alpha.assign(tf.exp(self.log_alpha))
-      self.target_alpha = -self.dimu[0]
+      self.target_alpha = -np.prod(self.dimu)
       self._alpha_optimizer = tfk.optimizers.Adam(learning_rate=self.alpha_lr)
 
     # Generate policies
@@ -355,28 +355,6 @@ class SAC(agent.Agent):
 
   @tf.function
   def _train_online_graph(self, o, g, o_2, g_2, u, r, n, done):
-    # Train critic q
-    criticq_trainable_weights = (self._criticq1.trainable_weights +
-                                 self._criticq2.trainable_weights)
-    with tf.GradientTape(watch_accessed_variables=False) as tape:
-      tape.watch(criticq_trainable_weights)
-      with tf.name_scope('OnlineLosses/'):
-        criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done,
-                                                self.online_training_step)
-    criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
-    self._criticq_optimizer.apply_gradients(
-        zip(criticq_grads, criticq_trainable_weights))
-
-    # Train actor
-    actor_trainable_weights = self._actor.trainable_weights
-    with tf.GradientTape(watch_accessed_variables=False) as tape:
-      tape.watch(actor_trainable_weights)
-      with tf.name_scope('OnlineLosses/'):
-        actor_loss = self._actor_loss_graph(o, g, u, self.online_training_step)
-    actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
-    self._actor_optimizer.apply_gradients(
-        zip(actor_grads, actor_trainable_weights))
-
     # Train alpha (entropy weight)
     if self.auto_alpha:
       with tf.GradientTape(watch_accessed_variables=False) as tape:
@@ -391,6 +369,28 @@ class SAC(agent.Agent):
             self.online_training_step.name),
                           data=self.log_alpha,
                           step=self.online_training_step)
+    # Critic q loss
+    criticq_trainable_weights = (self._criticq1.trainable_weights +
+                                 self._criticq2.trainable_weights)
+    with tf.GradientTape(watch_accessed_variables=False) as tape:
+      tape.watch(criticq_trainable_weights)
+      with tf.name_scope('OnlineLosses/'):
+        criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done,
+                                                self.online_training_step)
+    criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
+    # Actor loss
+    actor_trainable_weights = self._actor.trainable_weights
+    with tf.GradientTape(watch_accessed_variables=False) as tape:
+      tape.watch(actor_trainable_weights)
+      with tf.name_scope('OnlineLosses/'):
+        actor_loss = self._actor_loss_graph(o, g, u, self.online_training_step)
+    actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
+
+    # Update networks
+    self._criticq_optimizer.apply_gradients(
+        zip(criticq_grads, criticq_trainable_weights))
+    self._actor_optimizer.apply_gradients(
+        zip(actor_grads, actor_trainable_weights))
 
     self.online_training_step.assign_add(1)
 
