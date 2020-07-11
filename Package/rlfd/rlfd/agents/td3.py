@@ -145,19 +145,6 @@ class TD3(agent.Agent):
       norm_g = self._g_stats.normalize(g)
       return norm_o, norm_g
 
-    self._eval_policy = policies.Policy(
-        self.dimo,
-        self.dimg,
-        self.dimu,
-        get_action=lambda o, g: self._actor([o, g]),
-        process_observation=process_observation_expl)
-
-    def process_observation_eval(o, g):
-      norm_o = self._o_stats.normalize(o)
-      norm_g = self._g_stats.normalize(g)
-      self._policy_inspect_graph(o, g)
-      return norm_o, norm_g
-
     self._expl_policy = policies.GaussianEpsilonGreedyPolicy(
         self.dimo,
         self.dimg,
@@ -166,6 +153,19 @@ class TD3(agent.Agent):
         max_u=self.max_u,
         noise_eps=expl_gaussian_noise,
         random_prob=expl_random_prob,
+        process_observation=process_observation_expl)
+
+    def process_observation_eval(o, g):
+      norm_o = self._o_stats.normalize(o)
+      norm_g = self._g_stats.normalize(g)
+      self._policy_inspect_graph(o, g)
+      return norm_o, norm_g
+
+    self._eval_policy = policies.Policy(
+        self.dimo,
+        self.dimg,
+        self.dimu,
+        get_action=lambda o, g: self._actor([o, g]),
         process_observation=process_observation_eval)
 
     # Losses

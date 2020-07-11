@@ -157,11 +157,11 @@ class CQL(sac.SAC):
       norm_g = self._g_stats.normalize(g)
       return norm_o, norm_g
 
-    self._eval_policy = policies.Policy(
+    self._expl_policy = policies.Policy(
         self.dimo,
         self.dimg,
         self.dimu,
-        get_action=lambda o, g: self._actor([o, g], sample=False)[0],
+        get_action=lambda o, g: self._actor([o, g], sample=True)[0],
         process_observation=process_observation_expl)
 
     def process_observation_eval(o, g):
@@ -170,11 +170,11 @@ class CQL(sac.SAC):
       self._policy_inspect_graph(o, g)
       return norm_o, norm_g
 
-    self._expl_policy = policies.Policy(
+    self._eval_policy = policies.Policy(
         self.dimo,
         self.dimg,
         self.dimu,
-        get_action=lambda o, g: self._actor([o, g], sample=True)[0],
+        get_action=lambda o, g: self._actor([o, g], sample=False)[0],
         process_observation=process_observation_eval)
 
     # Losses
