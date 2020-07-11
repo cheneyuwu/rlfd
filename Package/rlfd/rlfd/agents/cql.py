@@ -149,10 +149,9 @@ class CQL(sac.SAC):
       self._alpha_optimizer = tfk.optimizers.Adam(learning_rate=self.alpha_lr)
 
     # Generate policies
-    def process_observation(o, g):
+    def process_observation_expl(o, g):
       norm_o = self._o_stats.normalize(o)
       norm_g = self._g_stats.normalize(g)
-      self._policy_inspect_graph(o, g)
       return norm_o, norm_g
 
     self._eval_policy = policies.Policy(
@@ -160,13 +159,20 @@ class CQL(sac.SAC):
         self.dimg,
         self.dimu,
         get_action=lambda o, g: self._actor([o, g], sample=False)[0],
-        process_observation=process_observation)
+        process_observation=process_observation_expl)
+
+    def process_observation_eval(o, g):
+      norm_o = self._o_stats.normalize(o)
+      norm_g = self._g_stats.normalize(g)
+      self._policy_inspect_graph(o, g)
+      return norm_o, norm_g
+
     self._expl_policy = policies.Policy(
         self.dimo,
         self.dimg,
         self.dimu,
         get_action=lambda o, g: self._actor([o, g], sample=True)[0],
-        process_observation=process_observation)
+        process_observation=process_observation_eval)
 
     # Losses
     self._huber_loss = tfk.losses.Huber(delta=10.0,
@@ -181,10 +187,6 @@ class CQL(sac.SAC):
                                             trainable=False,
                                             name="online_training_step",
                                             dtype=tf.int64)
-    self.online_expl_step = tf.Variable(0,
-                                        trainable=False,
-                                        name="online_expl_step",
-                                        dtype=tf.int64)
 
   def _criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
     # Normalize observations

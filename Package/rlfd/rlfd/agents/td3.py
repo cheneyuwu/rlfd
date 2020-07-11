@@ -140,10 +140,9 @@ class TD3(agent.Agent):
     self._bc_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
 
     # Generate policies
-    def process_observation(o, g):
+    def process_observation_expl(o, g):
       norm_o = self._o_stats.normalize(o)
       norm_g = self._g_stats.normalize(g)
-      self._policy_inspect_graph(o, g)
       return norm_o, norm_g
 
     self._eval_policy = policies.Policy(
@@ -151,7 +150,14 @@ class TD3(agent.Agent):
         self.dimg,
         self.dimu,
         get_action=lambda o, g: self._actor([o, g]),
-        process_observation=process_observation)
+        process_observation=process_observation_expl)
+
+    def process_observation_eval(o, g):
+      norm_o = self._o_stats.normalize(o)
+      norm_g = self._g_stats.normalize(g)
+      self._policy_inspect_graph(o, g)
+      return norm_o, norm_g
+
     self._expl_policy = policies.GaussianEpsilonGreedyPolicy(
         self.dimo,
         self.dimg,
@@ -160,7 +166,7 @@ class TD3(agent.Agent):
         max_u=self.max_u,
         noise_eps=expl_gaussian_noise,
         random_prob=expl_random_prob,
-        process_observation=process_observation)
+        process_observation=process_observation_eval)
 
     # Losses
     self._huber_loss = tfk.losses.Huber(delta=10.0,
@@ -175,10 +181,6 @@ class TD3(agent.Agent):
                                             trainable=False,
                                             name="online_training_step",
                                             dtype=tf.int64)
-    self.online_expl_step = tf.Variable(0,
-                                        trainable=False,
-                                        name="online_expl_step",
-                                        dtype=tf.int64)
 
   @property
   def expl_policy(self):
@@ -234,14 +236,9 @@ class TD3(agent.Agent):
     self._g_stats.update(g_tf)
 
   def store_experiences(self, experiences):
-    with tf.summary.record_if(lambda: self.online_expl_step % 200 == 0):
-      self.online_buffer.store(experiences)
-      if self.norm_obs_online:
-        self._update_stats(experiences)
-      self._policy_inspect_graph(summarize=True)
-
-      num_steps = np.prod(experiences["o"].shape[:-1])
-      self.online_expl_step.assign_add(num_steps)
+    self.online_buffer.store(experiences)
+    if self.norm_obs_online:
+      self._update_stats(experiences)
 
   def save(self, path):
     """Pickles the current policy."""
@@ -439,55 +436,54 @@ class TD3(agent.Agent):
     return logs
 
   @tf.function
-  def _policy_inspect_graph(self, o=None, g=None, summarize=False):
+  def _policy_inspect_graph(self, o, g):
     # should only happen for in the first call of this function
-    if not hasattr(self, "_policy_inspect_count"):
+    if not hasattr(self, "_total_policy_inspect_count"):
+      self._total_policy_inspect_count = tf.Variable(0,
+                                                     trainable=False,
+                                                     dtype=tf.int64)
       self._policy_inspect_count = tf.Variable(0.0, trainable=False)
       self._policy_inspect_estimate_q = tf.Variable(0.0, trainable=False)
       if self.shaping != None:
         self._policy_inspect_potential = tf.Variable(0.0, trainable=False)
 
-    if summarize:
-      with tf.name_scope('PolicyInspect'):
-        if self.shaping == None:
-          mean_estimate_q = (self._policy_inspect_estimate_q /
-                             self._policy_inspect_count)
-          success = tf.summary.scalar(
-              name='mean_estimate_q vs exploration_step',
-              data=mean_estimate_q,
-              step=self.online_expl_step)
-        else:
-          mean_potential = (self._policy_inspect_potential /
-                            self._policy_inspect_count)
-          tf.summary.scalar(name='mean_potential vs exploration_step',
-                            data=mean_potential,
-                            step=self.online_expl_step)
-          mean_estimate_q = (
-              self._policy_inspect_estimate_q +
-              self._policy_inspect_potential) / self._policy_inspect_count
-          success = tf.summary.scalar(
-              name='mean_estimate_q vs exploration_step',
-              data=mean_estimate_q,
-              step=self.online_expl_step)
-      if success:
-        self._policy_inspect_count.assign(0.0)
-        self._policy_inspect_estimate_q.assign(0.0)
-        if self.shaping != None:
-          self._policy_inspect_potential.assign(0.0)
-      return
-
-    assert o != None and g != None, "Provide the same arguments passed to get action."
-
     norm_o = self._o_stats.normalize(o)
     norm_g = self._g_stats.normalize(g)
     u = self._actor([norm_o, norm_g])
 
+    self._total_policy_inspect_count.assign_add(1)
     self._policy_inspect_count.assign_add(1)
     q = self._criticq1([norm_o, norm_g, u])
     self._policy_inspect_estimate_q.assign_add(tf.reduce_sum(q))
     if self.shaping != None:
       p = self.shaping.potential(o=o, g=g, u=u)
       self._policy_inspect_potential.assign_add(tf.reduce_sum(p))
+
+    if self._total_policy_inspect_count % 5000 == 0:
+      with tf.name_scope('PolicyInspect'):
+        if self.shaping == None:
+          mean_estimate_q = (self._policy_inspect_estimate_q /
+                             self._policy_inspect_count)
+          success = tf.summary.scalar(name='mean_estimate_q vs evaluation_step',
+                                      data=mean_estimate_q,
+                                      step=self._total_policy_inspect_count)
+        else:
+          mean_potential = (self._policy_inspect_potential /
+                            self._policy_inspect_count)
+          tf.summary.scalar(name='mean_potential vs evaluation_step',
+                            data=mean_potential,
+                            step=self._total_policy_inspect_count)
+          mean_estimate_q = (
+              self._policy_inspect_estimate_q +
+              self._policy_inspect_potential) / self._policy_inspect_count
+          success = tf.summary.scalar(name='mean_estimate_q vs evaluation_step',
+                                      data=mean_estimate_q,
+                                      step=self._total_policy_inspect_count)
+      if success:
+        self._policy_inspect_count.assign(0.0)
+        self._policy_inspect_estimate_q.assign(0.0)
+        if self.shaping != None:
+          self._policy_inspect_potential.assign(0.0)
 
   def __getstate__(self):
     """
