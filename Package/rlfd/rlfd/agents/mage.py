@@ -27,7 +27,8 @@ class MAGE(agent.Agent):
       expl_random_prob,
       fix_T,
       # normalize
-      norm_obs,
+      norm_obs_online,
+      norm_obs_offline,
       norm_eps,
       norm_clip,
       # networks
@@ -86,7 +87,8 @@ class MAGE(agent.Agent):
     self.soft_target_tau = soft_target_tau
     self.target_update_freq = target_update_freq
 
-    self.norm_obs = norm_obs
+    self.norm_obs_online = norm_obs_online
+    self.norm_obs_offline = norm_obs_offline
     self.norm_eps = norm_eps
     self.norm_clip = norm_clip
 
@@ -236,7 +238,8 @@ class MAGE(agent.Agent):
     demo_file = osp.join(data_dir, "demo_data.npz")
     if (not experiences) and osp.isfile(demo_file):
       experiences = self.offline_buffer.load_from_file(data_file=demo_file)
-    if experiences and self.online_data_strategy != "None" and self.norm_obs:
+    if self.norm_obs_offline:
+      assert experiences, "Offline dataset does not exist."
       self._update_stats(experiences)
 
     self.shaping = shaping
@@ -265,7 +268,7 @@ class MAGE(agent.Agent):
   def store_experiences(self, experiences):
     with tf.summary.record_if(lambda: self.online_expl_step % 200 == 0):
       self.online_buffer.store(experiences)
-      if self.norm_obs:
+      if self.norm_obs_online:
         self._update_stats(experiences)
       self._policy_inspect_graph(summarize=True)
 

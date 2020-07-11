@@ -37,7 +37,8 @@ default_params = {
         # online training plus offline data
         "online_data_strategy": "None",  # ["None", "BC", "NFShaping", "GANShaping"]
         # normalize observation
-        "norm_obs": True,
+        "norm_obs_online": True,
+        "norm_obs_offline": False,
         "norm_eps": 0.01,
         "norm_clip": 5,
         # actor critic networks

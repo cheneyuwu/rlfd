@@ -27,7 +27,8 @@ class SACVF(sac.SAC):
       offline_batch_size,
       fix_T,
       # normalize
-      norm_obs,
+      norm_obs_online,
+      norm_obs_offline,
       norm_eps,
       norm_clip,
       # networks
@@ -77,7 +78,9 @@ class SACVF(sac.SAC):
     self.action_l2 = action_l2
     self.soft_target_tau = soft_target_tau
     self.target_update_freq = target_update_freq
-    self.norm_obs = norm_obs
+
+    self.norm_obs_online = norm_obs_online
+    self.norm_obs_offline = norm_obs_offline
     self.norm_eps = norm_eps
     self.norm_clip = norm_clip
 
@@ -136,7 +139,7 @@ class SACVF(sac.SAC):
       self.log_alpha = tf.Variable(0., dtype=tf.float32)
       self.alpha = tf.Variable(0., dtype=tf.float32)
       self.alpha.assign(tf.exp(self.log_alpha))
-      self.target_alpha = -self.dimu[0]
+      self.target_alpha = -np.prod(self.dimu)
       self._alpha_optimizer = tfk.optimizers.Adam(learning_rate=self.alpha_lr)
 
     # Generate policies
