@@ -42,6 +42,9 @@ default_params = {
         "layer_sizes": [256, 256],
         "auto_alpha": True,
         "alpha": 0.2,
+        # cql specific
+        "cql_tau": 10.0,
+        "cql_alpha_lr": 3e-4,
         "q_lr": 3e-4,
         "pi_lr": 3e-5,
         "action_l2": 0.0,

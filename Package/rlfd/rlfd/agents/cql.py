@@ -38,6 +38,9 @@ class CQL(sac.SAC):
       # sac specific
       auto_alpha,
       alpha,
+      # cql specific
+      cql_tau,
+      cql_alpha_lr,
       # double q
       soft_target_tau,
       target_update_freq,
@@ -71,8 +74,8 @@ class CQL(sac.SAC):
 
     self.cql_log_alpha = tf.Variable(0.0, dtype=tf.float32)
     # self.cql_alpha.assign(tf.exp(self.cql_log_alpha))
-    self.cql_tau = 10.0
-    self.cql_alpha_lr = 3e-4
+    self.cql_tau = cql_tau
+    self.cql_alpha_lr = cql_alpha_lr
     self._cql_alpha_optimizer = tfk.optimizers.Adam(
         learning_rate=self.cql_alpha_lr)
 
