@@ -51,6 +51,8 @@ class CQL(sac.SAC):
     # Store initial args passed into the function
     self.init_args = locals()
 
+    agent.Agent.__init__(self)
+
     self.dims = dims
     self.dimo = self.dims["o"]
     self.dimg = self.dims["g"]

@@ -1,15 +1,29 @@
 import abc
+import os
 import pickle
+osp = os.path
+
+import tensorflow as tf
 
 AGENTS = {}
 
 
-class Agent(object, metaclass=abc.ABCMeta):
+class Agent(tf.Module, metaclass=abc.ABCMeta):
+  """Defines the general interface of an agent, registers subclasses and
+  provide saving methods.
+  """
 
   @classmethod
   def __init_subclass__(cls, **kwargs):
     super().__init_subclass__(**kwargs)
     AGENTS[cls.__name__] = cls
+
+  def __init__(self):
+    super().__init__()
+
+    self._tf_ckpt = tf.train.Checkpoint(agent=self)
+    self._tf_ckpt_manager = None
+    self._tf_ckpt_dir = None
 
   @property
   @abc.abstractmethod
@@ -42,10 +56,27 @@ class Agent(object, metaclass=abc.ABCMeta):
     """Return default parameters as a dictionary"""
     return {}
 
-  def save(self, path):
+  def save(self, policy_path, ckpt_path=None):
     """Pickles the current policy."""
-    with open(path, "wb") as f:
+    with open(policy_path, "wb") as f:
       pickle.dump(self, f)
+
+    if ckpt_path == None:
+      return
+    if self._tf_ckpt_manager == None or ckpt_path != self._tf_ckpt_dir:
+      self._tf_ckpt_manager = tf.train.CheckpointManager(self._tf_ckpt,
+                                                         ckpt_path,
+                                                         max_to_keep=1)
+    self._tf_ckpt_manager.save()
+
+  def load(self, ckpt_path):
+    """Loads parameters from a checkpoint"""
+    # for var in tf.train.list_variables(tf.train.latest_checkpoint(ckpt_path)):
+    #   print("agent-->", var)
+    result = self._tf_ckpt.restore(tf.train.latest_checkpoint(ckpt_path))
+    # Some variables may not have been contructed yet, but they should be for
+    # plotting only, so no need to worry about.
+    result.assert_existing_objects_matched()
 
   def __getstate__(self):
     """For pickle. Store weights"""

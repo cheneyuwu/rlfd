@@ -192,12 +192,17 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, ip_head,
           config_name) == tuple else config_name
       search_params_list, search_params_dict = get_search_params(params_config)
       # store json config file to the target directory
+      overwrite_all = remove_all = False
       for k, v in dir_param_dict.items():
-        if os.path.exists(k):  # COMMENT out this check for restarting
-          print("Directory {} already exists! Remove it? [Y/n]".format(k))
-          remove = input()
-          if remove != "y":
+        if os.path.exists(k) and (not overwrite_all and not remove_all):
+          resp = input("Directory {} exists! (R)emove/(O)verwrite?".format(k))
+          if resp.lower() == "r":
+            remove_all = True
+          elif resp.lower() == "o":
+            overwrite_all = True
+          else:
             exit(1)
+        if remove_all:
           shutil.rmtree(k)
         os.makedirs(k, exist_ok=True)
         # copy params.json file

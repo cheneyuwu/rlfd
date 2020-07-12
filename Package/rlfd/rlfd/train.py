@@ -155,6 +155,12 @@ def main(config):
   save_interval = 0
   policy_path = osp.join(root_dir, "policies")
   os.makedirs(policy_path, exist_ok=True)
+  ckpt_path = osp.join(root_dir, "ckpts")
+  if osp.exists(ckpt_path):
+    print("WARNING:rlfd:Loading from an checkpoint. Be careful!")
+    agent.load(ckpt_path)
+  else:
+    os.makedirs(ckpt_path)
 
   # Load offline data and initialize shaping
   agent.before_training_hook(data_dir=root_dir, env=make_env(), shaping=shaping)
@@ -177,7 +183,7 @@ def main(config):
 
     logger.dump_tabular()
 
-    agent.save(osp.join(policy_path, "offline_policy_initial.pkl"))
+    agent.save(osp.join(policy_path, "offline_policy_latest.pkl"), ckpt_path)
     logger.info("Saving agent after offline training.")
 
     # For ray status updates
@@ -224,7 +230,7 @@ def main(config):
     # Save the agent periodically.
     if (save_interval > 0 and epoch % save_interval == save_interval - 1):
       agent.save(osp.join(policy_path, "online_policy_{}.pkl".format(epoch)))
-    agent.save(osp.join(policy_path, "online_policy_latest.pkl"))
+    agent.save(osp.join(policy_path, "online_policy_latest.pkl"), ckpt_path)
     logger.info("Saving agent after online training.")
 
     # For ray status updates

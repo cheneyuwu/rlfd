@@ -7,7 +7,7 @@ import tensorflow as tf
 tfk = tf.keras
 
 from rlfd import logger, memory, normalizer, policies
-from rlfd.agents import sac, sac_networks
+from rlfd.agents import agent, sac, sac_networks
 
 
 class SACVF(sac.SAC):
@@ -52,6 +52,8 @@ class SACVF(sac.SAC):
       info):
     # Store initial args passed into the function
     self.init_args = locals()
+
+    agent.Agent.__init__(self)
 
     self.dims = dims
     self.dimo = self.dims["o"]

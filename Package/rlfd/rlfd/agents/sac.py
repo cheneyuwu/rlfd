@@ -49,6 +49,8 @@ class SAC(agent.Agent):
     # Store initial args passed into the function
     self.init_args = locals()
 
+    super().__init__()
+
     self.dims = dims
     self.dimo = self.dims["o"]
     self.dimg = self.dims["g"]
@@ -236,11 +238,6 @@ class SAC(agent.Agent):
     self.online_buffer.store(experiences)
     if self.norm_obs_online:
       self._update_stats(experiences)
-
-  def save(self, path):
-    """Pickles the current policy."""
-    with open(path, "wb") as f:
-      pickle.dump(self, f)
 
   def _merge_batch_experiences(self, batch1, batch2):
     """Helper function to merge experiences from offline and online data."""
