@@ -38,6 +38,9 @@ class CQL(sac.SAC):
       # sac specific
       auto_alpha,
       alpha,
+      # cql specific
+      cql_tau,
+      cql_alpha_lr,
       # double q
       soft_target_tau,
       target_update_freq,
@@ -73,8 +76,8 @@ class CQL(sac.SAC):
 
     self.cql_log_alpha = tf.Variable(0.0, dtype=tf.float32)
     # self.cql_alpha.assign(tf.exp(self.cql_log_alpha))
-    self.cql_tau = 10.0
-    self.cql_alpha_lr = 3e-4
+    self.cql_tau = cql_tau
+    self.cql_alpha_lr = cql_alpha_lr
     self._cql_alpha_optimizer = tfk.optimizers.Adam(
         learning_rate=self.cql_alpha_lr)
 
@@ -156,11 +159,11 @@ class CQL(sac.SAC):
       norm_g = self._g_stats.normalize(g)
       return norm_o, norm_g
 
-    self._eval_policy = policies.Policy(
+    self._expl_policy = policies.Policy(
         self.dimo,
         self.dimg,
         self.dimu,
-        get_action=lambda o, g: self._actor([o, g], sample=False)[0],
+        get_action=lambda o, g: self._actor([o, g], sample=True)[0],
         process_observation=process_observation_expl)
 
     def process_observation_eval(o, g):
@@ -169,11 +172,11 @@ class CQL(sac.SAC):
       self._policy_inspect_graph(o, g)
       return norm_o, norm_g
 
-    self._expl_policy = policies.Policy(
+    self._eval_policy = policies.Policy(
         self.dimo,
         self.dimg,
         self.dimu,
-        get_action=lambda o, g: self._actor([o, g], sample=True)[0],
+        get_action=lambda o, g: self._actor([o, g], sample=False)[0],
         process_observation=process_observation_eval)
 
     # Losses

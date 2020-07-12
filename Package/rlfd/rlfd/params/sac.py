@@ -32,7 +32,7 @@ default_params = {
         # replay buffer setup
         "buffer_size": int(1e6),
         # online training plus offline data
-        "online_data_strategy": "None",  # ["None", "BC", "NFShaping", "GANShaping"]
+        "online_data_strategy": "None",  # ["None", "BC", "Shaping"]
         # normalize observation
         "norm_obs_online": True,
         "norm_obs_offline": False,
