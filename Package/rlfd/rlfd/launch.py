@@ -21,12 +21,6 @@ tf.get_logger().setLevel('ERROR')
 from rlfd import logger, plot, train, evaluate
 from rlfd.demo_utils import generate_demo
 
-# TODO: remove include from the old repo
-# tf debug
-# from td3fd.ddpg.debug.generate_query import main as generate_query_entry
-# from td3fd.ddpg.debug.visualize_query import main as visualize_query_entry
-# from td3fd.ddpg2.debug.check_potential import main as check_potential_entry
-
 
 def import_param_config(load_dir):
   """Assume that there is a gv called params_config that contains all the params
@@ -93,55 +87,7 @@ def get_search_params(param_config):
 
 
 def transform_config_name(config_name):
-  """ Transfer the legend names"""
-  for i in range(len(config_name)):
-    if config_name[i].startswith("config"):
-      if config_name[i] == "config_TD3_NF_Shaping":
-        for name in config_name:
-          if name.startswith("potential_weight_"):
-            weight = name.replace("potential_weight_", "")
-            return ["TD3+Shaping(NF), $k^{NF}$=" + weight]
-        return ["TD3+Shaping(NF)"]
-      elif config_name[i] == "config_TD3_NF_Shaping_Decay":
-        for name in config_name:
-          if name.startswith("potential_weight_"):
-            weight = name.replace("potential_weight_", "")
-            return ["TD3+Shaping(NF) w/ Decay, $k^{NF}$=" + weight]
-        return ["TD3+Shaping(NF) w/ Decay"]
-      elif config_name[i] == "config_TD3_GAN_Shaping":
-        for name in config_name:
-          if name.startswith("potential_weight_"):
-            weight = name.replace("potential_weight_", "")
-            return ["TD3+Shaping(GAN), $k^{GAN}$=" + weight]
-        return ["TD3+Shaping(GAN)"]
-      elif config_name[i] == "config_BC":
-        return ["BC"]
-      elif config_name[i] == "config_TD3":
-        return ["TD3"]
-      elif config_name[i] == "config_TD3_BC":
-        if "prm_loss_weight_0.0001" in config_name:
-          return ["TD3+BC, $\lambda$=0.0001"]
-        elif "prm_loss_weight_0.001" in config_name:
-          return ["TD3+BC, $\lambda$=0.001"]
-        elif "prm_loss_weight_0.01" in config_name:
-          return ["TD3+BC, $\lambda$=0.01"]
-        elif "prm_loss_weight_0.1" in config_name:
-          return ["TD3+BC, $\lambda$=0.1"]
-        else:
-          return ["TD3+BC"]
-      elif config_name[i] == "config_TD3_BC_QFilter":
-        if "prm_loss_weight_0.0001" in config_name:
-          return ["TD3+BC+QFilter, $\lambda$=0.0001"]
-        elif "prm_loss_weight_0.001" in config_name:
-          return ["TD3+BC+QFilter, $\lambda$=0.001"]
-        elif "prm_loss_weight_0.01" in config_name:
-          return ["TD3+BC+QFilter, $\lambda$=0.01"]
-        elif "prm_loss_weight_0.1" in config_name:
-          return ["TD3+BC+QFilter, $\lambda$=0.1"]
-        else:
-          return ["TD3+BC+QFilter"]
-      elif config_name[i] == "config_TD3_BC_Init":
-        return ["TD3+BC Init."]
+  """Change the legend names to whatever you want it to be."""
   return config_name
 
 
@@ -255,28 +201,10 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, ip_head,
           save_dir=save_dir,
           xys=[
               # "train/steps:test/reward_per_eps",
-              "Testing/AverageReturn vs EnvironmentSteps",
+              "OnlineTesting/AverageReturn vs EnvironmentSteps",
           ],
           smooth=True,
       )
-
-    # elif target == "gen_query":
-    #   print("\n\n=================================================")
-    #   print("Generating queries at: {}".format(exp_dir))
-    #   print("=================================================")
-    #   generate_query_entry(exp_dir=exp_dir, save=True)
-
-    # elif target == "vis_query":
-    #   print("\n\n=================================================")
-    #   print("Visualizing queries.")
-    #   print("=================================================")
-    #   visualize_query_entry(exp_dir=exp_dir, save=True)
-
-    # elif target == "check":
-    #   print("\n\n=================================================")
-    #   print("Check potential.")
-    #   print("=================================================")
-    #   check_potential_entry(exp_dir=exp_dir)
 
     else:
       raise ValueError("Unknown target: {}".format(target))

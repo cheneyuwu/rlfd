@@ -77,7 +77,11 @@ def convert_tensorboard_data_to_csv(path,
   tags = summary_iterator.Tags()
   for tag in tags["tensors"]:
     # This is hardcoded in the tensorboard output
-    y_label, x_label = tag.split(" vs ")
+    try:
+      y_label, x_label = tag.split(" vs ")
+    except ValueError:
+      y_label = tag
+      x_label = "Step"
     xy_data = np.array([(event.step, tf.make_ndarray(event.tensor_proto))
                         for event in summary_iterator.Tensors(tag)])
     df = pd.DataFrame({y_label: xy_data[:, 1], x_label: xy_data[:, 0]})
@@ -104,13 +108,9 @@ def load_results(root_dir_or_dirs):
   for rootdir in rootdirs:
     assert osp.exists(rootdir), "%s doesn't exist" % rootdir
     for dirname, subdirs, files in os.walk(rootdir):
-      if all([file in files for file in ["params.json", "progress.csv"]]):
+      if (all([file in files for file in ["params.json", "progress.csv"]]) and
+          "summaries" in subdirs):
         result = {"dirname": dirname}
-        # load parameters
-        paramsjson = osp.join(
-            dirname, "params_renamed.json")  # search for the renamed file first
-        if not osp.exists(paramsjson):
-          paramsjson = osp.join(dirname, "params.json")
         # load progress (for old plot)
         result["progress"] = dict()
         progcsv = osp.join(dirname, "progress.csv")
@@ -126,6 +126,11 @@ def load_results(root_dir_or_dirs):
           for csv in os.listdir(osp.join(dirname, target_dir)):
             progress = load_csv(osp.join(dirname, target_dir, csv))
             result["progress"][csv] = progress
+        # load parameters
+        paramsjson = osp.join(
+            dirname, "params_renamed.json")  # search for the renamed file first
+        if not osp.exists(paramsjson):
+          paramsjson = osp.join(dirname, "params.json")
         with open(paramsjson, "r") as f:
           result["params"] = json.load(f)
 
@@ -150,14 +155,17 @@ def plot_results(allresults, xys, target_dir, smooth=0):
         y = results["progress"]["progress"][xy.split(":")[1]]
       else:  # new way of plotting data (from tensorboard)
         csv_name = xy.replace("/", "_")
-        y_label, x_label = xy.split(" vs ")
+        try:
+          y_label, x_label = xy.split(" vs ")
+        except ValueError:
+          y_label = xy
+          x_label = "Step"
         x = results["progress"][csv_name][x_label]
         y = results["progress"][csv_name][y_label]
 
       # Process and smooth data.
       if smooth:
         x, y = smooth_reward_curve(x, y, max(3, len(x) / 10))
-        # x, y = smooth_reward_curve(x, y, 300) # for MW
       assert x.shape == y.shape, (x.shape, y.shape)
 
       if env_id not in data:
@@ -176,8 +184,7 @@ def plot_results(allresults, xys, target_dir, smooth=0):
                       bottom=0.25,
                       top=0.95,
                       wspace=0.25,
-                      hspace=0.25)  # gym envs
-  # fig.subplots_adjust(left=0.2, right=0.9, bottom=0.2, top=0.95, wspace=0.25, hspace=0.25) # MW envs
+                      hspace=0.25)
   fig.clf()
 
   for env_n, env_id in enumerate(sorted(data.keys())):
@@ -241,12 +248,6 @@ def plot_results(allresults, xys, target_dir, smooth=0):
         #
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
-        # ax.set_xlabel("Number of Env. Steps")
-        # ax.set_ylabel("Average Episode Return")
-
-        # ax.set_ylim(-20, -5) # for reacher 2d
-        # ax.set_ylim(-45, -5)  # for reacher 2d
-        # ax.set_ylim(-150, -0) # for reacher 2d
 
         ax.tick_params(axis="x", pad=5, length=5, width=1)
         ax.tick_params(axis="y", pad=5, length=5, width=1)
