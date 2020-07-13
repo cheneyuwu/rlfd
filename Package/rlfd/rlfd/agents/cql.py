@@ -331,33 +331,3 @@ class CQL(sac.SAC):
                                 done_tf)
       if self.offline_training_step % self.target_update_freq == 0:
         self._update_target_network()
-
-  def __getstate__(self):
-    """
-    Our policies can be loaded from pkl, but after unpickling you cannot continue training.
-    """
-    state = {k: v for k, v in self.init_args.items() if not k == "self"}
-    state["shaping"] = self.shaping
-    state["tf"] = {
-        "o_stats": self._o_stats.get_weights(),
-        "g_stats": self._g_stats.get_weights(),
-        "actor": self._actor.get_weights(),
-        "criticq1": self._criticq1.get_weights(),
-        "criticq2": self._criticq2.get_weights(),
-        "criticq1_target": self._criticq1_target.get_weights(),
-        "criticq2_target": self._criticq2_target.get_weights(),
-    }
-    return state
-
-  def __setstate__(self, state):
-    stored_vars = state.pop("tf")
-    shaping = state.pop("shaping")
-    self.__init__(**state)
-    self._o_stats.set_weights(stored_vars["o_stats"])
-    self._g_stats.set_weights(stored_vars["g_stats"])
-    self._actor.set_weights(stored_vars["actor"])
-    self._criticq1.set_weights(stored_vars["criticq1"])
-    self._criticq2.set_weights(stored_vars["criticq2"])
-    self._criticq1_target.set_weights(stored_vars["criticq1_target"])
-    self._criticq2_target.set_weights(stored_vars["criticq2_target"])
-    self.shaping = shaping

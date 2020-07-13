@@ -14,15 +14,15 @@ default_params = {
     "env_args": {},
     "fix_T": False,
     # learner
-    "offline_num_epochs": int(1e4),
+    "offline_num_epochs": int(1e3),
     "offline_num_batches_per_epoch": 1000,
     "random_expl_num_cycles": 0,
     "num_epochs": 0,
-    "num_cycles_per_epoch": int(1e3),
-    "num_batches_per_cycle": 1,
+    "num_cycles_per_epoch": 1,
+    "num_batches_per_cycle": 1000,
     "expl_num_episodes_per_cycle": None,
-    "expl_num_steps_per_cycle": 1,
-    "eval_num_episodes_per_cycle": 4,
+    "expl_num_steps_per_cycle": 1000,
+    "eval_num_episodes_per_cycle": 5,
     "eval_num_steps_per_cycle": None,
     # agent config
     "agent": {
