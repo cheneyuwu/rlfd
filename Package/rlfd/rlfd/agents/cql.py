@@ -315,7 +315,7 @@ class CQL(sac.SAC):
     self.offline_training_step.assign_add(1)
 
   def train_offline(self):
-    with tf.summary.record_if(lambda: self.offline_training_step % 200 == 0):
+    with tf.summary.record_if(lambda: self.offline_training_step % 1000 == 0):
       batch = self.offline_buffer.sample(self.offline_batch_size)
 
       o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
