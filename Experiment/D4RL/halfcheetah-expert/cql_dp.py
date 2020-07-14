@@ -21,7 +21,7 @@ params_config["seed"] = tuple(range(5))
 # params_config["seed"] = tuple(range(4))
 
 # Exp 2 Normal CQL but with online fine-tuning
-params_config["config"] = ("CQL_NoMaxTerm_w_Online",)
+params_config["config"] = ("CQLDP_NoMaxTerm_w_Online",)
 params_config["agent"]["norm_obs_offline"] = (True,)
 params_config["num_epochs"] = (int(1e3),)
 params_config["agent"]["pi_lr"] = (3e-5,)
