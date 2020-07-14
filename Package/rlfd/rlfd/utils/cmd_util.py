@@ -3,18 +3,12 @@
 import argparse
 from subprocess import call
 
-try:
-  from mpi4py import MPI
-except ImportError:
-  MPI = None
-
 
 class ArgParser:
 
   def __init__(self, allow_unknown_args=True):
     self.parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    self.dump = not MPI.COMM_WORLD.Get_rank() if MPI != None else True
     self.allow_unknown_args = allow_unknown_args
 
   def parse(self, args):
@@ -24,18 +18,17 @@ class ArgParser:
     if not self.allow_unknown_args:
       assert self.unknown_dict == {}
 
-    if self.dump:
-      print("\nKnown arguments:")
-      print("-----------------------------------")
-      print("{:<30}{:<30}".format("Option", "Value"))
-      for key, value in self.known_dict.items():
-        print("{:<30}{:<30}".format(str(key), str(value)))
-      print("\nUnknown arguments:")
-      print("-----------------------------------")
-      print("{:<30}{:<30}".format("Option", "Value"))
-      for key, value in self.unknown_dict.items():
-        print("{:<30}{:<30}".format(str(key), str(value)))
-      print("===================================")
+    print("\nKnown arguments:")
+    print("-----------------------------------")
+    print("{:<30}{:<30}".format("Option", "Value"))
+    for key, value in self.known_dict.items():
+      print("{:<30}{:<30}".format(str(key), str(value)))
+    print("\nUnknown arguments:")
+    print("-----------------------------------")
+    print("{:<30}{:<30}".format("Option", "Value"))
+    for key, value in self.unknown_dict.items():
+      print("{:<30}{:<30}".format(str(key), str(value)))
+    print("===================================")
 
   def get_dict(self):
     args = {}
