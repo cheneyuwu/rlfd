@@ -163,7 +163,8 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, ip_head,
       ray.init(num_cpus=num_cpus if not ip_head else None,
                num_gpus=num_gpus if not ip_head else None,
                address=ip_head,
-               redis_password=redis_password)
+               redis_password=redis_password,
+               temp_dir=osp.join(osp.expanduser("~"), ".ray"))
       tune.run(train.main,
                verbose=1,
                local_dir=os.path.join(exp_dir, "config_" + config_name),
