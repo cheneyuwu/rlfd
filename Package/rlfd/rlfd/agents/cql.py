@@ -40,6 +40,8 @@ class CQL(sac.SAC):
       alpha,
       # cql specific
       cql_tau,
+      auto_cql_alpha,
+      cql_log_alpha,
       cql_alpha_lr,
       # double q
       soft_target_tau,
@@ -74,8 +76,11 @@ class CQL(sac.SAC):
     self.alpha = tf.constant(alpha, dtype=tf.float32)
     self.alpha_lr = 3e-4
 
-    self.cql_log_alpha = tf.Variable(0.0, dtype=tf.float32)
-    # self.cql_alpha.assign(tf.exp(self.cql_log_alpha))
+    self.auto_cql_alpha = auto_cql_alpha
+    if self.auto_cql_alpha:
+      self.cql_log_alpha = tf.Variable(0.0, dtype=tf.float32)
+    else:
+      self.cql_log_alpha = tf.constant(cql_log_alpha, dtype=tf.float32)
     self.cql_tau = cql_tau
     self.cql_alpha_lr = cql_alpha_lr
     self._cql_alpha_optimizer = tfk.optimizers.Adam(
@@ -274,7 +279,8 @@ class CQL(sac.SAC):
     with tf.GradientTape(watch_accessed_variables=False,
                          persistent=True) as tape:
       tape.watch(criticq_trainable_weights)
-      tape.watch([self.cql_log_alpha])
+      if self.auto_cql_alpha:
+        tape.watch([self.cql_log_alpha])
       with tf.name_scope('OfflineLosses/'):
         criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done,
                                                 self.offline_training_step)
@@ -282,9 +288,10 @@ class CQL(sac.SAC):
     criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
     self._criticq_optimizer.apply_gradients(
         zip(criticq_grads, criticq_trainable_weights))
-    cql_alpha_grads = tape.gradient(cql_alpha_loss, [self.cql_log_alpha])
-    self._cql_alpha_optimizer.apply_gradients(
-        zip(cql_alpha_grads, [self.cql_log_alpha]))
+    if self.auto_cql_alpha:
+      cql_alpha_grads = tape.gradient(cql_alpha_loss, [self.cql_log_alpha])
+      self._cql_alpha_optimizer.apply_gradients(
+          zip(cql_alpha_grads, [self.cql_log_alpha]))
     # self.cql_alpha.assign(tf.exp(self.cql_log_alpha))
     with tf.name_scope('OfflineLosses/'):
       tf.summary.scalar(name='cql alpha vs {}'.format(

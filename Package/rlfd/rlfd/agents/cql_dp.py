@@ -61,8 +61,8 @@ class CQLDP(cql.CQL):
     uni_q1 = self._criticq1([tiled_norm_o, tiled_norm_g, uni_u])
     uni_q2 = self._criticq2([tiled_norm_o, tiled_norm_g, uni_u])
     # apply double side penalty
-    uni_q1 = (uni_q1 + 1000)**2
-    uni_q2 = (uni_q2 + 1000)**2
+    uni_q1 = tf.abs(uni_q1 + 1000)
+    uni_q2 = tf.abs(uni_q2 + 1000)
     # apply double side penalty
     uni_q1_logprob_uni_u = uni_q1 - logprob_uni_u
     uni_q2_logprob_uni_u = uni_q2 - logprob_uni_u
@@ -71,8 +71,8 @@ class CQLDP(cql.CQL):
     pi_q1 = self._criticq1([tiled_norm_o, tiled_norm_g, pi])
     pi_q2 = self._criticq2([tiled_norm_o, tiled_norm_g, pi])
     # apply double side penalty
-    pi_q1 = (pi_q1 + 1000)**2
-    pi_q2 = (pi_q2 + 1000)**2
+    pi_q1 = tf.abs(pi_q1 + 1000)
+    pi_q2 = tf.abs(pi_q2 + 1000)
     # apply double side penalty
     pi_q1_logprob_pi = pi_q1 - logprob_pi
     pi_q2_logprob_pi = pi_q2 - logprob_pi
