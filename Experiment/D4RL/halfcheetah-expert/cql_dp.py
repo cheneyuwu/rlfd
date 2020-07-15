@@ -6,6 +6,7 @@ params_config = deepcopy(gym_mujoco_params)
 params_config["config"] = ("CQLDP",)
 
 params_config["env_name"] = "halfcheetah-expert-v0"
+params_config["agent"]["target_lower_bound"] = -1000
 # Offline training
 params_config["offline_num_epochs"] = int(1e3)
 # No online training with offline data
