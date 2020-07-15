@@ -184,7 +184,7 @@ class SACVF(sac.SAC):
                                             name="online_training_step",
                                             dtype=tf.int64)
 
-  def _criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
+  def _sac_criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
     # Normalize observations
     norm_o = self._o_stats.normalize(o)
     norm_g = self._g_stats.normalize(g)
@@ -210,7 +210,7 @@ class SACVF(sac.SAC):
                       step=step)
     return criticq_loss
 
-  def _vf_loss_graph(self, o, g, step):
+  def _sac_vf_loss_graph(self, o, g, step):
     norm_o = self._o_stats.normalize(o)
     norm_g = self._g_stats.normalize(g)
 
@@ -237,8 +237,9 @@ class SACVF(sac.SAC):
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(criticq_trainable_weights)
       with tf.name_scope('OnlineLosses/'):
-        criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done,
-                                                self.online_training_step)
+        criticq_loss = self._sac_criticq_loss_graph(o, g, o_2, g_2, u, r, n,
+                                                    done,
+                                                    self.online_training_step)
     criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
     self._criticq_optimizer.apply_gradients(
         zip(criticq_grads, criticq_trainable_weights))
@@ -248,7 +249,7 @@ class SACVF(sac.SAC):
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(vf_trainable_weights)
       with tf.name_scope('OnlineLosses/'):
-        vf_loss = self._vf_loss_graph(o, g, self.online_training_step)
+        vf_loss = self._sac_vf_loss_graph(o, g, self.online_training_step)
     vf_grads = tape.gradient(vf_loss, vf_trainable_weights)
     self._vf_optimizer.apply_gradients(zip(vf_grads, vf_trainable_weights))
 
@@ -257,7 +258,8 @@ class SACVF(sac.SAC):
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(actor_trainable_weights)
       with tf.name_scope('OnlineLosses/'):
-        actor_loss = self._actor_loss_graph(o, g, u, self.online_training_step)
+        actor_loss = self._sac_actor_loss_graph(o, g, u,
+                                                self.online_training_step)
     actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
     self._actor_optimizer.apply_gradients(
         zip(actor_grads, actor_trainable_weights))

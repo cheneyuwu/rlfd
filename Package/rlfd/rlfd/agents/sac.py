@@ -213,13 +213,6 @@ class SAC(agent.Agent):
 
     self.shaping = shaping
 
-    # TODO set repeat=True?
-    # self._offline_data_iter = self.offline_buffer.sample(
-    #     batch_size=self.offline_batch_size,
-    #     shuffle=True,
-    #     return_iterator=True,
-    #     include_partial_batch=True)
-
   def _update_stats(self, experiences):
     # add transitions to normalizer
     if self.fix_T:
@@ -285,7 +278,7 @@ class SAC(agent.Agent):
       self._train_offline_graph(o_tf, g_tf, u_tf)
       self._update_target_network(soft_target_tau=1.0)
 
-  def _criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
+  def _sac_criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
     # Normalize observations
     norm_o = self._o_stats.normalize(o)
     norm_g = self._g_stats.normalize(g)
@@ -320,7 +313,7 @@ class SAC(agent.Agent):
                       step=step)
     return criticq_loss
 
-  def _actor_loss_graph(self, o, g, u, step):
+  def _sac_actor_loss_graph(self, o, g, u, step):
     # Normalize observations
     norm_o = self._o_stats.normalize(o)
     norm_g = self._g_stats.normalize(g)
@@ -372,15 +365,17 @@ class SAC(agent.Agent):
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(criticq_trainable_weights)
       with tf.name_scope('OnlineLosses/'):
-        criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done,
-                                                self.online_training_step)
+        criticq_loss = self._sac_criticq_loss_graph(o, g, o_2, g_2, u, r, n,
+                                                    done,
+                                                    self.online_training_step)
     criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
     # Actor loss
     actor_trainable_weights = self._actor.trainable_weights
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(actor_trainable_weights)
       with tf.name_scope('OnlineLosses/'):
-        actor_loss = self._actor_loss_graph(o, g, u, self.online_training_step)
+        actor_loss = self._sac_actor_loss_graph(o, g, u,
+                                                self.online_training_step)
     actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
 
     # Update networks

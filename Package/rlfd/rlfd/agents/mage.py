@@ -255,13 +255,6 @@ class MAGE(agent.Agent):
 
     self.shaping = shaping
 
-    # TODO set repeat=True?
-    # self._offline_data_iter = self.offline_buffer.sample(
-    #     batch_size=self.offline_batch_size,
-    #     shuffle=True,
-    #     return_iterator=True,
-    #     include_partial_batch=True)
-
   def _update_stats(self, experiences):
     # add transitions to normalizer
     if self.fix_T:

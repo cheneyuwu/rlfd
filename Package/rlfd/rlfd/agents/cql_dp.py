@@ -13,8 +13,11 @@ from rlfd.agents import agent, cql, sac_networks
 
 
 class CQLDP(cql.CQL):
+  """This agent adds on top of normal CQL a double penalty to the Q value
+  regularizer.
+  """
 
-  def _criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
+  def _cql_criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
     # Normalize observations
     norm_o = self._o_stats.normalize(o)
     norm_g = self._g_stats.normalize(g)

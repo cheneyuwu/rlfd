@@ -198,7 +198,7 @@ class CQL(sac.SAC):
                                             name="online_training_step",
                                             dtype=tf.int64)
 
-  def _criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
+  def _cql_criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
     # Normalize observations
     norm_o = self._o_stats.normalize(o)
     norm_g = self._g_stats.normalize(g)
@@ -282,8 +282,9 @@ class CQL(sac.SAC):
       if self.auto_cql_alpha:
         tape.watch([self.cql_log_alpha])
       with tf.name_scope('OfflineLosses/'):
-        criticq_loss = self._criticq_loss_graph(o, g, o_2, g_2, u, r, n, done,
-                                                self.offline_training_step)
+        criticq_loss = self._cql_criticq_loss_graph(o, g, o_2, g_2, u, r, n,
+                                                    done,
+                                                    self.offline_training_step)
         cql_alpha_loss = -criticq_loss
     criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
     self._criticq_optimizer.apply_gradients(
@@ -304,7 +305,8 @@ class CQL(sac.SAC):
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(actor_trainable_weights)
       with tf.name_scope('OfflineLosses/'):
-        actor_loss = self._actor_loss_graph(o, g, u, self.offline_training_step)
+        actor_loss = self._sac_actor_loss_graph(o, g, u,
+                                                self.offline_training_step)
     actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
     self._actor_optimizer.apply_gradients(
         zip(actor_grads, actor_trainable_weights))
