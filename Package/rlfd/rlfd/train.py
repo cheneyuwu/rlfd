@@ -170,7 +170,6 @@ def main(config):
     for _ in range(offline_num_batches_per_epoch):
       agent.train_offline()
 
-    eval_driver.clear_history()
     experiences = eval_driver.generate_rollouts(
         observers=offline_testing_metrics)
 
@@ -178,10 +177,6 @@ def main(config):
       for metric in offline_testing_metrics[2:]:
         metric.summarize(step=agent.offline_training_step,
                          step_metrics=offline_testing_metrics[:2])
-      for key, val in eval_driver.logs("test"):
-        logger.record_tabular(key, val)
-
-    logger.dump_tabular()
 
     agent.save(osp.join(policy_path, "offline_policy_latest.pkl"), ckpt_path)
     logger.info("Saving agent after offline training.")
@@ -199,9 +194,6 @@ def main(config):
     agent.store_experiences(experiences)
 
   for epoch in range(num_epochs):
-    logger.record_tabular("epoch", epoch)
-
-    expl_driver.clear_history()
     for cyc in range(num_cycles_per_epoch):
       experiences = expl_driver.generate_rollouts(observers=training_metrics)
       agent.store_experiences(experiences)
@@ -211,21 +203,12 @@ def main(config):
     with tf.name_scope("OnlineTraining"):
       for metric in training_metrics[2:]:
         metric.summarize(step_metrics=training_metrics[:2])
-      for key, val in expl_driver.logs("train"):
-        logger.record_tabular(key, val)
-      for key, val in agent.logs():
-        logger.record_tabular(key, val)
 
-    eval_driver.clear_history()
     experiences = eval_driver.generate_rollouts(observers=testing_metrics)
 
     with tf.name_scope("OnlineTesting"):
       for metric in testing_metrics[2:]:
         metric.summarize(step_metrics=training_metrics[:2])
-      for key, val in eval_driver.logs("test"):
-        logger.record_tabular(key, val)
-
-    logger.dump_tabular()
 
     # Save the agent periodically.
     if (save_interval > 0 and epoch % save_interval == save_interval - 1):

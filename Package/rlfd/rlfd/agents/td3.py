@@ -422,16 +422,6 @@ class TD3(agent.Agent):
         map(copy_func, zip(self._criticq2_target.weights,
                            self._criticq2.weights)))
 
-  def logs(self, prefix=""):
-    logs = []
-    logs.append(
-        (prefix + "stats_o/mean", np.mean(self._o_stats.mean_tf.numpy())))
-    logs.append((prefix + "stats_o/std", np.mean(self._o_stats.std_tf.numpy())))
-    logs.append(
-        (prefix + "stats_g/mean", np.mean(self._g_stats.mean_tf.numpy())))
-    logs.append((prefix + "stats_g/std", np.mean(self._g_stats.std_tf.numpy())))
-    return logs
-
   @tf.function
   def _policy_inspect_graph(self, o, g):
     # should only happen for in the first call of this function

@@ -1,5 +1,3 @@
-"""Adopted from OpenAI baselines, HER
-"""
 import abc
 import pickle
 from collections import deque
@@ -17,68 +15,27 @@ except:
 
 class Driver(object, metaclass=abc.ABCMeta):
 
-  def __init__(self, make_env, policy, history_len, render):
+  def __init__(self, make_env, policy, render):
     """
-    Rollout worker generates experience by interacting with one or many environments.
-
-    This base class handles the following:
+    Driver that generates experience by interacting with one or many environments.
 
     Args:
-        make_env           (function)    - a factory function that creates a new instance of the environment when called
-        policy             (object)      - the policy that is used to act
-        num_episodes       (int)         - the number of parallel rollouts that should be used
-        history_len        (int)         - length of history for statistics smoothing
-        render             (bool)        - whether or not to render the rollouts
+        make_env (function) - a factory function that creates a new instance of the environment when called
+        policy   (object)   - the policy that is used to act
+        render   (bool)     - whether or not to render the rollouts
     """
     self.make_env = make_env
     self.policy = policy
     self.render = render
-    self.history_len = history_len
-    self.history = {}
-    self.total_num_episodes = 0
-    self.total_num_steps = 0
 
+  @abc.abstractmethod
   def seed(self, seed):
     """set seed for internal environments"""
     return self._seed(seed)
 
+  @abc.abstractmethod
   def generate_rollouts(self, observers=()):
     return self._generate_rollouts(observers=observers)
-
-  def logs(self, prefix="worker"):
-    """Generates a dictionary that contains all collected statistics.
-    """
-    logs = []
-    logs += [("episodes", self.total_num_episodes)]
-    logs += [("steps", self.total_num_steps)]
-    for k, v in self.history.items():
-      logs += [(k, np.mean(v))]
-
-    if prefix is not "" and not prefix.endswith("/"):
-      return [(prefix + "/" + key, val) for key, val in logs]
-    else:
-      return logs
-
-  def add_history_key(self, key):
-    self.history[key] = deque(maxlen=self.history_len)
-
-  def add_history_keys(self, keys):
-    for key in keys:
-      self.history[key] = deque(maxlen=self.history_len)
-
-  def clear_history(self):
-    """Clears all histories that are used for statistics
-    """
-    for k, v in self.history.items():
-      v.clear()
-
-  @abc.abstractmethod
-  def _seed(self, seed):
-    """set seed for environment"""
-
-  @abc.abstractmethod
-  def _generate_rollouts(self, observers=()):
-    """Performs `num_episodes` rollouts for maximum time horizon `eps_length` with the current policy"""
 
 
 class StepBasedDriver(Driver):
@@ -88,7 +45,6 @@ class StepBasedDriver(Driver):
                policy,
                num_steps=None,
                num_episodes=None,
-               history_len=300,
                render=False):
     """
     Rollout worker generates experience by interacting with one or many environments.
@@ -96,30 +52,25 @@ class StepBasedDriver(Driver):
     Args:
         make_env           (func)        - a factory function that creates a new instance of the environment when called
         policy             (cls)         - the policy that is used to act
-        history_len        (int)         - length of history for statistics smoothing
         render             (bool)        - whether or not to render the rollouts
     """
-    super().__init__(make_env=make_env,
-                     policy=policy,
-                     history_len=history_len,
-                     render=render)
-    # add to history
-    self.add_history_keys(["reward_per_eps"])
-    #
+    super().__init__(make_env=make_env, policy=policy, render=render)
+
     self.env = make_env()
     assert any([num_steps, num_episodes]) and not all([num_steps, num_episodes])
     self.num_steps = num_steps
     self.num_episodes = num_episodes
     self.eps_length = self.env.eps_length
+
     self.done = True
     self.curr_eps_step = 0
 
-  def _seed(self, seed):
+  def seed(self, seed):
     """Set seed for environment
     """
     self.env.seed(seed)
 
-  def _generate_rollouts(self, observers=()):
+  def generate_rollouts(self, observers=()):
     """generate `num_steps` rollouts
     """
     # Information to store
@@ -189,15 +140,6 @@ class StepBasedDriver(Driver):
     for key, value in experiences.items():
       experiences[key] = np.array(value).reshape(len(value), -1)
 
-    # Store stats
-    # total reward
-    total_reward = np.sum(
-        experiences["r"]) / current_episode if self.num_episodes else np.NaN
-    self.history["reward_per_eps"].append(total_reward)
-    # number of steps
-    self.total_num_episodes += current_episode
-    self.total_num_steps += current_step
-
     return experiences
 
 
@@ -208,14 +150,12 @@ class EpisodeBasedDriver(StepBasedDriver):
                policy,
                num_steps=None,
                num_episodes=None,
-               history_len=300,
-               render=False,
-               **kwargs):
+               render=False):
     assert num_episodes and not num_steps
     super(EpisodeBasedDriver, self).__init__(make_env, policy, num_steps,
-                                             num_episodes, history_len, render)
+                                             num_episodes, render)
 
-  def _generate_rollouts(self, observers=()):
+  def generate_rollouts(self, observers=()):
     experiences = super()._generate_rollouts(observers=observers)
     assert all([
         v.shape[0] == self.num_episodes * self.eps_length
