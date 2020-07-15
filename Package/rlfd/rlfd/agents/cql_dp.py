@@ -17,6 +17,98 @@ class CQLDP(cql.CQL):
   regularizer.
   """
 
+  def __init__(
+      self,
+      # environment configuration
+      dims,
+      max_u,
+      eps_length,
+      gamma,
+      # training
+      online_batch_size,
+      offline_batch_size,
+      fix_T,
+      # normalize
+      norm_obs_online,
+      norm_obs_offline,
+      norm_eps,
+      norm_clip,
+      # networks
+      layer_sizes,
+      q_lr,
+      pi_lr,
+      action_l2,
+      # sac specific
+      auto_alpha,
+      alpha,
+      # cql specific
+      cql_tau,
+      auto_cql_alpha,
+      cql_log_alpha,
+      cql_alpha_lr,
+      # double penalty specific
+      target_lower_bound,
+      # double q
+      soft_target_tau,
+      target_update_freq,
+      # online training plus offline data
+      online_data_strategy,
+      # online bc regularizer
+      bc_params,
+      # replay buffer
+      buffer_size,
+      info):
+    # Store initial args passed into the function
+    self.init_args = locals()
+
+    agent.Agent.__init__(self)
+
+    self.dims = dims
+    self.dimo = self.dims["o"]
+    self.dimg = self.dims["g"]
+    self.dimu = self.dims["u"]
+    self.max_u = max_u
+    self.fix_T = fix_T
+    self.eps_length = eps_length
+    self.gamma = gamma
+
+    self.online_batch_size = online_batch_size
+    self.offline_batch_size = offline_batch_size
+
+    self.buffer_size = buffer_size
+
+    self.auto_alpha = auto_alpha
+    self.alpha = tf.constant(alpha, dtype=tf.float32)
+    self.alpha_lr = 3e-4
+
+    self.auto_cql_alpha = auto_cql_alpha
+    self.cql_log_alpha = tf.constant(cql_log_alpha, dtype=tf.float32)
+    self.cql_alpha_lr = cql_alpha_lr
+    self.cql_tau = cql_tau
+
+    self.target_lower_bound = target_lower_bound
+
+    self.layer_sizes = layer_sizes
+    self.q_lr = q_lr
+    self.pi_lr = pi_lr
+    self.action_l2 = action_l2
+    self.soft_target_tau = soft_target_tau
+    self.target_update_freq = target_update_freq
+
+    self.norm_obs_online = norm_obs_online
+    self.norm_obs_offline = norm_obs_offline
+    self.norm_eps = norm_eps
+    self.norm_clip = norm_clip
+
+    self.online_data_strategy = online_data_strategy
+    assert self.online_data_strategy in ["None", "BC", "Shaping"]
+    self.bc_params = bc_params
+    self.info = info
+
+    self._create_memory()
+    self._create_model()
+    self._initialize_training_steps()
+
   def _cql_criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
     # Normalize observations
     norm_o = self._o_stats.normalize(o)
@@ -64,8 +156,8 @@ class CQLDP(cql.CQL):
     uni_q1 = self._criticq1([tiled_norm_o, tiled_norm_g, uni_u])
     uni_q2 = self._criticq2([tiled_norm_o, tiled_norm_g, uni_u])
     # apply double side penalty
-    uni_q1 = tf.abs(uni_q1 + 1000)
-    uni_q2 = tf.abs(uni_q2 + 1000)
+    uni_q1 = tf.abs(uni_q1 - self.target_lower_bound)
+    uni_q2 = tf.abs(uni_q2 - self.target_lower_bound)
     # apply double side penalty
     uni_q1_logprob_uni_u = uni_q1 - logprob_uni_u
     uni_q2_logprob_uni_u = uni_q2 - logprob_uni_u
@@ -74,8 +166,8 @@ class CQLDP(cql.CQL):
     pi_q1 = self._criticq1([tiled_norm_o, tiled_norm_g, pi])
     pi_q2 = self._criticq2([tiled_norm_o, tiled_norm_g, pi])
     # apply double side penalty
-    pi_q1 = tf.abs(pi_q1 + 1000)
-    pi_q2 = tf.abs(pi_q2 + 1000)
+    pi_q1 = tf.abs(pi_q1 - self.target_lower_bound)
+    pi_q2 = tf.abs(pi_q2 - self.target_lower_bound)
     # apply double side penalty
     pi_q1_logprob_pi = pi_q1 - logprob_pi
     pi_q2_logprob_pi = pi_q2 - logprob_pi

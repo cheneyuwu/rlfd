@@ -77,14 +77,9 @@ class CQL(sac.SAC):
     self.alpha_lr = 3e-4
 
     self.auto_cql_alpha = auto_cql_alpha
-    if self.auto_cql_alpha:
-      self.cql_log_alpha = tf.Variable(0.0, dtype=tf.float32)
-    else:
-      self.cql_log_alpha = tf.constant(cql_log_alpha, dtype=tf.float32)
-    self.cql_tau = cql_tau
+    self.cql_log_alpha = tf.constant(cql_log_alpha, dtype=tf.float32)
     self.cql_alpha_lr = cql_alpha_lr
-    self._cql_alpha_optimizer = tfk.optimizers.Adam(
-        learning_rate=self.cql_alpha_lr)
+    self.cql_tau = cql_tau
 
     self.layer_sizes = layer_sizes
     self.q_lr = q_lr
@@ -103,30 +98,11 @@ class CQL(sac.SAC):
     self.bc_params = bc_params
     self.info = info
 
-    # Create Replaybuffers
-    buffer_shapes = dict(o=self.dimo,
-                         o_2=self.dimo,
-                         u=self.dimu,
-                         r=(1,),
-                         ag=self.dimg,
-                         ag_2=self.dimg,
-                         g=self.dimg,
-                         g_2=self.dimg,
-                         done=(1,))
-    if self.fix_T:
-      buffer_shapes = {
-          k: (self.eps_length,) + v for k, v in buffer_shapes.items()
-      }
-      self.online_buffer = memory.EpisodeBaseReplayBuffer(
-          buffer_shapes, self.buffer_size, self.eps_length)
-      self.offline_buffer = memory.EpisodeBaseReplayBuffer(
-          buffer_shapes, self.buffer_size, self.eps_length)
-    else:
-      self.online_buffer = memory.StepBaseReplayBuffer(buffer_shapes,
-                                                       self.buffer_size)
-      self.offline_buffer = memory.StepBaseReplayBuffer(buffer_shapes,
-                                                        self.buffer_size)
+    self._create_memory()
+    self._create_model()
+    self._initialize_training_steps()
 
+  def _create_model(self):
     # Normalizer for goal and observation.
     self._o_stats = normalizer.Normalizer(self.dimo, self.norm_eps,
                                           self.norm_clip)
@@ -150,6 +126,10 @@ class CQL(sac.SAC):
     self._actor_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
     self._criticq_optimizer = tfk.optimizers.Adam(learning_rate=self.q_lr)
     self._bc_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
+    # Losses
+    self._huber_loss = tfk.losses.Huber(delta=10.0,
+                                        reduction=tfk.losses.Reduction.NONE)
+
     # Entropy regularizer
     if self.auto_alpha:
       self.log_alpha = tf.Variable(0., dtype=tf.float32)
@@ -157,6 +137,11 @@ class CQL(sac.SAC):
       self.alpha.assign(tf.exp(self.log_alpha))
       self.target_alpha = -np.prod(self.dimu)
       self._alpha_optimizer = tfk.optimizers.Adam(learning_rate=self.alpha_lr)
+
+    if self.auto_cql_alpha:
+      self.cql_log_alpha = tf.Variable(0.0, dtype=tf.float32)
+    self._cql_alpha_optimizer = tfk.optimizers.Adam(
+        learning_rate=self.cql_alpha_lr)
 
     # Generate policies
     def process_observation_expl(o, g):
@@ -183,20 +168,6 @@ class CQL(sac.SAC):
         self.dimu,
         get_action=lambda o, g: self._actor([o, g], sample=False)[0],
         process_observation=process_observation_eval)
-
-    # Losses
-    self._huber_loss = tfk.losses.Huber(delta=10.0,
-                                        reduction=tfk.losses.Reduction.NONE)
-
-    # Initialize training steps
-    self.offline_training_step = tf.Variable(0,
-                                             trainable=False,
-                                             name="offline_training_step",
-                                             dtype=tf.int64)
-    self.online_training_step = tf.Variable(0,
-                                            trainable=False,
-                                            name="online_training_step",
-                                            dtype=tf.int64)
 
   def _cql_criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
     # Normalize observations

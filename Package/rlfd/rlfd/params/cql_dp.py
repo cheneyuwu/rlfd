@@ -47,6 +47,7 @@ default_params = {
         "auto_cql_alpha": False,
         "cql_log_alpha": 2.0,
         "cql_alpha_lr": 3e-4,
+        "target_lower_bound": 0,
         "q_lr": 3e-4,
         "pi_lr": 3e-5,
         "action_l2": 0.0,

@@ -86,7 +86,11 @@ class SAC(agent.Agent):
     self.bc_params = bc_params
     self.info = info
 
-    # Create Replaybuffers
+    self._create_memory()
+    self._create_model()
+    self._initialize_training_steps()
+
+  def _create_memory(self):
     buffer_shapes = dict(o=self.dimo,
                          o_2=self.dimo,
                          u=self.dimu,
@@ -110,6 +114,7 @@ class SAC(agent.Agent):
       self.offline_buffer = memory.StepBaseReplayBuffer(buffer_shapes,
                                                         self.buffer_size)
 
+  def _create_model(self):
     # Normalizer for goal and observation.
     self._o_stats = normalizer.Normalizer(self.dimo, self.norm_eps,
                                           self.norm_clip)
@@ -133,6 +138,10 @@ class SAC(agent.Agent):
     self._actor_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
     self._criticq_optimizer = tfk.optimizers.Adam(learning_rate=self.q_lr)
     self._bc_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
+    # Losses
+    self._huber_loss = tfk.losses.Huber(delta=10.0,
+                                        reduction=tfk.losses.Reduction.NONE)
+
     # Entropy regularizer
     if self.auto_alpha:
       self.log_alpha = tf.Variable(0., dtype=tf.float32)
@@ -167,11 +176,7 @@ class SAC(agent.Agent):
         get_action=lambda o, g: self._actor([o, g], sample=False)[0],
         process_observation=process_observation_eval)
 
-    # Losses
-    self._huber_loss = tfk.losses.Huber(delta=10.0,
-                                        reduction=tfk.losses.Reduction.NONE)
-
-    # Initialize training steps
+  def _initialize_training_steps(self):
     self.offline_training_step = tf.Variable(0,
                                              trainable=False,
                                              name="offline_training_step",
