@@ -7,11 +7,6 @@ import tensorflow as tf
 
 from rlfd import logger
 
-try:
-  from mujoco_py import MujocoException
-except:
-  MujocoException = None
-
 
 class Driver(object, metaclass=abc.ABCMeta):
 
@@ -31,11 +26,10 @@ class Driver(object, metaclass=abc.ABCMeta):
   @abc.abstractmethod
   def seed(self, seed):
     """set seed for internal environments"""
-    return self._seed(seed)
 
   @abc.abstractmethod
   def generate_rollouts(self, observers=()):
-    return self._generate_rollouts(observers=observers)
+    """Generate experiences"""
 
 
 class StepBasedDriver(Driver):
@@ -46,14 +40,6 @@ class StepBasedDriver(Driver):
                num_steps=None,
                num_episodes=None,
                render=False):
-    """
-    Rollout worker generates experience by interacting with one or many environments.
-
-    Args:
-        make_env           (func)        - a factory function that creates a new instance of the environment when called
-        policy             (cls)         - the policy that is used to act
-        render             (bool)        - whether or not to render the rollouts
-    """
     super().__init__(make_env=make_env, policy=policy, render=render)
 
     self.env = make_env()
@@ -66,13 +52,11 @@ class StepBasedDriver(Driver):
     self.curr_eps_step = 0
 
   def seed(self, seed):
-    """Set seed for environment
-    """
+    """Set seed for environment"""
     self.env.seed(seed)
 
   def generate_rollouts(self, observers=()):
-    """generate `num_steps` rollouts
-    """
+    """generate `num_steps` rollouts"""
     # Information to store
     experiences = {
         k: [] for k in ("o", "o_2", "ag", "ag_2", "u", "g", "g_2", "r", "done")
@@ -90,19 +74,10 @@ class StepBasedDriver(Driver):
             "achieved_goal"], state["desired_goal"]
       u = self.policy(self.o, self.g)
       # compute new states and observations
-      try:
-        state, r, self.done, iv = self.env.step(u)
-        o_2, ag_2 = state["observation"], state["achieved_goal"]
-        if self.render:
-          self.env.render()
-      except MujocoException:
-        print("MujocoException caught during rollout generation. Trying again.")
-        self.done = True
-        return self.generate_rollouts()
-      if np.isnan(o_2).any():
-        print("NaN caught during rollout generation. Trying again.")
-        self.done = True
-        return self.generate_rollouts()
+      state, r, self.done, info = self.env.step(u)
+      o_2, ag_2 = state["observation"], state["achieved_goal"]
+      if self.render:
+        self.env.render()
 
       for observer in observers:
         observer(o=self.o,
@@ -114,7 +89,7 @@ class StepBasedDriver(Driver):
                  u=u,
                  r=r,
                  done=self.done,
-                 info=iv,
+                 info=info,
                  reset=self.done or (self.curr_eps_step + 1 == self.eps_length))
 
       experiences["o"].append(self.o)
@@ -126,8 +101,8 @@ class StepBasedDriver(Driver):
       experiences["u"].append(u)
       experiences["r"].append(r)
       experiences["done"].append(self.done)
-      self.o = o_2  # o_2 -> o
-      self.ag = ag_2  # ag_2 -> ag
+      self.o = o_2
+      self.ag = ag_2
 
       current_step += 1
       self.curr_eps_step += 1
@@ -156,7 +131,7 @@ class EpisodeBasedDriver(StepBasedDriver):
                                              num_episodes, render)
 
   def generate_rollouts(self, observers=()):
-    experiences = super()._generate_rollouts(observers=observers)
+    experiences = super().generate_rollouts(observers=observers)
     assert all([
         v.shape[0] == self.num_episodes * self.eps_length
         for v in experiences.values()
