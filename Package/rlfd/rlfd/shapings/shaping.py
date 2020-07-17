@@ -1,8 +1,11 @@
 import abc
 import os
+import pickle
 osp = os.path
 
 import numpy as np
+import ray
+from ray import tune
 import tensorflow as tf
 import tensorflow_probability as tfp
 tfd = tfp.distributions
@@ -16,6 +19,8 @@ class EnsembleShaping(object):
 
   def __init__(self, shaping_type, num_ensembles, num_epochs, batch_size, fix_T,
                *args, **kwargs):
+    self.init_args = locals()
+
     self.shapings = [
         SHAPINGS[shaping_type](*args, **kwargs) for _ in range(num_ensembles)
     ]
@@ -65,16 +70,43 @@ class EnsembleShaping(object):
           # TODO: should be done on validation set
           shaping.evaluate(**batch, name="model_" + str(i))
 
+          # For ray status updates
+          if ray.is_initialized():
+            try:
+              tune.report(mode="shaping", epoch=epoch)  # ray 0.8.6
+            except:
+              tune.track.log(mode="shaping", epoch=epoch)  # previous versions
+
       shaping.after_training_hook()
 
   def after_training_hook(self, *args, **kwargs):
     pass
+
+  def save(self, path):
+    with open(path, "wb") as f:
+      pickle.dump(self, f)
 
   @tf.function
   def potential(self, o, g, u):
     potential = tf.reduce_mean([x.potential(o, g, u) for x in self.shapings],
                                axis=0)
     return potential
+
+  def __getstate__(self):
+    state = {
+        k: v
+        for k, v in self.init_args.items()
+        if not k in ["self", "__class__"]
+    }
+    state["shaping"] = self.shapings
+    return state
+
+  def __setstate__(self, state):
+    shapings = state.pop("shaping")
+    args = state.pop("args")
+    kwargs = state.pop("kwargs")
+    self.__init__(*args, **kwargs, **state)
+    self.shapings = shapings
 
 
 class Shaping(object, metaclass=abc.ABCMeta):

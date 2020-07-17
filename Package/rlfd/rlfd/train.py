@@ -94,6 +94,7 @@ def main(config):
     shaping.before_training_hook(data_dir=root_dir, env=make_env())
     shaping.train()
     shaping.after_training_hook()
+    shaping.save(shaping_file)
 
   # Configure agents and drivers.
   agent_params = params["agent"]
@@ -170,9 +171,7 @@ def main(config):
     for _ in range(offline_num_batches_per_epoch):
       agent.train_offline()
 
-    experiences = eval_driver.generate_rollouts(
-        observers=offline_testing_metrics)
-
+    eval_driver.generate_rollouts(observers=offline_testing_metrics)
     with tf.name_scope("OfflineTesting"):
       for metric in offline_testing_metrics[2:]:
         metric.summarize(step=agent.offline_training_step,
@@ -199,13 +198,11 @@ def main(config):
       agent.store_experiences(experiences)
       for _ in range(num_batches_per_cycle):
         agent.train_online()
-
     with tf.name_scope("OnlineTraining"):
       for metric in training_metrics[2:]:
         metric.summarize(step_metrics=training_metrics[:2])
 
-    experiences = eval_driver.generate_rollouts(observers=testing_metrics)
-
+    eval_driver.generate_rollouts(observers=testing_metrics)
     with tf.name_scope("OnlineTesting"):
       for metric in testing_metrics[2:]:
         metric.summarize(step_metrics=training_metrics[:2])

@@ -111,14 +111,7 @@ def load_results(root_dir_or_dirs):
       if (all([file in files for file in ["params.json", "progress.csv"]]) and
           "summaries" in subdirs):
         result = {"dirname": dirname}
-        # load progress (for old plot)
         result["progress"] = dict()
-        progcsv = osp.join(dirname, "progress.csv")
-        progress = load_csv(progcsv)
-        if progress is None:
-          continue
-        result["progress"]["progress"] = progress
-        # load tensorboard progress (for new plot)
         source_dir = "summaries"
         target_dir = "csv_summaries"
         if source_dir in subdirs:
@@ -141,27 +134,24 @@ def load_results(root_dir_or_dirs):
 
 def plot_results(allresults, xys, target_dir, smooth=0):
 
-  # collect data
+  # collect data: [environment][legend][configuration] -> data
   data = {}
   for results in allresults:
     # get environment name and algorithm configuration summary (should always exist)
     env_id = results["params"]["env_name"].replace("Dense", "")
     config = results["params"]["config"]
-    assert config != ""
 
     for xy in xys:
-      if ":" in xy:  # old way of plotting data
-        x = results["progress"]["progress"][xy.split(":")[0]]
-        y = results["progress"]["progress"][xy.split(":")[1]]
-      else:  # new way of plotting data (from tensorboard)
-        csv_name = xy.replace("/", "_")
-        try:
-          y_label, x_label = xy.split(" vs ")
-        except ValueError:
-          y_label = xy
-          x_label = "Step"
-        x = results["progress"][csv_name][x_label]
-        y = results["progress"][csv_name][y_label]
+      csv_name = xy.replace("/", "_")
+      try:
+        y_label, x_label = xy.split(" vs ")
+      except ValueError:
+        y_label = xy
+        x_label = "Step"
+      if csv_name not in results["progress"].keys():
+        continue
+      x = results["progress"][csv_name][x_label]
+      y = results["progress"][csv_name][y_label]
 
       # Process and smooth data.
       if smooth:
@@ -199,11 +189,11 @@ def plot_results(allresults, xys, target_dir, smooth=0):
 
       ax = fig.add_subplot(len(xys), len(data.keys()),
                            env_n * len(data.keys()) + i + 1)
-      if ":" in xy:
-        x_label = xy.split(":")[0]
-        y_label = xy.split(":")[1]
-      else:
+      try:
         y_label, x_label = xy.split(" vs ")
+      except ValueError:
+        y_label = xy
+        x_label = "Step"
       for j, config in enumerate(sorted(data[env_id][xy].keys())):
         xs, ys = zip(*data[env_id][xy][config])
         if config == "default":
@@ -268,13 +258,13 @@ def plot_results(allresults, xys, target_dir, smooth=0):
   fig.legend(handles,
              labels,
              loc="lower center",
-             ncol=2,
+             ncol=1,
              frameon=False,
-             fontsize=9)
+             fontsize=6)
 
   now = datetime.now()  # current date and time
   date_time = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
-  save_path = osp.join(target_dir, "Plot_{}_{}.jpg".format("name", date_time))
+  save_path = osp.join(target_dir, "plot_{}_{}.jpg".format("name", date_time))
   print("Saving image to " + save_path)
   plt.savefig(save_path, dpi=200)
   plt.show()

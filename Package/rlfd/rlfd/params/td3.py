@@ -15,39 +15,39 @@ default_params = {
     "fix_T": False,
     # learner
     "offline_num_epochs": 0,
-    "offline_num_batches_per_epoch": 100,
-    "random_expl_num_cycles": 0,
+    "offline_num_batches_per_epoch": 1000,
+    "random_expl_num_cycles": int(1),
     "num_epochs": int(1e3),
-    "num_cycles_per_epoch": int(1e3),
-    "num_batches_per_cycle": 1,
+    "num_cycles_per_epoch": 1,
+    "num_batches_per_cycle": 1000,
     "expl_num_episodes_per_cycle": None,
-    "expl_num_steps_per_cycle": 1,
-    "eval_num_episodes_per_cycle": 4,
+    "expl_num_steps_per_cycle": 1000,
+    "eval_num_episodes_per_cycle": 5,
     "eval_num_steps_per_cycle": None,
     # agent config
     "agent": {
         "gamma": 0.99,
-        "online_batch_size": 100,
-        "offline_batch_size": 128,
+        "online_batch_size": 256,
+        "offline_batch_size": 0,
         # replay buffer setup
         "buffer_size": int(1e6),
         # exploration
         "expl_gaussian_noise": 0.1,
         "expl_random_prob": 0.0,
         # online training plus offline data
-        "online_data_strategy": "None",  # ["None", "BC", "NFShaping", "GANShaping"]
+        "online_data_strategy": "None",  # ["None", "BC", "Shaping"]
         # normalize observation
         "norm_obs_online": True,
         "norm_obs_offline": False,
         "norm_eps": 0.01,
         "norm_clip": 5,
         # actor critic networks
-        "layer_sizes": [400, 300],
+        "layer_sizes": [256, 256],
         "policy_freq": 2,
         "policy_noise": 0.2,
         "policy_noise_clip": 0.5,
-        "q_lr": 1e-3,
-        "pi_lr": 1e-3,
+        "q_lr": 3e-4,
+        "pi_lr": 3e-4,
         "action_l2": 0.0,
         # double q learning
         "soft_target_tau": 5e-3,
@@ -63,7 +63,6 @@ default_params = {
 
 # OpenAI Gym
 gym_mujoco_params = deepcopy(default_params)
-gym_mujoco_params["random_expl_num_cycles"] = int(5e3)
 
 # OpenAI Peg Insertion 2D
 insert_peg_2d_params = deepcopy(default_params)

@@ -201,8 +201,8 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, ip_head,
           dirs=[exp_dir],
           save_dir=save_dir,
           xys=[
-              # "train/steps:test/reward_per_eps",
               "OnlineTesting/AverageReturn vs EnvironmentSteps",
+              # "OfflineTesting/AverageReturn",
           ],
           smooth=True,
       )

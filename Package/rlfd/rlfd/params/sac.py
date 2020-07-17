@@ -28,7 +28,7 @@ default_params = {
     "agent": {
         "gamma": 0.99,
         "online_batch_size": 256,
-        "offline_batch_size": 128,
+        "offline_batch_size": 0,
         # replay buffer setup
         "buffer_size": int(1e6),
         # online training plus offline data
