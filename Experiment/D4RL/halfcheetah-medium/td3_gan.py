@@ -16,3 +16,6 @@ params_config["offline_num_epochs"] = 0
 params_config["agent"]["online_data_strategy"] = "Shaping"
 # Tuned values
 params_config["seed"] = tuple(range(5))
+
+# Exp 1
+params_config["seed"] = tuple(range(4))
