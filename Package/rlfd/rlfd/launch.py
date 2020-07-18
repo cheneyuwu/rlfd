@@ -149,7 +149,10 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, ip_head,
           else:
             exit(1)
         if remove_all:
-          shutil.rmtree(k)
+          try:
+            shutil.rmtree(k)
+          except FileNotFoundError:
+            pass
         os.makedirs(k, exist_ok=True)
         # copy params.json file
         with open(os.path.join(k, "params.json"), "w") as f:
