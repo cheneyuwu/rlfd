@@ -40,7 +40,7 @@ gan_params = {
 }
 # OpenAI Gym
 gym_mujoco_gan_params = deepcopy(gan_params)
-gym_mujoco_nf_params["num_epochs"] = int(1e2)
+gym_mujoco_gan_params["num_epochs"] = int(5e2)
 gym_mujoco_gan_params["batch_size"] = 256
 gym_mujoco_gan_params["latent_dim"] = 10
 gym_mujoco_gan_params["layer_sizes"] = [256, 256]
