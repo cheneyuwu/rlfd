@@ -21,7 +21,8 @@ nf_params = {
 gym_mujoco_nf_params = deepcopy(nf_params)
 gym_mujoco_nf_params["batch_size"] = 256
 gym_mujoco_nf_params["num_epochs"] = int(1e2)
-gym_mujoco_nf_params["potential_weight"] = 10.0
+gym_mujoco_nf_params["potential_weight"] = int(1e3)
+gym_mujoco_nf_params["reg_loss_weight"] = int(5e2)
 
 # GAN Shaping Parameters
 gan_params = {

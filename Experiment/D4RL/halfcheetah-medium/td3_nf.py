@@ -18,4 +18,6 @@ params_config["agent"]["online_data_strategy"] = "Shaping"
 params_config["seed"] = tuple(range(5))
 
 # Exp 1
+params_config["shaping"]["reg_loss_weight"] = int(5e2)
+params_config["shaping"]["potential_weight"] = int(1e3)
 params_config["seed"] = tuple(range(4))
