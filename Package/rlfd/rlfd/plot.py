@@ -132,7 +132,7 @@ def load_results(root_dir_or_dirs):
   return allresults
 
 
-def plot_results(allresults, xys, target_dir, smooth=0):
+def plot_results(allresults, xys, save_dir, save_name, smooth=False):
 
   # collect data: [environment][legend][configuration] -> data
   data = {}
@@ -258,48 +258,20 @@ def plot_results(allresults, xys, target_dir, smooth=0):
   fig.legend(handles,
              labels,
              loc="lower center",
-             ncol=1,
+             ncol=2,
              frameon=False,
              fontsize=6)
 
-  now = datetime.now()  # current date and time
   date_time = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
-  save_path = osp.join(target_dir, "plot_{}_{}.jpg".format("name", date_time))
+  save_name = "plot_{}_{}.jpg".format(save_name, date_time)
+  save_path = osp.join(save_dir, save_name)
   print("Saving image to " + save_path)
   plt.savefig(save_path, dpi=200)
   plt.show()
 
 
-def main(dirs, xys, save_dir=None, smooth=0, **kwargs):
+def main(dirs, xys, save_dir=None, save_name="", smooth=False, **kwargs):
   results = load_results(dirs)
   # get directory to save results
-  target_dir = save_dir if save_dir else dirs[0]
-  plot_results(results, xys, target_dir, smooth)
-
-
-ap = ArgParser()
-ap.parser.add_argument("--dirs",
-                       help="target or list of dirs",
-                       type=str,
-                       nargs="+",
-                       default=[os.getcwd()])
-ap.parser.add_argument("--save_dir",
-                       help="plot saving directory",
-                       type=str,
-                       default=os.getcwd())
-ap.parser.add_argument(
-    "--xy",
-    help="value on x and y axis, splitted by :",
-    type=str,
-    default=[
-        "train/steps:test/reward_per_eps",
-        "Testing/AverageReturn vs EnvironmentSteps",
-    ],
-    action="append",
-    dest="xys",
-)
-ap.parser.add_argument("--smooth", help="smooth the curve", type=int, default=0)
-
-if __name__ == "__main__":
-  ap.parse(sys.argv)
-  main(**ap.get_dict())
+  save_dir = save_dir if save_dir else dirs[0]
+  plot_results(results, xys, save_dir, save_name, smooth)

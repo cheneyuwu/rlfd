@@ -196,13 +196,15 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, ip_head,
       print("=================================================")
       evaluate.main(policy=policy)
 
-    elif target == "plot":
+    elif "plot" in target:
       print("\n\n=================================================")
       print("Plotting.")
       print("=================================================")
+      save_name = target.replace("plot:", "") if "plot:" in target else ""
       plot.main(
           dirs=[exp_dir],
           save_dir=save_dir,
+          save_name=save_name,
           xys=[
               "OnlineTesting/AverageReturn vs EnvironmentSteps",
               # "OfflineTesting/AverageReturn",
