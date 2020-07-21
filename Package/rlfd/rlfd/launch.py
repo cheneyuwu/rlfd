@@ -9,6 +9,7 @@ import sys
 osp = os.path
 
 import mujoco_py  # include at the beginning (bug on compute canada cluster)
+import numpy as np
 import tensorflow as tf
 import ray
 from ray import tune
@@ -91,8 +92,8 @@ def transform_config_name(config_name):
   return config_name
 
 
-def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, ip_head,
-         redis_password, **kwargs):
+def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, memory, time,
+         ip_head, redis_password, **kwargs):
   # Setup
   exp_dir = os.path.abspath(os.path.expanduser(exp_dir))
   if policy is not None:
@@ -124,6 +125,46 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, ip_head,
         v["config"] = "-".join(config_name)
         with open(os.path.join(k, "params_renamed.json"), "w") as f:
           json.dump(v, f)
+
+    elif "slurm:" in target:
+      print("\n\n=================================================")
+      print("Generating the slurm launch script!")
+      print("=================================================")
+
+      max_cpus_per_node = 16  # for graham and beluga
+      max_gpus_per_node = 2
+
+      nodes = max(np.ceil(num_cpus / max_cpus_per_node),
+                  np.ceil(num_gpus / max_gpus_per_node))
+
+      cpus_per_node = np.ceil(num_cpus / nodes)
+      gpus_per_node = np.ceil(num_gpus / nodes)
+
+      config_file = target.replace("slurm:", "")
+
+      with open(
+          osp.join(osp.dirname(osp.realpath(__file__)),
+                   "scripts/slurm_launch.sh")) as f:
+        slurm = f.read()
+
+      slurm = slurm.replace('%%NODES%%', str(int(nodes)))
+      slurm = slurm.replace('%%CPUS_PER_NODE%%', str(int(cpus_per_node)))
+      slurm = slurm.replace('%%GPUS_PER_NODE%%', str(int(gpus_per_node)))
+      slurm = slurm.replace('%%MEM_PER_CPU%%', str(int(memory)))
+      slurm = slurm.replace('%%CONFIG_FILE%%', str(config_file))
+      slurm = slurm.replace('%%TIME%%', str(int(time)))
+
+      save_file = osp.join(os.getcwd(), config_file.replace(".py", ".sh"))
+      with open(save_file, "w") as f:
+        f.write(slurm)
+
+      print("The slurm script has been stored to {}".format(save_file))
+      print(
+          "If this is the same directory as {}, use `sbatch {}` to rerun with the same configuration."
+          .format(config_file, save_file))
+      input("\nMake sure the resources are correct.\n")
+
+      os.system("echo '=> sbatch {}' && sbatch {}".format(save_file, save_file))
 
     elif "train:" in target:
       print("\n\n=================================================")
@@ -254,16 +295,28 @@ if __name__ == "__main__":
       type=int,
       default=0,
   )
+  exp_parser.parser.add_argument(
+      "--memory",
+      help="ray.init memory per cpu",
+      type=int,
+      default=4,
+  )
   # Options below are cluster specific
   exp_parser.parser.add_argument(
+      "--time",
+      help="slurm time in hours",
+      type=int,
+      default=8,
+  )
+  exp_parser.parser.add_argument(
       "--ip_head",
-      help="ray.init address",
+      help="ray.init address You should not call this from command line",
       type=str,
       default=None,
   )
   exp_parser.parser.add_argument(
       "--redis_password",
-      help="ray.init redis_password",
+      help="ray.init redis_password You should not call this from command line",
       type=str,
       default=None,
   )

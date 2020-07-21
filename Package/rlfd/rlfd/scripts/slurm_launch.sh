@@ -1,13 +1,15 @@
 #!/bin/bash
 
+## THIS IS A TEMPLATE SLURM LAUNCH SCRIPT TO BE MODIFIED
+
 #SBATCH --account=def-florian7
-#SBATCH --nodes=1
+#SBATCH --nodes=%%NODES%%
 #SBATCH --tasks-per-node=1
-#SBATCH --cpus-per-task=10        # maximum CPU cores per GPU request: 6 on Cedar, 16 on Graham.
-#SBATCH --gres=gpu:1              # request GPU "generic resource"
-#SBATCH --mem-per-cpu=4GB    
-#SBATCH --time=01-00:00:00        # time format: day-hour:min:sec
-#SBATCH --job-name=train             
+#SBATCH --cpus-per-task=%%CPUS_PER_NODE%%  # maximum CPU cores per GPU request: 6 on Cedar, 16 on Graham.
+#SBATCH --gres=gpu:%%GPUS_PER_NODE%%       # request GPU "generic resource"
+#SBATCH --mem-per-cpu=%%MEM_PER_CPU%%GB
+#SBATCH --time=00-%%TIME%%:00:00                 # time format: day-hour:min:sec
+#SBATCH --job-name=train
 #SBATCH --output=job-%x-%j.out
 
 #SBATCH --mail-user=cheney.wu@mail.utoronto.ca
@@ -15,10 +17,10 @@
 #SBATCH --mail-type=END
 
 # Parameters (make sure it is consistent with the resources required above)
-NUM_NODES=1
-NUM_CPU_PER_NODE=10
-NUM_GPU_PER_NODE=1
-TRAINING_FILE="<parameters>.py"
+NUM_NODES=%%NODES%%
+NUM_CPU_PER_NODE=%%CPUS_PER_NODE%%
+NUM_GPU_PER_NODE=%%GPUS_PER_NODE%%
+TRAINING_FILE=%%CONFIG_FILE%%
 
 # Setup
 module load nixpkgs/16.09 intel/2018.3 openmpi/3.1.4 mpi4py/3.0.0 cuda/10.1 cudnn/7.6.5
