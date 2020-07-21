@@ -162,8 +162,6 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, memory, time,
       print(
           "If this is the same directory as {}, use `sbatch {}` to rerun with the same configuration."
           .format(config_file, save_file))
-      input("\nMake sure the resources are correct.\n")
-
       os.system("echo '=> sbatch {}' && sbatch {}".format(save_file, save_file))
 
     elif "train:" in target:
