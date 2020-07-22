@@ -167,6 +167,12 @@ def main(config):
   agent.before_training_hook(data_dir=root_dir, env=make_env(), shaping=shaping)
 
   # Train offline
+  eval_driver.generate_rollouts(observers=offline_testing_metrics)
+  with tf.name_scope("OfflineTesting"):
+    for metric in offline_testing_metrics[2:]:
+      metric.summarize(step=agent.offline_training_step,
+                       step_metrics=offline_testing_metrics[:2])
+
   for epoch in range(offline_num_epochs):
     for _ in range(offline_num_batches_per_epoch):
       agent.train_offline()
@@ -188,6 +194,11 @@ def main(config):
         tune.track.log(mode="offline", epoch=epoch)  # previous versions
 
   # Train online
+  eval_driver.generate_rollouts(observers=testing_metrics)
+  with tf.name_scope("OnlineTesting"):
+    for metric in testing_metrics[2:]:
+      metric.summarize(step_metrics=training_metrics[:2])
+
   for _ in range(random_exploration_cycles):
     experiences = random_driver.generate_rollouts(observers=training_metrics)
     agent.store_experiences(experiences)
