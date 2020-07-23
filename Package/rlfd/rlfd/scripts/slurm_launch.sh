@@ -9,7 +9,7 @@
 #SBATCH --gres=gpu:%%GPUS_PER_NODE%%       # request GPU "generic resource"
 #SBATCH --mem-per-cpu=%%MEM_PER_CPU%%GB
 #SBATCH --time=00-%%TIME%%:00:00                 # time format: day-hour:min:sec
-#SBATCH --job-name=train
+#SBATCH --job-name=%%NAME%%
 #SBATCH --output=job-%x-%j.out
 
 #SBATCH --mail-user=cheney.wu@mail.utoronto.ca

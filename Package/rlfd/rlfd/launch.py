@@ -147,6 +147,7 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, memory, time,
                    "scripts/slurm_launch.sh")) as f:
         slurm = f.read()
 
+      slurm = slurm.replace('%%NAME%%', config_file.replace(".py", ""))
       slurm = slurm.replace('%%NODES%%', str(int(nodes)))
       slurm = slurm.replace('%%CPUS_PER_NODE%%', str(int(cpus_per_node)))
       slurm = slurm.replace('%%GPUS_PER_NODE%%', str(int(gpus_per_node)))
