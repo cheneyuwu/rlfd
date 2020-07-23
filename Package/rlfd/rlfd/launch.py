@@ -105,20 +105,28 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, memory, time,
       print("Renaming the config to params_renamed.json!")
       print("=================================================")
       # excluded params
-      exc_params = []
+      inc_params = exc_params = []
+      inc_params = []  # CHANGE this!
       exc_params = ["seed"]  # CHANGE this!
       # adding checking
       config_file = target.replace("rename:", "")
       params_config = import_param_config(config_file)
       dir_param_dict = generate_params(exp_dir, params_config)
       for k, v in dir_param_dict.items():
-        assert os.path.exists(k), k
+        if not os.path.exists(k):
+          continue
         # copy params.json file, rename the config entry
         varied_params = k[len(exp_dir) + 1:].split("/")
-        config_name = [
-            x for x in varied_params
-            if not any([x.startswith(y) for y in exc_params])
-        ]
+        if inc_params:
+          config_name = [
+              x for x in varied_params
+              if any([x.startswith(y) for y in inc_params])
+          ]
+        else:
+          config_name = [
+              x for x in varied_params
+              if not any([x.startswith(y) for y in exc_params])
+          ]
         print(config_name)
         config_name = transform_config_name(config_name)
         print("||||---> ", config_name)
