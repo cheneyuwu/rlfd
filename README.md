@@ -10,7 +10,7 @@
   - [Instructions on installing it locally](http://www.mujoco.org/)
   - [Instructions on installing it on CC](https://docs.computecanada.ca/wiki/MuJoCo)
 - download the repo
-  - `git clone --recurse-submodules git@github.com:cheneyuwu/rlfd-through-Shaping-using-Generative-Models`
+  - `git clone --recurse-submodules git@github.com:cheneyuwu/TD3fD-through-Shaping-using-Generative-Models`
 - build virtual env
   - cluster: `module load python/3.6` (so that you have the correct python version)
   - run `virtualenv venv` inside the root folder of the repo
