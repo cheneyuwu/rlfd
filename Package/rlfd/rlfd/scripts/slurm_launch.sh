@@ -33,14 +33,15 @@ export LD_LIBRARY_PATH=/home/yuchenwu/rlfd/venv/lib/python3.6/site-packages/torc
 nodes=$(scontrol show hostnames $SLURM_JOB_NODELIST)  # Getting the node names
 nodes_array=( $nodes )
 
+# Get the ip address for the head node (the node where we run this script) and pass it to other nodes
 node1=${nodes_array[0]}
-
-ip_prefix=$(srun --nodes=1 --ntasks=1 -w $node1 hostname --ip-address | xargs)  # Making address, xargs to remove trailing spaces
-suffix=':6379'
-ip_head=$ip_prefix$suffix
+# ip_address=$(srun --nodes=1 --ntasks=1 -w $node1 hostname --ip-address | xargs)  # Making address, xargs to remove trailing spaces
+ip_address=$(python -c "import ray.services; print(ray.services.get_node_ip_address())")
+port='6379'
+ip_address_port=${ip_address}:${port}
 redis_password=$(uuidgen)
 
-srun --nodes=1 --ntasks=1 -w $node1 ray start --block --head --redis-port=6379 --redis-password=$redis_password & # Starting the head
+srun --nodes=1 --ntasks=1 -w $node1 ray start --block --head --redis-port=$port --redis-password=$redis_password --num-cpus ${NUM_CPU_PER_NODE} --num-gpus ${NUM_GPU_PER_NODE} & # Starting the head
 sleep 5
 # Make sure the head successfully starts before any worker does, otherwise
 # the worker will not be able to connect to redis. In case of longer delay,
@@ -49,11 +50,11 @@ sleep 5
 for ((  i=1; i<$NUM_NODES; i++ ))
 do
   node2=${nodes_array[$i]}
-  srun --nodes=1 --ntasks=1 -w $node2 ray start --block --address=$ip_head --redis-password=$redis_password & # Starting the workers
+  srun --nodes=1 --ntasks=1 -w $node2 ray start --block --address=$ip_address_port --redis-password=$redis_password --num-cpus ${NUM_CPU_PER_NODE} --num-gpus ${NUM_GPU_PER_NODE} & # Starting the workers
   # Flag --block will keep ray process alive on each compute node.
   sleep 5
 done
 
 # Launch the training process
 let NUM_CPUS=${NUM_CPU_PER_NODE}*${NUM_NODES} NUM_GPUS=${NUM_GPU_PER_NODE}*${NUM_NODES}
-python -u -m rlfd.launch --redis_password $redis_password --ip_head $ip_head --num_cpus $NUM_CPUS --num_gpus $NUM_GPUS --targets train:${TRAINING_FILE}
+python -u -m rlfd.launch --redis_password $redis_password --ip_head $ip_address_port --num_cpus $NUM_CPUS --num_gpus $NUM_GPUS --targets train:${TRAINING_FILE}
