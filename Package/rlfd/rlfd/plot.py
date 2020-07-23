@@ -266,8 +266,8 @@ def plot_results(allresults, xys, save_dir, save_name, smooth=False):
   save_name = "plot_{}_{}.jpg".format(save_name, date_time)
   save_path = osp.join(save_dir, save_name)
   print("Saving image to " + save_path)
-  plt.savefig(save_path, dpi=200)
   plt.show()
+  plt.savefig(save_path, dpi=200)
 
 
 def main(dirs, xys, save_dir=None, save_name="", smooth=False, **kwargs):
