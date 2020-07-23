@@ -44,7 +44,7 @@ default_params = {
         "alpha": 0.2,
         # cql specific
         "cql_tau": 0.0,
-        "auto_cql_alpha": False,
+        "auto_cql_alpha": True,
         "cql_log_alpha": 2.0,
         "cql_alpha_lr": 3e-4,
         "q_lr": 3e-4,
