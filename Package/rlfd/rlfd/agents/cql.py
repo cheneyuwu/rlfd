@@ -53,10 +53,7 @@ class CQL(sac.SAC):
       # replay buffer
       buffer_size,
       info):
-    # Store initial args passed into the function
-    self.init_args = locals()
-
-    agent.Agent.__init__(self)
+    agent.Agent.__init__(self, locals())
 
     self.dims = dims
     self.dimo = self.dims["o"]
@@ -103,33 +100,14 @@ class CQL(sac.SAC):
     self._initialize_training_steps()
 
   def _create_model(self):
-    # Normalizer for goal and observation.
-    self._o_stats = normalizer.Normalizer(self.dimo, self.norm_eps,
-                                          self.norm_clip)
-    self._g_stats = normalizer.Normalizer(self.dimg, self.norm_eps,
-                                          self.norm_clip)
-    # Models
-    self._actor = sac_networks.Actor(self.dimo, self.dimg, self.dimu,
-                                     self.max_u, self.layer_sizes)
-    self._criticq1 = sac_networks.CriticQ(self.dimo, self.dimg, self.dimu,
-                                          self.max_u, self.layer_sizes)
-    self._criticq2 = sac_networks.CriticQ(self.dimo, self.dimg, self.dimu,
-                                          self.max_u, self.layer_sizes)
-    self._criticq1_target = sac_networks.CriticQ(self.dimo, self.dimg,
-                                                 self.dimu, self.max_u,
-                                                 self.layer_sizes)
-    self._criticq2_target = sac_networks.CriticQ(self.dimo, self.dimg,
-                                                 self.dimu, self.max_u,
-                                                 self.layer_sizes)
-    self._update_target_network(soft_target_tau=1.0)
-    # Optimizers
-    self._actor_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
-    self._criticq_optimizer = tfk.optimizers.Adam(learning_rate=self.q_lr)
+    self._initialize_actor()
+    self._initialize_critic()
+
+    # For BC initialization
     self._bc_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
     # Losses
     self._huber_loss = tfk.losses.Huber(delta=10.0,
                                         reduction=tfk.losses.Reduction.NONE)
-
     # Entropy regularizer
     if self.auto_alpha:
       self.log_alpha = tf.Variable(0., dtype=tf.float32)
@@ -145,8 +123,8 @@ class CQL(sac.SAC):
 
     # Generate policies
     def process_observation_expl(o, g):
-      norm_o = self._o_stats.normalize(o)
-      norm_g = self._g_stats.normalize(g)
+      norm_o = self._actor_o_norm(o)
+      norm_g = self._actor_g_norm(g)
       return norm_o, norm_g
 
     self._expl_policy = policies.Policy(
@@ -157,8 +135,8 @@ class CQL(sac.SAC):
         process_observation=process_observation_expl)
 
     def process_observation_eval(o, g):
-      norm_o = self._o_stats.normalize(o)
-      norm_g = self._g_stats.normalize(g)
+      norm_o = self._actor_o_norm(o)
+      norm_g = self._actor_g_norm(g)
       self._policy_inspect_graph(o, g)
       return norm_o, norm_g
 
@@ -170,13 +148,9 @@ class CQL(sac.SAC):
         process_observation=process_observation_eval)
 
   def _cql_criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
-    # Normalize observations
-    norm_o = self._o_stats.normalize(o)
-    norm_g = self._g_stats.normalize(g)
-    norm_o_2 = self._o_stats.normalize(o_2)
-    norm_g_2 = self._g_stats.normalize(g_2)
-
-    pi_2, logprob_pi_2 = self._actor([norm_o_2, norm_g_2])
+    pi_2, logprob_pi_2 = self._actor(
+        [self._actor_o_norm(o_2),
+         self._actor_g_norm(g_2)])
 
     # Immediate reward
     target_q = r
@@ -187,40 +161,58 @@ class CQL(sac.SAC):
       target_q += (1.0 - done) * tf.pow(self.gamma,
                                         n) * potential_next - potential_curr
     # Q value from next state
-    target_next_q1 = self._criticq1_target([norm_o_2, norm_g_2, pi_2])
-    target_next_q2 = self._criticq2_target([norm_o_2, norm_g_2, pi_2])
+    target_next_q1 = self._criticq1_target(
+        [self._critic_o_norm(o_2),
+         self._critic_g_norm(g_2), pi_2])
+    target_next_q2 = self._criticq2_target(
+        [self._critic_o_norm(o_2),
+         self._critic_g_norm(g_2), pi_2])
     target_next_min_q = tf.minimum(target_next_q1, target_next_q2)
     target_q += ((1.0 - done) * tf.pow(self.gamma, n) *
                  (target_next_min_q - self.alpha * logprob_pi_2))
     target_q = tf.stop_gradient(target_q)
 
-    td_loss_q1 = self._huber_loss(target_q, self._criticq1([norm_o, norm_g, u]))
-    td_loss_q2 = self._huber_loss(target_q, self._criticq2([norm_o, norm_g, u]))
+    td_loss_q1 = self._huber_loss(
+        target_q,
+        self._criticq1([self._critic_o_norm(o),
+                        self._critic_g_norm(g), u]))
+    td_loss_q2 = self._huber_loss(
+        target_q,
+        self._criticq2([self._critic_o_norm(o),
+                        self._critic_g_norm(g), u]))
     td_loss = td_loss_q1 + td_loss_q2
     # Being Conservative (Eqn.4)
+    critic_o = self._critic_o_norm(o)
+    critic_g = self._critic_g_norm(g)
     # second term
-    max_term_q1 = self._criticq1([norm_o, norm_g, u])
-    max_term_q2 = self._criticq2([norm_o, norm_g, u])
+    max_term_q1 = self._criticq1([critic_o, critic_g, u])
+    max_term_q2 = self._criticq2([critic_o, critic_g, u])
     # first term (uniform)
     num_samples = 10
-    tiled_norm_o = tf.tile(tf.expand_dims(norm_o, axis=1),
-                           [1, num_samples] + [1] * len(self.dimo))
-    tiled_norm_g = tf.tile(tf.expand_dims(norm_g, axis=1),
-                           [1, num_samples] + [1] * len(self.dimg))
+    tiled_critic_o = tf.tile(tf.expand_dims(critic_o, axis=1),
+                             [1, num_samples] + [1] * len(self.dimo))
+    tiled_critic_g = tf.tile(tf.expand_dims(critic_g, axis=1),
+                             [1, num_samples] + [1] * len(self.dimg))
     uni_u_dist = tfd.Uniform(low=-self.max_u * tf.ones(self.dimu),
                              high=self.max_u * tf.ones(self.dimu))
     uni_u = uni_u_dist.sample((tf.shape(u)[0], num_samples))
     logprob_uni_u = tf.reduce_sum(uni_u_dist.log_prob(uni_u),
                                   axis=list(range(2, 2 + len(self.dimu))),
                                   keepdims=True)
-    uni_q1 = self._criticq1([tiled_norm_o, tiled_norm_g, uni_u])
-    uni_q2 = self._criticq2([tiled_norm_o, tiled_norm_g, uni_u])
+    uni_q1 = self._criticq1([tiled_critic_o, tiled_critic_g, uni_u])
+    uni_q2 = self._criticq2([tiled_critic_o, tiled_critic_g, uni_u])
     uni_q1_logprob_uni_u = uni_q1 - logprob_uni_u
     uni_q2_logprob_uni_u = uni_q2 - logprob_uni_u
     # first term (policy)
-    pi, logprob_pi = self._actor([tiled_norm_o, tiled_norm_g])
-    pi_q1 = self._criticq1([tiled_norm_o, tiled_norm_g, pi])
-    pi_q2 = self._criticq2([tiled_norm_o, tiled_norm_g, pi])
+    actor_o = self._actor_o_norm(o)
+    actor_g = self._actor_g_norm(g)
+    tiled_actor_o = tf.tile(tf.expand_dims(actor_o, axis=1),
+                            [1, num_samples] + [1] * len(self.dimo))
+    tiled_actor_g = tf.tile(tf.expand_dims(actor_g, axis=1),
+                            [1, num_samples] + [1] * len(self.dimg))
+    pi, logprob_pi = self._actor([tiled_actor_o, tiled_actor_g])
+    pi_q1 = self._criticq1([tiled_critic_o, tiled_critic_g, pi])
+    pi_q2 = self._criticq2([tiled_critic_o, tiled_critic_g, pi])
     pi_q1_logprob_pi = pi_q1 - logprob_pi
     pi_q2_logprob_pi = pi_q2 - logprob_pi
     # Note: log(2N) not included in this case since it is constant.
@@ -264,7 +256,6 @@ class CQL(sac.SAC):
       cql_alpha_grads = tape.gradient(cql_alpha_loss, [self.cql_log_alpha])
       self._cql_alpha_optimizer.apply_gradients(
           zip(cql_alpha_grads, [self.cql_log_alpha]))
-    # self.cql_alpha.assign(tf.exp(self.cql_log_alpha))
     with tf.name_scope('OfflineLosses/'):
       tf.summary.scalar(name='cql alpha vs {}'.format(
           self.offline_training_step.name),
@@ -309,5 +300,6 @@ class CQL(sac.SAC):
 
       self._train_offline_graph(o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf,
                                 done_tf)
-      if self.offline_training_step % self.target_update_freq == 0:
-        self._update_target_network()
+      if self.online_training_step % self.target_update_freq == 0:
+        self._copy_weights(self._criticq1, self._criticq1_target)
+        self._copy_weights(self._criticq2, self._criticq2_target)

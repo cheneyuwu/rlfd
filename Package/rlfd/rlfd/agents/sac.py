@@ -46,10 +46,7 @@ class SAC(agent.Agent):
       # replay buffer
       buffer_size,
       info):
-    # Store initial args passed into the function
-    self.init_args = locals()
-
-    super().__init__()
+    super().__init__(locals())
 
     self.dims = dims
     self.dimo = self.dims["o"]
@@ -114,34 +111,64 @@ class SAC(agent.Agent):
       self.offline_buffer = memory.StepBaseReplayBuffer(buffer_shapes,
                                                         self.buffer_size)
 
-  def _create_model(self):
-    # Normalizer for goal and observation.
-    self._o_stats = normalizer.Normalizer(self.dimo, self.norm_eps,
-                                          self.norm_clip)
-    self._g_stats = normalizer.Normalizer(self.dimg, self.norm_eps,
-                                          self.norm_clip)
-    # Models
+  def _initialize_actor(self):
+    self._actor_o_norm = normalizer.Normalizer(self.dimo, self.norm_eps,
+                                               self.norm_clip)
+    self._actor_g_norm = normalizer.Normalizer(self.dimg, self.norm_eps,
+                                               self.norm_clip)
+
     self._actor = sac_networks.Actor(self.dimo, self.dimg, self.dimu,
                                      self.max_u, self.layer_sizes)
+    self._actor_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
+
+    self._actor_models = {
+        "actor_o_norm": self._actor_o_norm,
+        "actor_g_norm": self._actor_g_norm,
+        "actor": self._actor,
+    }
+    self.save_model(self._actor_models)
+
+  def _initialize_critic(self):
+    self._critic_o_norm = normalizer.Normalizer(self.dimo, self.norm_eps,
+                                                self.norm_clip)
+    self._critic_g_norm = normalizer.Normalizer(self.dimg, self.norm_eps,
+                                                self.norm_clip)
+
     self._criticq1 = sac_networks.CriticQ(self.dimo, self.dimg, self.dimu,
-                                          self.max_u, self.layer_sizes)
-    self._criticq2 = sac_networks.CriticQ(self.dimo, self.dimg, self.dimu,
                                           self.max_u, self.layer_sizes)
     self._criticq1_target = sac_networks.CriticQ(self.dimo, self.dimg,
                                                  self.dimu, self.max_u,
                                                  self.layer_sizes)
+    self._copy_weights(self._criticq1, self._criticq1_target, 1.0)
+
+    self._criticq2 = sac_networks.CriticQ(self.dimo, self.dimg, self.dimu,
+                                          self.max_u, self.layer_sizes)
     self._criticq2_target = sac_networks.CriticQ(self.dimo, self.dimg,
                                                  self.dimu, self.max_u,
                                                  self.layer_sizes)
-    self._update_target_network(soft_target_tau=1.0)
-    # Optimizers
-    self._actor_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
+    self._copy_weights(self._criticq2, self._criticq2_target, 1.0)
+
     self._criticq_optimizer = tfk.optimizers.Adam(learning_rate=self.q_lr)
+
+    self._critic_models = {
+        "critic_o_norm": self._critic_o_norm,
+        "critic_g_norm": self._critic_g_norm,
+        "criticq1": self._criticq1,
+        "criticq2": self._criticq2,
+        "criticq1_target": self._criticq1_target,
+        "criticq2_target": self._criticq2_target,
+    }
+    self.save_model(self._critic_models)
+
+  def _create_model(self):
+    self._initialize_actor()
+    self._initialize_critic()
+
+    # For BC initialization
     self._bc_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
     # Losses
     self._huber_loss = tfk.losses.Huber(delta=10.0,
                                         reduction=tfk.losses.Reduction.NONE)
-
     # Entropy regularizer
     if self.auto_alpha:
       self.log_alpha = tf.Variable(0., dtype=tf.float32)
@@ -152,8 +179,8 @@ class SAC(agent.Agent):
 
     # Generate policies
     def process_observation_expl(o, g):
-      norm_o = self._o_stats.normalize(o)
-      norm_g = self._g_stats.normalize(g)
+      norm_o = self._actor_o_norm(o)
+      norm_g = self._actor_g_norm(g)
       return norm_o, norm_g
 
     self._expl_policy = policies.Policy(
@@ -164,8 +191,8 @@ class SAC(agent.Agent):
         process_observation=process_observation_expl)
 
     def process_observation_eval(o, g):
-      norm_o = self._o_stats.normalize(o)
-      norm_g = self._g_stats.normalize(g)
+      norm_o = self._actor_o_norm(o)
+      norm_g = self._actor_g_norm(g)
       self._policy_inspect_graph(o, g)
       return norm_o, norm_g
 
@@ -197,11 +224,13 @@ class SAC(agent.Agent):
   @tf.function
   def estimate_q_graph(self, o, g, u):
     """A convenient function for shaping"""
-    o = self._o_stats.normalize(o)
-    g = self._g_stats.normalize(g)
-    return self._criticq1([o, g, u])
+    return self._criticq1([self._critic_o_norm(o), self._critic_g_norm(g), u])
 
-  def before_training_hook(self, data_dir=None, env=None, shaping=None):
+  def before_training_hook(self,
+                           data_dir=None,
+                           env=None,
+                           shaping=None,
+                           pretrained_agent=None):
     """Adds data to the offline replay buffer and add shaping"""
     # Offline data
     # D4RL
@@ -217,6 +246,16 @@ class SAC(agent.Agent):
       self._update_stats(experiences)
 
     self.shaping = shaping
+    self.pretrained_agent = pretrained_agent
+
+  def before_online_hook(self):
+    if self.use_pretrained_actor:
+      for k, v in self._actor_models:
+        self._copy_weights(self.pretrained_agent.get_saved_model(k), v, 1.0)
+
+    if self.use_pretrained_critic:
+      for k, v in self._critic_models:
+        self._copy_weights(self.pretrained_agent.get_saved_model(k), v, 1.0)
 
   def _update_stats(self, experiences):
     # add transitions to normalizer
@@ -229,8 +268,10 @@ class SAC(agent.Agent):
       transitions = experiences.copy()
     o_tf = tf.convert_to_tensor(transitions["o"], dtype=tf.float32)
     g_tf = tf.convert_to_tensor(transitions["g"], dtype=tf.float32)
-    self._o_stats.update(o_tf)
-    self._g_stats.update(g_tf)
+    self._actor_o_norm.update(o_tf)
+    self._actor_g_norm.update(g_tf)
+    self._critic_o_norm.update(o_tf)
+    self._critic_g_norm.update(g_tf)
 
   def store_experiences(self, experiences):
     self.online_buffer.store(experiences)
@@ -258,10 +299,9 @@ class SAC(agent.Agent):
 
   @tf.function
   def _train_offline_graph(self, o, g, u):
-    o = self._o_stats.normalize(o)
-    g = self._g_stats.normalize(g)
     with tf.GradientTape() as tape:
-      pi, logprob_pi = self._actor([o, g])
+      pi, logprob_pi = self._actor(
+          [self._actor_o_norm(o), self._actor_g_norm(g)])
       bc_loss = tf.reduce_mean(tf.square(pi - u))
     actor_grads = tape.gradient(bc_loss, self._actor.trainable_weights)
     self._bc_optimizer.apply_gradients(
@@ -281,16 +321,13 @@ class SAC(agent.Agent):
       g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
       u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
       self._train_offline_graph(o_tf, g_tf, u_tf)
-      self._update_target_network(soft_target_tau=1.0)
+      self._copy_weights(self._criticq1, self._criticq1_target, 1.0)
+      self._copy_weights(self._criticq2, self._criticq2_target, 1.0)
 
   def _sac_criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
-    # Normalize observations
-    norm_o = self._o_stats.normalize(o)
-    norm_g = self._g_stats.normalize(g)
-    norm_o_2 = self._o_stats.normalize(o_2)
-    norm_g_2 = self._g_stats.normalize(g_2)
-
-    pi_2, logprob_pi_2 = self._actor([norm_o_2, norm_g_2])
+    pi_2, logprob_pi_2 = self._actor(
+        [self._actor_o_norm(o_2),
+         self._actor_g_norm(g_2)])
 
     # Immediate reward
     target_q = r
@@ -301,15 +338,25 @@ class SAC(agent.Agent):
       target_q += (1.0 - done) * tf.pow(self.gamma,
                                         n) * potential_next - potential_curr
     # Q value from next state
-    target_next_q1 = self._criticq1_target([norm_o_2, norm_g_2, pi_2])
-    target_next_q2 = self._criticq2_target([norm_o_2, norm_g_2, pi_2])
+    target_next_q1 = self._criticq1_target(
+        [self._critic_o_norm(o_2),
+         self._critic_g_norm(g_2), pi_2])
+    target_next_q2 = self._criticq2_target(
+        [self._critic_o_norm(o_2),
+         self._critic_g_norm(g_2), pi_2])
     target_next_min_q = tf.minimum(target_next_q1, target_next_q2)
     target_q += ((1.0 - done) * tf.pow(self.gamma, n) *
                  (target_next_min_q - self.alpha * logprob_pi_2))
     target_q = tf.stop_gradient(target_q)
 
-    td_loss_q1 = self._huber_loss(target_q, self._criticq1([norm_o, norm_g, u]))
-    td_loss_q2 = self._huber_loss(target_q, self._criticq2([norm_o, norm_g, u]))
+    td_loss_q1 = self._huber_loss(
+        target_q,
+        self._criticq1([self._critic_o_norm(o),
+                        self._critic_g_norm(g), u]))
+    td_loss_q2 = self._huber_loss(
+        target_q,
+        self._criticq2([self._critic_o_norm(o),
+                        self._critic_g_norm(g), u]))
     td_loss = td_loss_q1 + td_loss_q2
 
     criticq_loss = tf.reduce_mean(td_loss)
@@ -319,13 +366,13 @@ class SAC(agent.Agent):
     return criticq_loss
 
   def _sac_actor_loss_graph(self, o, g, u, step):
-    # Normalize observations
-    norm_o = self._o_stats.normalize(o)
-    norm_g = self._g_stats.normalize(g)
-
-    pi, logprob_pi = self._actor([norm_o, norm_g])
-    current_q1 = self._criticq1([norm_o, norm_g, pi])
-    current_q2 = self._criticq2([norm_o, norm_g, pi])
+    pi, logprob_pi = self._actor([self._actor_o_norm(o), self._actor_g_norm(g)])
+    current_q1 = self._criticq1(
+        [self._critic_o_norm(o),
+         self._critic_g_norm(g), pi])
+    current_q2 = self._criticq2(
+        [self._critic_o_norm(o),
+         self._critic_g_norm(g), pi])
     current_min_q = tf.minimum(current_q1, current_q2)
 
     actor_loss = tf.reduce_mean(self.alpha * logprob_pi - current_min_q)
@@ -339,10 +386,7 @@ class SAC(agent.Agent):
     return actor_loss
 
   def _alpha_loss_graph(self, o, g, step):
-    norm_o = self._o_stats.normalize(o)
-    norm_g = self._g_stats.normalize(g)
-
-    _, logprob_pi = self._actor([norm_o, norm_g])
+    _, logprob_pi = self._actor([self._actor_o_norm(o), self._actor_g_norm(g)])
     alpha_loss = -tf.reduce_mean(
         (self.log_alpha * tf.stop_gradient(logprob_pi + self.target_alpha)))
 
@@ -408,19 +452,15 @@ class SAC(agent.Agent):
       self._train_online_graph(o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf,
                                done_tf)
       if self.online_training_step % self.target_update_freq == 0:
-        self._update_target_network()
+        self._copy_weights(self._criticq1, self._criticq1_target)
+        self._copy_weights(self._criticq2, self._criticq2_target)
 
-  def _update_target_network(self, soft_target_tau=None):
+  def _copy_weights(self, source, target, soft_target_tau=None):
     soft_target_tau = (soft_target_tau
                        if soft_target_tau else self.soft_target_tau)
-    copy_func = lambda v: v[0].assign(
-        (1.0 - soft_target_tau) * v[0] + soft_target_tau * v[1])
-    list(
-        map(copy_func, zip(self._criticq1_target.weights,
-                           self._criticq1.weights)))
-    list(
-        map(copy_func, zip(self._criticq2_target.weights,
-                           self._criticq2.weights)))
+    copy_func = lambda v: v[1].assign(
+        (1.0 - soft_target_tau) * v[1] + soft_target_tau * v[0])
+    list(map(copy_func, zip(source.weights, target.weights)))
 
   @tf.function
   def _policy_inspect_graph(self, o, g):
@@ -434,13 +474,12 @@ class SAC(agent.Agent):
       if self.shaping != None:
         self._policy_inspect_potential = tf.Variable(0.0, trainable=False)
 
-    norm_o = self._o_stats.normalize(o)
-    norm_g = self._g_stats.normalize(g)
-    mean_u, logprob_u = self._actor([norm_o, norm_g])
+    mean_u, logprob_u = self._actor(
+        [self._actor_o_norm(o), self._actor_g_norm(g)])
 
     self._total_policy_inspect_count.assign_add(1)
     self._policy_inspect_count.assign_add(1)
-    q = self._criticq1([norm_o, norm_g, mean_u])
+    q = self._criticq1([self._critic_o_norm(o), self._critic_g_norm(g), mean_u])
     self._policy_inspect_estimate_q.assign_add(tf.reduce_sum(q))
     if self.shaping != None:
       p = self.shaping.potential(o=o, g=g, u=mean_u)
@@ -473,31 +512,13 @@ class SAC(agent.Agent):
           self._policy_inspect_potential.assign(0.0)
 
   def __getstate__(self):
-    """
-    Our policies can be loaded from pkl, but after unpickling you cannot continue training.
-    """
-    state = {k: v for k, v in self.init_args.items() if not k == "self"}
+    """For pickle. Store weights"""
+    state = super().__getstate__()
     state["shaping"] = self.shaping
-    state["tf"] = {
-        "o_stats": self._o_stats.get_weights(),
-        "g_stats": self._g_stats.get_weights(),
-        "actor": self._actor.get_weights(),
-        "criticq1": self._criticq1.get_weights(),
-        "criticq2": self._criticq2.get_weights(),
-        "criticq1_target": self._criticq1_target.get_weights(),
-        "criticq2_target": self._criticq2_target.get_weights(),
-    }
     return state
 
   def __setstate__(self, state):
-    stored_vars = state.pop("tf")
+    """For pickle. Re-instantiate the class, load weights"""
     shaping = state.pop("shaping")
-    self.__init__(**state)
-    self._o_stats.set_weights(stored_vars["o_stats"])
-    self._g_stats.set_weights(stored_vars["g_stats"])
-    self._actor.set_weights(stored_vars["actor"])
-    self._criticq1.set_weights(stored_vars["criticq1"])
-    self._criticq2.set_weights(stored_vars["criticq2"])
-    self._criticq1_target.set_weights(stored_vars["criticq1_target"])
-    self._criticq2_target.set_weights(stored_vars["criticq2_target"])
+    super().__setstate__(state)
     self.shaping = shaping

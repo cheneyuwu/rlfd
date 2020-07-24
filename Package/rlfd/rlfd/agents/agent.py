@@ -18,9 +18,11 @@ class Agent(tf.Module, metaclass=abc.ABCMeta):
     super().__init_subclass__(**kwargs)
     AGENTS[cls.__name__] = cls
 
-  def __init__(self):
+  def __init__(self, init_args):
     super().__init__()
 
+    self._init_args = init_args
+    self._saved_model = dict()
     self._tf_ckpt = tf.train.Checkpoint(agent=self)
     self._tf_ckpt_manager = None
     self._tf_ckpt_dir = None
@@ -39,6 +41,14 @@ class Agent(tf.Module, metaclass=abc.ABCMeta):
   def before_training_hook(self, data_dir=None, env=None):
     """Adds data to the replay buffer and initalizes shaping"""
 
+  def before_offline_hook(self):
+    """Optional: before offline training"""
+    pass
+
+  def before_online_hook(self):
+    """Optional: before online training"""
+    pass
+
   @abc.abstractmethod
   def train_offline(self):
     """Performs one step of offline training"""
@@ -55,6 +65,17 @@ class Agent(tf.Module, metaclass=abc.ABCMeta):
   def get_default_params(self):
     """Return default parameters as a dictionary"""
     return {}
+
+  def save_model(self, model):
+    """Save a tf model when calling agent.save. Only call this function during
+    class initialization.
+    
+    :param model a dictionary mapping model name to model
+    """
+    self._saved_model.update(model)
+
+  def get_saved_model(self, model):
+    return self._saved_model[model]
 
   def save(self, policy_path, ckpt_path=None):
     """Pickles the current policy."""
@@ -80,6 +101,19 @@ class Agent(tf.Module, metaclass=abc.ABCMeta):
 
   def __getstate__(self):
     """For pickle. Store weights"""
+    state = {
+        k: v
+        for k, v in self._init_args.items()
+        if not k in ["self", "__class__"]
+    }
+    state["tf_model"] = {
+        k: v.get_weights() for k, v in self._saved_model.items()
+    }
+    return state
 
   def __setstate__(self, state):
     """For pickle. Re-instantiate the class, load weights"""
+    tf_model = state.pop("tf_model")
+    self.__init__(**state)
+    for k, v in tf_model.items():
+      self._saved_model[k].set_weights(tf_model[k])

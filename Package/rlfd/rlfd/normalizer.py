@@ -1,5 +1,3 @@
-"""Adopted from openai baseline
-"""
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -33,6 +31,17 @@ class Normalizer(tfk.Model):
     self.std_tf = tf.Variable(tf.ones(self.shape), trainable=False)
 
   @tf.function
+  def call(self, v):  # normalize
+    mean_tf, std_tf = self._reshape_for_broadcasting(v)
+    return tf.clip_by_value((v - mean_tf) / std_tf, -self.clip_range,
+                            self.clip_range)
+
+  @tf.function
+  def denormalize(self, v):
+    mean_tf, std_tf = self._reshape_for_broadcasting(v)
+    return mean_tf + v * std_tf
+
+  @tf.function
   def update(self, v):
     v = tf.reshape(v, [-1] + list(self.shape))
     self.count_tf.assign_add(tf.cast(tf.shape(v)[0], tf.float32))
@@ -45,17 +54,6 @@ class Normalizer(tfk.Model):
             tf.maximum(
                 tf.square(self.eps), self.sumsq_tf / self.count_tf -
                 tf.square(self.sum_tf / self.count_tf))))
-
-  @tf.function
-  def normalize(self, v):
-    mean_tf, std_tf = self._reshape_for_broadcasting(v)
-    return tf.clip_by_value((v - mean_tf) / std_tf, -self.clip_range,
-                            self.clip_range)
-
-  @tf.function
-  def denormalize(self, v):
-    mean_tf, std_tf = self._reshape_for_broadcasting(v)
-    return mean_tf + v * std_tf
 
   def _reshape_for_broadcasting(self, v):
     dim = len(v.shape) - len(self.shape)
@@ -70,7 +68,7 @@ def test_normalizer():
   train_data = dist.sample([1000000])
   test_data = dist.sample([1000000])
   normalizer.update(train_data)
-  output = normalizer.normalize(test_data)
+  output = normalizer(test_data)
   revert_output = normalizer.denormalize(output)
   print("After normalization:")
   print(np.round(np.mean(output, axis=0)), "\n", np.round(np.std(output,
