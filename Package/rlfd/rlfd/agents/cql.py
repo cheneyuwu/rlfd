@@ -47,6 +47,8 @@ class CQL(sac.SAC):
       soft_target_tau,
       target_update_freq,
       # online training plus offline data
+      use_pretrained_actor,
+      use_pretrained_critic,
       online_data_strategy,
       # online bc regularizer
       bc_params,
@@ -90,6 +92,8 @@ class CQL(sac.SAC):
     self.norm_eps = norm_eps
     self.norm_clip = norm_clip
 
+    self.use_pretrained_actor = use_pretrained_actor
+    self.use_pretrained_critic = use_pretrained_critic
     self.online_data_strategy = online_data_strategy
     assert self.online_data_strategy in ["None", "BC", "Shaping"]
     self.bc_params = bc_params

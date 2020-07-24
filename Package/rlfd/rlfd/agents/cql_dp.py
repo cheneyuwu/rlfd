@@ -52,6 +52,8 @@ class CQLDP(cql.CQL):
       soft_target_tau,
       target_update_freq,
       # online training plus offline data
+      use_pretrained_actor,
+      use_pretrained_critic,
       online_data_strategy,
       # online bc regularizer
       bc_params,
@@ -97,6 +99,8 @@ class CQLDP(cql.CQL):
     self.norm_eps = norm_eps
     self.norm_clip = norm_clip
 
+    self.use_pretrained_actor = use_pretrained_actor
+    self.use_pretrained_critic = use_pretrained_critic
     self.online_data_strategy = online_data_strategy
     assert self.online_data_strategy in ["None", "BC", "Shaping"]
     self.bc_params = bc_params
@@ -189,8 +193,10 @@ class CQLDP(cql.CQL):
     log_sum_exp_q2 = tf.math.reduce_logsumexp(tf.concat(
         (uni_q2_logprob_uni_u, pi_q2_logprob_pi), axis=1),
                                               axis=1)
-    cql_loss_q1 = (tf.exp(self.cql_log_alpha) * (log_sum_exp_q1 - self.cql_tau))
-    cql_loss_q2 = (tf.exp(self.cql_log_alpha) * (log_sum_exp_q2 - self.cql_tau))
+    cql_loss_q1 = (tf.exp(self.cql_log_alpha) *
+                   (log_sum_exp_q1 - max_term_q1 - self.cql_tau))
+    cql_loss_q2 = (tf.exp(self.cql_log_alpha) *
+                   (log_sum_exp_q2 - max_term_q2 - self.cql_tau))
     cql_loss = cql_loss_q1 + cql_loss_q2
 
     criticq_loss = tf.reduce_mean(td_loss) + tf.reduce_mean(cql_loss)
