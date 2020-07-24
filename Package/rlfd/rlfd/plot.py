@@ -275,3 +275,43 @@ def main(dirs, xys, save_dir=None, save_name="", smooth=False, **kwargs):
   # get directory to save results
   save_dir = save_dir if save_dir else dirs[0]
   plot_results(results, xys, save_dir, save_name, smooth)
+
+
+if __name__ == "__main__":
+
+  from rlfd.utils.cmd_util import ArgParser
+
+  exp_parser = ArgParser(allow_unknown_args=False)
+  exp_parser.parser.add_argument(
+      "-d",
+      "--dirs",
+      help="top level directory to store experiment results",
+      nargs="*",
+      type=str,
+      default=[os.getcwd()])
+  exp_parser.parser.add_argument(
+      "-p",
+      "--xys",
+      help="top level directory to store experiment results",
+      nargs="*",
+      type=str,
+      default=[
+          "OnlineTesting/AverageReturn vs EnvironmentSteps",
+          # "OfflineTesting/AverageReturn",
+      ])
+  exp_parser.parser.add_argument("-s",
+                                 "--save_dir",
+                                 help="top level directory to store plots",
+                                 type=str,
+                                 default=os.getcwd())
+  exp_parser.parser.add_argument("-n",
+                                 "--save_name",
+                                 help="name to store plots",
+                                 type=str,
+                                 default="")
+  exp_parser.parser.add_argument("--smooth",
+                                 help="smooth the plot",
+                                 type=bool,
+                                 default=False)
+  exp_parser.parse(sys.argv)
+  main(**exp_parser.get_dict())
