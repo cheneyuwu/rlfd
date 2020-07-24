@@ -206,7 +206,7 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, memory, time,
         with open(os.path.join(k, "params.json"), "w") as f:
           json.dump(v, f)
         # copy demo_sata file if exist
-        for f in ["demo_data.npz", "demo_policy.pkl", "shaping.pkl"]:
+        for f in ["demo_data.npz", "pretrained.pkl", "shaping.pkl"]:
           source = os.path.join(exp_dir, f)
           destination = os.path.join(k, f)
           if os.path.isfile(source):

@@ -34,6 +34,9 @@ default_params = {
         # exploration
         "expl_gaussian_noise": 0.1,
         "expl_random_prob": 0.0,
+        # online training use a pre-trained actor or critic
+        "use_pretrained_actor": False,
+        "use_pretrained_critic": False,
         # online training plus offline data
         "online_data_strategy": "None",  # ["None", "BC", "Shaping"]
         # normalize observation

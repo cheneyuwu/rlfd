@@ -96,6 +96,14 @@ def main(config):
     shaping.after_training_hook()
     shaping.save(shaping_file)
 
+  # Configure pre-trained agent
+  pretrained_agent = None
+  pretrained_file = osp.join(root_dir, "pretrained.pkl")
+  if osp.isfile(pretrained_file):
+    print("Load pretrained agent.")
+    with open(pretrained_file, "rb") as f:
+      pretrained_agent = pickle.load(f)
+
   # Configure agents and drivers.
   agent_params = params["agent"]
   agent = agents.AGENTS[params["algo"]](**agent_params, **env_params)
@@ -164,9 +172,13 @@ def main(config):
     os.makedirs(ckpt_path)
 
   # Load offline data and initialize shaping
-  agent.before_training_hook(data_dir=root_dir, env=make_env(), shaping=shaping)
+  agent.before_training_hook(data_dir=root_dir,
+                             env=make_env(),
+                             shaping=shaping,
+                             pretrained_agent=pretrained_agent)
 
   # Train offline
+  agent.before_offline_hook()
   eval_driver.generate_rollouts(observers=offline_testing_metrics)
   with tf.name_scope("OfflineTesting"):
     for metric in offline_testing_metrics[2:]:
@@ -194,6 +206,7 @@ def main(config):
         tune.track.log(mode="offline", epoch=epoch)  # previous versions
 
   # Train online
+  agent.before_online_hook()
   eval_driver.generate_rollouts(observers=testing_metrics)
   with tf.name_scope("OnlineTesting"):
     for metric in testing_metrics[2:]:

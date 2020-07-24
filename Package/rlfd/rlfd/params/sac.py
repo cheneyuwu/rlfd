@@ -31,6 +31,9 @@ default_params = {
         "offline_batch_size": 0,
         # replay buffer setup
         "buffer_size": int(1e6),
+        # online training use a pre-trained actor or critic
+        "use_pretrained_actor": False,
+        "use_pretrained_critic": False,
         # online training plus offline data
         "online_data_strategy": "None",  # ["None", "BC", "Shaping"]
         # normalize observation

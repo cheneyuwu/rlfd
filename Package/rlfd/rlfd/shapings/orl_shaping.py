@@ -23,7 +23,7 @@ class OfflineRLShaping(shaping.Shaping):
     return self._policy.estimate_q_graph(o, g, u)
 
   def before_training_hook(self, data_dir, **kwargs):
-    policy = osp.join(data_dir, "demo_policy.pkl")
+    policy = osp.join(data_dir, "pretrained.pkl")
     with open(policy, "rb") as f:
       self._policy = pickle.load(f)
 

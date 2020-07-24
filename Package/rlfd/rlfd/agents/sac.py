@@ -40,6 +40,8 @@ class SAC(agent.Agent):
       soft_target_tau,
       target_update_freq,
       # online training plus offline data
+      use_pretrained_actor,
+      use_pretrained_critic,
       online_data_strategy,
       # online bc regularizer
       bc_params,
@@ -78,6 +80,8 @@ class SAC(agent.Agent):
     self.norm_eps = norm_eps
     self.norm_clip = norm_clip
 
+    self.use_pretrained_actor = use_pretrained_actor
+    self.use_pretrained_critic = use_pretrained_critic
     self.online_data_strategy = online_data_strategy
     assert self.online_data_strategy in ["None", "BC", "Shaping"]
     self.bc_params = bc_params
@@ -250,11 +254,11 @@ class SAC(agent.Agent):
 
   def before_online_hook(self):
     if self.use_pretrained_actor:
-      for k, v in self._actor_models:
+      for k, v in self._actor_models.items():
         self._copy_weights(self.pretrained_agent.get_saved_model(k), v, 1.0)
 
     if self.use_pretrained_critic:
-      for k, v in self._critic_models:
+      for k, v in self._critic_models.items():
         self._copy_weights(self.pretrained_agent.get_saved_model(k), v, 1.0)
 
   def _update_stats(self, experiences):
