@@ -36,8 +36,6 @@ def main(policy, **kwargs):
   eval_driver = train.config_driver(make_env=make_env,
                                     policy=policy.eval_policy,
                                     **env_params)
-
-  eval_driver.clear_history()
   eval_driver.generate_rollouts()
 
   for key, val in eval_driver.logs("test"):
