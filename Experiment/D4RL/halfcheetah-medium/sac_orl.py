@@ -17,4 +17,6 @@ params_config["agent"]["online_data_strategy"] = "Shaping"
 # Tuned values
 params_config["seed"] = tuple(range(5))
 
+# Exp1
+# Uses a critic from offline trained critic via cql: cql_policy.pkl
 params_config["seed"] = tuple(range(4))
