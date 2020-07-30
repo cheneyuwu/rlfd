@@ -1,0 +1,4 @@
+[submodule "d4rl"]
+	path = d4rl
+	url = git@github.com:rail-berkeley/d4rl.git
+	branch = master
