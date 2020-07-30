@@ -7,22 +7,6 @@ from gym import spaces
 
 import d4rl
 import gym_rlfd
-from rlfd.envs import reacher_2d
-
-try:
-  import dmc2gym as dmc
-except ModuleNotFoundError:
-  dmc = None
-
-try:
-  from metaworld.envs.mujoco.env_dict import HARD_MODE_ARGS_KWARGS, HARD_MODE_CLS_DICT
-
-  mtw_envs = {**HARD_MODE_CLS_DICT["train"], **HARD_MODE_CLS_DICT["test"]}
-  mtw_args = {**HARD_MODE_ARGS_KWARGS["train"], **HARD_MODE_ARGS_KWARGS["test"]}
-
-except:
-  mtw_envs = None
-  mtw_args = None
 
 
 class EnvWrapper:
@@ -162,49 +146,6 @@ class EnvManager:
                r_shift=0.0,
                with_goal=True):
     self.make_env = None
-    # Search from our own environments
-    if env_name == "Reach2D":
-      env_args["sparse"] = True
-      self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
-    elif env_name == "Reach2DDense":
-      env_args["sparse"] = False
-      self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
-    elif env_name == "Reach2DF":
-      env_args["order"] = 1
-      env_args["sparse"] = True
-      self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
-    elif env_name == "Reach2DFDense":
-      env_args["order"] = 1
-      env_args["sparse"] = False
-      self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
-    elif env_name == "BlockReachF":
-      env_args["sparse"] = True
-      env_args["order"] = 1
-      env_args["block"] = True
-      self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
-    elif env_name == "BlockReachFDense":
-      env_args["sparse"] = False
-      env_args["order"] = 1
-      env_args["block"] = True
-      self.make_env = lambda: reacher_2d.make("Reacher", **env_args)
-
-    # Search in DMC Envs
-    if self.make_env is None and dmc is not None and ":" in env_name:
-      # acrobot swingup, acrobot swingup_sparse, ball_in_cup catch,
-      # cartpole balance, cartpole balance_sparse, cartpole swingup,
-      # cartpole swingup_sparse, cheetah run, finger spin, finger turn_easy,
-      # finger turn_hard, fish upright, fish swim, hopper stand, hopper hop,
-      # humanoid stand, humanoid walk, humanoid run, manipulator bring_ball,
-      # pendulum swingup, point_mass easy, reacher easy, reacher hard, swimmer
-      # swimmer6, swimmer swimmer15, walker stand, walker walk, walker run
-      domain_name, task_name = env_name.split(":")
-      try:
-        dmc.make(domain_name=domain_name, task_name=task_name)
-        self.make_env = lambda: dmc.make(domain_name=domain_name,
-                                         task_name=task_name)
-      except ValueError:
-        pass
-
     # OpenAI Gym envs: https://gym.openai.com/envs/#mujoco
     # D4RL envs: https://github.com/rail-berkeley/d4rl/wiki/Tasks
     # Customized envs: YWPickAndPlaceRandInit-v0, YWPegInHoleRandInit-v0
@@ -215,23 +156,6 @@ class EnvManager:
         self.make_env = lambda: gym.make(env_name, **env_args)
       except gym.error.UnregisteredEnv:
         pass
-
-    # Search in MetaWorld envs
-    if (self.make_env is None and mtw_envs is not None and
-        env_name in mtw_envs.keys()):
-
-      def make_env():
-        args = mtw_args[env_name]["args"]
-        kwargs = mtw_args[env_name]["kwargs"]
-        kwargs["random_init"] = (env_args["random_init"]
-                                 if "random_init" in env_args.keys() else False
-                                )  # disable random goal locations
-        kwargs["obs_type"] = "with_goal"  # disable random goal locations
-        kwargs["rewMode"] = "sparse"  # use sparse reward mode by default
-        env = mtw_envs[env_name](*args, **kwargs)
-        return env
-
-      self.make_env = make_env
 
     if self.make_env is None:
       raise NotImplementedError
