@@ -1,8 +1,0 @@
-{
-    "fix_T": true,
-    "seed": 0,
-    "num_steps": null,
-    "num_episodes": 10,    
-    "render": false,
-    "filename": "demo_data.npz"
-}
