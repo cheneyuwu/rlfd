@@ -42,6 +42,7 @@ class SAC(agent.Agent):
       # online training plus offline data
       use_pretrained_actor,
       use_pretrained_critic,
+      use_pretrained_alpha,
       online_data_strategy,
       # online bc regularizer
       bc_params,
@@ -82,6 +83,7 @@ class SAC(agent.Agent):
 
     self.use_pretrained_actor = use_pretrained_actor
     self.use_pretrained_critic = use_pretrained_critic
+    self.use_pretrained_alpha = use_pretrained_alpha
     self.online_data_strategy = online_data_strategy
     assert self.online_data_strategy in ["None", "BC", "Shaping"]
     self.bc_params = bc_params
@@ -180,6 +182,7 @@ class SAC(agent.Agent):
       self.alpha.assign(tf.exp(self.log_alpha))
       self.target_alpha = -np.prod(self.dimu)
       self._alpha_optimizer = tfk.optimizers.Adam(learning_rate=self.alpha_lr)
+      self.save_var({"alpha": self.alpha, "log_alpha": self.log_alpha})
 
     # Generate policies
     def process_observation_expl(o, g):
@@ -260,6 +263,10 @@ class SAC(agent.Agent):
     if self.use_pretrained_critic:
       for k, v in self._critic_models.items():
         self._copy_weights(self.pretrained_agent.get_saved_model(k), v, 1.0)
+
+    if self.use_pretrained_alpha:
+      self.log_alpha.assign(self.pretrained_agent.get_saved_var["log_alpha"])
+      self.alpha.assign(self.pretrained_agent.get_saved_var["alpha"])
 
   def _update_stats(self, experiences):
     # add transitions to normalizer

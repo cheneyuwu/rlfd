@@ -49,6 +49,7 @@ class CQL(sac.SAC):
       # online training plus offline data
       use_pretrained_actor,
       use_pretrained_critic,
+      use_pretrained_alpha,
       online_data_strategy,
       # online bc regularizer
       bc_params,
@@ -94,6 +95,7 @@ class CQL(sac.SAC):
 
     self.use_pretrained_actor = use_pretrained_actor
     self.use_pretrained_critic = use_pretrained_critic
+    self.use_pretrained_alpha = use_pretrained_alpha
     self.online_data_strategy = online_data_strategy
     assert self.online_data_strategy in ["None", "BC", "Shaping"]
     self.bc_params = bc_params
@@ -119,11 +121,12 @@ class CQL(sac.SAC):
       self.alpha.assign(tf.exp(self.log_alpha))
       self.target_alpha = -np.prod(self.dimu)
       self._alpha_optimizer = tfk.optimizers.Adam(learning_rate=self.alpha_lr)
+      self.save_var({"alpha": self.alpha, "log_alpha": self.log_alpha})
 
     if self.auto_cql_alpha:
       self.cql_log_alpha = tf.Variable(0.0, dtype=tf.float32)
-    self._cql_alpha_optimizer = tfk.optimizers.Adam(
-        learning_rate=self.cql_alpha_lr)
+      self._cql_alpha_optimizer = tfk.optimizers.Adam(
+          learning_rate=self.cql_alpha_lr)
 
     # Generate policies
     def process_observation_expl(o, g):

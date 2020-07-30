@@ -22,6 +22,7 @@ class Agent(tf.Module, metaclass=abc.ABCMeta):
     super().__init__()
 
     self._init_args = init_args
+    self._saved_var = dict()
     self._saved_model = dict()
     self._tf_ckpt = tf.train.Checkpoint(agent=self)
     self._tf_ckpt_manager = None
@@ -66,10 +67,21 @@ class Agent(tf.Module, metaclass=abc.ABCMeta):
     """Return default parameters as a dictionary"""
     return {}
 
+  def save_var(self, var):
+    """Save a tf var when calling agent.save. Only call this function during
+    class initialization.
+
+    :param var a dictionary mapping var name to var
+    """
+    self._saved_var.update(var)
+
+  def get_saved_var(self, var):
+    return self._saved_var[var]
+
   def save_model(self, model):
     """Save a tf model when calling agent.save. Only call this function during
     class initialization.
-    
+
     :param model a dictionary mapping model name to model
     """
     self._saved_model.update(model)
@@ -106,6 +118,7 @@ class Agent(tf.Module, metaclass=abc.ABCMeta):
         for k, v in self._init_args.items()
         if not k in ["self", "__class__"]
     }
+    state["tf_var"] = {k: v.numpy() for k, v in self._saved_var.items()}
     state["tf_model"] = {
         k: v.get_weights() for k, v in self._saved_model.items()
     }
@@ -113,7 +126,10 @@ class Agent(tf.Module, metaclass=abc.ABCMeta):
 
   def __setstate__(self, state):
     """For pickle. Re-instantiate the class, load weights"""
+    tf_var = state.pop("tf_var")
     tf_model = state.pop("tf_model")
     self.__init__(**state)
+    for k, v in tf_var.items():
+      self._saved_var[k].assign(v)
     for k, v in tf_model.items():
-      self._saved_model[k].set_weights(tf_model[k])
+      self._saved_model[k].set_weights(v)

@@ -34,6 +34,7 @@ default_params = {
         # online training use a pre-trained actor or critic
         "use_pretrained_actor": False,
         "use_pretrained_critic": False,
+        "use_pretrained_alpha": False,
         # online training plus offline data
         "online_data_strategy": "None",  # ["None", "BC", "Shaping"]
         # normalize observation
