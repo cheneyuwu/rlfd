@@ -1,8 +1,4 @@
-# Shaping Rewards for Combined Reinforcement and Imitation Learning using Generative Models
-
-- by Yuchen Wu, Melissa Mozifian and Prof. Florian Shkurti
-
-## [Link to Project Webpage](http://www.cs.toronto.edu/~florian/rl_with_shaping/)
+# [rlfd]((http://www.cs.toronto.edu/~florian/rl_with_shaping/))
 
 ## Installation
 
@@ -10,28 +6,26 @@
   - [Instructions on installing it locally](http://www.mujoco.org/)
   - [Instructions on installing it on CC](https://docs.computecanada.ca/wiki/MuJoCo)
 - download the repo
-  - `git clone --recurse-submodules git@github.com:cheneyuwu/TD3fD-through-Shaping-using-Generative-Models`
-- build virtual env
-  - cluster: `module load python/3.6` (so that you have the correct python version)
-  - run `virtualenv venv` inside the root folder of the repo
+  - `git clone --recurse-submodules git@github.com:cheneyuwu/rlfd`
+- build virtual env (python >= 3.6, < 3.8)
+  - cluster: `module load python/3.6` (so you have the correct version)
+  - `virtualenv venv` (or use conda if preferred)
 - enter virtual env and install packages:
-  - install mujoco_py
+  - install mujoco_py (>= 2.0.0)
     - `pip install mujoco_py`
-  - install tensorflow
-    - local: `pip install tensorflow tensorflow_probability`
+  - install tensorflow (>= 2.2.0)
+    - local: `pip install tensorflow tensorflow_probability` (or use conda if preferred)
     - cluster: `pip install tensorflow_gpu tensorflow_probability`
-  - install pytorch (not used, but in case)
-    - `pip install torch torchvision torchsummary`
-  - install ray
-    - `pip install ray`
+  - install pytorch (>= 1.5.0)
+    - `pip install torch torchvision` (or use conda if preferred)
+  - install ray with tune (>= 0.8.0)
     - `pip install ray[tune]`
-  - install environments
+  - install environments and rlfd
     - `pip install gym`
-    - `pip install -e Package/gym_rlfd`
-    - `pip install -e Package/d4rl`
-    - `pip install -e Package/metaworld --no-deps`
+    - `pip install -e gym_rlfd`
+    - `pip install -e d4rl`
   - install rlfd
-    - `pip install -e Package/rlfd`
+    - `pip install -e rlfd`
 
 ## Running Experiments
 
@@ -131,7 +125,3 @@ python -m rlfd.launch --targets evaluate --policy <policy file name>.pkl
   ```
 
 This script will collect (recursively) all the experiment results under `<top level plotting directory>` and generate one plot named `Result_<environment name>.png` for each environment.
-
-### Examples
-
-1. [2D Peg Insertion Task with Optimal Demonstrations](./Experiment/YWPegInHole2DOptDemo)
