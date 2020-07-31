@@ -32,7 +32,7 @@ class Actor(tfk.Model):
     for l in self._mlp_layers:
       res = l(res)
     res = self._output_layer(res)
-    return res
+    return res * self._max_u
 
 
 class Critic(tfk.Model):
