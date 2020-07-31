@@ -26,6 +26,8 @@
     - `pip install -e d4rl`
   - install rlfd
     - `pip install -e rlfd`
+  - add rlfd environment variables
+    - `source setup.sh`
 
 ## Running Experiments
 
