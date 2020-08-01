@@ -39,7 +39,7 @@ default_params = {
         "online_data_strategy": "None",  # ["None", "BC", "Shaping"]
         # normalize observation
         "norm_obs_online": True,
-        "norm_obs_offline": False,
+        "norm_obs_offline": True,
         "norm_eps": 0.01,
         "norm_clip": 5,
         # actor critic networks
