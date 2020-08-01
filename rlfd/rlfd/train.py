@@ -168,8 +168,7 @@ def main(config):
   if osp.exists(ckpt_path):
     print("WARNING:rlfd:Loading from an checkpoint. Be careful!")
     agent.load(ckpt_path)
-  else:
-    os.makedirs(ckpt_path)
+  os.makedirs(ckpt_path, exist_ok=True)
 
   # Load offline data and initialize shaping
   agent.before_training_hook(data_dir=root_dir,

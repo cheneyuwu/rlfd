@@ -43,7 +43,8 @@ class StepBasedDriver(Driver):
     super().__init__(make_env=make_env, policy=policy, render=render)
 
     self.env = make_env()
-    assert any([num_steps, num_episodes]) and not all([num_steps, num_episodes])
+    assert (any([num_steps == None, num_episodes == None]) and
+            not all([num_steps == None, num_episodes == None]))
     self.num_steps = num_steps
     self.num_episodes = num_episodes
     self.eps_length = self.env.eps_length
@@ -57,14 +58,19 @@ class StepBasedDriver(Driver):
 
   def generate_rollouts(self, observers=()):
     """generate `num_steps` rollouts"""
-    # Information to store
+
+    # Special case for 0 step/episode.
+    if not self.num_steps and not self.num_episodes:
+      return None
+
     experiences = {
         k: [] for k in ("o", "o_2", "ag", "ag_2", "u", "g", "g_2", "r", "done")
     }
 
     current_step = 0
     current_episode = 0
-    while (not self.num_steps) or current_step < self.num_steps:
+    while ((self.num_steps != None and current_step < self.num_steps) or
+           (self.num_episodes != None and current_episode < self.num_episodes)):
       # start a new episode if the last one is done
       if self.done or (self.curr_eps_step == self.eps_length):
         self.done = False
@@ -108,8 +114,6 @@ class StepBasedDriver(Driver):
       self.curr_eps_step += 1
       if self.done or (self.curr_eps_step == self.eps_length):
         current_episode += 1
-        if self.num_episodes and current_episode == self.num_episodes:
-          break
 
     # Store all information into an episode dict
     for key, value in experiences.items():
@@ -126,7 +130,7 @@ class EpisodeBasedDriver(StepBasedDriver):
                num_steps=None,
                num_episodes=None,
                render=False):
-    assert num_episodes and not num_steps
+    assert num_episodes and (num_steps == None)
     super(EpisodeBasedDriver, self).__init__(make_env, policy, num_steps,
                                              num_episodes, render)
 

@@ -258,15 +258,6 @@ class TD3(agent.Agent):
     self.shaping = shaping
     self.pretrained_agent = pretrained_agent
 
-  def before_online_hook(self):
-    if self.use_pretrained_actor:
-      for k, v in self._actor_models.items():
-        self._copy_weights(self.pretrained_agent.get_saved_model(k), v, 1.0)
-
-    if self.use_pretrained_critic:
-      for k, v in self._critic_models.items():
-        self._copy_weights(self.pretrained_agent.get_saved_model(k), v, 1.0)
-
   def _update_stats(self, experiences):
     # add transitions to normalizer
     if self.fix_T:
@@ -282,6 +273,19 @@ class TD3(agent.Agent):
     self._actor_g_norm.update(g_tf)
     self._critic_o_norm.update(o_tf)
     self._critic_g_norm.update(g_tf)
+
+  def train_offline(self):
+    # No offline training.
+    self.offline_training_step.assign_add(1)
+
+  def before_online_hook(self):
+    if self.use_pretrained_actor:
+      for k, v in self._actor_models.items():
+        self._copy_weights(self.pretrained_agent.get_saved_model(k), v, 1.0)
+
+    if self.use_pretrained_critic:
+      for k, v in self._critic_models.items():
+        self._copy_weights(self.pretrained_agent.get_saved_model(k), v, 1.0)
 
   def store_experiences(self, experiences):
     self.online_buffer.store(experiences)
@@ -306,33 +310,6 @@ class TD3(agent.Agent):
       offline_batch = self.offline_buffer.sample(self.offline_batch_size)
       batch = self._merge_batch_experiences(online_batch, offline_batch)
     return batch
-
-  @tf.function
-  def _train_offline_graph(self, o, g, u):
-    with tf.GradientTape() as tape:
-      pi = self._actor([self._actor_o_norm(o), self._actor_g_norm(g)])
-      bc_loss = tf.reduce_mean(tf.square(pi - u))
-    actor_grads = tape.gradient(bc_loss, self._actor.trainable_weights)
-    self._bc_optimizer.apply_gradients(
-        zip(actor_grads, self._actor.trainable_weights))
-
-    with tf.name_scope('OfflineLosses/'):
-      tf.summary.scalar(name='bc_loss vs offline_training_step',
-                        data=bc_loss,
-                        step=self.offline_training_step)
-
-    self.offline_training_step.assign_add(1)
-
-  def train_offline(self):
-    with tf.summary.record_if(lambda: self.offline_training_step % 200 == 0):
-      batch = self.offline_buffer.sample(self.offline_batch_size)
-      o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-      g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
-      u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
-      self._train_offline_graph(o_tf, g_tf, u_tf)
-      self._copy_weights(self._actor, self._actor_target, 1.0)
-      self._copy_weights(self._criticq1, self._criticq1_target, 1.0)
-      self._copy_weights(self._criticq2, self._criticq2_target, 1.0)
 
   def _td3_criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
     # Add noise to target policy output

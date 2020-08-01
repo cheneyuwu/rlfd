@@ -13,6 +13,8 @@ from rlfd.agents import agent, sac, sac_networks
 
 
 class CQL(sac.SAC):
+  """Default online training algorithm of CQL is SAC.
+  """
 
   def __init__(
       self,
