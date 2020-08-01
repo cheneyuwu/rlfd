@@ -285,8 +285,8 @@ class SAC(agent.Agent):
         self._copy_weights(self.pretrained_agent.get_saved_model(k), v, 1.0)
 
     if self.use_pretrained_alpha:
-      self.log_alpha.assign(self.pretrained_agent.get_saved_var["log_alpha"])
-      self.alpha.assign(self.pretrained_agent.get_saved_var["alpha"])
+      self.log_alpha.assign(self.pretrained_agent.get_saved_var("log_alpha"))
+      self.alpha.assign(self.pretrained_agent.get_saved_var("alpha"))
 
   def store_experiences(self, experiences):
     self.online_buffer.store(experiences)
