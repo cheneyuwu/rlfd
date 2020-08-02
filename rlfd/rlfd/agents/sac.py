@@ -169,9 +169,6 @@ class SAC(agent.Agent):
   def _create_model(self):
     self._initialize_actor()
     self._initialize_critic()
-
-    # For BC initialization
-    self._bc_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
     # Losses
     self._huber_loss = tfk.losses.Huber(delta=10.0,
                                         reduction=tfk.losses.Reduction.NONE)
