@@ -15,11 +15,6 @@ import tensorflow as tf
 import ray
 from ray import tune
 
-# Tensorflow environment setup
-os.environ["TF_DETERMINISTIC_OPS"] = "1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-tf.get_logger().setLevel('ERROR')
-
 from rlfd import logger, plot, train, evaluate
 from rlfd.demo_utils import generate_demo
 
