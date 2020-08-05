@@ -14,6 +14,7 @@ default_params = {
     "env_args": {},
     "fix_T": False,
     # learner
+    "pretrained": None,
     "offline_num_epochs": 0,
     "offline_num_batches_per_epoch": 1000,
     "random_expl_num_cycles": int(1),

@@ -2,6 +2,7 @@ import argparse
 import collections
 import copy
 import importlib
+import glob
 import json
 import os
 import shutil
@@ -64,7 +65,7 @@ def generate_params(root_dir, param_config):
 
 
 def get_search_params(param_config):
-  """Returns a list of parameter keys we want to grid-search for and a dict of 
+  """Returns a list of parameter keys we want to grid-search for and a dict of
   grid-search values.
   """
 
@@ -206,7 +207,8 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, memory, time,
         with open(os.path.join(k, "params.json"), "w") as f:
           json.dump(v, f)
         # copy demo_sata file if exist
-        for f in ["demo_data.npz", "pretrained.pkl", "shaping.pkl"]:
+        for f in glob.glob("*.pkl") + glob.glob("*.npz"):
+          # .pkl -> pretrained policies, .npz -> demonstrations
           source = os.path.join(exp_dir, f)
           destination = os.path.join(k, f)
           if os.path.isfile(source):

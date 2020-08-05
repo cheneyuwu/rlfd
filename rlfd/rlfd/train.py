@@ -98,9 +98,9 @@ def main(config):
 
   # Configure pre-trained agent
   pretrained_agent = None
-  pretrained_file = osp.join(root_dir, "pretrained.pkl")
-  if osp.isfile(pretrained_file):
-    print("Load pretrained agent.")
+  if params["pretrained"]:
+    pretrained_file = osp.join(root_dir, params["pretrained"] + ".pkl")
+    print("Load pretrained agent: {}.".format(pretrained_file))
     with open(pretrained_file, "rb") as f:
       pretrained_agent = pickle.load(f)
 
