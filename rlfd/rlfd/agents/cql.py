@@ -8,7 +8,7 @@ import tensorflow_probability as tfp
 tfd = tfp.distributions
 tfk = tf.keras
 
-from rlfd import logger, memory, normalizer, policies
+from rlfd import memory, normalizer, policies
 from rlfd.agents import agent, sac, sac_networks
 
 

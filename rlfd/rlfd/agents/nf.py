@@ -10,7 +10,7 @@ tfd = tfp.distributions
 tfk = tf.keras
 tfl = tfk.layers
 
-from rlfd import logger, memory, normalizer, policies
+from rlfd import memory, normalizer, policies
 from rlfd.agents import agent, sac_networks
 
 

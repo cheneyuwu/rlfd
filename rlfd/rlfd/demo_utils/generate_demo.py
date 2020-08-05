@@ -7,7 +7,7 @@ osp = os.path
 import numpy as np
 import tensorflow as tf
 
-from rlfd import train, logger
+from rlfd import train
 from rlfd.utils.util import set_global_seeds
 
 DEFAULT_PARAMS = {
@@ -22,7 +22,6 @@ DEFAULT_PARAMS = {
 
 def main(policy, root_dir, **kwargs):
   """Generate demo from policy file"""
-  logger.configure()
 
   # Get default params from config and update params.
   param_file = osp.join(root_dir, "demo_config.json")
@@ -30,8 +29,7 @@ def main(policy, root_dir, **kwargs):
     with open(param_file, "r") as f:
       env_params = json.load(f)
   else:
-    logger.warn(
-        "WARNING: demo_config.json not found! using the default parameters.")
+    print("demo_config.json not found! using the default parameters.")
     env_params = DEFAULT_PARAMS.copy()
     param_file = osp.join(root_dir, "demo_config.json")
     with open(param_file, "w") as f:
@@ -56,10 +54,6 @@ def main(policy, root_dir, **kwargs):
 
   episode = eval_driver.generate_rollouts()
 
-  for key, val in eval_driver.logs("test"):
-    logger.record_tabular(key, np.mean(val))
-  logger.dump_tabular()
-
   os.makedirs(root_dir, exist_ok=True)
   np.savez_compressed(osp.join(root_dir, filename), **episode)  # save the file
-  logger.info("Demo file has been stored into {}.".format(filename))
+  print("Demo file has been stored into {}.".format(filename))

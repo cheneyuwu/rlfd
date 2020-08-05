@@ -5,8 +5,6 @@ from collections import deque
 import numpy as np
 import tensorflow as tf
 
-from rlfd import logger
-
 
 class Driver(object, metaclass=abc.ABCMeta):
 

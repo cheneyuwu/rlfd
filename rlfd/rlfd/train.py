@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import pickle
 import sys
@@ -9,8 +10,7 @@ import tensorflow as tf
 import ray
 from ray import tune
 
-from rlfd import (logger, agents, metrics, policies, env_manager, drivers,
-                  shapings)
+from rlfd import (agents, metrics, policies, env_manager, drivers, shapings)
 
 from rlfd.utils.util import set_global_seeds
 
@@ -50,8 +50,10 @@ def main(config):
   root_dir = os.path.join(
       config["root_dir"], "config_" + config["config"],
       *[x + "_" + str(config[x]) for x in config["search_params_list"]])
-  logger.configure(dir=root_dir, format_strs=["log", "csv"], log_suffix="")
-  assert logger.get_dir() is not None
+
+  logger = logging.getLogger("rlfd")
+  logger.addHandler(logging.FileHandler(osp.join(root_dir, "train.log")))
+  logger.setLevel(logging.DEBUG)
 
   # Limit gpu memory growth for tensorflow
   physical_gpus = tf.config.list_physical_devices("GPU")
@@ -85,11 +87,11 @@ def main(config):
   shaping = None
   shaping_file = osp.join(root_dir, "shaping.pkl")
   if osp.isfile(shaping_file):
-    print("Load shaping.")
+    logger.info("Load shaping.")
     with open(shaping_file, "rb") as f:
       shaping = pickle.load(f)
   if "shaping" in params.keys():
-    print("Train shaping.")
+    logger.info("Train shaping.")
     shaping = shapings.EnsembleShaping(**params["shaping"], **env_params)
     shaping.before_training_hook(data_dir=root_dir, env=make_env())
     shaping.train()
@@ -100,7 +102,7 @@ def main(config):
   pretrained_agent = None
   if params["pretrained"]:
     pretrained_file = osp.join(root_dir, params["pretrained"] + ".pkl")
-    print("Load pretrained agent: {}.".format(pretrained_file))
+    logger.info("Load pretrained agent: {}.".format(pretrained_file))
     with open(pretrained_file, "rb") as f:
       pretrained_agent = pickle.load(f)
 
@@ -166,7 +168,7 @@ def main(config):
   os.makedirs(policy_path, exist_ok=True)
   ckpt_path = osp.join(root_dir, "ckpts")
   if osp.exists(ckpt_path):
-    print("WARNING:rlfd:Loading from an checkpoint. Be careful!")
+    logger.warning("Loading from an checkpoint. Be careful!")
     agent.load(ckpt_path)
   os.makedirs(ckpt_path, exist_ok=True)
 

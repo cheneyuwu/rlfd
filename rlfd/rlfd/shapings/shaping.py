@@ -10,7 +10,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 tfd = tfp.distributions
 
-from rlfd import logger, memory
+from rlfd import memory
 
 SHAPINGS = {}
 

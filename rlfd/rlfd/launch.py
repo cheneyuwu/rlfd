@@ -15,7 +15,7 @@ import tensorflow as tf
 import ray
 from ray import tune
 
-from rlfd import logger, plot, train, evaluate
+from rlfd import plot, train, evaluate
 from rlfd.demo_utils import generate_demo
 
 

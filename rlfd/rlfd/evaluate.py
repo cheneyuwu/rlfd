@@ -5,7 +5,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from rlfd import train, logger
+from rlfd import train
 from rlfd.utils.util import set_global_seeds
 
 DEFAULT_PARAMS = {
@@ -18,8 +18,6 @@ DEFAULT_PARAMS = {
 
 
 def main(policy, **kwargs):
-  logger.configure()
-
   env_params = DEFAULT_PARAMS.copy()
 
   set_global_seeds(env_params["seed"])
@@ -37,7 +35,3 @@ def main(policy, **kwargs):
                                     policy=policy.eval_policy,
                                     **env_params)
   eval_driver.generate_rollouts()
-
-  for key, val in eval_driver.logs("test"):
-    logger.record_tabular(key, np.mean(val))
-  logger.dump_tabular()

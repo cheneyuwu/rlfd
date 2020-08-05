@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 tfk = tf.keras
 
-from rlfd import logger, memory, normalizer, policies
+from rlfd import memory, normalizer, policies
 from rlfd.agents import agent, td3_networks
 
 

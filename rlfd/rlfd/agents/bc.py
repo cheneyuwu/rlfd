@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 tfk = tf.keras
 
-from rlfd import logger, memory, normalizer, policies
+from rlfd import memory, normalizer, policies
 from rlfd.agents import agent, sac_networks
 
 
@@ -136,9 +136,9 @@ class BC(agent.Agent):
                                              name="offline_training_step",
                                              dtype=tf.int64)
     self.online_training_step = tf.Variable(0,
-                                             trainable=False,
-                                             name="online_training_step",
-                                             dtype=tf.int64)
+                                            trainable=False,
+                                            name="online_training_step",
+                                            dtype=tf.int64)
 
   @property
   def expl_policy(self):

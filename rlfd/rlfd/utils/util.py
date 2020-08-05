@@ -12,15 +12,7 @@ import numpy as np
 def set_global_seeds(seed):
   try:
     import tensorflow as tf
-    if tf.__version__.startswith("1"):
-      from tfdeterminism import patch
-
-      tf.compat.v1.reset_default_graph()  # should be removed after tf2
-      tf.compat.v1.set_random_seed(seed)
-      patch()  # deterministic tensorflow, requires tensorflow-determinism
-    else:
-      os.environ["TF_DETERMINISTIC_OPS"] = "1"
-      tf.random.set_seed(seed)
+    tf.random.set_seed(seed)
   except ImportError:
     print("Warning: tensorflow not installed!")
   try:
