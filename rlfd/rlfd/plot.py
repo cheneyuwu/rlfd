@@ -1,8 +1,10 @@
+import glob
 import json
 import os
 import os.path as osp
 import sys
 from datetime import datetime
+from functools import reduce
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -271,7 +273,7 @@ def plot_results(allresults, xys, save_dir, save_name, smooth=False):
 
 
 def main(dirs, xys, save_dir=None, save_name="", smooth=False, **kwargs):
-  results = load_results(dirs)
+  results = load_results(reduce(lambda a, b: a + glob.glob(b), dirs, []))
   # get directory to save results
   save_dir = save_dir if save_dir else dirs[0]
   plot_results(results, xys, save_dir, save_name, smooth)
