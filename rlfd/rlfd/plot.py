@@ -100,7 +100,7 @@ def load_results(root_dir_or_dirs):
   Arguments:
 
   Returns:
-      allresults - list of dicts that contains "progress" and "params".
+      allresults - list of dicts that contains "summaries" and "params".
   """
   if isinstance(root_dir_or_dirs, str):
     rootdirs = [osp.expanduser(root_dir_or_dirs)]
@@ -110,7 +110,7 @@ def load_results(root_dir_or_dirs):
   for rootdir in rootdirs:
     assert osp.exists(rootdir), "%s doesn't exist" % rootdir
     for dirname, subdirs, files in os.walk(rootdir):
-      if (all([file in files for file in ["params.json", "progress.csv"]]) and
+      if (all([file in files for file in ["params.json"]]) and
           "summaries" in subdirs):
         result = {"dirname": dirname}
         result["progress"] = dict()
