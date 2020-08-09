@@ -172,9 +172,13 @@ class EnvManager:
 
 
 if __name__ == "__main__":
-  env_manager = EnvManager("hopper-medium-replay-v0")
+  env_manager = EnvManager("pen-cloned-v0")
   env = env_manager.get_env()
+  print("Episode length:", env.eps_length)
+  print("Demonstration shapes:")
   dataset = env.get_dataset()
+  for k, v in dataset.items():
+    print(k, v.shape)
   env.seed(0)
   done = True
   while True:
