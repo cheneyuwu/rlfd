@@ -89,7 +89,7 @@ def transform_config_name(config_name):
 
 
 def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, memory, time,
-         ip_head, redis_password, **kwargs):
+         port, ip_head, redis_password, **kwargs):
   # Setup
   exp_dir = os.path.abspath(os.path.expanduser(exp_dir))
   if policy is not None:
@@ -158,6 +158,7 @@ def main(targets, exp_dir, policy, save_dir, num_cpus, num_gpus, memory, time,
       slurm = slurm.replace('%%MEM_PER_CPU%%', str(int(memory)))
       slurm = slurm.replace('%%CONFIG_FILE%%', str(config_file))
       slurm = slurm.replace('%%TIME%%', str(int(time)))
+      slurm = slurm.replace('%%PORT%%', str(int(port)))
 
       save_file = osp.join(os.getcwd(), config_file.replace(".py", ".sh"))
       with open(save_file, "w") as f:
@@ -312,6 +313,12 @@ if __name__ == "__main__":
       help="slurm time in hours",
       type=int,
       default=8,
+  )
+  exp_parser.parser.add_argument(
+      "--port",
+      help="port to use when using multiple nodes",
+      type=int,
+      default=6379,
   )
   exp_parser.parser.add_argument(
       "--ip_head",

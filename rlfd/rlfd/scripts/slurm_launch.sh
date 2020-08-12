@@ -34,7 +34,7 @@ nodes=$(scontrol show hostnames $SLURM_JOB_NODELIST)  # Getting the node names
 nodes_array=( $nodes )
 
 # Find the first available port
-port=6379
+port=%%PORT%%
 port_available=true
 while true
 do
