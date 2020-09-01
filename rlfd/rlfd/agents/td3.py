@@ -56,7 +56,6 @@ class TD3(agent.Agent):
 
     self.dims = dims
     self.dimo = self.dims["o"]
-    self.dimg = self.dims["g"]
     self.dimu = self.dims["u"]
     self.max_u = max_u
     self.fix_T = fix_T
@@ -103,10 +102,6 @@ class TD3(agent.Agent):
                          o_2=self.dimo,
                          u=self.dimu,
                          r=(1,),
-                         ag=self.dimg,
-                         ag_2=self.dimg,
-                         g=self.dimg,
-                         g_2=self.dimg,
                          done=(1,))
     if self.fix_T:
       buffer_shapes = {
@@ -125,13 +120,10 @@ class TD3(agent.Agent):
   def _initialize_actor(self):
     self._actor_o_norm = normalizer.Normalizer(self.dimo, self.norm_eps,
                                                self.norm_clip)
-    self._actor_g_norm = normalizer.Normalizer(self.dimg, self.norm_eps,
-                                               self.norm_clip)
-
-    self._actor = td3_networks.Actor(self.dimo, self.dimg, self.dimu,
-                                     self.max_u, self.layer_sizes)
-    self._actor_target = td3_networks.Actor(self.dimo, self.dimg, self.dimu,
-                                            self.max_u, self.layer_sizes)
+    self._actor = td3_networks.Actor(self.dimo, self.dimu, self.max_u,
+                                     self.layer_sizes)
+    self._actor_target = td3_networks.Actor(self.dimo, self.dimu, self.max_u,
+                                            self.layer_sizes)
 
     self._actor_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
 
@@ -139,7 +131,6 @@ class TD3(agent.Agent):
 
     self._actor_models = {
         "actor_o_norm": self._actor_o_norm,
-        "actor_g_norm": self._actor_g_norm,
         "actor": self._actor,
     }
     self.save_model(self._actor_models)
@@ -147,18 +138,15 @@ class TD3(agent.Agent):
   def _initialize_critic(self):
     self._critic_o_norm = normalizer.Normalizer(self.dimo, self.norm_eps,
                                                 self.norm_clip)
-    self._critic_g_norm = normalizer.Normalizer(self.dimg, self.norm_eps,
-                                                self.norm_clip)
-
-    self._criticq1 = td3_networks.Critic(self.dimo, self.dimg, self.dimu,
-                                         self.max_u, self.layer_sizes)
-    self._criticq1_target = td3_networks.Critic(self.dimo, self.dimg, self.dimu,
+    self._criticq1 = td3_networks.Critic(self.dimo, self.dimu, self.max_u,
+                                         self.layer_sizes)
+    self._criticq1_target = td3_networks.Critic(self.dimo, self.dimu,
                                                 self.max_u, self.layer_sizes)
     self._copy_weights(self._criticq1, self._criticq1_target, 1.0)
 
-    self._criticq2 = td3_networks.Critic(self.dimo, self.dimg, self.dimu,
-                                         self.max_u, self.layer_sizes)
-    self._criticq2_target = td3_networks.Critic(self.dimo, self.dimg, self.dimu,
+    self._criticq2 = td3_networks.Critic(self.dimo, self.dimu, self.max_u,
+                                         self.layer_sizes)
+    self._criticq2_target = td3_networks.Critic(self.dimo, self.dimu,
                                                 self.max_u, self.layer_sizes)
     self._copy_weights(self._criticq2, self._criticq2_target, 1.0)
 
@@ -166,7 +154,6 @@ class TD3(agent.Agent):
 
     self._critic_models = {
         "critic_o_norm": self._critic_o_norm,
-        "critic_g_norm": self._critic_g_norm,
         "criticq1": self._criticq1,
         "criticq2": self._criticq2,
         "criticq1_target": self._criticq1_target,
@@ -182,32 +169,26 @@ class TD3(agent.Agent):
                                         reduction=tfk.losses.Reduction.NONE)
 
     # Generate policies
-    def process_observation_expl(o, g):
-      norm_o = self._actor_o_norm(o)
-      norm_g = self._actor_g_norm(g)
-      return norm_o, norm_g
+    def process_observation_expl(o):
+      return self._actor_o_norm(o)
 
     self._expl_policy = policies.GaussianEpsilonGreedyPolicy(
         self.dimo,
-        self.dimg,
         self.dimu,
-        get_action=lambda o, g: self._actor([o, g]),
+        get_action=lambda o: self._actor([o]),
         max_u=self.max_u,
         noise_eps=self.expl_gaussian_noise,
         random_prob=self.expl_random_prob,
         process_observation=process_observation_expl)
 
-    def process_observation_eval(o, g):
-      norm_o = self._actor_o_norm(o)
-      norm_g = self._actor_g_norm(g)
-      self._policy_inspect_graph(o, g)
-      return norm_o, norm_g
+    def process_observation_eval(o):
+      self._policy_inspect_graph(o)
+      return self._actor_o_norm(o)
 
     self._eval_policy = policies.Policy(
         self.dimo,
-        self.dimg,
         self.dimu,
-        get_action=lambda o, g: self._actor([o, g]),
+        get_action=lambda o: self._actor([o]),
         process_observation=process_observation_eval)
 
   def _initialize_training_steps(self):
@@ -229,9 +210,9 @@ class TD3(agent.Agent):
     return self._eval_policy
 
   @tf.function
-  def estimate_q_graph(self, o, g, u):
+  def estimate_q_graph(self, o, u):
     """A convenient function for shaping"""
-    return self._criticq1([self._critic_o_norm(o), self._critic_g_norm(g), u])
+    return self._criticq1([self._critic_o_norm(o), u])
 
   def before_training_hook(self,
                            data_dir=None,
@@ -265,11 +246,8 @@ class TD3(agent.Agent):
     else:
       transitions = experiences.copy()
     o_tf = tf.convert_to_tensor(transitions["o"], dtype=tf.float32)
-    g_tf = tf.convert_to_tensor(transitions["g"], dtype=tf.float32)
     self._actor_o_norm.update(o_tf)
-    self._actor_g_norm.update(g_tf)
     self._critic_o_norm.update(o_tf)
-    self._critic_g_norm.update(g_tf)
 
   def train_offline(self):
     # No offline training.
@@ -308,43 +286,33 @@ class TD3(agent.Agent):
       batch = self._merge_batch_experiences(online_batch, offline_batch)
     return batch
 
-  def _td3_criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
+  def _td3_criticq_loss_graph(self, o, o_2, u, r, done, step):
     # Add noise to target policy output
     noise = tf.random.normal(tf.shape(u), 0.0, self.policy_noise)
     noise = tf.clip_by_value(noise, -self.policy_noise_clip,
                              self.policy_noise_clip) * self.max_u
     u_2 = tf.clip_by_value(
-        self._actor_target([self._actor_o_norm(o_2),
-                            self._actor_g_norm(g_2)]) + noise, -self.max_u,
+        self._actor_target([self._actor_o_norm(o_2)]) + noise, -self.max_u,
         self.max_u)
 
     # Immediate reward
     target_q = r
     # Shaping reward
     if self.online_data_strategy == "Shaping":
-      potential_curr = self.shaping.potential(o=o, g=g, u=u)
-      potential_next = self.shaping.potential(o=o_2, g=g_2, u=u_2)
-      target_q += (1.0 - done) * tf.pow(self.gamma,
-                                        n) * potential_next - potential_curr
+      potential_curr = self.shaping.potential(o=o, u=u)
+      potential_next = self.shaping.potential(o=o_2, u=u_2)
+      target_q += (1.0 - done) * self.gamma * potential_next - potential_curr
     # Q value from next state
-    target_next_q1 = self._criticq1_target(
-        [self._critic_o_norm(o_2),
-         self._critic_g_norm(g_2), u_2])
-    target_next_q2 = self._criticq2_target(
-        [self._critic_o_norm(o_2),
-         self._critic_g_norm(g_2), u_2])
+    target_next_q1 = self._criticq1_target([self._critic_o_norm(o_2), u_2])
+    target_next_q2 = self._criticq2_target([self._critic_o_norm(o_2), u_2])
     target_next_min_q = tf.minimum(target_next_q1, target_next_q2)
-    target_q += (1.0 - done) * tf.pow(self.gamma, n) * target_next_min_q
+    target_q += (1.0 - done) * self.gamma * target_next_min_q
     target_q = tf.stop_gradient(target_q)
 
-    td_loss_q1 = self._huber_loss(
-        target_q,
-        self._criticq1([self._critic_o_norm(o),
-                        self._critic_g_norm(g), u]))
-    td_loss_q2 = self._huber_loss(
-        target_q,
-        self._criticq2([self._critic_o_norm(o),
-                        self._critic_g_norm(g), u]))
+    td_loss_q1 = self._huber_loss(target_q,
+                                  self._criticq1([self._critic_o_norm(o), u]))
+    td_loss_q2 = self._huber_loss(target_q,
+                                  self._criticq2([self._critic_o_norm(o), u]))
     td_loss = td_loss_q1 + td_loss_q2
 
     criticq_loss = tf.reduce_mean(td_loss)
@@ -353,14 +321,12 @@ class TD3(agent.Agent):
                       step=step)
     return criticq_loss
 
-  def _td3_actor_loss_graph(self, o, g, u, step):
-    pi = self._actor([self._actor_o_norm(o), self._actor_g_norm(g)])
-    actor_loss = -tf.reduce_mean(
-        self._criticq1([self._critic_o_norm(o),
-                        self._critic_g_norm(g), pi]))
+  def _td3_actor_loss_graph(self, o, u, step):
+    pi = self._actor([self._actor_o_norm(o)])
+    actor_loss = -tf.reduce_mean(self._criticq1([self._critic_o_norm(o), pi]))
     actor_loss += self.action_l2 * tf.reduce_mean(tf.square(pi / self.max_u))
     if self.online_data_strategy == "Shaping":
-      actor_loss += -tf.reduce_mean(self.shaping.potential(o=o, g=g, u=pi))
+      actor_loss += -tf.reduce_mean(self.shaping.potential(o=o, u=pi))
     if self.online_data_strategy == "BC":
       mask = np.concatenate(
           (np.zeros(self.online_batch_size - self.offline_batch_size),
@@ -369,12 +335,8 @@ class TD3(agent.Agent):
       demo_pi = tf.boolean_mask((pi), mask)
       demo_u = tf.boolean_mask((u), mask)
       if self.bc_params["q_filter"]:
-        q_u = self._criticq1(
-            [self._critic_o_norm(o),
-             self._critic_g_norm(g), u])
-        q_pi = self._criticq1(
-            [self._critic_o_norm(o),
-             self._critic_g_norm(g), pi])
+        q_u = self._criticq1([self._critic_o_norm(o), u])
+        q_pi = self._criticq1([self._critic_o_norm(o), pi])
         q_filter_mask = tf.reshape(tf.boolean_mask(q_u > q_pi, mask), [-1])
         bc_loss = tf.reduce_mean(
             tf.square(
@@ -390,15 +352,14 @@ class TD3(agent.Agent):
     return actor_loss
 
   @tf.function
-  def _train_online_graph(self, o, g, o_2, g_2, u, r, n, done):
+  def _train_online_graph(self, o, o_2, u, r, done):
     # Train critic q
     criticq_trainable_weights = (self._criticq1.trainable_weights +
                                  self._criticq2.trainable_weights)
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(criticq_trainable_weights)
       with tf.name_scope('OnlineLosses/'):
-        criticq_loss = self._td3_criticq_loss_graph(o, g, o_2, g_2, u, r, n,
-                                                    done,
+        criticq_loss = self._td3_criticq_loss_graph(o, o_2, u, r, done,
                                                     self.online_training_step)
     criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
     self._criticq_optimizer.apply_gradients(
@@ -410,7 +371,7 @@ class TD3(agent.Agent):
       with tf.GradientTape(watch_accessed_variables=False) as tape:
         tape.watch(actor_trainable_weights)
         with tf.name_scope('OnlineLosses/'):
-          actor_loss = self._td3_actor_loss_graph(o, g, u,
+          actor_loss = self._td3_actor_loss_graph(o, u,
                                                   self.online_training_step)
       actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
       self._actor_optimizer.apply_gradients(
@@ -424,16 +385,12 @@ class TD3(agent.Agent):
       batch = self.sample_batch()
 
       o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-      g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
       o_2_tf = tf.convert_to_tensor(batch["o_2"], dtype=tf.float32)
-      g_2_tf = tf.convert_to_tensor(batch["g_2"], dtype=tf.float32)
       u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
       r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
-      n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
       done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
 
-      self._train_online_graph(o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf,
-                               done_tf)
+      self._train_online_graph(o_tf, o_2_tf, u_tf, r_tf, n_tf, done_tf)
       if self.online_training_step % self.target_update_freq == 0:
         self._copy_weights(self._actor, self._actor_target)
         self._copy_weights(self._criticq1, self._criticq1_target)
@@ -447,7 +404,7 @@ class TD3(agent.Agent):
     list(map(copy_func, zip(source.weights, target.weights)))
 
   @tf.function
-  def _policy_inspect_graph(self, o, g):
+  def _policy_inspect_graph(self, o):
     # should only happen for in the first call of this function
     if not hasattr(self, "_total_policy_inspect_count"):
       self._total_policy_inspect_count = tf.Variable(0,
@@ -458,14 +415,14 @@ class TD3(agent.Agent):
       if self.shaping != None:
         self._policy_inspect_potential = tf.Variable(0.0, trainable=False)
 
-    u = self._actor([self._actor_o_norm(o), self._actor_g_norm(g)])
+    u = self._actor([self._actor_o_norm(o)])
 
     self._total_policy_inspect_count.assign_add(1)
     self._policy_inspect_count.assign_add(1)
-    q = self._criticq1([self._critic_o_norm(o), self._critic_g_norm(g), u])
+    q = self._criticq1([self._critic_o_norm(o), u])
     self._policy_inspect_estimate_q.assign_add(tf.reduce_sum(q))
     if self.shaping != None:
-      p = self.shaping.potential(o=o, g=g, u=u)
+      p = self.shaping.potential(o=o, u=u)
       self._policy_inspect_potential.assign_add(tf.reduce_sum(p))
 
     if self._total_policy_inspect_count % 5000 == 0:

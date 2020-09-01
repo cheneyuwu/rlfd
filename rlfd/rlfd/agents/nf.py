@@ -95,7 +95,6 @@ class NF(agent.Agent):
 
     self.dims = dims
     self.dimo = self.dims["o"]
-    self.dimg = self.dims["g"]
     self.dimu = self.dims["u"]
     self.max_u = max_u
     self.fix_T = fix_T
@@ -131,10 +130,6 @@ class NF(agent.Agent):
                          o_2=self.dimo,
                          u=self.dimu,
                          r=(1,),
-                         ag=self.dimg,
-                         ag_2=self.dimg,
-                         g=self.dimg,
-                         g_2=self.dimg,
                          done=(1,))
     if self.fix_T:
       buffer_shapes = {
@@ -153,9 +148,7 @@ class NF(agent.Agent):
   def _initialize_maf(self):
     self._maf_o_norm = normalizer.Normalizer(self.dimo, self.norm_eps,
                                              self.norm_clip)
-    self._maf_g_norm = normalizer.Normalizer(self.dimg, self.norm_eps,
-                                             self.norm_clip)
-    self._maf = MAF(dim=self.dimo[0] + self.dimg[0] + self.dimu[0],
+    self._maf = MAF(dim=self.dimo[0] + self.dimu[0],
                     num_bijectors=self.num_bijectors,
                     layer_sizes=self.layer_sizes)
     self._maf_optimizer = tfk.optimizers.Adam(learning_rate=self.maf_lr)
@@ -168,17 +161,13 @@ class NF(agent.Agent):
   def _initialize_critic(self):
     self._critic_o_norm = normalizer.Normalizer(self.dimo, self.norm_eps,
                                                 self.norm_clip)
-    self._critic_g_norm = normalizer.Normalizer(self.dimg, self.norm_eps,
-                                                self.norm_clip)
-
-    self._critic = sac_networks.CriticQ(self.dimo, self.dimg, self.dimu,
+    self._critic = sac_networks.CriticQ(self.dimo, self.dimu,
                                         self.max_u, self.layer_sizes)
 
     self._critic_optimizer = tfk.optimizers.Adam(learning_rate=self.q_lr)
 
     self._critic_models = {
         "critic_o_norm": self._critic_o_norm,
-        "critic_g_norm": self._critic_g_norm,
         "criticq1": self._critic,
         "criticq2": self._critic,
         "criticq1_target": self._critic,
@@ -194,7 +183,7 @@ class NF(agent.Agent):
                                         reduction=tfk.losses.Reduction.NONE)
 
     self._expl_policy = self._eval_policy = policies.RandomPolicy(
-        self.dimo, self.dimg, self.dimu, self.max_u)
+        self.dimo, self.dimu, self.max_u)
 
   def _initialize_training_steps(self):
     self.offline_training_step = tf.Variable(0,
@@ -215,9 +204,9 @@ class NF(agent.Agent):
     return self._eval_policy
 
   @tf.function
-  def estimate_q_graph(self, o, g, u):
+  def estimate_q_graph(self, o, u):
     """A convenient function for shaping"""
-    return self._critic([self._critic_o_norm(o), self._critic_g_norm(g), u])
+    return self._critic([self._critic_o_norm(o), u])
 
   def before_training_hook(self, data_dir=None, env=None, **kwargs):
     """Adds data to the offline replay buffer and add shaping"""
@@ -244,19 +233,15 @@ class NF(agent.Agent):
     else:
       transitions = experiences.copy()
     o_tf = tf.convert_to_tensor(transitions["o"], dtype=tf.float32)
-    g_tf = tf.convert_to_tensor(transitions["g"], dtype=tf.float32)
     self._maf_o_norm.update(o_tf)
-    self._maf_g_norm.update(g_tf)
     self._critic_o_norm.update(o_tf)
-    self._critic_g_norm.update(g_tf)
 
   @tf.function
-  def _train_offline_graph(self, o, g, u):
+  def _train_offline_graph(self, o, u):
     with tf.name_scope('OfflineLosses/'):
       # Train maf
       maf_input = tf.concat(
-          [self._maf_o_norm(o),
-           self._maf_g_norm(g), u / self.max_u], axis=1)
+          [self._maf_o_norm(o), u / self.max_u], axis=1)
 
       with tf.GradientTape(watch_accessed_variables=False) as tape:
         tape.watch(self._maf.trainable_weights)
@@ -282,17 +267,13 @@ class NF(agent.Agent):
       # add random data
       rand_o = self._critic_o_norm.denormalize(
           tf.random.uniform(tf.shape(o), -1, 1))
-      rand_g = self._critic_g_norm.denormalize(
-          tf.random.uniform(tf.shape(g), -1, 1))
       rand_u = tf.random.uniform(tf.shape(u), -1, 1) * self.max_u
       # axis 0 => batch dim
       o = tf.concat((o, rand_o), axis=0)
-      g = tf.concat((g, rand_g), axis=0)
       u = tf.concat((u, rand_u), axis=0)
 
       maf_input = tf.concat(
-          [self._maf_o_norm(o),
-           self._maf_g_norm(g), u / self.max_u], axis=1)
+          [self._maf_o_norm(o),u / self.max_u], axis=1)
       logprob = self._maf(maf_input)
       logprob = tf.clip_by_value(logprob, -1e5, 1e5)
       logprob = tf.reshape(logprob, (-1, 1))
@@ -303,8 +284,7 @@ class NF(agent.Agent):
         tape.watch(self._critic.trainable_weights)
         critic_loss = self._huber_loss(
             tf.stop_gradient(logprob),
-            self._critic([self._critic_o_norm(o),
-                          self._critic_g_norm(g), u]))
+            self._critic([self._critic_o_norm(o), u]))
         critic_loss = tf.reduce_mean(critic_loss)
         tf.summary.scalar(name='critic_loss vs {}'.format(
             self.offline_training_step.name),
@@ -320,9 +300,8 @@ class NF(agent.Agent):
     with tf.summary.record_if(lambda: self.offline_training_step % 200 == 0):
       batch = self.offline_buffer.sample(self.offline_batch_size)
       o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-      g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
       u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
-      self._train_offline_graph(o_tf, g_tf, u_tf)
+      self._train_offline_graph(o_tf, u_tf)
 
   def store_experiences(self, experiences):
     pass  # no online training

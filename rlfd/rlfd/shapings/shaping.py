@@ -87,8 +87,8 @@ class EnsembleShaping(object):
       pickle.dump(self, f)
 
   @tf.function
-  def potential(self, o, g, u):
-    potential = tf.reduce_mean([x.potential(o, g, u) for x in self.shapings],
+  def potential(self, o, u):
+    potential = tf.reduce_mean([x.potential(o, u) for x in self.shapings],
                                axis=0)
     return potential
 
@@ -137,7 +137,7 @@ class Shaping(object, metaclass=abc.ABCMeta):
     pass
 
   @abc.abstractmethod
-  def potential(self, o, g, u):
+  def potential(self, o, u):
     """return the shaping potential, has to be a tf.function"""
 
   def _train(self, *args, **kwargs):

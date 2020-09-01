@@ -37,7 +37,6 @@ class BC(agent.Agent):
 
     self.dims = dims
     self.dimo = self.dims["o"]
-    self.dimg = self.dims["g"]
     self.dimu = self.dims["u"]
     self.max_u = max_u
     self.fix_T = fix_T
@@ -65,10 +64,6 @@ class BC(agent.Agent):
                          o_2=self.dimo,
                          u=self.dimu,
                          r=(1,),
-                         ag=self.dimg,
-                         ag_2=self.dimg,
-                         g=self.dimg,
-                         g_2=self.dimg,
                          done=(1,))
     if self.fix_T:
       buffer_shapes = {
@@ -87,16 +82,12 @@ class BC(agent.Agent):
   def _initialize_actor(self):
     self._actor_o_norm = normalizer.Normalizer(self.dimo, self.norm_eps,
                                                self.norm_clip)
-    self._actor_g_norm = normalizer.Normalizer(self.dimg, self.norm_eps,
-                                               self.norm_clip)
-
-    self._actor = sac_networks.Actor(self.dimo, self.dimg, self.dimu,
-                                     self.max_u, self.layer_sizes)
+    self._actor = sac_networks.Actor(self.dimo, self.dimu, self.max_u,
+                                     self.layer_sizes)
     self._actor_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
 
     self._actor_models = {
         "actor_o_norm": self._actor_o_norm,
-        "actor_g_norm": self._actor_g_norm,
         "actor": self._actor,
     }
     self.save_model(self._actor_models)
@@ -105,29 +96,23 @@ class BC(agent.Agent):
     self._initialize_actor()
 
     # Generate policies
-    def process_observation_expl(o, g):
-      norm_o = self._actor_o_norm(o)
-      norm_g = self._actor_g_norm(g)
-      return norm_o, norm_g
+    def process_observation_expl(o):
+      return self._actor_o_norm(o)
 
     self._expl_policy = policies.Policy(
         self.dimo,
-        self.dimg,
         self.dimu,
-        get_action=lambda o, g: self._actor([o, g], sample=True)[0],
+        get_action=lambda o: self._actor([o], sample=True)[0],
         process_observation=process_observation_expl)
 
-    def process_observation_eval(o, g):
-      norm_o = self._actor_o_norm(o)
-      norm_g = self._actor_g_norm(g)
-      self._policy_inspect_graph(o, g)
-      return norm_o, norm_g
+    def process_observation_eval(o):
+      self._policy_inspect_graph(o)
+      return self._actor_o_norm(o)
 
     self._eval_policy = policies.Policy(
         self.dimo,
-        self.dimg,
         self.dimu,
-        get_action=lambda o, g: self._actor([o, g], sample=False)[0],
+        get_action=lambda o: self._actor([o], sample=False)[0],
         process_observation=process_observation_eval)
 
   def _initialize_training_steps(self):
@@ -177,16 +162,13 @@ class BC(agent.Agent):
     else:
       transitions = experiences.copy()
     o_tf = tf.convert_to_tensor(transitions["o"], dtype=tf.float32)
-    g_tf = tf.convert_to_tensor(transitions["g"], dtype=tf.float32)
     self._actor_o_norm.update(o_tf)
-    self._actor_g_norm.update(g_tf)
 
   @tf.function
-  def _train_offline_graph(self, o, g, u):
+  def _train_offline_graph(self, o, u):
     with tf.GradientTape() as tape:
       # pi if using td3_network actor.
-      pi, logprob_pi = self._actor(
-          [self._actor_o_norm(o), self._actor_g_norm(g)])
+      pi, logprob_pi = self._actor([self._actor_o_norm(o)])
       bc_loss = tf.reduce_mean(tf.square(pi - u))
     actor_grads = tape.gradient(bc_loss, self._actor.trainable_weights)
     self._actor_optimizer.apply_gradients(
@@ -203,9 +185,8 @@ class BC(agent.Agent):
     with tf.summary.record_if(lambda: self.offline_training_step % 200 == 0):
       batch = self.offline_buffer.sample(self.offline_batch_size)
       o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-      g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
       u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
-      self._train_offline_graph(o_tf, g_tf, u_tf)
+      self._train_offline_graph(o_tf, u_tf)
 
   def store_experiences(self, experiences):
     pass

@@ -13,17 +13,9 @@ from rlfd.agents import agent, sac_networks
 
 class Generator(tfk.Model):
 
-  def __init__(self,
-               dimo,
-               dimg,
-               dimu,
-               max_u,
-               latent_dim,
-               layer_sizes,
-               name="g"):
+  def __init__(self, dimo, dimu, max_u, latent_dim, layer_sizes, name="g"):
     super().__init__(name=name)
     self._dimo = dimo
-    self._dimg = dimg
     self._dimu = dimu
     self._max_u = max_u
 
@@ -35,10 +27,6 @@ class Generator(tfk.Model):
       self._mlp_layers.append(layer)
     self._obs_output_layer = tfl.Dense(units=self._dimo[0],
                                        kernel_initializer="glorot_normal")
-    # TF has issue doing back prop with 0 dimension matrix
-    self._goal_output_layer = tfl.Dense(units=self._dimg[0],
-                                        kernel_initializer="glorot_normal",
-                                        trainable=bool(self._dimg[0]))
     self._act_output_layer = tfl.Dense(units=self._dimu[0],
                                        kernel_initializer="glorot_normal")
     # Create weights
@@ -50,9 +38,8 @@ class Generator(tfk.Model):
     for l in self._mlp_layers:
       res = l(res)
     obs = self._obs_output_layer(res)
-    goal = self._goal_output_layer(res)
     act = self._act_output_layer(res)
-    return obs, goal, act * self._max_u
+    return obs, act * self._max_u
 
 
 class GAN(agent.Agent):
@@ -84,7 +71,6 @@ class GAN(agent.Agent):
 
     self.dims = dims
     self.dimo = self.dims["o"]
-    self.dimg = self.dims["g"]
     self.dimu = self.dims["u"]
     self.max_u = max_u
     self.fix_T = fix_T
@@ -114,10 +100,6 @@ class GAN(agent.Agent):
                          o_2=self.dimo,
                          u=self.dimu,
                          r=(1,),
-                         ag=self.dimg,
-                         ag_2=self.dimg,
-                         g=self.dimg,
-                         g_2=self.dimg,
                          done=(1,))
     if self.fix_T:
       buffer_shapes = {
@@ -134,7 +116,7 @@ class GAN(agent.Agent):
                                                         self.buffer_size)
 
   def _initialize_generator(self):
-    self._generator = Generator(self.dimo, self.dimg, self.dimu, self.max_u,
+    self._generator = Generator(self.dimo, self.dimu, self.max_u,
                                 self.latent_dim, self.layer_sizes)
     self._generator_optimizer = tfk.optimizers.Adam(learning_rate=1e-4,
                                                     beta_1=0.5,
@@ -148,18 +130,14 @@ class GAN(agent.Agent):
   def _initialize_discriminator(self):
     self._discriminator_o_norm = normalizer.Normalizer(self.dimo, self.norm_eps,
                                                        self.norm_clip)
-    self._discriminator_g_norm = normalizer.Normalizer(self.dimg, self.norm_eps,
-                                                       self.norm_clip)
-
-    self._discriminator = sac_networks.CriticQ(self.dimo, self.dimg, self.dimu,
-                                               self.max_u, self.layer_sizes)
+    self._discriminator = sac_networks.CriticQ(self.dimo, self.dimu, self.max_u,
+                                               self.layer_sizes)
     self._discriminator_optimizer = tfk.optimizers.Adam(learning_rate=1e-4,
                                                         beta_1=0.5,
                                                         beta_2=0.9)
 
     self._critic_models = {  # discriminator => critic because we use it as pretrained critic
         "critic_o_norm": self._discriminator_o_norm,
-        "critic_g_norm": self._discriminator_g_norm,
         "criticq1": self._discriminator,
         "criticq2": self._discriminator,
         "criticq1_target": self._discriminator,
@@ -172,7 +150,7 @@ class GAN(agent.Agent):
     self._initialize_discriminator()
 
     self._expl_policy = self._eval_policy = policies.RandomPolicy(
-        self.dimo, self.dimg, self.dimu, self.max_u)
+        self.dimo, self.dimu, self.max_u)
 
   def _initialize_training_steps(self):
     self.offline_training_step = tf.Variable(0,
@@ -193,11 +171,9 @@ class GAN(agent.Agent):
     return self._eval_policy
 
   @tf.function
-  def estimate_q_graph(self, o, g, u):
+  def estimate_q_graph(self, o, u):
     """A convenient function for shaping"""
-    return self._discriminator(
-        [self._discriminator_o_norm(o),
-         self._discriminator_g_norm(g), u])
+    return self._discriminator([self._discriminator_o_norm(o), u])
 
   def before_training_hook(self, data_dir=None, env=None, **kwargs):
     """Adds data to the offline replay buffer and add shaping"""
@@ -224,16 +200,13 @@ class GAN(agent.Agent):
     else:
       transitions = experiences.copy()
     o_tf = tf.convert_to_tensor(transitions["o"], dtype=tf.float32)
-    g_tf = tf.convert_to_tensor(transitions["g"], dtype=tf.float32)
     self._discriminator_o_norm.update(o_tf)
-    self._discriminator_g_norm.update(g_tf)
 
   @tf.function
-  def _train_offline_graph(self, o, g, u):
+  def _train_offline_graph(self, o, u):
     with tf.name_scope('OfflineLosses/'):
 
       o = self._discriminator_o_norm(o)
-      g = self._discriminator_g_norm(g)
 
       with tf.GradientTape(watch_accessed_variables=False,
                            persistent=True) as tape:
@@ -241,12 +214,12 @@ class GAN(agent.Agent):
             self._discriminator.trainable_weights,
             self._generator.trainable_weights
         ])
-        fo, fg, fu = self._generator(
+        fo, fu = self._generator(
             tf.random.uniform(
                 tf.concat((tf.shape(o)[:-1], [self.latent_dim]), axis=0)))
 
-        disc_fake = self._discriminator([fo, fg, fu])
-        disc_real = self._discriminator([o, g, u])
+        disc_fake = self._discriminator([fo, fu])
+        disc_real = self._discriminator([o, u])
         # Discriminator loss on generator (including gradient penalty)
         alpha = tf.random.uniform(shape=tf.concat((tf.shape(o)[:-1], [1]),
                                                   axis=0),
@@ -254,7 +227,7 @@ class GAN(agent.Agent):
                                   maxval=1.0)  # assumes 1 dim state+action
         interpolates = list(
             map(lambda v: alpha * v[0] + (1.0 - alpha) * v[1],
-                zip([o, g, u], [fo, fg, fu])))
+                zip([o, u], [fo, fu])))
         with tf.GradientTape(watch_accessed_variables=False) as tape2:
           tape2.watch(interpolates)
           disc_interpolates = self._discriminator(interpolates)
@@ -290,9 +263,8 @@ class GAN(agent.Agent):
     with tf.summary.record_if(lambda: self.offline_training_step % 200 == 0):
       batch = self.offline_buffer.sample(self.offline_batch_size)
       o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-      g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
       u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
-      self._train_offline_graph(o_tf, g_tf, u_tf)
+      self._train_offline_graph(o_tf, u_tf)
 
   def store_experiences(self, experiences):
     pass  # no online training

@@ -60,7 +60,6 @@ class NFShaping(shaping.Shaping):
 
     # Prepare parameters
     self.dimo = dims["o"]
-    self.dimg = dims["g"]
     self.dimu = dims["u"]
     self.max_u = max_u
     self.num_bijectors = num_bijectors
@@ -79,11 +78,9 @@ class NFShaping(shaping.Shaping):
     # normalizer for goal and observation.
     self.o_stats = normalizer.Normalizer(self.dimo, self.norm_eps,
                                          self.norm_clip)
-    self.g_stats = normalizer.Normalizer(self.dimg, self.norm_eps,
-                                         self.norm_clip)
 
     # normalizing flow
-    state_dim = self.dimo[0] + self.dimg[0] + self.dimu[0]
+    state_dim = self.dimo[0] + self.dimu[0]
     self.nf = create_maf(dim=state_dim,
                          num_bijectors=num_bijectors,
                          layer_sizes=layer_sizes)
@@ -97,13 +94,11 @@ class NFShaping(shaping.Shaping):
     if not self.norm_obs:
       return
     self.o_stats.update(batch["o"])
-    self.g_stats.update(batch["g"])
 
   @tf.function
-  def potential(self, o, g, u):
+  def potential(self, o, u):
     o = self.o_stats.normalize(o)
-    g = self.g_stats.normalize(g)
-    state_tf = tf.concat(axis=1, values=[o, g, u / self.max_u])
+    state_tf = tf.concat(axis=1, values=[o, u / self.max_u])
 
     state_tf = tf.cast(state_tf, tf.float64)
 
@@ -120,11 +115,10 @@ class NFShaping(shaping.Shaping):
     self._update_stats(batch)
 
   @tf.function
-  def _train_graph(self, o, g, u):
+  def _train_graph(self, o, u):
 
     o = self.o_stats.normalize(o)
-    g = self.g_stats.normalize(g)
-    state = tf.concat(axis=1, values=[o, g, u / self.max_u])
+    state = tf.concat(axis=1, values=[o, u / self.max_u])
 
     state = tf.cast(state, tf.float64)
 
@@ -146,13 +140,12 @@ class NFShaping(shaping.Shaping):
 
     return loss
 
-  def _train(self, o, g, u, name="", **kwargs):
+  def _train(self, o, u, name="", **kwargs):
 
     o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
-    g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
     u_tf = tf.convert_to_tensor(u, dtype=tf.float32)
 
-    loss_tf = self._train_graph(o_tf, g_tf, u_tf)
+    loss_tf = self._train_graph(o_tf, u_tf)
 
     with tf.name_scope('NFShapingLosses'):
       tf.summary.scalar(name=name + ' loss vs training_step',
@@ -161,11 +154,10 @@ class NFShaping(shaping.Shaping):
 
     return loss_tf.numpy()
 
-  def _evaluate(self, o, g, u, name="", **kwargs):
+  def _evaluate(self, o, u, name="", **kwargs):
     o_tf = tf.convert_to_tensor(o, dtype=tf.float32)
-    g_tf = tf.convert_to_tensor(g, dtype=tf.float32)
     u_tf = tf.convert_to_tensor(u, dtype=tf.float32)
-    potential = self.potential(o_tf, g_tf, u_tf)
+    potential = self.potential(o_tf, u_tf)
     potential = np.mean(potential.numpy())
     with tf.name_scope('NFShapingEvaluation'):
       tf.summary.scalar(name=name + ' mean potential vs training_step',
@@ -181,7 +173,6 @@ class NFShaping(shaping.Shaping):
     }
     state["tf"] = {
         "o_stats": self.o_stats.get_weights(),
-        "g_stats": self.g_stats.get_weights(),
         "nf": list(map(lambda v: v.numpy(), self.nf.variables)),
     }
     return state
@@ -190,7 +181,6 @@ class NFShaping(shaping.Shaping):
     stored_vars = state.pop("tf")
     self.__init__(**state)
     self.o_stats.set_weights(stored_vars["o_stats"])
-    self.g_stats.set_weights(stored_vars["g_stats"])
     list(
         map(lambda v: v[0].assign(v[1]),
             zip(self.nf.variables, stored_vars["nf"])))

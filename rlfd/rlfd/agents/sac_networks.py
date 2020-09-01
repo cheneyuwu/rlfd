@@ -11,11 +11,10 @@ class Actor(tfk.Model):
   LOG_SIG_CAP_MIN = -20  # np.e**-10 = 4.540e-05
   EPS = 1e-6
 
-  def __init__(self, dimo, dimg, dimu, max_u, layer_sizes, name="pi"):
+  def __init__(self, dimo, dimu, max_u, layer_sizes, name="pi"):
     super().__init__(name=name)
 
     self._dimo = dimo
-    self._dimg = dimg
     self._dimu = dimu
     self._max_u = max_u
     self._dist = tfd.MultivariateNormalDiag
@@ -44,7 +43,7 @@ class Actor(tfk.Model):
         "glorot_uniform",  #tfk.initializers.RandomUniform(-3e-3, 3e-3)
     )
     # Create weights
-    self([tf.zeros([0, *self._dimo]), tf.zeros([0, *self._dimg])])
+    self([tf.zeros([0, *self._dimo])])
 
   @tf.function
   def call(self, inputs, sample=True):
@@ -60,9 +59,9 @@ class Actor(tfk.Model):
 
   @tf.function
   def compute_log_prob(self, inputs):
-    o, g, u = inputs
+    o, u = inputs
     u /= self._max_u
-    mean, logstd = self._compute_dist([o, g])
+    mean, logstd = self._compute_dist([o])
     logprob_pi = self._dist(mean, tf.exp(logstd)).log_prob(u)
     logprob_pi = tf.expand_dims(logprob_pi, axis=-1)
     squashed_logprob_pi = self._squash_correction(logprob_pi, u)
@@ -77,8 +76,7 @@ class Actor(tfk.Model):
 
   def _compute_dist(self, inputs):
     """Compute multivariate normal distribution."""
-    o, g = inputs
-    res = tf.concat([o, g], axis=-1)
+    res = inputs[0]
     for l in self._mlp_layers:
       res = l(res)
     mean = self._mean_output_layer(res)
@@ -96,11 +94,10 @@ class Actor(tfk.Model):
 
 class CriticV(tfk.Model):
 
-  def __init__(self, dimo, dimg, layer_sizes, name="vf"):
+  def __init__(self, dimo, layer_sizes, name="vf"):
     super().__init__(name=name)
 
     self._dimo = dimo
-    self._dimg = dimg
 
     self._mlp_layers = []
     for size in layer_sizes:
@@ -119,12 +116,11 @@ class CriticV(tfk.Model):
         "glorot_uniform",  #tfk.initializers.RandomUniform(-3e-3, 3e-3)
     )
     # Create weights
-    self([tf.zeros([0, *self._dimo]), tf.zeros([0, *self._dimg])])
+    self([tf.zeros([0, *self._dimo])])
 
   @tf.function
   def call(self, inputs):
-    o, g = inputs
-    res = tf.concat([o, g], axis=-1)
+    res = inputs[0]
     for l in self._mlp_layers:
       res = l(res)
     res = self._output_layer(res)
@@ -133,11 +129,10 @@ class CriticV(tfk.Model):
 
 class CriticQ(tfk.Model):
 
-  def __init__(self, dimo, dimg, dimu, max_u, layer_sizes, name="qf"):
+  def __init__(self, dimo, dimu, max_u, layer_sizes, name="qf"):
     super().__init__(name=name)
 
     self._dimo = dimo
-    self._dimg = dimg
     self._dimu = dimu
     self._max_u = max_u
 
@@ -158,16 +153,12 @@ class CriticQ(tfk.Model):
         "glorot_uniform",  #tfk.initializers.RandomUniform(-3e-3, 3e-3)
     )
     # Create weights
-    self([
-        tf.zeros([0, *self._dimo]),
-        tf.zeros([0, *self._dimg]),
-        tf.zeros([0, *self._dimu])
-    ])
+    self([tf.zeros([0, *self._dimo]), tf.zeros([0, *self._dimu])])
 
   @tf.function
   def call(self, inputs):
-    o, g, u = inputs
-    res = tf.concat([o, g, u / self._max_u], axis=-1)
+    o, u = inputs
+    res = tf.concat([o, u / self._max_u], axis=-1)
     for l in self._mlp_layers:
       res = l(res)
     res = self._output_layer(res)

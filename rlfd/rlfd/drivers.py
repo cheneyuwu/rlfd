@@ -61,9 +61,7 @@ class StepBasedDriver(Driver):
     if not self.num_steps and not self.num_episodes:
       return None
 
-    experiences = {
-        k: [] for k in ("o", "o_2", "ag", "ag_2", "u", "g", "g_2", "r", "done")
-    }
+    experiences = {k: [] for k in ("o", "o_2", "u", "r", "done")}
 
     current_step = 0
     current_episode = 0
@@ -73,23 +71,16 @@ class StepBasedDriver(Driver):
       if self.done or (self.curr_eps_step == self.eps_length):
         self.done = False
         self.curr_eps_step = 0
-        state = self.env.reset()
-        self.o, self.ag, self.g = state["observation"], state[
-            "achieved_goal"], state["desired_goal"]
-      u = self.policy(self.o, self.g)
+        self.o = self.env.reset()
+      u = self.policy(self.o)
       # compute new states and observations
-      state, r, self.done, info = self.env.step(u)
-      o_2, ag_2 = state["observation"], state["achieved_goal"]
+      o_2, r, self.done, info = self.env.step(u)
       if self.render:
         self.env.render()
 
       for observer in observers:
         observer(o=self.o,
-                 ag=self.ag,
-                 g=self.g,
                  o_2=o_2,
-                 ag_2=ag_2,
-                 g_2=self.g,
                  u=u,
                  r=r,
                  done=self.done,
@@ -97,16 +88,11 @@ class StepBasedDriver(Driver):
                  reset=self.done or (self.curr_eps_step + 1 == self.eps_length))
 
       experiences["o"].append(self.o)
-      experiences["ag"].append(self.ag)
-      experiences["g"].append(self.g)
       experiences["o_2"].append(o_2)
-      experiences["ag_2"].append(ag_2)
-      experiences["g_2"].append(self.g)
       experiences["u"].append(u)
       experiences["r"].append(r)
       experiences["done"].append(self.done)
       self.o = o_2
-      self.ag = ag_2
 
       current_step += 1
       self.curr_eps_step += 1

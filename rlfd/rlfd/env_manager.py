@@ -69,48 +69,8 @@ class EnvWrapper:
   def close(self):
     return self.env.close()
 
-
-class GoalEnvWrapper(EnvWrapper):
-
-  def __init__(self, make_env, r_scale, r_shift):
-    super().__init__(make_env, r_scale, r_shift)
-
-    if not type(self.observation_space) == spaces.Dict:
-      self.observation_space = spaces.Dict(
-          dict(
-              observation=self.env.observation_space,
-              desired_goal=spaces.Box(-np.inf,
-                                      np.inf,
-                                      shape=np.empty(0).shape,
-                                      dtype="float32"),
-              achieved_goal=spaces.Box(-np.inf,
-                                       np.inf,
-                                       shape=np.empty(0).shape,
-                                       dtype="float32"),
-          ))
-
   def _transform_state(self, state):
-    """
-    modify state to contain: observation, achieved_goal, desired_goal
-    """
-    if not type(state) == dict:
-      state = {
-          "observation": state,
-          "achieved_goal": np.empty(0),
-          "desired_goal": np.empty(0)
-      }
     return state
-
-  def get_dataset(self):
-    """This is for d4rl environments only"""
-    # observations, actions, rewards, terminals
-    dataset = super().get_dataset()
-    if dataset:
-      dataset["g"] = np.empty((dataset["o"].shape[0], 0))
-      dataset["g_2"] = np.empty((dataset["o"].shape[0], 0))
-      dataset["ag"] = np.empty((dataset["o"].shape[0], 0))
-      dataset["ag_2"] = np.empty((dataset["o"].shape[0], 0))
-    return dataset
 
 
 class NoGoalEnvWrapper(EnvWrapper):
@@ -139,12 +99,7 @@ class NoGoalEnvWrapper(EnvWrapper):
 
 class EnvManager:
 
-  def __init__(self,
-               env_name,
-               env_args={},
-               r_scale=1,
-               r_shift=0.0,
-               with_goal=True):
+  def __init__(self, env_name, env_args={}, r_scale=1, r_shift=0.0):
     self.make_env = None
     # OpenAI Gym envs: https://gym.openai.com/envs/#mujoco
     # D4RL envs: https://github.com/rail-berkeley/d4rl/wiki/Tasks
@@ -163,12 +118,11 @@ class EnvManager:
     # Add extra properties on the environment.
     self.r_scale = r_scale
     self.r_shift = r_shift
-    self.with_goal = with_goal
 
   def get_env(self):
-    if self.with_goal:
-      return GoalEnvWrapper(self.make_env, self.r_scale, self.r_shift)
-    return NoGoalEnvWrapper(self.make_env, self.r_scale, self.r_shift)
+    return EnvWrapper(self.make_env, self.r_scale, self.r_shift)
+    # The following line concatenates o and g.
+    # return NoGoalEnvWrapper(self.make_env, self.r_scale, self.r_shift)
 
 
 if __name__ == "__main__":
