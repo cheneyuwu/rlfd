@@ -19,8 +19,8 @@ class OfflineRLShaping(shaping.Shaping):
     self._policy = None
 
   @tf.function
-  def potential(self, o, g, u):
-    return self._policy.estimate_q_graph(o, g, u)
+  def potential(self, o, u):
+    return self._policy.estimate_q_graph(o, u)
 
   def before_training_hook(self, data_dir, **kwargs):
     policy = osp.join(data_dir, "pretrained.pkl")

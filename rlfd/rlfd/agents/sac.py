@@ -53,7 +53,6 @@ class SAC(agent.Agent):
 
     self.dims = dims
     self.dimo = self.dims["o"]
-    self.dimg = self.dims["g"]
     self.dimu = self.dims["u"]
     self.max_u = max_u
     self.fix_T = fix_T
@@ -98,10 +97,6 @@ class SAC(agent.Agent):
                          o_2=self.dimo,
                          u=self.dimu,
                          r=(1,),
-                         ag=self.dimg,
-                         ag_2=self.dimg,
-                         g=self.dimg,
-                         g_2=self.dimg,
                          done=(1,))
     if self.fix_T:
       buffer_shapes = {
@@ -120,16 +115,12 @@ class SAC(agent.Agent):
   def _initialize_actor(self):
     self._actor_o_norm = normalizer.Normalizer(self.dimo, self.norm_eps,
                                                self.norm_clip)
-    self._actor_g_norm = normalizer.Normalizer(self.dimg, self.norm_eps,
-                                               self.norm_clip)
-
-    self._actor = sac_networks.Actor(self.dimo, self.dimg, self.dimu,
-                                     self.max_u, self.layer_sizes)
+    self._actor = sac_networks.Actor(self.dimo, self.dimu, self.max_u,
+                                     self.layer_sizes)
     self._actor_optimizer = tfk.optimizers.Adam(learning_rate=self.pi_lr)
 
     self._actor_models = {
         "actor_o_norm": self._actor_o_norm,
-        "actor_g_norm": self._actor_g_norm,
         "actor": self._actor,
     }
     self.save_model(self._actor_models)
@@ -137,28 +128,23 @@ class SAC(agent.Agent):
   def _initialize_critic(self):
     self._critic_o_norm = normalizer.Normalizer(self.dimo, self.norm_eps,
                                                 self.norm_clip)
-    self._critic_g_norm = normalizer.Normalizer(self.dimg, self.norm_eps,
-                                                self.norm_clip)
 
-    self._criticq1 = sac_networks.CriticQ(self.dimo, self.dimg, self.dimu,
-                                          self.max_u, self.layer_sizes)
-    self._criticq1_target = sac_networks.CriticQ(self.dimo, self.dimg,
-                                                 self.dimu, self.max_u,
-                                                 self.layer_sizes)
+    self._criticq1 = sac_networks.CriticQ(self.dimo, self.dimu, self.max_u,
+                                          self.layer_sizes)
+    self._criticq1_target = sac_networks.CriticQ(self.dimo, self.dimu,
+                                                 self.max_u, self.layer_sizes)
     self._copy_weights(self._criticq1, self._criticq1_target, 1.0)
 
-    self._criticq2 = sac_networks.CriticQ(self.dimo, self.dimg, self.dimu,
-                                          self.max_u, self.layer_sizes)
-    self._criticq2_target = sac_networks.CriticQ(self.dimo, self.dimg,
-                                                 self.dimu, self.max_u,
-                                                 self.layer_sizes)
+    self._criticq2 = sac_networks.CriticQ(self.dimo, self.dimu, self.max_u,
+                                          self.layer_sizes)
+    self._criticq2_target = sac_networks.CriticQ(self.dimo, self.dimu,
+                                                 self.max_u, self.layer_sizes)
     self._copy_weights(self._criticq2, self._criticq2_target, 1.0)
 
     self._criticq_optimizer = tfk.optimizers.Adam(learning_rate=self.q_lr)
 
     self._critic_models = {
         "critic_o_norm": self._critic_o_norm,
-        "critic_g_norm": self._critic_g_norm,
         "criticq1": self._criticq1,
         "criticq2": self._criticq2,
         "criticq1_target": self._criticq1_target,
@@ -182,29 +168,23 @@ class SAC(agent.Agent):
       self.save_var({"alpha": self.alpha, "log_alpha": self.log_alpha})
 
     # Generate policies
-    def process_observation_expl(o, g):
-      norm_o = self._actor_o_norm(o)
-      norm_g = self._actor_g_norm(g)
-      return norm_o, norm_g
+    def process_observation_expl(o):
+      return self._actor_o_norm(o)
 
     self._expl_policy = policies.Policy(
         self.dimo,
-        self.dimg,
         self.dimu,
-        get_action=lambda o, g: self._actor([o, g], sample=True)[0],
+        get_action=lambda o: self._actor([o], sample=True)[0],
         process_observation=process_observation_expl)
 
-    def process_observation_eval(o, g):
-      norm_o = self._actor_o_norm(o)
-      norm_g = self._actor_g_norm(g)
-      self._policy_inspect_graph(o, g)
-      return norm_o, norm_g
+    def process_observation_eval(o):
+      self._policy_inspect_graph(o)
+      return self._actor_o_norm(o)
 
     self._eval_policy = policies.Policy(
         self.dimo,
-        self.dimg,
         self.dimu,
-        get_action=lambda o, g: self._actor([o, g], sample=False)[0],
+        get_action=lambda o: self._actor([o], sample=False)[0],
         process_observation=process_observation_eval)
 
   def _initialize_training_steps(self):
@@ -226,9 +206,9 @@ class SAC(agent.Agent):
     return self._eval_policy
 
   @tf.function
-  def estimate_q_graph(self, o, g, u):
+  def estimate_q_graph(self, o, u):
     """A convenient function for shaping"""
-    return self._criticq1([self._critic_o_norm(o), self._critic_g_norm(g), u])
+    return self._criticq1([self._critic_o_norm(o), u])
 
   def before_training_hook(self,
                            data_dir=None,
@@ -262,11 +242,8 @@ class SAC(agent.Agent):
     else:
       transitions = experiences.copy()
     o_tf = tf.convert_to_tensor(transitions["o"], dtype=tf.float32)
-    g_tf = tf.convert_to_tensor(transitions["g"], dtype=tf.float32)
     self._actor_o_norm.update(o_tf)
-    self._actor_g_norm.update(g_tf)
     self._critic_o_norm.update(o_tf)
-    self._critic_g_norm.update(g_tf)
 
   def train_offline(self):
     # No offline training.
@@ -309,39 +286,28 @@ class SAC(agent.Agent):
       batch = self._merge_batch_experiences(online_batch, offline_batch)
     return batch
 
-  def _sac_criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
-    pi_2, logprob_pi_2 = self._actor(
-        [self._actor_o_norm(o_2),
-         self._actor_g_norm(g_2)])
+  def _sac_criticq_loss_graph(self, o, o_2, u, r, done, step):
+    pi_2, logprob_pi_2 = self._actor([self._actor_o_norm(o_2)])
 
     # Immediate reward
     target_q = r
     # Shaping reward
     if self.online_data_strategy == "Shaping":
-      potential_curr = self.shaping.potential(o=o, g=g, u=u)
-      potential_next = self.shaping.potential(o=o_2, g=g_2, u=pi_2)
-      target_q += (1.0 - done) * tf.pow(self.gamma,
-                                        n) * potential_next - potential_curr
+      potential_curr = self.shaping.potential(o=o, u=u)
+      potential_next = self.shaping.potential(o=o_2, u=pi_2)
+      target_q += (1.0 - done) * self.gamma * potential_next - potential_curr
     # Q value from next state
-    target_next_q1 = self._criticq1_target(
-        [self._critic_o_norm(o_2),
-         self._critic_g_norm(g_2), pi_2])
-    target_next_q2 = self._criticq2_target(
-        [self._critic_o_norm(o_2),
-         self._critic_g_norm(g_2), pi_2])
+    target_next_q1 = self._criticq1_target([self._critic_o_norm(o_2), pi_2])
+    target_next_q2 = self._criticq2_target([self._critic_o_norm(o_2), pi_2])
     target_next_min_q = tf.minimum(target_next_q1, target_next_q2)
-    target_q += ((1.0 - done) * tf.pow(self.gamma, n) *
+    target_q += ((1.0 - done) * self.gamma *
                  (target_next_min_q - self.alpha * logprob_pi_2))
     target_q = tf.stop_gradient(target_q)
 
-    td_loss_q1 = self._huber_loss(
-        target_q,
-        self._criticq1([self._critic_o_norm(o),
-                        self._critic_g_norm(g), u]))
-    td_loss_q2 = self._huber_loss(
-        target_q,
-        self._criticq2([self._critic_o_norm(o),
-                        self._critic_g_norm(g), u]))
+    td_loss_q1 = self._huber_loss(target_q,
+                                  self._criticq1([self._critic_o_norm(o), u]))
+    td_loss_q2 = self._huber_loss(target_q,
+                                  self._criticq2([self._critic_o_norm(o), u]))
     td_loss = td_loss_q1 + td_loss_q2
 
     criticq_loss = tf.reduce_mean(td_loss)
@@ -350,19 +316,15 @@ class SAC(agent.Agent):
                       step=step)
     return criticq_loss
 
-  def _sac_actor_loss_graph(self, o, g, u, step):
-    pi, logprob_pi = self._actor([self._actor_o_norm(o), self._actor_g_norm(g)])
-    current_q1 = self._criticq1(
-        [self._critic_o_norm(o),
-         self._critic_g_norm(g), pi])
-    current_q2 = self._criticq2(
-        [self._critic_o_norm(o),
-         self._critic_g_norm(g), pi])
+  def _sac_actor_loss_graph(self, o, u, step):
+    pi, logprob_pi = self._actor([self._actor_o_norm(o)])
+    current_q1 = self._criticq1([self._critic_o_norm(o), pi])
+    current_q2 = self._criticq2([self._critic_o_norm(o), pi])
     current_min_q = tf.minimum(current_q1, current_q2)
 
     actor_loss = tf.reduce_mean(self.alpha * logprob_pi - current_min_q)
     if self.online_data_strategy == "Shaping":
-      actor_loss += -tf.reduce_mean(self.shaping.potential(o=o, g=g, u=pi))
+      actor_loss += -tf.reduce_mean(self.shaping.potential(o=o, u=pi))
     if self.online_data_strategy == "BC":
       pass  # TODO add behavior clone.
     tf.summary.scalar(name='actor_loss vs {}'.format(step.name),
@@ -370,21 +332,21 @@ class SAC(agent.Agent):
                       step=step)
     return actor_loss
 
-  def _alpha_loss_graph(self, o, g, step):
-    _, logprob_pi = self._actor([self._actor_o_norm(o), self._actor_g_norm(g)])
+  def _alpha_loss_graph(self, o, step):
+    _, logprob_pi = self._actor([self._actor_o_norm(o)])
     alpha_loss = -tf.reduce_mean(
         (self.log_alpha * tf.stop_gradient(logprob_pi + self.target_alpha)))
 
     return alpha_loss
 
   @tf.function
-  def _train_online_graph(self, o, g, o_2, g_2, u, r, n, done):
+  def _train_online_graph(self, o, o_2, u, r, done):
     # Train alpha (entropy weight)
     if self.auto_alpha:
       with tf.GradientTape(watch_accessed_variables=False) as tape:
         tape.watch(self.log_alpha)
         with tf.name_scope('OnlineLosses/'):
-          alpha_loss = self._alpha_loss_graph(o, g, self.online_training_step)
+          alpha_loss = self._alpha_loss_graph(o, self.online_training_step)
       alpha_grad = tape.gradient(alpha_loss, [self.log_alpha])
       self._alpha_optimizer.apply_gradients(zip(alpha_grad, [self.log_alpha]))
       self.alpha.assign(tf.exp(self.log_alpha))
@@ -399,8 +361,7 @@ class SAC(agent.Agent):
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(criticq_trainable_weights)
       with tf.name_scope('OnlineLosses/'):
-        criticq_loss = self._sac_criticq_loss_graph(o, g, o_2, g_2, u, r, n,
-                                                    done,
+        criticq_loss = self._sac_criticq_loss_graph(o, o_2, u, r, done,
                                                     self.online_training_step)
     criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
     # Actor loss
@@ -408,8 +369,7 @@ class SAC(agent.Agent):
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(actor_trainable_weights)
       with tf.name_scope('OnlineLosses/'):
-        actor_loss = self._sac_actor_loss_graph(o, g, u,
-                                                self.online_training_step)
+        actor_loss = self._sac_actor_loss_graph(o, u, self.online_training_step)
     actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
 
     # Update networks
@@ -426,16 +386,12 @@ class SAC(agent.Agent):
       batch = self.sample_batch()
 
       o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-      g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
       o_2_tf = tf.convert_to_tensor(batch["o_2"], dtype=tf.float32)
-      g_2_tf = tf.convert_to_tensor(batch["g_2"], dtype=tf.float32)
       u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
       r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
-      n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
       done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
 
-      self._train_online_graph(o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf,
-                               done_tf)
+      self._train_online_graph(o_tf, o_2_tf, u_tf, r_tf, done_tf)
       if self.online_training_step % self.target_update_freq == 0:
         self._copy_weights(self._criticq1, self._criticq1_target)
         self._copy_weights(self._criticq2, self._criticq2_target)
@@ -448,7 +404,7 @@ class SAC(agent.Agent):
     list(map(copy_func, zip(source.weights, target.weights)))
 
   @tf.function
-  def _policy_inspect_graph(self, o, g):
+  def _policy_inspect_graph(self, o):
     # should only happen for in the first call of this function
     if not hasattr(self, "_total_policy_inspect_count"):
       self._total_policy_inspect_count = tf.Variable(0,
@@ -459,15 +415,14 @@ class SAC(agent.Agent):
       if self.shaping != None:
         self._policy_inspect_potential = tf.Variable(0.0, trainable=False)
 
-    mean_u, logprob_u = self._actor(
-        [self._actor_o_norm(o), self._actor_g_norm(g)])
+    mean_u, logprob_u = self._actor([self._actor_o_norm(o)])
 
     self._total_policy_inspect_count.assign_add(1)
     self._policy_inspect_count.assign_add(1)
-    q = self._criticq1([self._critic_o_norm(o), self._critic_g_norm(g), mean_u])
+    q = self._criticq1([self._critic_o_norm(o), mean_u])
     self._policy_inspect_estimate_q.assign_add(tf.reduce_sum(q))
     if self.shaping != None:
-      p = self.shaping.potential(o=o, g=g, u=mean_u)
+      p = self.shaping.potential(o=o, u=mean_u)
       self._policy_inspect_potential.assign_add(tf.reduce_sum(p))
 
     if self._total_policy_inspect_count % 5000 == 0:

@@ -23,9 +23,7 @@ def get_env_constructor_and_config(params):
   tmp_env = manager.get_env()
   tmp_env.reset()
   obs, _, _, _ = tmp_env.step(tmp_env.action_space.sample())
-  dims = dict(o=tmp_env.observation_space["observation"].shape,
-              g=tmp_env.observation_space["desired_goal"].shape,
-              u=tmp_env.action_space.shape)
+  dims = dict(o=tmp_env.observation_space.shape, u=tmp_env.action_space.shape)
   info = dict(env_name=params["env_name"],
               env_args=params["env_args"],
               r_scale=params["r_scale"],
@@ -115,7 +113,6 @@ def main(config):
       params["seed"],
       make_env=make_env,
       policy=policies.RandomPolicy(env_params["dims"]["o"],
-                                   env_params["dims"]["g"],
                                    env_params["dims"]["u"],
                                    env_params["max_u"]),
       num_steps=params["expl_num_steps_per_cycle"],

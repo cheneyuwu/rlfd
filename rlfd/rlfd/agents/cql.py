@@ -62,7 +62,6 @@ class CQL(sac.SAC):
 
     self.dims = dims
     self.dimo = self.dims["o"]
-    self.dimg = self.dims["g"]
     self.dimu = self.dims["u"]
     self.max_u = max_u
     self.fix_T = fix_T
@@ -131,97 +130,74 @@ class CQL(sac.SAC):
           learning_rate=self.cql_alpha_lr)
 
     # Generate policies
-    def process_observation_expl(o, g):
-      norm_o = self._actor_o_norm(o)
-      norm_g = self._actor_g_norm(g)
-      return norm_o, norm_g
+    def process_observation_expl(o):
+      return self._actor_o_norm(o)
 
     self._expl_policy = policies.Policy(
         self.dimo,
-        self.dimg,
         self.dimu,
-        get_action=lambda o, g: self._actor([o, g], sample=True)[0],
+        get_action=lambda o: self._actor([o], sample=True)[0],
         process_observation=process_observation_expl)
 
-    def process_observation_eval(o, g):
-      norm_o = self._actor_o_norm(o)
-      norm_g = self._actor_g_norm(g)
-      self._policy_inspect_graph(o, g)
-      return norm_o, norm_g
+    def process_observation_eval(o):
+      self._policy_inspect_graph(o)
+      return self._actor_o_norm(o)
 
     self._eval_policy = policies.Policy(
         self.dimo,
-        self.dimg,
         self.dimu,
-        get_action=lambda o, g: self._actor([o, g], sample=False)[0],
+        get_action=lambda o: self._actor([o], sample=False)[0],
         process_observation=process_observation_eval)
 
-  def _cql_criticq_loss_graph(self, o, g, o_2, g_2, u, r, n, done, step):
-    pi_2, logprob_pi_2 = self._actor(
-        [self._actor_o_norm(o_2),
-         self._actor_g_norm(g_2)])
+  def _cql_criticq_loss_graph(self, o, o_2, u, r, done, step):
+    pi_2, logprob_pi_2 = self._actor([self._actor_o_norm(o_2)])
 
     # Immediate reward
     target_q = r
     # Shaping reward
     if self.online_data_strategy == "Shaping":
-      potential_curr = self.shaping.potential(o=o, g=g, u=u)
-      potential_next = self.shaping.potential(o=o_2, g=g_2, u=pi_2)
-      target_q += (1.0 - done) * tf.pow(self.gamma,
-                                        n) * potential_next - potential_curr
+      potential_curr = self.shaping.potential(o=o, u=u)
+      potential_next = self.shaping.potential(o=o_2, u=pi_2)
+      target_q += (1.0 - done) * self.gamma * potential_next - potential_curr
     # Q value from next state
-    target_next_q1 = self._criticq1_target(
-        [self._critic_o_norm(o_2),
-         self._critic_g_norm(g_2), pi_2])
-    target_next_q2 = self._criticq2_target(
-        [self._critic_o_norm(o_2),
-         self._critic_g_norm(g_2), pi_2])
+    target_next_q1 = self._criticq1_target([self._critic_o_norm(o_2), pi_2])
+    target_next_q2 = self._criticq2_target([self._critic_o_norm(o_2), pi_2])
     target_next_min_q = tf.minimum(target_next_q1, target_next_q2)
-    target_q += ((1.0 - done) * tf.pow(self.gamma, n) *
+    target_q += ((1.0 - done) * self.gamma *
                  (target_next_min_q - self.alpha * logprob_pi_2))
     target_q = tf.stop_gradient(target_q)
 
-    td_loss_q1 = self._huber_loss(
-        target_q,
-        self._criticq1([self._critic_o_norm(o),
-                        self._critic_g_norm(g), u]))
-    td_loss_q2 = self._huber_loss(
-        target_q,
-        self._criticq2([self._critic_o_norm(o),
-                        self._critic_g_norm(g), u]))
+    td_loss_q1 = self._huber_loss(target_q,
+                                  self._criticq1([self._critic_o_norm(o), u]))
+    td_loss_q2 = self._huber_loss(target_q,
+                                  self._criticq2([self._critic_o_norm(o), u]))
     td_loss = td_loss_q1 + td_loss_q2
     # Being Conservative (Eqn.4)
     critic_o = self._critic_o_norm(o)
-    critic_g = self._critic_g_norm(g)
     # second term
-    max_term_q1 = self._criticq1([critic_o, critic_g, u])
-    max_term_q2 = self._criticq2([critic_o, critic_g, u])
+    max_term_q1 = self._criticq1([critic_o, u])
+    max_term_q2 = self._criticq2([critic_o, u])
     # first term (uniform)
     num_samples = 10
     tiled_critic_o = tf.tile(tf.expand_dims(critic_o, axis=1),
                              [1, num_samples] + [1] * len(self.dimo))
-    tiled_critic_g = tf.tile(tf.expand_dims(critic_g, axis=1),
-                             [1, num_samples] + [1] * len(self.dimg))
     uni_u_dist = tfd.Uniform(low=-self.max_u * tf.ones(self.dimu),
                              high=self.max_u * tf.ones(self.dimu))
     uni_u = uni_u_dist.sample((tf.shape(u)[0], num_samples))
     logprob_uni_u = tf.reduce_sum(uni_u_dist.log_prob(uni_u),
                                   axis=list(range(2, 2 + len(self.dimu))),
                                   keepdims=True)
-    uni_q1 = self._criticq1([tiled_critic_o, tiled_critic_g, uni_u])
-    uni_q2 = self._criticq2([tiled_critic_o, tiled_critic_g, uni_u])
+    uni_q1 = self._criticq1([tiled_critic_o, uni_u])
+    uni_q2 = self._criticq2([tiled_critic_o, uni_u])
     uni_q1_logprob_uni_u = uni_q1 - logprob_uni_u
     uni_q2_logprob_uni_u = uni_q2 - logprob_uni_u
     # first term (policy)
     actor_o = self._actor_o_norm(o)
-    actor_g = self._actor_g_norm(g)
     tiled_actor_o = tf.tile(tf.expand_dims(actor_o, axis=1),
                             [1, num_samples] + [1] * len(self.dimo))
-    tiled_actor_g = tf.tile(tf.expand_dims(actor_g, axis=1),
-                            [1, num_samples] + [1] * len(self.dimg))
-    pi, logprob_pi = self._actor([tiled_actor_o, tiled_actor_g])
-    pi_q1 = self._criticq1([tiled_critic_o, tiled_critic_g, pi])
-    pi_q2 = self._criticq2([tiled_critic_o, tiled_critic_g, pi])
+    pi, logprob_pi = self._actor([tiled_actor_o])
+    pi_q1 = self._criticq1([tiled_critic_o, pi])
+    pi_q2 = self._criticq2([tiled_critic_o, pi])
     pi_q1_logprob_pi = pi_q1 - logprob_pi
     pi_q2_logprob_pi = pi_q2 - logprob_pi
     # Note: log(2N) not included in this case since it is constant.
@@ -244,7 +220,7 @@ class CQL(sac.SAC):
     return criticq_loss
 
   @tf.function
-  def _train_offline_graph(self, o, g, o_2, g_2, u, r, n, done):
+  def _train_offline_graph(self, o, o_2, u, r, done):
     # Train critic q
     criticq_trainable_weights = (self._criticq1.trainable_weights +
                                  self._criticq2.trainable_weights)
@@ -254,8 +230,7 @@ class CQL(sac.SAC):
       if self.auto_cql_alpha:
         tape.watch([self.cql_log_alpha])
       with tf.name_scope('OfflineLosses/'):
-        criticq_loss = self._cql_criticq_loss_graph(o, g, o_2, g_2, u, r, n,
-                                                    done,
+        criticq_loss = self._cql_criticq_loss_graph(o, o_2, u, r, done,
                                                     self.offline_training_step)
         cql_alpha_loss = -criticq_loss
     criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
@@ -276,7 +251,7 @@ class CQL(sac.SAC):
     with tf.GradientTape(watch_accessed_variables=False) as tape:
       tape.watch(actor_trainable_weights)
       with tf.name_scope('OfflineLosses/'):
-        actor_loss = self._sac_actor_loss_graph(o, g, u,
+        actor_loss = self._sac_actor_loss_graph(o, u,
                                                 self.offline_training_step)
     actor_grads = tape.gradient(actor_loss, actor_trainable_weights)
     self._actor_optimizer.apply_gradients(
@@ -287,7 +262,7 @@ class CQL(sac.SAC):
       with tf.GradientTape(watch_accessed_variables=False) as tape:
         tape.watch(self.log_alpha)
         with tf.name_scope('OfflineLosses/'):
-          alpha_loss = self._alpha_loss_graph(o, g, self.offline_training_step)
+          alpha_loss = self._alpha_loss_graph(o, self.offline_training_step)
       alpha_grad = tape.gradient(alpha_loss, [self.log_alpha])
       self._alpha_optimizer.apply_gradients(zip(alpha_grad, [self.log_alpha]))
       self.alpha.assign(tf.exp(self.log_alpha))
@@ -299,16 +274,12 @@ class CQL(sac.SAC):
       batch = self.offline_buffer.sample(self.offline_batch_size)
 
       o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-      g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
       o_2_tf = tf.convert_to_tensor(batch["o_2"], dtype=tf.float32)
-      g_2_tf = tf.convert_to_tensor(batch["g_2"], dtype=tf.float32)
       u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
       r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
-      n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
       done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
 
-      self._train_offline_graph(o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf,
-                                done_tf)
+      self._train_offline_graph(o_tf, o_2_tf, u_tf, r_tf, done_tf)
       if self.online_training_step % self.target_update_freq == 0:
         self._copy_weights(self._criticq1, self._criticq1_target)
         self._copy_weights(self._criticq2, self._criticq2_target)
