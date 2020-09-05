@@ -20,8 +20,9 @@ class SAC(agent.Agent):
       eps_length,
       gamma,
       # training
-      online_batch_size,
       offline_batch_size,
+      online_batch_size,
+      online_sample_ratio,
       fix_T,
       # normalize
       norm_obs_online,
@@ -59,8 +60,9 @@ class SAC(agent.Agent):
     self.eps_length = eps_length
     self.gamma = gamma
 
-    self.online_batch_size = online_batch_size
     self.offline_batch_size = offline_batch_size
+    self.online_batch_size = online_batch_size
+    self.online_sample_ratio = online_sample_ratio
 
     self.buffer_size = buffer_size
 
@@ -268,7 +270,7 @@ class SAC(agent.Agent):
       self._update_stats(experiences)
 
   def _merge_batch_experiences(self, batch1, batch2):
-    """Helper function to merge experiences from offline and online data."""
+    """Helper function to merge experiences of offline and online data."""
     assert batch1.keys() == batch2.keys()
     merged_batch = {}
     for k in batch1.keys():
@@ -277,13 +279,12 @@ class SAC(agent.Agent):
     return merged_batch
 
   def sample_batch(self):
-    if self.online_data_strategy == "None":
-      batch = self.online_buffer.sample(self.online_batch_size)
-    else:
-      online_batch = self.online_buffer.sample(self.online_batch_size -
-                                               self.offline_batch_size)
-      offline_batch = self.offline_buffer.sample(self.offline_batch_size)
-      batch = self._merge_batch_experiences(online_batch, offline_batch)
+    ratio = self.online_sample_ratio
+    online_batch = self.online_buffer.sample(int(self.online_batch_size *
+                                                 ratio))
+    offline_batch = self.offline_buffer.sample(
+        int(self.online_batch_size * (1 - ratio)))
+    batch = self._merge_batch_experiences(online_batch, offline_batch)
     return batch
 
   def _sac_criticq_loss_graph(self, o, o_2, u, r, done, step):

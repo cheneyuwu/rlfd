@@ -24,8 +24,9 @@ class CQL(sac.SAC):
       eps_length,
       gamma,
       # training
-      online_batch_size,
       offline_batch_size,
+      online_batch_size,
+      online_sample_ratio,
       fix_T,
       # normalize
       norm_obs_online,
@@ -45,6 +46,7 @@ class CQL(sac.SAC):
       auto_cql_alpha,
       cql_log_alpha,
       cql_alpha_lr,
+      cql_weight_decay_factor,
       # double q
       soft_target_tau,
       target_update_freq,
@@ -68,8 +70,9 @@ class CQL(sac.SAC):
     self.eps_length = eps_length
     self.gamma = gamma
 
-    self.online_batch_size = online_batch_size
     self.offline_batch_size = offline_batch_size
+    self.online_batch_size = online_batch_size
+    self.online_sample_ratio = online_sample_ratio
 
     self.buffer_size = buffer_size
 
@@ -81,6 +84,8 @@ class CQL(sac.SAC):
     self.cql_log_alpha = tf.constant(cql_log_alpha, dtype=tf.float32)
     self.cql_alpha_lr = cql_alpha_lr
     self.cql_tau = cql_tau
+    self.cql_weight = tf.Variable(1.0, dtype=tf.float32, trainable=False)
+    self.cql_weight_decay_factor = cql_weight_decay_factor
 
     self.layer_sizes = layer_sizes
     self.q_lr = q_lr
@@ -213,7 +218,8 @@ class CQL(sac.SAC):
                    (log_sum_exp_q2 - max_term_q2 - self.cql_tau))
     cql_loss = cql_loss_q1 + cql_loss_q2
 
-    criticq_loss = tf.reduce_mean(td_loss) + tf.reduce_mean(cql_loss)
+    criticq_loss = (tf.reduce_mean(td_loss) +
+                    self.cql_weight * tf.reduce_mean(cql_loss))
     tf.summary.scalar(name='criticq_loss vs {}'.format(step.name),
                       data=criticq_loss,
                       step=step)
@@ -280,6 +286,6 @@ class CQL(sac.SAC):
       done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
 
       self._train_offline_graph(o_tf, o_2_tf, u_tf, r_tf, done_tf)
-      if self.online_training_step % self.target_update_freq == 0:
+      if self.offline_training_step % self.target_update_freq == 0:
         self._copy_weights(self._criticq1, self._criticq1_target)
         self._copy_weights(self._criticq2, self._criticq2_target)

@@ -20,8 +20,9 @@ class TD3(agent.Agent):
       eps_length,
       gamma,
       # training
-      online_batch_size,
       offline_batch_size,
+      online_batch_size,
+      online_sample_ratio,
       # exploration
       expl_gaussian_noise,
       expl_random_prob,
@@ -62,8 +63,9 @@ class TD3(agent.Agent):
     self.eps_length = eps_length
     self.gamma = gamma
 
-    self.online_batch_size = online_batch_size
     self.offline_batch_size = offline_batch_size
+    self.online_batch_size = online_batch_size
+    self.online_sample_ratio = online_sample_ratio
 
     self.buffer_size = buffer_size
 
@@ -277,13 +279,12 @@ class TD3(agent.Agent):
     return merged_batch
 
   def sample_batch(self):
-    if self.online_data_strategy == "None":
-      batch = self.online_buffer.sample(self.online_batch_size)
-    else:
-      online_batch = self.online_buffer.sample(self.online_batch_size -
-                                               self.offline_batch_size)
-      offline_batch = self.offline_buffer.sample(self.offline_batch_size)
-      batch = self._merge_batch_experiences(online_batch, offline_batch)
+    ratio = self.online_sample_ratio
+    online_batch = self.online_buffer.sample(int(self.online_batch_size *
+                                                 ratio))
+    offline_batch = self.offline_buffer.sample(
+        int(self.online_batch_size * (1 - ratio)))
+    batch = self._merge_batch_experiences(online_batch, offline_batch)
     return batch
 
   def _td3_criticq_loss_graph(self, o, o_2, u, r, done, step):

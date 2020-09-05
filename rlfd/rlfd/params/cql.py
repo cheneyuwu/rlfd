@@ -28,8 +28,9 @@ default_params = {
     # agent config
     "agent": {
         "gamma": 0.99,
-        "online_batch_size": 256,
         "offline_batch_size": 256,
+        "online_batch_size": 256,
+        "online_sample_ratio": 1,
         # replay buffer setup
         "buffer_size": int(1e6),
         # online training use a pre-trained actor or critic
@@ -52,6 +53,8 @@ default_params = {
         "auto_cql_alpha": True,
         "cql_log_alpha": 2.0,
         "cql_alpha_lr": 3e-4,
+        "cql_weight_decay_factor": 1,
+        #
         "q_lr": 3e-4,
         "pi_lr": 3e-5,
         "action_l2": 0.0,

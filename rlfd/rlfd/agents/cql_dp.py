@@ -25,8 +25,9 @@ class CQLDP(cql.CQL):
       eps_length,
       gamma,
       # training
-      online_batch_size,
       offline_batch_size,
+      online_batch_size,
+      online_sample_ratio,
       fix_T,
       # normalize
       norm_obs_online,
@@ -71,8 +72,9 @@ class CQLDP(cql.CQL):
     self.eps_length = eps_length
     self.gamma = gamma
 
-    self.online_batch_size = online_batch_size
     self.offline_batch_size = offline_batch_size
+    self.online_batch_size = online_batch_size
+    self.online_sample_ratio = online_sample_ratio
 
     self.buffer_size = buffer_size
 
