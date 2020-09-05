@@ -18,7 +18,7 @@ default_params = {
     "offline_num_epochs": int(1e3),
     "offline_num_batches_per_epoch": 1000,
     "random_expl_num_cycles": 0,
-    "num_epochs": 0,
+    "num_epochs": int(1e3),
     "num_cycles_per_epoch": 1,
     "num_batches_per_cycle": 1000,
     "expl_num_episodes_per_cycle": None,
