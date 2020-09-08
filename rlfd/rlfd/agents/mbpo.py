@@ -104,10 +104,6 @@ class MBPO(sac.SAC):
                          o_2=self.dimo,
                          u=self.dimu,
                          r=(1,),
-                         ag=self.dimg,
-                         ag_2=self.dimg,
-                         g=self.dimg,
-                         g_2=self.dimg,
                          done=(1,))
         if self.fix_T:
             buffer_shapes = {k: (self.eps_length,) + v for k, v in buffer_shapes.items()}
@@ -134,34 +130,20 @@ class MBPO(sac.SAC):
         self.model_buffer.clear_buffer()
         batch = self.online_buffer.sample(self.rollout_batch_size)
         o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-        g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32) #useless junk
-
-        #useless junk that shouldn't be here
-        ag = batch["ag"]
-        ag_2 = batch["ag_2"]
-        g_2 = batch["g_2"]
 
         for _ in range(self.rollout_length):
-            u_tf, _ = self._actor([self._actor_o_norm(o_tf), self._actor_g_norm(g_tf)]) #sample next action from policy
+            u_tf, _ = self._actor([self._actor_o_norm(o_tf)]) #sample next action from policy
             o_2_tf, r_tf = self.dynamics_model.predict(o_tf, u_tf) #predict next_obs and reward
             o = tf.make_ndarray(o_tf)
             o_2 = tf.make_ndarray(o_2_tf)
-            g = tf.make_ndarray(g_tf)
             u = tf.make_ndarray(u_tf)
             r = tf.make_ndarray(r_tf)
             done = self.termination_func(o, u, o_2)
-            samples = {"o": o, "o_2": o_2, "r": r, "done": done, "g": g, "g_2": g_2, "u": u, "ag": ag, "ag_2": ag_2}
+            samples = {"o": o, "o_2": o_2, "r": r, "done": done, "u": u}
             self.model_buffer.store(samples)
 
             not_done_mask = ~done.squeeze(-1)
             o_tf = tf.convert_to_tensor(o_2[not_done_mask]) #make the next obs the current obs
-
-            #useless junk
-            g_tf = tf.convert_to_tensor(g[not_done_mask])
-            g_2 = g_2[not_done_mask]
-            ag = ag[not_done_mask]
-            ag_2 = ag_2[not_done_mask]
-            n = n[not_done_mask]
 
     def sample_batch(self):
         #modify to sample from model buffer according to real ratio
@@ -181,15 +163,12 @@ class MBPO(sac.SAC):
             batch = self.sample_batch()
 
             o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-            g_tf = tf.convert_to_tensor(batch["g"], dtype=tf.float32)
             o_2_tf = tf.convert_to_tensor(batch["o_2"], dtype=tf.float32)
-            g_2_tf = tf.convert_to_tensor(batch["g_2"], dtype=tf.float32)
             u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
             r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
-            n_tf = tf.convert_to_tensor(batch["n"], dtype=tf.float32)
             done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
 
-            self._train_online_graph(o_tf, g_tf, o_2_tf, g_2_tf, u_tf, r_tf, n_tf, done_tf)
+            self._train_online_graph(o_tf, o_2_tf, u_tf, done_tf)
 
             if self.online_training_step % self.model_train_freq == 0:
                 model_batch = self.online_buffer(batch_size=-1)
