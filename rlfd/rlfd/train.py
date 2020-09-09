@@ -105,6 +105,7 @@ def main(config):
       pretrained_agent = pickle.load(f)
 
   # Configure agents and drivers.
+  print("Keys of AGENTS: {}".format(agents.AGENTS.keys()))
   agent_params = params["agent"]
   agent = agents.AGENTS[params["algo"]](**agent_params, **env_params)
 

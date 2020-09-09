@@ -89,7 +89,7 @@ class MBPO(sac.SAC):
             buffer_size,
             info
         )
-
+        agent.Agent.__init__(self, locals())
         self.dynamics_model = BNNEnsemble(self.dimo, self.dimu, model_layer_size, model_weight_decay, num_networks, num_elites, model_lr)
         self.model_train_freq = model_train_freq
         self.real_ratio = real_ratio
@@ -168,7 +168,7 @@ class MBPO(sac.SAC):
             r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
             done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
 
-            self._train_online_graph(o_tf, o_2_tf, u_tf, done_tf)
+            self._train_online_graph(o_tf, o_2_tf, u_tf, r_tf, done_tf)
 
             if self.online_training_step % self.model_train_freq == 0:
                 model_batch = self.online_buffer(batch_size=-1)

@@ -201,7 +201,7 @@ class BNNEnsemble(tf.keras.Model):
                 self.holdout_losses[i].assign(self._models[i].training_loss(holdout_inputs, holdout_targets, False))
                 best = self.best_performance[i]
                 improvement = (best - self.holdout_losses[i]) / best
-                improvement = tf.where(tf.is_nan(improvement), 100., improvement)
+                improvement = tf.where(tf.math.is_nan(improvement), 100., improvement)
                 if (improvement > 0.01):
                     self.best_performance[i] = self.holdout_losses[i]
                     updated = True
