@@ -244,7 +244,7 @@ class CQL(sac.SAC):
       self._cql_alpha_optimizer.apply_gradients(
           zip(cql_alpha_grads, [self.cql_log_alpha]))
       # clip for numerical stability
-      self.cql_log_alpha.assign(tf.clip_by_value(self.cql_log_alpha, -20., 10.))
+      self.cql_log_alpha.assign(tf.clip_by_value(self.cql_log_alpha, -20., 40.))
     with tf.name_scope('OfflineLosses/'):
       tf.summary.scalar(name='cql alpha vs {}'.format(
           self.offline_training_step.name),
