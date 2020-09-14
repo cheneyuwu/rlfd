@@ -48,8 +48,6 @@ class TD3(agent.Agent):
       use_pretrained_actor,
       use_pretrained_critic,
       online_data_strategy,
-      # online bc regularizer
-      bc_params,
       # replay buffer
       buffer_size,
       info):
@@ -92,7 +90,6 @@ class TD3(agent.Agent):
     self.use_pretrained_critic = use_pretrained_critic
     self.online_data_strategy = online_data_strategy
     assert self.online_data_strategy in ["None", "BC", "Shaping"]
-    self.bc_params = bc_params
     self.info = info
 
     self._create_memory()

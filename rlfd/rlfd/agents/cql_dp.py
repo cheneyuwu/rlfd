@@ -57,8 +57,6 @@ class CQLDP(cql.CQL):
       use_pretrained_critic,
       use_pretrained_alpha,
       online_data_strategy,
-      # online bc regularizer
-      bc_params,
       # replay buffer
       buffer_size,
       info):
@@ -106,7 +104,6 @@ class CQLDP(cql.CQL):
     self.use_pretrained_alpha = use_pretrained_alpha
     self.online_data_strategy = online_data_strategy
     assert self.online_data_strategy in ["None", "BC", "Shaping"]
-    self.bc_params = bc_params
     self.info = info
 
     self._create_memory()

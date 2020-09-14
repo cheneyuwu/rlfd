@@ -61,11 +61,6 @@ default_params = {
         # double q learning
         "soft_target_tau": 5e-3,
         "target_update_freq": 1,
-        "bc_params": {
-            "q_filter": False,
-            "prm_loss_weight": 1.0,
-            "aux_loss_weight": 1.0
-        },
     },
     "seed": 0,
 }
