@@ -9,7 +9,7 @@ tfd = tfp.distributions
 tfk = tf.keras
 import pdb
 
-from rlfd import logger, memory, normalizer, policies
+from rlfd import  memory, normalizer, policies
 from rlfd.agents import agent, sac, sac_networks, mbpo_networks
 
 def default_termination(o, u, o_2):
@@ -24,10 +24,11 @@ class MBPO(sac.SAC):
         eps_length,
         gamma,
         online_batch_size,
+        online_sample_ratio,
         offline_batch_size,
         fix_T,
-        norms_obs_online,
-        norms_obs_offline,
+        norm_obs_online,
+        norm_obs_offline,
         norm_eps,
         norm_clip,
         layer_sizes,
@@ -44,7 +45,6 @@ class MBPO(sac.SAC):
         online_data_strategy,
         bc_params,
         buffer_size,
-        info,
 
         #MBPO-specifc parameters
 
@@ -57,20 +57,24 @@ class MBPO(sac.SAC):
         rollout_batch_size, #number of real samples to rollout in the model
         real_ratio, #percentage of "fake" data to include in actor and critic training batch
         rollout_schedule, #increases in number of model steps as epochs increase
+        info,
         termination_function = default_termination #compute done bit for model rollouts
 
         ):
-
+        
+        print("REACHED MBPO INITIALIZATION \n")
+        print()
         super(MBPO, self).__init__(
             dims,
             max_u,
             eps_length,
             gamma,
-            online_batch_size,
             offline_batch_size,
+            online_batch_size,
+            online_sample_ratio,
             fix_T,
-            norms_obs_online,
-            norms_obs_offline,
+            norm_obs_online,
+            norm_obs_offline,
             norm_eps,
             norm_clip,
             layer_sizes,
@@ -90,7 +94,7 @@ class MBPO(sac.SAC):
             info
         )
         agent.Agent.__init__(self, locals())
-        self.dynamics_model = BNNEnsemble(self.dimo, self.dimu, model_layer_size, model_weight_decay, num_networks, num_elites, model_lr)
+        self.dynamics_model = mbpo_networks.BNNEnsemble(self.dimo[0], self.dimu[0], model_layer_size, model_weight_decay, num_networks, num_elites, model_lr)
         self.model_train_freq = model_train_freq
         self.real_ratio = real_ratio
         self.rollout_schedule = rollout_schedule
@@ -147,7 +151,7 @@ class MBPO(sac.SAC):
 
     def sample_batch(self):
         #modify to sample from model buffer according to real ratio
-        if self.real_ratio == 0:
+        if self.real_ratio == 1:
             batch = self.online_buffer.sample(self.online_batch_size)
         else:
             model_batch_size = self.online_batch_size * self.real_ratio
@@ -160,18 +164,9 @@ class MBPO(sac.SAC):
     
     def train_online(self):
         with tf.summary.record_if(lambda: self.online_training_step % 200 == 0):
-            batch = self.sample_batch()
-
-            o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
-            o_2_tf = tf.convert_to_tensor(batch["o_2"], dtype=tf.float32)
-            u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
-            r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
-            done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
-
-            self._train_online_graph(o_tf, o_2_tf, u_tf, r_tf, done_tf)
 
             if self.online_training_step % self.model_train_freq == 0:
-                model_batch = self.online_buffer(batch_size=-1)
+                model_batch = self.online_buffer.sample(self.online_buffer.stored_steps)
                 o_tf = tf.convert_to_tensor(model_batch["o"], dtype=tf.float32)
                 o_2_tf = tf.convert_to_tensor(model_batch["o_2"], dtype=tf.float32)
                 u_tf = tf.convert_to_tensor(model_batch["u"], dtype=tf.float32)
@@ -184,6 +179,16 @@ class MBPO(sac.SAC):
             if self.online_training_step % self.target_update_freq == 0:
                 self._copy_weights(self._criticq1, self._criticq1_target)
                 self._copy_weights(self._criticq2, self._criticq2_target)
+        
+            batch = self.sample_batch()
+
+            o_tf = tf.convert_to_tensor(batch["o"], dtype=tf.float32)
+            o_2_tf = tf.convert_to_tensor(batch["o_2"], dtype=tf.float32)
+            u_tf = tf.convert_to_tensor(batch["u"], dtype=tf.float32)
+            r_tf = tf.convert_to_tensor(batch["r"], dtype=tf.float32)
+            done_tf = tf.convert_to_tensor(batch["done"], dtype=tf.float32)
+
+            self._train_online_graph(o_tf, o_2_tf, u_tf, r_tf, done_tf)
 
 
 

@@ -121,6 +121,7 @@ class BNNEnsemble(tf.keras.Model):
         self.holdout_losses = tf.Variable(tf.zeros(shape=tf.TensorShape([self._num_networks])), trainable=False)
         self.best_performance = tf.Variable(tf.zeros(shape=tf.TensorShape([self._num_networks])), dtype=tf.dtypes.float32, trainable=False)
         self.epochs_since_update = tf.Variable(0, dtype=tf.dtypes.int32, trainable=False)
+        self.updated = tf.Variable(tf.constant(False), trainable=False)
         for _ in range(num_networks):
             self._models.append(BNN(dimo, dimu, layer_sizes, weight_decay))
 
@@ -157,7 +158,7 @@ class BNNEnsemble(tf.keras.Model):
 
         return next_obs, rew
 
-    @tf.function
+    #@tf.function
     def train(self, obs, act, next_obs, rew, batch_size=256, max_num_epochs = 100, max_epochs_since_update = 5, holdout_ratio=0.2):
         inputs = tf.concat([obs, act], 1)
         self.mu.assign(tf.reduce_mean(inputs, 0))
@@ -181,9 +182,9 @@ class BNNEnsemble(tf.keras.Model):
 
         #create seperate training sequences (with duplicates) for inividual models
         training_idx = tf.random.uniform([self._num_networks, num_training_samples], 0, num_training_samples, tf.dtypes.int32)
-
-        updated = False
+        print("Max num epoch: {}".format(max_num_epochs))
         for i in range(max_num_epochs):
+            tf.print("Got into the for loop \n")
             for batch_num in tf.range(num_training_samples // batch_size):
                 with tf.GradientTape() as tape:
                     total_loss = tf.reduce_sum([
@@ -202,16 +203,18 @@ class BNNEnsemble(tf.keras.Model):
                 best = self.best_performance[i]
                 improvement = (best - self.holdout_losses[i]) / best
                 improvement = tf.where(tf.math.is_nan(improvement), 100., improvement)
-                if (improvement > 0.01):
-                    self.best_performance[i] = self.holdout_losses[i]
-                    updated = True
-            if updated:
+                if (improvement > 0.001):
+                    self.best_performance[i].assign(self.holdout_losses[i])
+                    self.updated.assign(True)
+            tf.print("Just before the condition")
+            if tf.equal(self.updated, True):
+                tf.print("Just after the condition")
                 self.epochs_since_update.assign(0)
             else:
                 self.epochs_since_update.assign_add(1)
             if(self.epochs_since_update > max_epochs_since_update):
                 break
-            updated = False
+            self.updated.assign(False)
 
         #determine elites
         for i in range(self._num_networks):
@@ -245,8 +248,8 @@ if __name__ == '__main__':
     next_obs = tf.constant([[3.]])
     rew = tf.constant([[100.]])
 
-    model.train(obs, act, next_obs, rew, 1, 200)
-    model.train(obs, act, next_obs, rew, 1, 200)
-    model.train(obs, act, next_obs, rew, 1, 200)
+    model.train(obs, act, next_obs, rew, 1, 200, 20)
+    model.train(obs, act, next_obs, rew, 1, 200, 20)
+    model.train(obs, act, next_obs, rew, 1, 200, 20)
     result = model.predict(obs, act)
     print(result)

@@ -17,7 +17,7 @@ default_params = {
     "pretrained": None,  # e.g. "./cql" means "./cql.pkl", ".pkl" auto appended.
     "offline_num_epochs": 0,
     "offline_num_batches_per_epoch": 1000,
-    "random_expl_num_cycles": int(1),
+    "random_expl_num_cycles": int(300),
     "num_epochs": int(1e3),
     "num_cycles_per_epoch": 1,
     "num_batches_per_cycle": 1000,
@@ -30,6 +30,7 @@ default_params = {
         "gamma": 0.99,
         "online_batch_size": 256,
         "offline_batch_size": 0,
+        "online_sample_ratio": 1,
         # replay buffer setup
         "buffer_size": int(1e6),
         # online training use a pre-trained actor or critic

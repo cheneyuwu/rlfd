@@ -1,0 +1,4 @@
+mode,epoch,time_this_iter_s,done,timesteps_total,episodes_total,training_iteration,experiment_id,date,timestamp,time_total_s,pid,hostname,node_ip,time_since_restore,timesteps_since_restore,iterations_since_restore,trial_id,experiment_tag
+online,0,41.57176089286804,False,,,1,e4b103e1a11b42bd9ba584928538da2d,2020-09-09_22-47-21,1599706041,41.57176089286804,20850,antarctica,142.1.44.25,41.57176089286804,0,1,d8533_00004,4_seed=4
+online,1,17.940030336380005,False,,,2,e4b103e1a11b42bd9ba584928538da2d,2020-09-09_22-47-39,1599706059,59.51179122924805,20850,antarctica,142.1.44.25,59.51179122924805,0,2,d8533_00004,4_seed=4
+online,2,17.789888858795166,False,,,3,e4b103e1a11b42bd9ba584928538da2d,2020-09-09_22-47-57,1599706077,77.30168008804321,20850,antarctica,142.1.44.25,77.30168008804321,0,3,d8533_00004,4_seed=4

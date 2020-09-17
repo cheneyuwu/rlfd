@@ -1,0 +1,8 @@
+{
+  "config": "MBPO",
+  "root_dir": "/home/kamran/rlfd",
+  "search_params_list": [
+    "seed"
+  ],
+  "seed": 0
+}

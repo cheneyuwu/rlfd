@@ -1,0 +1,32 @@
+Failure # 1 (occurred at 2020-09-09_19-43-40)
+Traceback (most recent call last):
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/trial_runner.py", line 471, in _process_trial
+    result = self.trial_executor.fetch_result(trial)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/ray_trial_executor.py", line 430, in fetch_result
+    result = ray.get(trial_future[0], DEFAULT_GET_TIMEOUT)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/worker.py", line 1538, in get
+    raise value.as_instanceof_cause()
+ray.exceptions.RayTaskError(RayOutOfMemoryError): [36mray::ImplicitFunc.train()[39m (pid=12639, ip=142.1.44.25)
+  File "python/ray/_raylet.pyx", line 439, in ray._raylet.execute_task
+  File "python/ray/_raylet.pyx", line 440, in ray._raylet.execute_task
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/memory_monitor.py", line 128, in raise_if_low_memory
+    self.error_threshold))
+ray.memory_monitor.RayOutOfMemoryError: More than 95% of the memory on node antarctica is used (121.67 / 125.5 GB). The top 10 memory consumers are:
+
+PID	MEM	COMMAND
+4224	96.59GiB	python clustering/cluster_masks.py --cfg config/custom_configs/slowfast_kinetics.yaml --gpu 2 --spli
+24228	1.99GiB	/home/sherry/code/resnet_env/bin/python -c from multiprocessing.spawn import spawn_main; spawn_main(
+10610	1.93GiB	python extract_pose_estimation.py --model poolnet --split val --output /media/diskstation/datasets/k
+21713	1.39GiB	/home/sherry/code/resnet_env/bin/python -c from multiprocessing.spawn import spawn_main; spawn_main(
+2592	0.71GiB	/opt/conda/envs/nerf/bin/python /opt/conda/envs/nerf/bin/tensorboard --logdir logs/summaries
+30047	0.42GiB	/home/andrei/anaconda3/envs/florian/bin/python /home/andrei/anaconda3/envs/florian/bin/tensorboard -
+12524	0.21GiB	python -m rlfd.launch --targets train:half_cheetah_launch_file.py --num_cpus 5 --num_gpus 1
+12636	0.19GiB	ray::IDLE
+12638	0.19GiB	ray::IDLE
+12637	0.19GiB	ray::IDLE
+
+In addition, up to 13.92 GiB of shared memory is currently being used by the Ray object store. You can set the object store size with the `object_store_memory` parameter when starting Ray.
+---
+--- Tip: Use the `ray memory` command to list active objects in the cluster.
+---
+

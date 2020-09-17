@@ -1,0 +1,31 @@
+Failure # 1 (occurred at 2020-09-14_17-06-08)
+Traceback (most recent call last):
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/trial_runner.py", line 471, in _process_trial
+    result = self.trial_executor.fetch_result(trial)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/ray_trial_executor.py", line 430, in fetch_result
+    result = ray.get(trial_future[0], DEFAULT_GET_TIMEOUT)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/worker.py", line 1538, in get
+    raise value.as_instanceof_cause()
+ray.exceptions.RayTaskError(TuneError): [36mray::ImplicitFunc.train()[39m (pid=18362, ip=142.1.44.25)
+  File "python/ray/_raylet.pyx", line 479, in ray._raylet.execute_task
+  File "python/ray/_raylet.pyx", line 432, in ray._raylet.execute_task.function_executor
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/trainable.py", line 332, in train
+    result = self.step()
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/function_runner.py", line 337, in step
+    self._report_thread_runner_error(block=True)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/function_runner.py", line 456, in _report_thread_runner_error
+    .format(err_tb_str)))
+ray.tune.error.TuneError: Trial raised an exception. Traceback:
+[36mray::ImplicitFunc.train()[39m (pid=18362, ip=142.1.44.25)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/function_runner.py", line 224, in run
+    self._entrypoint()
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/function_runner.py", line 287, in entrypoint
+    self._status_reporter.get_checkpoint())
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/function_runner.py", line 507, in _trainable_func
+    output = train_func(config)
+  File "/home/kamran/rlfd/rlfd/rlfd/train.py", line 224, in main
+    agent.train_online()
+  File "/home/kamran/rlfd/rlfd/rlfd/agents/mbpo.py", line 169, in train_online
+    model_batch = self.online_buffer(batch_size=-1)
+TypeError: 'StepBaseReplayBuffer' object is not callable
+

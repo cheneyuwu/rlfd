@@ -1,0 +1,74 @@
+Failure # 1 (occurred at 2020-09-14_17-18-04)
+Traceback (most recent call last):
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/trial_runner.py", line 471, in _process_trial
+    result = self.trial_executor.fetch_result(trial)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/ray_trial_executor.py", line 430, in fetch_result
+    result = ray.get(trial_future[0], DEFAULT_GET_TIMEOUT)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/worker.py", line 1538, in get
+    raise value.as_instanceof_cause()
+ray.exceptions.RayTaskError(TuneError): [36mray::ImplicitFunc.train()[39m (pid=29187, ip=142.1.44.25)
+  File "python/ray/_raylet.pyx", line 479, in ray._raylet.execute_task
+  File "python/ray/_raylet.pyx", line 432, in ray._raylet.execute_task.function_executor
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/trainable.py", line 332, in train
+    result = self.step()
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/function_runner.py", line 337, in step
+    self._report_thread_runner_error(block=True)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/function_runner.py", line 456, in _report_thread_runner_error
+    .format(err_tb_str)))
+ray.tune.error.TuneError: Trial raised an exception. Traceback:
+[36mray::ImplicitFunc.train()[39m (pid=29187, ip=142.1.44.25)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/function_runner.py", line 224, in run
+    self._entrypoint()
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/function_runner.py", line 287, in entrypoint
+    self._status_reporter.get_checkpoint())
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/ray/tune/function_runner.py", line 507, in _trainable_func
+    output = train_func(config)
+  File "/home/kamran/rlfd/rlfd/rlfd/train.py", line 224, in main
+    agent.train_online()
+  File "/home/kamran/rlfd/rlfd/rlfd/agents/mbpo.py", line 176, in train_online
+    self.dynamics_model.train(o_tf, u_tf, o_2_tf, r_tf)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/eager/def_function.py", line 780, in __call__
+    result = self._call(*args, **kwds)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/eager/def_function.py", line 823, in _call
+    self._initialize(args, kwds, add_initializers_to=initializers)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/eager/def_function.py", line 697, in _initialize
+    *args, **kwds))
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/eager/function.py", line 2855, in _get_concrete_function_internal_garbage_collected
+    graph_function, _, _ = self._maybe_define_function(args, kwargs)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/eager/function.py", line 3213, in _maybe_define_function
+    graph_function = self._create_graph_function(args, kwargs)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/eager/function.py", line 3075, in _create_graph_function
+    capture_by_value=self._capture_by_value),
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/framework/func_graph.py", line 986, in func_graph_from_py_func
+    func_outputs = python_func(*func_args, **func_kwargs)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/eager/def_function.py", line 600, in wrapped_fn
+    return weak_wrapped_fn().__wrapped__(*args, **kwds)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/eager/function.py", line 3735, in bound_method_wrapper
+    return wrapped_fn(*args, **kwargs)
+  File "/home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/framework/func_graph.py", line 973, in wrapper
+    raise e.ag_error_metadata.to_exception(e)
+TypeError: in user code:
+
+    /home/kamran/rlfd/rlfd/rlfd/agents/mbpo_networks.py:205 train  *
+        if (improvement > 0.01):
+    /home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/autograph/operators/control_flow.py:951 if_stmt
+        _tf_if_stmt(cond, body, orelse, get_state, set_state, symbol_names, nouts)
+    /home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/autograph/operators/control_flow.py:996 _tf_if_stmt
+        cond, aug_body, aug_orelse, strict=True)
+    /home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/util/dispatch.py:201 wrapper
+        return target(*args, **kwargs)
+    /home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/util/deprecation.py:507 new_func
+        return func(*args, **kwargs)
+    /home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/ops/control_flow_ops.py:1180 cond
+        return cond_v2.cond_v2(pred, true_fn, false_fn, name)
+    /home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/ops/cond_v2.py:85 cond_v2
+        op_return_value=pred)
+    /home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/framework/func_graph.py:986 func_graph_from_py_func
+        func_outputs = python_func(*func_args, **func_kwargs)
+    /home/kamran/rlfd_env/lib/python3.6/site-packages/tensorflow/python/autograph/operators/control_flow.py:974 aug_body
+        set_state(init_vars)
+    /tmp/tmprpq5rood.py:80 set_state_1
+        (updated, self.best_performance[i]) = vars_
+
+    TypeError: 'ResourceVariable' object does not support item assignment
+

@@ -80,7 +80,6 @@ def main(config):
   summary_writer.set_as_default()
 
   make_env, env_params = get_env_constructor_and_config(params=params)
-
   # Configure shaping
   shaping = None
   shaping_file = osp.join(root_dir, "shaping.pkl")
@@ -107,6 +106,8 @@ def main(config):
   # Configure agents and drivers.
   print("Keys of AGENTS: {}".format(agents.AGENTS.keys()))
   agent_params = params["agent"]
+  print("Agent params: {}".format(agent_params))
+  print("Env params: {}".format(env_params))
   agent = agents.AGENTS[params["algo"]](**agent_params, **env_params)
 
   random_driver = config_driver(
