@@ -62,8 +62,6 @@ class MBPO(sac.SAC):
 
         ):
         
-        print("REACHED MBPO INITIALIZATION \n")
-        print()
         super(MBPO, self).__init__(
             dims,
             max_u,
@@ -138,10 +136,10 @@ class MBPO(sac.SAC):
         for _ in range(self.rollout_length):
             u_tf, _ = self._actor([self._actor_o_norm(o_tf)]) #sample next action from policy
             o_2_tf, r_tf = self.dynamics_model.predict(o_tf, u_tf) #predict next_obs and reward
-            o = tf.make_ndarray(o_tf)
-            o_2 = tf.make_ndarray(o_2_tf)
-            u = tf.make_ndarray(u_tf)
-            r = tf.make_ndarray(r_tf)
+            o = o_tf.numpy()
+            o_2 = o_2_tf.numpy()
+            u = u_tf.numpy()
+            r = r_tf.numpy()
             done = self.termination_func(o, u, o_2)
             samples = {"o": o, "o_2": o_2, "r": r, "done": done, "u": u}
             self.model_buffer.store(samples)
@@ -154,7 +152,7 @@ class MBPO(sac.SAC):
         if self.real_ratio == 1:
             batch = self.online_buffer.sample(self.online_batch_size)
         else:
-            model_batch_size = self.online_batch_size * self.real_ratio
+            model_batch_size = int((self.online_batch_size * self.real_ratio))
             real_batch_size = self.online_batch_size - model_batch_size
             model_batch = self.model_buffer.sample(model_batch_size)
             real_batch = self.model_buffer.sample(real_batch_size)
