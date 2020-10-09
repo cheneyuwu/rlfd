@@ -132,7 +132,7 @@ class CQLOnline(cql.CQL):
       # clip for numerical stability
       self.cql_log_alpha.assign(tf.clip_by_value(self.cql_log_alpha, -20., 40.))
     with tf.name_scope('OnlineLosses/'):
-      tf.summary.scalar(name='cql alpha vs {}'.format(
+      tf.summary.scalar(name='log cql alpha vs {}'.format(
           self.online_training_step.name),
                         data=self.cql_log_alpha,
                         step=self.online_training_step)
@@ -156,6 +156,11 @@ class CQLOnline(cql.CQL):
       alpha_grad = tape.gradient(alpha_loss, [self.log_alpha])
       self._alpha_optimizer.apply_gradients(zip(alpha_grad, [self.log_alpha]))
       self.alpha.assign(tf.exp(self.log_alpha))
+      with tf.name_scope('OnlineLosses/'):
+        tf.summary.scalar(name='log entropy alpha vs {}'.format(
+        self.online_training_step.name),
+                          data=self.log_alpha,
+                          step=self.online_training_step)
 
     # Reduce weight on cql regularization term.
     self.cql_weight.assign(self.cql_weight * self.cql_weight_decay_factor)

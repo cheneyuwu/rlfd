@@ -246,7 +246,7 @@ class CQL(sac.SAC):
       # clip for numerical stability
       self.cql_log_alpha.assign(tf.clip_by_value(self.cql_log_alpha, -20., 40.))
     with tf.name_scope('OfflineLosses/'):
-      tf.summary.scalar(name='cql alpha vs {}'.format(
+      tf.summary.scalar(name='cql log alpha vs {}'.format(
           self.offline_training_step.name),
                         data=self.cql_log_alpha,
                         step=self.offline_training_step)
