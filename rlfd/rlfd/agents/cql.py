@@ -24,9 +24,10 @@ class CQL(sac.SAC):
       eps_length,
       gamma,
       # training
-      offline_batch_size,
       online_batch_size,
-      online_sample_ratio,
+      offline_batch_size,
+      offline_sample_decay,
+      offline_sample_ratio,
       fix_T,
       # normalize
       norm_obs_online,
@@ -70,7 +71,8 @@ class CQL(sac.SAC):
 
     self.offline_batch_size = offline_batch_size
     self.online_batch_size = online_batch_size
-    self.online_sample_ratio = online_sample_ratio
+    self.offline_sample_ratio = offline_sample_ratio
+    self.offline_sample_decay = offline_sample_decay
 
     self.buffer_size = buffer_size
 

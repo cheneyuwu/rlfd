@@ -22,7 +22,8 @@ class SAC(agent.Agent):
       # training
       offline_batch_size,
       online_batch_size,
-      online_sample_ratio,
+      offline_sample_decay,
+      offline_sample_ratio,
       fix_T,
       # normalize
       norm_obs_online,
@@ -60,7 +61,8 @@ class SAC(agent.Agent):
 
     self.offline_batch_size = offline_batch_size
     self.online_batch_size = online_batch_size
-    self.online_sample_ratio = online_sample_ratio
+    self.offline_sample_decay = offline_sample_decay
+    self.offline_sample_ratio = offline_sample_ratio
 
     self.buffer_size = buffer_size
 
@@ -276,11 +278,16 @@ class SAC(agent.Agent):
     return merged_batch
 
   def sample_batch(self):
-    ratio = self.online_sample_ratio
+    offline_size = self.offline_buffer.current_size
+    online_size = self.online_buffer.current_size
+    ratio = float(offline_size) / (float(online_size) + float(offline_size))
     online_batch = self.online_buffer.sample(int(self.online_batch_size *
-                                                 ratio))
+                                                (1-ratio)))
     offline_batch = self.offline_buffer.sample(
-        int(self.online_batch_size * (1 - ratio)))
+        int(self.online_batch_size * ratio))
+    
+    with tf.name_scope('OnlineLosses/'):
+      tf.summary.scalar(name='Offline Data Ratio vs {}'.format(self.online_training_step.name), data=ratio, step=self.online_training_step)
     batch = self._merge_batch_experiences(online_batch, offline_batch)
     return batch
 
@@ -334,7 +341,8 @@ class SAC(agent.Agent):
     _, logprob_pi = self._actor([self._actor_o_norm(o)])
     alpha_loss = -tf.reduce_mean(
         (self.log_alpha * tf.stop_gradient(logprob_pi + self.target_alpha)))
-
+    with tf.name_scope('OnlineLosses/'):
+      tf.summary.scalar(name='alpha loss vs {}'.format(step.name), data=alpha_loss, step=step)
     return alpha_loss
 
   @tf.function

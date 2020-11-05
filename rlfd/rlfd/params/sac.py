@@ -30,7 +30,8 @@ default_params = {
         "gamma": 0.99,
         "offline_batch_size": 0,
         "online_batch_size": 256,
-        "online_sample_ratio": 1,
+        "offline_sample_decay": 1.0,
+        "offline_sample_ratio": 0.0,
         # replay buffer setup
         "buffer_size": int(1e6),
         # online training use a pre-trained actor or critic

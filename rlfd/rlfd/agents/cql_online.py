@@ -24,9 +24,10 @@ class CQLOnline(cql.CQL):
       eps_length,
       gamma,
       # training
-      offline_batch_size,
       online_batch_size,
-      online_sample_ratio,
+      offline_batch_size,
+      offline_sample_decay,
+      offline_sample_ratio,
       fix_T,
       # normalize
       norm_obs_online,
@@ -70,7 +71,8 @@ class CQLOnline(cql.CQL):
 
     self.offline_batch_size = offline_batch_size
     self.online_batch_size = online_batch_size
-    self.online_sample_ratio = online_sample_ratio
+    self.offline_sample_ratio = offline_sample_ratio
+    self.offline_sample_decay = offline_sample_decay
 
     self.buffer_size = buffer_size
 
@@ -116,8 +118,8 @@ class CQLOnline(cql.CQL):
     with tf.GradientTape(watch_accessed_variables=False,
                          persistent=True) as tape:
       tape.watch(criticq_trainable_weights)
-      if self.auto_cql_alpha:
-        tape.watch([self.cql_log_alpha])
+      # if self.auto_cql_alpha:
+      #   tape.watch([self.cql_log_alpha])
       with tf.name_scope('OnlineLosses/'):
         criticq_loss = self._cql_criticq_loss_graph(o, o_2, u, r, done,
                                                     self.online_training_step)
@@ -125,12 +127,12 @@ class CQLOnline(cql.CQL):
     criticq_grads = tape.gradient(criticq_loss, criticq_trainable_weights)
     self._criticq_optimizer.apply_gradients(
         zip(criticq_grads, criticq_trainable_weights))
-    if self.auto_cql_alpha:
-      cql_alpha_grads = tape.gradient(cql_alpha_loss, [self.cql_log_alpha])
-      self._cql_alpha_optimizer.apply_gradients(
-          zip(cql_alpha_grads, [self.cql_log_alpha]))
-      # clip for numerical stability
-      self.cql_log_alpha.assign(tf.clip_by_value(self.cql_log_alpha, -20., 40.))
+    # if self.auto_cql_alpha:
+    #   cql_alpha_grads = tape.gradient(cql_alpha_loss, [self.cql_log_alpha])
+    #   self._cql_alpha_optimizer.apply_gradients(
+    #       zip(cql_alpha_grads, [self.cql_log_alpha]))
+    #   # clip for numerical stability
+    #   self.cql_log_alpha.assign(tf.clip_by_value(self.cql_log_alpha, -20., 40.))
     with tf.name_scope('OnlineLosses/'):
       tf.summary.scalar(name='log cql alpha vs {}'.format(
           self.online_training_step.name),
@@ -154,6 +156,12 @@ class CQLOnline(cql.CQL):
         with tf.name_scope('OnlineLosses/'):
           alpha_loss = self._alpha_loss_graph(o, self.online_training_step)
       alpha_grad = tape.gradient(alpha_loss, [self.log_alpha])
+      with tf.name_scope('OnlineLosses/'):
+        norm_alpha_grad = tf.norm(alpha_grad)
+        tf.summary.scalar(name='Alpha Gradient Norm vs {}'.format(
+          self.online_training_step.name), 
+          data=norm_alpha_grad, 
+          step = self.online_training_step)
       self._alpha_optimizer.apply_gradients(zip(alpha_grad, [self.log_alpha]))
       self.alpha.assign(tf.exp(self.log_alpha))
       with tf.name_scope('OnlineLosses/'):
